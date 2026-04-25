@@ -1,43 +1,69 @@
 /**
  * src/lib/easyjur/html-parser.ts
  *
- * Parser do Relatório Analítico do EasyJur exportado como HTML.
- * Roda no browser (usa DOMParser nativo — sem dependências extras).
+ * Parser do Relatório Analítico do EasyJur (HTML).
+ * Baseado na estrutura real do export: app.easyjur.com
  *
- * Estratégias de extração (em ordem de prioridade):
- *  1. Células de label→valor em tabelas (padrão dominante do EasyJur)
- *  2. Seções com headings h3/h4/h5 seguidas de tabelas
- *  3. Regex no texto bruto do documento (fallback)
+ * ESTRUTURA REAL DO EASYJUR:
  *
- * O parser é tolerante: extrai o que encontra e registra o que não achou.
+ * <div class="container-processo">
+ *   <div class="header p-3 text-center">
+ *     <h5><strong>PROCESSO N° 0000000-00.0000.0.00.0000</strong></h5>
+ *   </div>
+ *
+ *   <table>          ← campos principais (2 colunas de <ul><li>)
+ *     <td><ul>
+ *       <li><p><strong>Cliente:</strong> Nome do cliente</p></li>
+ *       <li><p><strong>Contrário:</strong> Parte contrária</p></li>  ← NÃO "Parte Contrária"
+ *       <li><p><strong>Advogado:</strong> Nome</p></li>              ← NÃO "Responsável"
+ *       <li><p><strong>Área:</strong> Trabalhista</p></li>
+ *       <li><p><strong>Status Processo:</strong> Substabelecido</p></li>
+ *       <li><p><strong>Tribunal:</strong> TRT03</p></li>
+ *     </ul></td>
+ *     <td><ul>
+ *       <li><p><strong>Vara:</strong> 11ª Vara</p></li>
+ *       ...
+ *     </ul></td>
+ *   </table>
+ *
+ *   <div><hr><h5><strong>Partes</strong></h5>
+ *     <div class="my-2"><table><li>Nome da Parte / Qualificação</li></table></div>
+ *   </div>
+ *
+ *   <div><hr><h5><strong>Agendamentos</strong></h5>
+ *     <div class="my-2"><table>
+ *       <li>Tipo Evento / Status / Descrição / Data Fatal / Data Interna</li>
+ *     </table></div>
+ *   </div>
+ *
+ *   <div><hr><h5><strong>Andamentos</strong></h5>
+ *     <div class="my-2"><table>
+ *       <li>Responsável / Tipo do Andamento / Data Andamento / Descrição</li>
+ *     </table></div>
+ *     ← Item 1/N é o mais recente
+ *   </div>
+ *
+ *   <div><hr><h5><strong>Documentos Anexados</strong></h5>
+ *     <div class="my-2"><table><li>Data / Arquivo</li></table></div>
+ *   </div>
+ * </div>
  */
 
-import type { EasyJurAndamento, EasyJurHonorario, EasyJurParseResult, EasyJurProcesso, EasyJurPrazo } from '@/types/easyjur'
+import type {
+  EasyJurAndamento,
+  EasyJurHonorario,
+  EasyJurParseResult,
+  EasyJurProcesso,
+  EasyJurPrazo,
+} from '@/types/easyjur'
 
-// ── Regex ─────────────────────────────────────────────────────────────────────
-
-/** Número de processo CNJ: 0000000-00.0000.0.00.0000 */
-const RE_PROCESSO = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g
-
-/** CPF: 000.000.000-00 ou 00000000000 */
-const RE_CPF = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/
-
-/** CNPJ: 00.000.000/0000-00 */
-const RE_CNPJ = /\d{2}\.?\d{3}\.?\d{3}\/?0001-?\d{2}/
-
-/** Data brasileira: DD/MM/AAAA */
-const RE_DATA_BR = /\d{2}\/\d{2}\/\d{4}/
-
-/** Valor monetário R$ 0.000,00 */
-const RE_VALOR = /R\$\s*[\d.,]+/i
-
-// ── Normalização de texto ─────────────────────────────────────────────────────
+// ── Utilitários básicos ────────────────────────────────────────────────────────
 
 function limpar(s: string | null | undefined): string {
-  return (s ?? '').replace(/\s+/g, ' ').trim()
+  return (s ?? '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function normalizeLabel(s: string): string {
+function normalizeKey(s: string): string {
   return s
     .toLowerCase()
     .normalize('NFD').replace(/\p{M}/gu, '')
@@ -46,365 +72,307 @@ function normalizeLabel(s: string): string {
 }
 
 function parseMoeda(s: string): number | null {
-  const match = s.match(/[\d.,]+/)
-  if (!match) return null
-  const n = parseFloat(match[0].replace(/\./g, '').replace(',', '.'))
+  const digits = s.replace(/[^\d,]/g, '').replace(',', '.')
+  const n = parseFloat(digits)
   return isNaN(n) ? null : n
 }
 
-// ── Mapa de labels conhecidos do EasyJur ──────────────────────────────────────
+// ── Extração de campo de um <li> do EasyJur ───────────────────────────────────
+//
+// Dois formatos encontrados:
+//
+// Formato A (valor inline):
+//   <li><p><strong>Cliente:</strong> Nome do cliente</p></li>
+//
+// Formato B (valor em p separado):
+//   <li>
+//     <p class="text-justify"><strong>Descrição:</strong> </p>
+//     <p>Texto da descrição aqui.</p>
+//     <p></p>
+//   </li>
 
-const LABEL_MAP: Record<string, string> = {
-  // Identificação do processo
-  'numero_do_processo':     'numero_processo',
-  'no_do_processo':         'numero_processo',
-  'n_do_processo':          'numero_processo',
-  'numero':                 'numero_processo',
-  'processo':               'numero_processo',
+function extrairCampoLi(li: Element): { chave: string; valor: string } | null {
+  const strong = li.querySelector('strong')
+  if (!strong) return null
 
-  // Partes
-  'cliente':                'cliente',
-  'requerente':             'cliente',
-  'autor':                  'cliente',
-  'parte_ativa':            'cliente',
+  const chave = limpar(strong.textContent ?? '').replace(/:$/, '')
+  if (!chave) return null
 
-  'parte_contraria':        'parte_contraria',
-  'reu':                    'parte_contraria',
-  'requerido':              'parte_contraria',
-  'parte_passiva':          'parte_contraria',
-  'demandado':              'parte_contraria',
+  // Valor inline: texto após </strong> no mesmo <p>
+  const parentP = strong.parentElement
+  let valor = ''
 
-  // Responsável
-  'responsavel':            'responsavel',
-  'advogado_responsavel':   'responsavel',
-  'advogado':               'responsavel',
-  'profissional':           'responsavel',
-
-  // Classificação
-  'status':                 'status',
-  'situacao':               'status',
-  'fase':                   'status',
-  'area':                   'area_direito',
-  'area_do_direito':        'area_direito',
-  'especialidade':          'area_direito',
-  'materia':                'area_direito',
-
-  // Tribunal e vara
-  'tribunal':               'tribunal',
-  'orgao_julgador':         'tribunal',
-  'justica':                'tribunal',
-  'vara':                   'vara',
-  'juizo':                  'vara',
-  'comarca':                'vara',
-
-  // CPF/CNPJ
-  'cpf':                    'cpf_cnpj_cliente',
-  'cnpj':                   'cpf_cnpj_cliente',
-  'cpf_cnpj':               'cpf_cnpj_cliente',
-  'documento':              'cpf_cnpj_cliente',
-}
-
-// Alias para seções de blocos
-const SECAO_ANDAMENTOS  = /andamento|movimenta|historico/i
-const SECAO_PRAZOS      = /prazo|vencimento|deadline/i
-const SECAO_AUDIENCIAS  = /audiencia|sessao|julgamento/i
-const SECAO_TAREFAS     = /tarefa|task|atividade/i
-const SECAO_HONORARIOS  = /honorario|honorar/i
-const SECAO_CUSTAS      = /custa|despesa|taxa/i
-const SECAO_ALVARAS     = /alvara|deposito|levantamento/i
-const SECAO_INCIDENTES  = /incidente|recurso/i
-const SECAO_APENSADOS   = /apensad|apenso|conexo/i
-const SECAO_PEDIDOS     = /pedido|objeto|pretensao/i
-const SECAO_DOCUMENTOS  = /documento|anexo|arquivo/i
-
-// ── Extração de campos de uma tabela de cabeçalho ─────────────────────────────
-
-/**
- * Extrai pares label→valor de qualquer tabela do EasyJur.
- * Suporta 2 layouts:
- *  A) <td>Label:</td><td>Valor</td> (células adjacentes na mesma linha)
- *  B) <th>Label</th> na primeira coluna com <td>Valor</td>
- */
-function extrairParesDaTabela(table: Element): Record<string, string> {
-  const campos: Record<string, string> = {}
-
-  for (const row of Array.from(table.querySelectorAll('tr'))) {
-    const cells = Array.from(row.querySelectorAll('td, th'))
-    let i = 0
-    while (i < cells.length - 1) {
-      const cellText = limpar(cells[i].textContent).replace(/:$/, '')
-      const key = LABEL_MAP[normalizeLabel(cellText)]
-      if (key) {
-        campos[key] = limpar(cells[i + 1].textContent)
-        i += 2
-      } else {
-        i++
+  if (parentP) {
+    // Itera nos filhos do <p> ignorando o próprio <strong>
+    for (const node of Array.from(parentP.childNodes)) {
+      if (node.nodeType === 3 /* TEXT_NODE */) {
+        valor += node.textContent ?? ''
       }
+    }
+    valor = valor.trim()
+
+    // Formato B: valor em <p> seguintes
+    if (!valor) {
+      let sib = parentP.nextElementSibling
+      const partes: string[] = []
+      while (sib && sib.tagName === 'P') {
+        const t = limpar(sib.textContent)
+        if (t) partes.push(t)
+        sib = sib.nextElementSibling
+      }
+      valor = partes.join(' ')
     }
   }
 
+  return { chave, valor: limpar(valor) }
+}
+
+// ── Extração de todos os campos de <li> de um container ───────────────────────
+
+function extrairCamposDoContainer(container: Element): Record<string, string> {
+  const campos: Record<string, string> = {}
+  for (const li of Array.from(container.querySelectorAll('li'))) {
+    const resultado = extrairCampoLi(li)
+    if (resultado && resultado.chave) {
+      const k = normalizeKey(resultado.chave)
+      // Agrega valores para campos de descrição com múltiplas linhas
+      if (campos[k] && resultado.valor) {
+        campos[k] += ' ' + resultado.valor
+      } else if (resultado.valor) {
+        campos[k] = resultado.valor
+      }
+    }
+  }
   return campos
 }
 
-// ── Extração de tabelas de seção ──────────────────────────────────────────────
+// ── Encontra seção pelo texto do heading ───────────────────────────────────────
+//
+// Seções têm: <div><hr><h5 class="..."><strong>Nome da Seção</strong></h5>...</div>
+// O conteúdo dos itens é o sibling div (ou filhos da mesma div).
 
-interface TabelaSecao {
-  headers: string[]
-  rows:    string[][]
-}
-
-function extrairTabelaSecao(table: Element): TabelaSecao {
-  const headers: string[] = []
-  const rows:    string[][] = []
-
-  const headRow = table.querySelector('thead tr') ?? table.querySelector('tr')
-  if (headRow) {
-    for (const th of Array.from(headRow.querySelectorAll('th, td'))) {
-      headers.push(limpar(th.textContent))
-    }
-  }
-
-  const bodyRows = table.querySelectorAll('tbody tr, tr')
-  for (const row of Array.from(bodyRows)) {
-    if (row === headRow) continue
-    const cells = Array.from(row.querySelectorAll('td')).map(td => limpar(td.textContent))
-    if (cells.some(c => c.length > 0)) rows.push(cells)
-  }
-
-  return { headers, rows }
-}
-
-// ── Parsers de seção específicos ──────────────────────────────────────────────
-
-function parseAndamentos(table: Element): EasyJurAndamento[] {
-  const { headers, rows } = extrairTabelaSecao(table)
-  const idxData  = headers.findIndex(h => /data/i.test(h))
-  const idxTipo  = headers.findIndex(h => /tipo|classe/i.test(h))
-  const idxDesc  = headers.findIndex(h => /descri|moviment|texto|hist/i.test(h))
-
-  return rows
-    .filter(r => r.length > 0 && r.some(c => c))
-    .map(r => ({
-      data:     idxData >= 0  ? (r[idxData] || null)  : null,
-      tipo:     idxTipo >= 0  ? (r[idxTipo] || null)  : null,
-      descricao: idxDesc >= 0 ? (r[idxDesc] || r.join(' ')) : r.join(' '),
-    }))
-}
-
-function parsePrazos(table: Element, tipo: EasyJurPrazo['tipo']): EasyJurPrazo[] {
-  const { headers, rows } = extrairTabelaSecao(table)
-  const idxTitulo    = headers.findIndex(h => /descri|titulo|assunto|atividade|tarefa/i.test(h))
-  const idxData      = headers.findIndex(h => /data|vencim|prazo/i.test(h))
-  const idxStatus    = headers.findIndex(h => /status|situac/i.test(h))
-  const idxPrioridade = headers.findIndex(h => /prior|urgent/i.test(h))
-  const idxLocal     = headers.findIndex(h => /local|sala|lugar/i.test(h))
-
-  return rows
-    .filter(r => r.some(c => c))
-    .map(r => ({
-      titulo:    idxTitulo >= 0 ? r[idxTitulo] : (r[0] || 'Sem título'),
-      data:      idxData >= 0   ? r[idxData]   : null,
-      tipo,
-      status:    idxStatus >= 0    ? r[idxStatus]    : null,
-      prioridade: idxPrioridade >= 0 ? r[idxPrioridade] : null,
-      local:     idxLocal >= 0 ? r[idxLocal] : null,
-    }))
-}
-
-function parseHonorarios(table: Element): EasyJurHonorario[] {
-  const { headers, rows } = extrairTabelaSecao(table)
-  const idxDesc   = headers.findIndex(h => /descri|hist|tipo/i.test(h))
-  const idxValor  = headers.findIndex(h => /valor|montante|quantia/i.test(h))
-  const idxData   = headers.findIndex(h => /data|vencim/i.test(h))
-  const idxStatus = headers.findIndex(h => /status|situac/i.test(h))
-
-  return rows
-    .filter(r => r.some(c => c))
-    .map(r => ({
-      descricao: idxDesc >= 0  ? r[idxDesc]  : r[0] ?? '',
-      valor:     idxValor >= 0 ? parseMoeda(r[idxValor]) : null,
-      data:      idxData >= 0  ? r[idxData]  : null,
-      status:    idxStatus >= 0 ? r[idxStatus] : null,
-    }))
-}
-
-function extrairListaTexto(container: Element): string[] {
-  const items: string[] = []
-  for (const el of Array.from(container.querySelectorAll('li, td, p'))) {
-    const t = limpar(el.textContent)
-    if (t && t.length > 2) items.push(t)
-  }
-  if (items.length === 0) {
-    const t = limpar(container.textContent)
-    if (t) items.push(t)
-  }
-  return [...new Set(items)]
-}
-
-// ── Busca a seção seguinte a um heading ───────────────────────────────────────
-
-function encontrarSecao(doc: Document | Element, re: RegExp): Element | null {
-  const headings = Array.from(doc.querySelectorAll('h1,h2,h3,h4,h5,th,td,b,strong,span'))
-  for (const h of headings) {
-    if (re.test(limpar(h.textContent))) {
-      // Tenta próximo elemento irmão
-      let sib = h.nextElementSibling
-      while (sib) {
-        if (sib.tagName === 'TABLE' || sib.querySelectorAll('tr').length > 0) return sib
-        if (sib.querySelector('table, li, p')) return sib
-        sib = sib.nextElementSibling
-      }
-      // Tenta elemento pai
-      const parent = h.parentElement
-      if (parent) {
-        const table = parent.querySelector('table')
-        if (table) return table
-      }
+function encontrarSecao(processoDiv: Element, nomeExato: string): Element | null {
+  for (const h5 of Array.from(processoDiv.querySelectorAll('h5'))) {
+    const texto = limpar(h5.querySelector('strong')?.textContent ?? h5.textContent ?? '')
+    if (texto.toLowerCase() === nomeExato.toLowerCase()) {
+      return h5.parentElement   // a div que contém o h5 e os itens
     }
   }
   return null
 }
 
-// ── Parser de um único bloco de processo ──────────────────────────────────────
+// ── Extrai itens de uma seção (cada item = <div class="my-2 ..."> ─────────────
 
-/**
- * Extrai todos os campos de um trecho do documento relativo a um processo.
- * `root` pode ser o documento inteiro (relatório de 1 processo) ou
- * uma seção específica (relatório com múltiplos processos).
- */
-function parseProcessoBloco(root: Document | Element, numeroProcesso: string): EasyJurProcesso {
-  const avisos:  string[] = []
+function extrairItensSecao(secaoEl: Element): Array<Record<string, string>> {
+  const itens: Array<Record<string, string>> = []
+  for (const itemDiv of Array.from(secaoEl.querySelectorAll('.my-2'))) {
+    const campos = extrairCamposDoContainer(itemDiv)
+    if (Object.keys(campos).length > 0) itens.push(campos)
+  }
+  return itens
+}
+
+// ── Mapeamentos de tipo ────────────────────────────────────────────────────────
+
+function mapTipoEvento(raw: string | undefined): EasyJurPrazo['tipo'] {
+  if (!raw) return 'outro'
+  const n = raw.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').trim()
+  if (/audiencia|julgamento/.test(n)) return 'audiencia'
+  if (/prazo/.test(n))               return 'prazo'
+  if (/tarefa/.test(n))              return 'tarefa'
+  return 'outro'
+}
+
+function mapStatusAgenda(raw: string | undefined): string {
+  const n = (raw ?? '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').trim()
+  if (/conclu|realiz|done/.test(n)) return 'concluido'
+  return 'pendente'
+}
+
+// ── Parser do bloco de um processo ────────────────────────────────────────────
+
+function parseProcesso(processoDiv: Element): EasyJurProcesso {
   const naoEncontrados: string[] = []
+  const avisos: string[] = []
 
-  // ── 1. Campos de cabeçalho via tabelas de label→valor ──────────────────────
-  const campos: Record<string, string> = {}
-  for (const table of Array.from(root.querySelectorAll('table'))) {
-    Object.assign(campos, extrairParesDaTabela(table))
-  }
+  // ── 1. Número do processo (do header) ──────────────────────────────────────
+  const headerEl = processoDiv.querySelector('.header h5 strong, .header strong')
+  const headerText = limpar(headerEl?.textContent ?? '')
+  const numeroMatch = headerText.match(/\d[\d\-./]+\d/)
+  const numero_processo = numeroMatch ? limpar(numeroMatch[0]) : null
 
-  // ── 2. Campos não encontrados via regex no texto bruto ─────────────────────
-  const textoTotal = limpar(root instanceof Document ? root.body?.textContent : root.textContent)
+  // ── 2. Campos principais (tabela logo após o header) ───────────────────────
+  // A tabela de campos fica dentro do primeiro <div> filho (sem class="header")
+  const mainTable = processoDiv.querySelector(':scope > div:not([class*="header"]) > table, :scope > div > div > table')
+  const campos: Record<string, string> = mainTable
+    ? extrairCamposDoContainer(mainTable)
+    : {}
 
-  function campoOuRegex(key: string, re: RegExp): string | null {
-    if (campos[key]) return campos[key]
-    const m = textoTotal.match(re)
-    return m ? limpar(m[0]) : null
-  }
+  // Aliases exatos do EasyJur → nosso sistema
+  const cliente           = campos['cliente']          || null
+  const parteContraria    = campos['contrario']        || null   // ← "Contrário", não "Parte Contrária"
+  const responsavel       = campos['advogado']         || null   // ← "Advogado", não "Responsável"
+  const titulo            = campos['titulo']           || null
+  const areaRaw           = campos['area']             || null
+  const statusRaw         = campos['status_processo']  || null
+  const tribunal          = campos['tribunal']         || null
+  const vara              = campos['vara']             || null
+  const comarca           = campos['comarca']          || null
+  const uf                = campos['uf']               || null
+  const cpfCnpj           = campos['cpf_cnpj']        || campos['cpf'] || campos['cnpj'] || null
+  const valorCausa        = campos['valor_da_causa']   || null
+  const dataDistribuicao  = campos['data_de_distribuicao'] || null
+  const fase              = campos['fase_atual']       || null
+  const observacoes       = campos['observacoes']      || null
 
-  const cliente       = campos['cliente']       ?? null
-  const cpfCnpj       = campoOuRegex('cpf_cnpj_cliente', new RegExp(`(${RE_CPF.source}|${RE_CNPJ.source})`))
-  const parteContraria = campos['parte_contraria'] ?? null
-  const responsavel   = campos['responsavel']   ?? null
-  const status        = campos['status']        ?? null
-  const areaDireito   = campos['area_direito']  ?? null
-  const tribunal      = campos['tribunal']      ?? null
-  const vara          = campos['vara']          ?? null
-
-  // Partes vinculadas: qualquer partes_vinculadas ou terceiros
-  const partesVinculadas: string[] = []
-  const secaoPartes = encontrarSecao(root, /partes?\s+vinculad|terceiro|litisconsorte/i)
-  if (secaoPartes) partesVinculadas.push(...extrairListaTexto(secaoPartes))
-
-  // Campos obrigatórios ausentes
-  if (!cliente)       naoEncontrados.push('cliente')
+  if (!cliente)        naoEncontrados.push('cliente')
   if (!parteContraria) naoEncontrados.push('parte_contraria')
-  if (!responsavel)   naoEncontrados.push('responsavel')
-  if (!status)        naoEncontrados.push('status')
+  if (!responsavel)    naoEncontrados.push('responsavel')
 
-  // ── 3. Andamentos ──────────────────────────────────────────────────────────
+  // ── 3. Partes (seção "Partes") ──────────────────────────────────────────────
+  const partesVinculadas: string[] = []
+  const secaoPartes = encontrarSecao(processoDiv, 'Partes')
+  if (secaoPartes) {
+    for (const item of extrairItensSecao(secaoPartes)) {
+      const nome = item['nome_da_parte']?.trim()
+      const qual = (item['qualificacao'] ?? '').trim().toLowerCase()
+      if (nome) {
+        // Autor = cliente (já extraído dos campos principais)
+        // Reu = parte contrária (já extraído)
+        // Outros = partes vinculadas
+        if (qual !== 'autor' && qual !== 'reu') {
+          partesVinculadas.push(nome)
+        } else if (qual === 'reu' && !parteContraria) {
+          // fallback: se não encontrou contrário no header, pega da seção Partes
+        }
+      }
+    }
+  }
+
+  // ── 4. Andamentos (item 1 = mais recente) ─────────────────────────────────
   let andamentos: EasyJurAndamento[] = []
-  const secaoAnd = encontrarSecao(root, SECAO_ANDAMENTOS)
+  const secaoAnd = encontrarSecao(processoDiv, 'Andamentos')
   if (secaoAnd) {
-    const tbl = secaoAnd.tagName === 'TABLE' ? secaoAnd : secaoAnd.querySelector('table')
-    if (tbl) andamentos = parseAndamentos(tbl)
+    for (const item of extrairItensSecao(secaoAnd)) {
+      andamentos.push({
+        data:      item['data_andamento'] || null,
+        tipo:      item['tipo_do_andamento'] || null,
+        descricao: item['descricao'] || item['descricao_'] || '',
+      })
+    }
   }
 
-  // Último andamento real: último da lista (cronológico) ou regex no texto
-  let ultimoAndamento: string | null = null
-  if (andamentos.length > 0) {
-    const last = andamentos[andamentos.length - 1]
-    ultimoAndamento = [last.data, last.tipo, last.descricao].filter(Boolean).join(' — ')
-  } else {
-    // Tenta extrair "Último andamento" como label
-    ultimoAndamento = campos['ultimo_andamento'] ?? null
-    if (!ultimoAndamento) naoEncontrados.push('ultimo_andamento')
+  // Último andamento real = primeiro da lista (EasyJur ordena do mais recente para o mais antigo)
+  const ultimoAndamento = andamentos.length > 0
+    ? [andamentos[0].data, andamentos[0].tipo, andamentos[0].descricao].filter(Boolean).join(' — ')
+    : null
+
+  // ── 5. Agendamentos (prazos + audiências + tarefas) ───────────────────────
+  const prazos:    EasyJurPrazo[] = []
+  const audiencias: EasyJurPrazo[] = []
+  const tarefas:   EasyJurPrazo[] = []
+
+  const secaoAg = encontrarSecao(processoDiv, 'Agendamentos')
+  if (secaoAg) {
+    for (const item of extrairItensSecao(secaoAg)) {
+      const tipoEvento = mapTipoEvento(item['tipo_evento'])
+      const prazo: EasyJurPrazo = {
+        titulo:    item['descricao'] || item['tipo_evento'] || 'Agendamento',
+        data:      item['data_fatal'] || item['data_interna'] || null,
+        tipo:      tipoEvento,
+        status:    mapStatusAgenda(item['status']),
+        prioridade: null,
+        local:     null,
+      }
+      if (tipoEvento === 'audiencia') audiencias.push(prazo)
+      else if (tipoEvento === 'tarefa') tarefas.push(prazo)
+      else prazos.push(prazo)
+    }
   }
 
-  // ── 4. Prazos ──────────────────────────────────────────────────────────────
-  let prazos: EasyJurPrazo[] = []
-  const secaoPrazos = encontrarSecao(root, SECAO_PRAZOS)
-  if (secaoPrazos) {
-    const tbl = secaoPrazos.tagName === 'TABLE' ? secaoPrazos : secaoPrazos.querySelector('table')
-    if (tbl) prazos = parsePrazos(tbl, 'prazo')
+  // ── 6. Honorários / Receitas ───────────────────────────────────────────────
+  const honorarios: EasyJurHonorario[] = []
+  const secaoRec = encontrarSecao(processoDiv, 'Receitas')
+  if (secaoRec) {
+    for (const item of extrairItensSecao(secaoRec)) {
+      const desc  = item['descricao'] || item['historico'] || item['tipo'] || ''
+      const valor = Object.values(item).find(v => /r\$/.test(v.toLowerCase()))
+      honorarios.push({
+        descricao: desc,
+        valor:     valor ? parseMoeda(valor) : null,
+        data:      item['data'] || item['data_vencimento'] || null,
+        status:    item['status'] || null,
+      })
+    }
   }
 
-  // ── 5. Audiências ──────────────────────────────────────────────────────────
-  let audiencias: EasyJurPrazo[] = []
-  const secaoAud = encontrarSecao(root, SECAO_AUDIENCIAS)
-  if (secaoAud) {
-    const tbl = secaoAud.tagName === 'TABLE' ? secaoAud : secaoAud.querySelector('table')
-    if (tbl) audiencias = parsePrazos(tbl, 'audiencia')
+  // ── 7. Custas / Despesas ───────────────────────────────────────────────────
+  const custas: EasyJurHonorario[] = []
+  const secaoDes = encontrarSecao(processoDiv, 'Despesas')
+  if (secaoDes) {
+    for (const item of extrairItensSecao(secaoDes)) {
+      const desc  = item['descricao'] || item['historico'] || item['tipo'] || ''
+      const valor = Object.values(item).find(v => /r\$/.test(v.toLowerCase()))
+      custas.push({
+        descricao: desc,
+        valor:     valor ? parseMoeda(valor) : null,
+        data:      item['data'] || item['data_vencimento'] || null,
+        status:    item['status'] || null,
+      })
+    }
   }
 
-  // ── 6. Tarefas ─────────────────────────────────────────────────────────────
-  let tarefas: EasyJurPrazo[] = []
-  const secaoTar = encontrarSecao(root, SECAO_TAREFAS)
-  if (secaoTar) {
-    const tbl = secaoTar.tagName === 'TABLE' ? secaoTar : secaoTar.querySelector('table')
-    if (tbl) tarefas = parsePrazos(tbl, 'tarefa')
-  }
-
-  // ── 7. Financeiro ──────────────────────────────────────────────────────────
-  let honorarios: EasyJurHonorario[] = []
-  let custas:     EasyJurHonorario[] = []
-  let alvaras:    EasyJurHonorario[] = []
-
-  const secaoHon = encontrarSecao(root, SECAO_HONORARIOS)
-  if (secaoHon) {
-    const tbl = secaoHon.tagName === 'TABLE' ? secaoHon : secaoHon.querySelector('table')
-    if (tbl) honorarios = parseHonorarios(tbl)
-  }
-
-  const secaoCus = encontrarSecao(root, SECAO_CUSTAS)
-  if (secaoCus) {
-    const tbl = secaoCus.tagName === 'TABLE' ? secaoCus : secaoCus.querySelector('table')
-    if (tbl) custas = parseHonorarios(tbl)
-  }
-
-  const secaoAlv = encontrarSecao(root, SECAO_ALVARAS)
+  // ── 8. Alvarás e Depósitos ─────────────────────────────────────────────────
+  const alvaras: EasyJurHonorario[] = []
+  const secaoAlv = encontrarSecao(processoDiv, 'Alvarás e Depósitos')
   if (secaoAlv) {
-    const tbl = secaoAlv.tagName === 'TABLE' ? secaoAlv : secaoAlv.querySelector('table')
-    if (tbl) alvaras = parseHonorarios(tbl)
+    for (const item of extrairItensSecao(secaoAlv)) {
+      alvaras.push({
+        descricao: item['descricao'] || item['tipo'] || '',
+        valor:     item['valor'] ? parseMoeda(item['valor']) : null,
+        data:      item['data'] || null,
+        status:    item['status'] || null,
+      })
+    }
   }
 
-  // ── 8. Dados complementares ─────────────────────────────────────────────────
-
-  const incidentes: string[] = []
-  const secaoInc = encontrarSecao(root, SECAO_INCIDENTES)
-  if (secaoInc) incidentes.push(...extrairListaTexto(secaoInc))
-
-  const processoApensados: string[] = []
-  const secaoAp = encontrarSecao(root, SECAO_APENSADOS)
-  if (secaoAp) {
-    const nums = (secaoAp.textContent ?? '').match(RE_PROCESSO) ?? []
-    processoApensados.push(...nums)
+  // ── 9. Processos Vinculados ────────────────────────────────────────────────
+  const processosApensados: string[] = []
+  const secaoVin = encontrarSecao(processoDiv, 'Processos Vinculados')
+  if (secaoVin) {
+    const textoVin = limpar(secaoVin.textContent ?? '')
+    const nums = textoVin.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g) ?? []
+    processosApensados.push(...nums)
   }
 
+  // ── 10. Pedidos ────────────────────────────────────────────────────────────
   const pedidos: string[] = []
-  const secaoPed = encontrarSecao(root, SECAO_PEDIDOS)
-  if (secaoPed) pedidos.push(...extrairListaTexto(secaoPed))
+  const secaoPed = encontrarSecao(processoDiv, 'Pedidos')
+  if (secaoPed) {
+    for (const item of extrairItensSecao(secaoPed)) {
+      const texto = Object.values(item).join(' ').trim()
+      if (texto) pedidos.push(texto)
+    }
+  }
 
+  // ── 11. Documentos Anexados ────────────────────────────────────────────────
   const documentos: string[] = []
-  const secaoDoc = encontrarSecao(root, SECAO_DOCUMENTOS)
-  if (secaoDoc) documentos.push(...extrairListaTexto(secaoDoc))
+  const secaoDoc = encontrarSecao(processoDiv, 'Documentos Anexados')
+  if (secaoDoc) {
+    for (const item of extrairItensSecao(secaoDoc)) {
+      const arquivo = item['arquivo'] || ''
+      const data    = item['data']    || ''
+      if (arquivo) documentos.push(`${data} — ${arquivo}`.trim().replace(/^— /, ''))
+    }
+  }
 
   return {
-    numero_processo:     numeroProcesso,
-    titulo:             null,   // gerado pela API com base no número/cliente
-    area_direito:       areaDireito,
-    status,
+    numero_processo,
+    titulo,
+    area_direito:       areaRaw,
+    status:             statusRaw,
     tribunal,
-    vara,
+    vara:               vara || comarca,        // comarca como fallback de vara
     cliente,
     cpf_cnpj_cliente:   cpfCnpj,
     parte_contraria:    parteContraria,
@@ -418,8 +386,8 @@ function parseProcessoBloco(root: Document | Element, numeroProcesso: string): E
     honorarios,
     custas,
     alvaras,
-    incidentes,
-    processos_apensados: processoApensados,
+    incidentes:         [],
+    processos_apensados: processosApensados,
     pedidos,
     documentos,
     campos_nao_encontrados: naoEncontrados,
@@ -427,92 +395,42 @@ function parseProcessoBloco(root: Document | Element, numeroProcesso: string): E
   }
 }
 
-// ── Estratégia multi-processo ─────────────────────────────────────────────────
-
-/**
- * Tenta dividir o documento em blocos por processo.
- * Estratégias:
- *  A) Elementos com atributo id/class contendo o número de processo
- *  B) Headings que contêm o número de processo
- *  C) Documento inteiro = 1 processo
- */
-function encontrarBlocosProcesso(doc: Document): Array<{ numero: string; root: Element | Document }> {
-  const blocos: Array<{ numero: string; root: Element | Document }> = []
-  const texto = doc.body?.textContent ?? ''
-  const numeros = [...new Set([...texto.matchAll(RE_PROCESSO)].map(m => m[0]))]
-
-  if (numeros.length === 0) return blocos
-
-  if (numeros.length === 1) {
-    // Relatório de processo único
-    blocos.push({ numero: numeros[0], root: doc })
-    return blocos
-  }
-
-  // Tenta encontrar seções separadas por heading ou div
-  for (const numero of numeros) {
-    const re = new RegExp(numero.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    // Busca element que contenha APENAS esse número (para evitar doc inteiro)
-    const candidates = Array.from(doc.querySelectorAll('[id],[class],h1,h2,h3,h4,div,section'))
-    for (const el of candidates) {
-      const idClass = `${el.id ?? ''} ${el.className ?? ''}`
-      if (re.test(idClass)) {
-        blocos.push({ numero, root: el })
-        break
-      }
-    }
-    if (!blocos.find(b => b.numero === numero)) {
-      // Fallback: encontra a primeira ocorrência e pega o container pai
-      const walker = doc.createTreeWalker(doc.body ?? doc, NodeFilter.SHOW_TEXT)
-      let node: Text | null
-      while ((node = walker.nextNode() as Text | null)) {
-        if (re.test(node.textContent ?? '')) {
-          let el: Element | null = node.parentElement
-          // Sobe até encontrar um container significativo
-          while (el && !['DIV', 'SECTION', 'ARTICLE', 'TD'].includes(el.tagName)) {
-            el = el.parentElement
-          }
-          blocos.push({ numero, root: el ?? doc })
-          break
-        }
-      }
-    }
-  }
-
-  return blocos
-}
-
 // ── Ponto de entrada público ──────────────────────────────────────────────────
 
 /**
  * Faz o parse do HTML do Relatório Analítico do EasyJur.
- * Roda no browser — usa DOMParser (sem dependências extras).
+ * Roda no browser — usa DOMParser nativo, sem dependências extras.
  */
 export function parseEasyJurHtml(htmlText: string, arquivoNome: string): EasyJurParseResult {
   const errosGlobais: string[] = []
 
-  // Sanitiza BOM e parse
-  const clean = htmlText.replace(/^﻿/, '')
+  const clean = htmlText.replace(/^﻿/, '')   // remove BOM
   let doc: Document
   try {
     doc = new DOMParser().parseFromString(clean, 'text/html')
   } catch {
-    return { processos: [], arquivo_nome: arquivoNome, total_encontrados: 0, erros_parse: ['Falha ao interpretar o HTML — arquivo inválido ou corrompido.'] }
+    return {
+      processos: [],
+      arquivo_nome: arquivoNome,
+      total_encontrados: 0,
+      erros_parse: ['Falha ao interpretar o HTML — arquivo inválido ou corrompido.'],
+    }
   }
 
-  if (!doc.body || !doc.body.textContent?.trim()) {
-    errosGlobais.push('O arquivo HTML está vazio ou não contém texto legível.')
+  // Cada processo está em <div class="container-processo">
+  const containers = Array.from(doc.querySelectorAll('.container-processo'))
+
+  if (containers.length === 0) {
+    errosGlobais.push(
+      'Nenhum bloco de processo encontrado. ' +
+      'Verifique se o arquivo é o Relatório Analítico do EasyJur salvo como HTML completo.'
+    )
     return { processos: [], arquivo_nome: arquivoNome, total_encontrados: 0, erros_parse: errosGlobais }
   }
 
-  const blocos = encontrarBlocosProcesso(doc)
-
-  if (blocos.length === 0) {
-    errosGlobais.push('Nenhum número de processo (formato CNJ) encontrado no arquivo.')
-    return { processos: [], arquivo_nome: arquivoNome, total_encontrados: 0, erros_parse: errosGlobais }
-  }
-
-  const processos = blocos.map(({ numero, root }) => parseProcessoBloco(root, numero))
+  const processos = containers
+    .map(div => parseProcesso(div))
+    .filter(p => p.numero_processo !== null)    // descarta blocos sem número
 
   return {
     processos,
