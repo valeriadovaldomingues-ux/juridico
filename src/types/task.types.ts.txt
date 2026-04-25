@@ -1,0 +1,44 @@
+export type TaskStatus =
+  | "a_fazer"
+  | "fazendo"
+  | "com_pendencia"
+  | "concluido";
+
+export type TaskPriority = "baixa" | "media" | "alta" | "urgente";
+
+export interface Task {
+  id: string;
+  process_id: string | null;
+  numero_processo: string;
+  partes_resumidas: string;
+  titulo: string;
+  descricao: string;
+  responsavel_id: string;
+  responsavel_nome: string;
+  status: TaskStatus;
+  prioridade: TaskPriority;
+  prazo: string | null;
+  ordem: number;
+  area_juridica: string;
+  pendencia_motivo: string | null;
+  created_at: string;
+  updated_at: string;
+  concluido_em: string | null;
+}
+
+export interface KanbanColumnData {
+  id: string;
+  title: string;
+  type: "status" | "responsavel";
+}
+
+export interface TaskMovementHistory {
+  id: string;
+  task_id: string;
+  de_status: TaskStatus | null;
+  para_status: TaskStatus | null;
+  de_responsavel_id: string | null;
+  para_responsavel_id: string | null;
+  moved_at: string;
+  moved_by: string;
+}

@@ -1,0 +1,333 @@
+import type { UserRole } from '@/types'
+
+// ─── Labels e cores por perfil ────────────────────────────────────────────────
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  estagiario:     'Estagiário',
+  comercial:      'Comercial',
+  administrativo: 'Administrativo',
+  advogado:       'Advogado',
+  gerente:        'Gerente',
+  socio:          'Sócio',
+}
+
+export const ROLE_COLORS: Record<UserRole, string> = {
+  estagiario:     'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200/80',
+  comercial:      'bg-orange-50 text-orange-700 ring-1 ring-orange-200/80',
+  administrativo: 'bg-sky-50 text-sky-700 ring-1 ring-sky-200/80',
+  advogado:       'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
+  gerente:        'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80',
+  socio:          'bg-violet-50 text-violet-700 ring-1 ring-violet-200/80',
+}
+
+// ─── Módulos e Ações ──────────────────────────────────────────────────────────
+
+/**
+ * Módulos funcionais do sistema.
+ * Cada módulo pode ter ações independentes por perfil.
+ */
+export type Module =
+  | 'dashboard'
+  | 'clientes'
+  | 'processos'
+  | 'partes'        // partes do processo (vinculado ao módulo processos)
+  | 'agenda'
+  | 'kanban'
+  | 'publicacoes'
+  | 'documentos'
+  | 'importacao'
+  | 'financeiro'
+  | 'comercial'
+  | 'relatorios'
+  | 'monitoramento'
+  | 'usuarios'
+  | 'configuracoes'
+
+/**
+ * Ações possíveis por módulo.
+ * - view:   visualizar o módulo / lista de registros
+ * - create: criar novos registros
+ * - edit:   editar registros existentes
+ * - delete: excluir registros
+ * - manage: administração total (usuários, configurações)
+ */
+export type Action = 'view' | 'create' | 'edit' | 'delete' | 'manage'
+
+// ─── Matriz de Permissões ─────────────────────────────────────────────────────
+//
+// Fonte de verdade única para o controle de acesso por perfil.
+// Use can(role, module, action) para verificar permissão em qualquer contexto.
+//
+// Convenções:
+//  - Ausência de um módulo = sem acesso algum
+//  - 'delete' é sempre restrito; apenas gerente/sócio em módulos operacionais,
+//    apenas sócio em módulos críticos (financeiro, usuarios)
+//  - 'manage' indica acesso administrativo total (além do CRUD)
+
+type PermMatrix = Record<UserRole, Partial<Record<Module, Action[]>>>
+
+const PERMISSIONS: PermMatrix = {
+
+  // ── Estagiário ───────────────────────────────────────────────────────────────
+  // Acesso de leitura majoritariamente. Pode criar/editar apenas em módulos
+  // operacionais de baixo risco (agenda e kanban próprios, upload de docs).
+  estagiario: {
+    dashboard:   ['view'],
+    clientes:    ['view'],
+    processos:   ['view'],
+    partes:      ['view'],
+    agenda:      ['view', 'create', 'edit'],
+    kanban:      ['view', 'create', 'edit'],
+    publicacoes: ['view'],
+    documentos:  ['view', 'create'],
+  },
+
+  // ── Comercial ────────────────────────────────────────────────────────────────
+  // Foco no pipeline comercial e CRM. Sem acesso a módulos jurídicos, financeiros
+  // ou de configuração. Pode criar e editar clientes e leads.
+  comercial: {
+    dashboard:  ['view'],
+    clientes:   ['view', 'create', 'edit'],
+    agenda:     ['view', 'create', 'edit'],
+    kanban:     ['view', 'create', 'edit'],
+    documentos: ['view', 'create'],
+    comercial:  ['view', 'create', 'edit', 'delete'],
+  },
+
+  // ── Administrativo ───────────────────────────────────────────────────────────
+  // Acesso operacional completo, sem exclusão generalizada e sem módulos
+  // estratégicos (financeiro completo, relatórios gerenciais, configurações).
+  administrativo: {
+    dashboard:    ['view'],
+    clientes:     ['view', 'create', 'edit'],
+    processos:    ['view', 'create', 'edit'],
+    partes:       ['view', 'create', 'edit'],
+    agenda:       ['view', 'create', 'edit', 'delete'],
+    kanban:       ['view', 'create', 'edit', 'delete'],
+    publicacoes:  ['view', 'edit'],
+    documentos:   ['view', 'create', 'edit', 'delete'],
+    importacao:   ['view', 'create'],
+    comercial:    ['view'],
+    monitoramento: ['view'],
+  },
+
+  // ── Advogado ─────────────────────────────────────────────────────────────────
+  // Acesso jurídico completo. Pode tratar publicações, criar prazos, editar
+  // registros vinculados à sua atuação. Sem financeiro e sem gestão de usuários.
+  advogado: {
+    dashboard:    ['view'],
+    clientes:     ['view', 'create', 'edit'],
+    processos:    ['view', 'create', 'edit'],
+    partes:       ['view', 'create', 'edit'],
+    agenda:       ['view', 'create', 'edit', 'delete'],
+    kanban:       ['view', 'create', 'edit', 'delete'],
+    publicacoes:  ['view', 'create', 'edit'],
+    documentos:   ['view', 'create', 'edit'],
+    relatorios:   ['view'],
+    monitoramento: ['view'],
+  },
+
+  // ── Gerente ──────────────────────────────────────────────────────────────────
+  // Visão operacional completa. Acesso de leitura ao financeiro e relatórios.
+  // Pode visualizar equipe, redistribuir tarefas. Sem gestão de usuários por padrão.
+  gerente: {
+    dashboard:    ['view'],
+    clientes:     ['view', 'create', 'edit'],
+    processos:    ['view', 'create', 'edit'],
+    partes:       ['view', 'create', 'edit'],
+    agenda:       ['view', 'create', 'edit', 'delete'],
+    kanban:       ['view', 'create', 'edit', 'delete'],
+    publicacoes:  ['view', 'create', 'edit'],
+    documentos:   ['view', 'create', 'edit'],
+    importacao:   ['view', 'create'],
+    relatorios:   ['view'],
+    monitoramento: ['view'],
+    usuarios:     ['view', 'create', 'edit'],
+  },
+
+  // ── Sócio ────────────────────────────────────────────────────────────────────
+  // Acesso total ao sistema. Único perfil que pode excluir registros críticos,
+  // gerenciar usuários e acessar configurações.
+  socio: {
+    dashboard:    ['view'],
+    clientes:     ['view', 'create', 'edit', 'delete'],
+    processos:    ['view', 'create', 'edit', 'delete'],
+    partes:       ['view', 'create', 'edit', 'delete'],
+    agenda:       ['view', 'create', 'edit', 'delete'],
+    kanban:       ['view', 'create', 'edit', 'delete'],
+    publicacoes:  ['view', 'create', 'edit', 'delete'],
+    documentos:   ['view', 'create', 'edit', 'delete'],
+    importacao:   ['view', 'create'],
+    financeiro:   ['view', 'create', 'edit', 'delete'],
+    comercial:    ['view', 'create', 'edit', 'delete'],
+    relatorios:   ['view'],
+    monitoramento: ['view', 'create', 'edit', 'manage'],
+    usuarios:     ['view', 'create', 'edit', 'delete', 'manage'],
+    configuracoes: ['view', 'edit', 'manage'],
+  },
+}
+
+// ─── Helper principal ─────────────────────────────────────────────────────────
+
+/**
+ * Verifica se um perfil pode executar uma ação em um módulo.
+ *
+ * @example
+ * can('advogado', 'processos', 'edit')   // true
+ * can('estagiario', 'financeiro', 'view') // false
+ * can('socio', 'usuarios', 'manage')     // true
+ */
+export function can(role: UserRole, module: Module, action: Action = 'view'): boolean {
+  return PERMISSIONS[role]?.[module]?.includes(action) ?? false
+}
+
+/**
+ * Helpers de conveniência para os casos mais comuns.
+ * Evitam repetição de action strings no código.
+ */
+export const canView   = (role: UserRole, module: Module) => can(role, module, 'view')
+export const canCreate = (role: UserRole, module: Module) => can(role, module, 'create')
+export const canEdit   = (role: UserRole, module: Module) => can(role, module, 'edit')
+export const canDelete = (role: UserRole, module: Module) => can(role, module, 'delete')
+export const canManage = (role: UserRole, module: Module) => can(role, module, 'manage')
+
+// ─── Rotas permitidas por perfil (sidebar) ────────────────────────────────────
+//
+// Define quais hrefs aparecem na sidebar. Alinhado com a coluna 'view' da matriz
+// acima. Separado para manter a navegação independente do PERMISSIONS map.
+
+export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
+  estagiario: [
+    '/dashboard',
+    '/processos',
+    '/agenda',
+    '/kanban',
+  ],
+  comercial: [
+    '/dashboard',
+    '/clientes',
+    '/comercial',
+    '/agenda',
+    '/kanban',
+  ],
+  administrativo: [
+    '/dashboard',
+    '/clientes',
+    '/processos',
+    '/agenda',
+    '/kanban',
+    '/publicacoes',
+    '/documentos',
+    '/comercial',
+    '/importar',
+  ],
+  advogado: [
+    '/dashboard',
+    '/clientes',
+    '/processos',
+    '/agenda',
+    '/kanban',
+    '/publicacoes',
+    '/documentos',
+    '/relatorios',
+    '/monitoramento',
+    '/ia-juridica',
+  ],
+  gerente: [
+    '/dashboard',
+    '/clientes',
+    '/processos',
+    '/agenda',
+    '/kanban',
+    '/publicacoes',
+    '/documentos',
+    '/relatorios',
+    '/importar',
+    '/automacoes',
+    '/monitoramento',
+    '/ia-juridica',
+    '/integracoes/trello',
+    '/configuracoes/usuarios',
+  ],
+  socio: [
+    '/dashboard',
+    '/clientes',
+    '/processos',
+    '/agenda',
+    '/kanban',
+    '/publicacoes',
+    '/financeiro',
+    '/documentos',
+    '/comercial',
+    '/relatorios',
+    '/importar',
+    '/automacoes',
+    '/monitoramento',
+    '/ia-juridica',
+    '/integracoes/trello',
+    '/configuracoes/usuarios',
+    '/configuracoes',
+  ],
+}
+
+// ─── Rotas restritas (enforcement no proxy) ───────────────────────────────────
+//
+// Paths mais específicos devem vir antes dos mais genéricos.
+// Esta lista é inlined em proxy.ts por compatibilidade com edge runtime.
+
+export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
+  { prefix: '/financeiro',             roles: ['socio'] },
+  { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
+  { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
+  { prefix: '/configuracoes/usuarios', roles: ['gerente', 'socio'] },
+  { prefix: '/configuracoes',          roles: ['socio'] },
+]
+
+/**
+ * Retorna se um perfil pode acessar uma rota.
+ * Usado por guards server-side. O proxy.ts tem a mesma lógica inlined
+ * para compatibilidade com edge runtime.
+ */
+export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
+  for (const { prefix, roles } of RESTRICTED_ROUTES) {
+    if (pathname.startsWith(prefix)) return roles.includes(role)
+  }
+  return true
+}
+
+// ─── Extensão futura: acesso por processo ────────────────────────────────────
+//
+// Hoje: todos os usuários autenticados veem todos os processos.
+// Para ativar restrição por responsável/equipe (fase 2), consultar:
+//   supabase/rbac_migration.sql — seção "Restrição por responsável"
+
+export function canAccessProcesso(
+  _role: UserRole,
+  _userId: string,
+  _processoResponsavelId: string | null,
+): boolean {
+  return true
+  // Fase 2:
+  // return ['socio', 'gerente'].includes(_role) || _processoResponsavelId === _userId
+}
+
+// ─── canAccessModule ──────────────────────────────────────────────────────────
+/**
+ * Verifica se um perfil pode visualizar (acessar) um módulo.
+ * Equivale a canView, nomeado para clareza semântica.
+ */
+export const canAccessModule = (role: UserRole, module: Module) => can(role, module, 'view')
+
+// ─── Redirecionamento pós-login por perfil ────────────────────────────────────
+//
+// Define para qual rota cada perfil é enviado imediatamente após o login.
+// 'comercial' vai direto para o módulo comercial; demais vão para o dashboard.
+
+export const ROLE_REDIRECT: Record<UserRole, string> = {
+  estagiario:     '/dashboard',
+  comercial:      '/comercial',
+  administrativo: '/dashboard',
+  advogado:       '/dashboard',
+  gerente:        '/dashboard',
+  socio:          '/dashboard',
+}

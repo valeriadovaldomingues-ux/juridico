@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy:        #0F3D3E;
+  --color-navy-mid:   #145A5B;
+  --color-navy-light: #1B6E70;
+  --color-gold:       #b8903a;
+  --color-gold-light: #d4a94e;
+  --color-bg:         #F7F9F9;
+  --color-surface:    #ffffff;
+  --color-border:     #D0DCDC;
+  --color-border-2:   #E8F0F0;
+  --color-ink:        #0f1923;
+  --color-ink-2:      #3d4a5c;
+  --color-ink-3:      #7a8899;
+}
+
+html { -webkit-font-smoothing: antialiased; }
+
+body {
+  background: #F7F9F9;
+  color: #0f1923;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+* { box-sizing: border-box; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cdd4e0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a8b3c4; }
+
+/* Focus ring global */
+:focus-visible {
+  outline: 2px solid #1B6E70;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Input base */
+input, select, textarea {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+/* Transições suaves */
+a, button { transition: all 0.15s ease; }

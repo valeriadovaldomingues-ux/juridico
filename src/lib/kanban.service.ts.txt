@@ -1,0 +1,117 @@
+import { KanbanColumnData, Task, TaskStatus } from "@/types/task.types";
+
+export const statusColumns: KanbanColumnData[] = [
+  { id: "a_fazer", title: "A fazer", type: "status" },
+  { id: "fazendo", title: "Fazendo", type: "status" },
+  { id: "com_pendencia", title: "Com pendência", type: "status" },
+  { id: "concluido", title: "Concluído", type: "status" },
+];
+
+export const mockTasks: Task[] = [
+  {
+    id: "1",
+    process_id: "proc-1",
+    numero_processo: "5001234-12.2025.8.13.0001",
+    partes_resumidas: "Maria x Empresa Alfa",
+    titulo: "Elaborar contestação",
+    descricao: "Preparar minuta da contestação com preliminares e documentos.",
+    responsavel_id: "user-1",
+    responsavel_nome: "Valéria",
+    status: "a_fazer",
+    prioridade: "alta",
+    prazo: "2026-04-05",
+    ordem: 1,
+    area_juridica: "Trabalhista",
+    pendencia_motivo: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    concluido_em: null,
+  },
+  {
+    id: "2",
+    process_id: "proc-2",
+    numero_processo: "5019876-44.2025.8.13.0001",
+    partes_resumidas: "João x Construtora Beta",
+    titulo: "Analisar matrícula do imóvel",
+    descricao: "Conferir registro, ônus e cadeia dominial.",
+    responsavel_id: "user-1",
+    responsavel_nome: "Valéria",
+    status: "fazendo",
+    prioridade: "media",
+    prazo: "2026-04-07",
+    ordem: 2,
+    area_juridica: "Imobiliário",
+    pendencia_motivo: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    concluido_em: null,
+  },
+  {
+    id: "3",
+    process_id: "proc-3",
+    numero_processo: "5023333-10.2025.8.13.0001",
+    partes_resumidas: "Espólio de José",
+    titulo: "Reunir documentos do inventário",
+    descricao: "Aguardar certidão atualizada e documentos bancários.",
+    responsavel_id: "user-2",
+    responsavel_nome: "Fernanda",
+    status: "com_pendencia",
+    prioridade: "urgente",
+    prazo: "2026-04-03",
+    ordem: 1,
+    area_juridica: "Sucessões",
+    pendencia_motivo: "Cliente ainda não enviou documentação completa.",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    concluido_em: null,
+  },
+  {
+    id: "4",
+    process_id: "proc-4",
+    numero_processo: "5038888-91.2025.8.13.0001",
+    partes_resumidas: "Ana x Pedro",
+    titulo: "Protocolar acordo",
+    descricao: "Protocolo do acordo homologatório.",
+    responsavel_id: "user-3",
+    responsavel_nome: "Lucas",
+    status: "concluido",
+    prioridade: "alta",
+    prazo: "2026-04-01",
+    ordem: 1,
+    area_juridica: "Família",
+    pendencia_motivo: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    concluido_em: new Date().toISOString(),
+  },
+];
+
+export function getPersonalBoardTasks(tasks: Task[], currentUserId: string) {
+  return tasks.filter((task) => task.responsavel_id === currentUserId);
+}
+
+export function getOfficeColumns(tasks: Task[]): KanbanColumnData[] {
+  const unique = new Map<string, string>();
+
+  tasks.forEach((task) => {
+    unique.set(task.responsavel_id, task.responsavel_nome);
+  });
+
+  return Array.from(unique.entries()).map(([id, name]) => ({
+    id,
+    title: name,
+    type: "responsavel",
+  }));
+}
+
+export function getTasksByStatus(tasks: Task[], status: TaskStatus) {
+  return tasks
+    .filter((task) => task.status === status)
+    .sort((a, b) => a.ordem - b.ordem);
+}
+
+export function getTasksByResponsible(tasks: Task[], responsavelId: string) {
+  return tasks
+    .filter((task) => task.responsavel_id === responsavelId)
+    .sort((a, b) => a.ordem - b.ordem);
+}
