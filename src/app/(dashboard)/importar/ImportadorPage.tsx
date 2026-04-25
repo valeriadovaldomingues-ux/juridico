@@ -5,8 +5,9 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import {
   Upload, FileSpreadsheet, X, CheckCircle2, AlertCircle,
-  AlertTriangle, Users, Scale, ChevronRight, Loader2, RotateCcw, UserX, FileText,
+  AlertTriangle, Users, Scale, ChevronRight, Loader2, RotateCcw, UserX, FileText, FileSearch,
 } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import CsvJuridicoImporter from './CsvJuridicoImporter'
 
@@ -767,6 +768,19 @@ export default function ImportadorPage() {
             desc="Importação completa via CSV padronizado do Trello"
             onClick={() => setTipo('csv_juridico')}
           />
+          {/* EasyJur — página própria */}
+          <Link href="/importar/easyjur" className={`
+            flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all min-w-[180px]
+            border-[#145A5B]/30 bg-[#f0f7f7] hover:bg-[#e8f4f4]
+          `}>
+            <div className="p-2 rounded-xl bg-[#145A5B]/15 text-[#145A5B] shrink-0">
+              <FileSearch size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-[#145A5B]">EasyJur</p>
+              <p className="text-[11px] text-[#6b7280] mt-0.5 leading-snug">Relatório Analítico HTML</p>
+            </div>
+          </Link>
         </div>
       )}
 
