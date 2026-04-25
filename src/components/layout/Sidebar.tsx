@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2,
-  Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
+  Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap, FileSearch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -43,7 +43,8 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/financeiro',  label: 'Financeiro',  icon: DollarSign },
       { href: '/documentos',  label: 'Documentos',  icon: FileText   },
       { href: '/relatorios',  label: 'Relatórios',  icon: BarChart2  },
-      { href: '/importar',    label: 'Importar',    icon: Upload     },
+      { href: '/importar',                    label: 'Importar',         icon: Upload     },
+      { href: '/processos/importar-easyjur', label: 'EasyJur',          icon: FileSearch },
     ],
   },
   {

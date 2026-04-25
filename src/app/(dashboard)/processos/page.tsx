@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Scale } from 'lucide-react'
+import { Plus, Scale, FileSearch } from 'lucide-react'
 import ProcessosTable from './ProcessosTable'
 
 export default async function ProcessosPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -29,13 +29,22 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
             {processos?.length ?? 0} registro{(processos?.length ?? 0) !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link
-          href="/processos/novo"
-          className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
-        >
-          <Plus size={15} />
-          Novo Processo
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/processos/importar-easyjur"
+            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#f9fafb] border border-[#e5e7eb] text-[#374151] text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+          >
+            <FileSearch size={15} className="text-[#145A5B]" />
+            Importar EasyJur
+          </Link>
+          <Link
+            href="/processos/novo"
+            className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+          >
+            <Plus size={15} />
+            Novo Processo
+          </Link>
+        </div>
       </div>
       <ProcessosTable processos={processos ?? []} />
     </div>
