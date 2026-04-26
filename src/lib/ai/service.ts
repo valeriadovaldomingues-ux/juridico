@@ -46,8 +46,8 @@ export function streamTexto(
         const stream = await client.chat.completions.create({
           model:       AI_MODEL,
           messages,
-          max_tokens:  opts?.maxTokens  ?? 4096,
-          temperature: opts?.temperature ?? 0.7,
+          max_tokens:  opts?.maxTokens  ?? 8192,   // aumentado para peças completas
+          temperature: opts?.temperature ?? 0.65,
           stream:      true,
         })
 
@@ -69,7 +69,7 @@ export function streamTexto(
  */
 export async function completarJSON(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
-  opts?: { temperature?: number },
+  opts?: { temperature?: number; maxTokens?: number },
 ): Promise<string> {
   const client = getClient()
   const res = await client.chat.completions.create({
@@ -77,7 +77,7 @@ export async function completarJSON(
     messages,
     response_format: { type: 'json_object' },
     temperature:     opts?.temperature ?? 0.3,
-    max_tokens:      2048,
+    max_tokens:      opts?.maxTokens   ?? 2048,
   })
   return res.choices[0]?.message?.content ?? '{}'
 }

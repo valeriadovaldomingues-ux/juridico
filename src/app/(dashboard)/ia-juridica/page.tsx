@@ -30,7 +30,6 @@ const modulos = [
 ]
 
 export default function IAJuridicaPage() {
-  // Verificação feita no servidor — OPENAI_API_KEY nunca é exposta ao cliente
   const iaConfigurada = !!process.env.OPENAI_API_KEY
 
   return (
