@@ -7,7 +7,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Search,
   ChevronDown, ChevronLeft, ChevronRight, Upload, Plus,
   Gavel, FileText, ExternalLink, Link2, Clock, X, Sparkles,
-  Zap, Target, Play, Pause, TrendingUp, CalendarDays, Scale,
+  Zap, Target, Play, Pause, TrendingUp, CalendarDays, Scale, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as XLSX from 'xlsx'
@@ -28,6 +28,8 @@ interface Publicacao {
   processo_id?: string
   tribunal?: string
   orgao?: string
+  comarca?: string
+  vara?: string
   data_publicacao?: string
   data_disponibilizacao?: string
   nome_pesquisado: string
@@ -38,17 +40,36 @@ interface Publicacao {
   prazo_dias?: number
   prazo_data?: string
   prazo_descricao?: string
+  prazo_sugerido?: string
   audiencia_detectada: boolean
   audiencia_data?: string
   audiencia_descricao?: string
   status: 'nao_tratada' | 'tratada' | 'descartada'
+  status_revisao?: 'pendente' | 'em_revisao' | 'aprovado' | 'descartado'
+  urgencia?: 'critica' | 'alta' | 'media' | 'baixa'
   origem: string
   oab_pesquisada?: string
   hash: string
   created_at: string
   tratado_em?: string
   acao_tomada?: string
+  // Campos de fonte
+  fonte_id?: string
+  fonte_codigo?: string
+  email_remetente?: string
+  email_assunto?: string
+  message_id?: string
+  cliente?: string
+  parte_contraria?: string
   processo?: { id: string; titulo: string; numero_processo?: string } | null
+}
+
+interface FontePublicacao {
+  id: string
+  nome: string
+  codigo: string
+  tipo: 'contratado_pago' | 'tribunal_oficial' | 'diario_oficial' | 'manual'
+  ativo: boolean
 }
 
 interface Processo { id: string; titulo: string; numero_processo?: string }
@@ -1182,11 +1203,12 @@ function KanbanFromPubModal({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function PublicacoesPage({
-  initialPublicacoes, processos, advogados,
+  initialPublicacoes, processos, advogados, fontes = [],
 }: {
   initialPublicacoes: Publicacao[]
   processos: Processo[]
   advogados: Advogado[]
+  fontes?: FontePublicacao[]
 }) {
   const supabase = createClient()
   const [pubs,                  setPubs]                  = useState<Publicacao[]>(initialPublicacoes)
@@ -1255,6 +1277,9 @@ export default function PublicacoesPage({
   const [fAudiencia, setFAudiencia] = useState(false)
   const [fDe,        setFDe]        = useState('')
   const [fAte,       setFAte]       = useState('')
+  const [fFonte,     setFFonte]     = useState('')           // filtro por fonte_codigo
+  const [fRevisao,   setFRevisao]   = useState(false)        // mostrar apenas pendentes de revisão
+  const [showImportFonte, setShowImportFonte] = useState(false)
   const [page,       setPage]       = useState(1)
 
   function resetPage() { setPage(1) }
@@ -1263,7 +1288,10 @@ export default function PublicacoesPage({
   const activeStatus = modoTrabalho ? 'nao_tratada' : fStatus
 
   const filtered = pubs.filter(p => {
-    if (activeStatus !== 'todos' && p.status !== activeStatus) return false
+    // Filtro de revisão pendente (sobrepõe status)
+    if (fRevisao && p.status_revisao !== 'pendente') return false
+    if (!fRevisao && activeStatus !== 'todos' && p.status !== activeStatus) return false
+    if (fFonte && p.fonte_codigo !== fFonte) return false
     if (fTribunal && p.tribunal !== fTribunal) return false
     if (fAdvogado && !p.nome_pesquisado.toLowerCase().includes(fAdvogado.toLowerCase())) return false
     if (fProcesso && p.processo_id !== fProcesso) return false
@@ -1277,6 +1305,8 @@ export default function PublicacoesPage({
         || (p.numero_processo ?? '').includes(q)
         || (p.texto_publicacao ?? '').toLowerCase().includes(q)
         || (p.tribunal ?? '').toLowerCase().includes(q)
+        || (p.cliente ?? '').toLowerCase().includes(q)
+        || (p.parte_contraria ?? '').toLowerCase().includes(q)
       if (!ok) return false
     }
     return true
@@ -1294,6 +1324,7 @@ export default function PublicacoesPage({
   const paginated  = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // ── KPIs ───────────────────────────────────────────────────────────────────
+  const pendentesRevisao = pubs.filter(p => p.status_revisao === 'pendente').length
   const naoTratadasHoje  = pubs.filter(p => p.status === 'nao_tratada' && p.data_publicacao === today).length
   const tratadasHoje     = pubs.filter(p => p.status === 'tratada'     && p.data_publicacao === today).length
   const descartadasHoje  = pubs.filter(p => p.status === 'descartada'  && p.data_publicacao === today).length
@@ -1468,8 +1499,16 @@ export default function PublicacoesPage({
                 onClick={() => setShowImport(true)}
                 className="flex items-center gap-2 px-4 py-2 border border-[#D0DCDC] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F7F9F9] transition-colors"
               >
-                <Upload size={13} /> Importar
+                <Upload size={13} /> Importar CSV
               </button>
+              {fontes.length > 0 && (
+                <button
+                  onClick={() => setShowImportFonte(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-violet-300 bg-violet-50 text-violet-700 text-[13px] font-medium rounded-xl hover:bg-violet-100 transition-colors"
+                >
+                  <FileText size={13} /> Importar por Fonte
+                </button>
+              )}
             </div>
           </div>
           {monitoramentoFeedback && (
@@ -1542,20 +1581,60 @@ export default function PublicacoesPage({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[#F0F6F6]">
+            {/* Status tabs */}
             <div className="flex bg-[#F0F6F6] rounded-xl p-1 gap-0.5">
+              {/* Pendentes de revisão — aba especial */}
+              <button onClick={() => { setFRevisao(true); setFFonte(''); resetPage() }}
+                className={cn('px-3 py-1 rounded-lg text-[12px] font-medium transition-colors whitespace-nowrap flex items-center gap-1',
+                  fRevisao ? 'bg-amber-500 text-white shadow-sm' : 'text-[#7a8899] hover:text-[#0f1923]')}>
+                <Clock size={10} />
+                Pendentes revisão
+                {pendentesRevisao > 0 && (
+                  <span className={cn('text-[10px] font-bold rounded-full px-1.5 min-w-[18px] text-center',
+                    fRevisao ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-700')}>
+                    {pendentesRevisao}
+                  </span>
+                )}
+              </button>
               {[
                 { v: 'nao_tratada', l: 'Não tratadas' },
                 { v: 'tratada',     l: 'Tratadas'     },
                 { v: 'descartada',  l: 'Descartadas'  },
                 { v: 'todos',       l: 'Todas'        },
               ].map(({ v, l }) => (
-                <button key={v} onClick={() => { setFStatus(v); resetPage() }}
+                <button key={v} onClick={() => { setFRevisao(false); setFStatus(v); resetPage() }}
                   className={cn('px-3 py-1 rounded-lg text-[12px] font-medium transition-colors whitespace-nowrap',
-                    fStatus === v ? 'bg-white text-[#0f1923] shadow-sm' : 'text-[#7a8899] hover:text-[#0f1923]')}>
+                    !fRevisao && fStatus === v ? 'bg-white text-[#0f1923] shadow-sm' : 'text-[#7a8899] hover:text-[#0f1923]')}>
                   {l}
                 </button>
               ))}
             </div>
+
+            {/* Filtro por fonte — Themis, Oficial, TRT, TJ */}
+            {fontes.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wider">Fonte:</span>
+                <div className="flex gap-1">
+                  <button onClick={() => { setFFonte(''); resetPage() }}
+                    className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border',
+                      !fFonte ? 'bg-[#0F3D3E] text-white border-[#0F3D3E]' : 'bg-white text-[#7a8899] border-[#D0DCDC] hover:border-[#c8d8d8]')}>
+                    Todas
+                  </button>
+                  {fontes.map(f => (
+                    <button key={f.codigo} onClick={() => { setFFonte(f.codigo); setFRevisao(false); resetPage() }}
+                      className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border',
+                        fFonte === f.codigo
+                          ? f.tipo === 'contratado_pago'
+                            ? 'bg-violet-600 text-white border-violet-600'
+                            : 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-[#7a8899] border-[#D0DCDC] hover:border-[#c8d8d8]')}>
+                      {f.nome}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button onClick={() => { setFPrazo(f => !f); resetPage() }}
               className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-colors',
                 fPrazo ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]')}>
@@ -1781,6 +1860,342 @@ export default function PublicacoesPage({
           onClose={() => setKanbanPub(null)}
         />
       )}
+
+      {showImportFonte && (
+        <ImportarFonteModal
+          fontes={fontes}
+          onClose={() => setShowImportFonte(false)}
+          onImported={(novas) => {
+            setShowImportFonte(false)
+            // Recarrega publicações
+            supabase
+              .from('publicacoes')
+              .select('*, processo:processos(id, titulo, numero_processo)')
+              .order('created_at', { ascending: false })
+              .limit(300)
+              .then(({ data }) => { if (data) setPubs(data as Publicacao[]) })
+            if (novas > 0) setFRevisao(true)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Modal de importação por fonte ───────────────────────────────────────────
+
+const RE_PROCESSO_CNJ = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/g
+const RE_DATA_BR = /(\d{2})\/(\d{2})\/(\d{4})/
+
+function extrairNumeros(texto: string): string[] {
+  return [...new Set([...(texto.match(RE_PROCESSO_CNJ) ?? [])])]
+}
+
+function dataBrParaISO(s: string): string | null {
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!m) return null
+  return `${m[3]}-${m[2]}-${m[1]}`
+}
+
+function ImportarFonteModal({
+  fontes,
+  onClose,
+  onImported,
+}: {
+  fontes:      FontePublicacao[]
+  onClose:     () => void
+  onImported:  (novas: number) => void
+}) {
+  const [fonteSel,     setFonteSel]     = useState(fontes[0]?.codigo ?? '')
+  const [emailRem,     setEmailRem]     = useState('')
+  const [assunto,      setAssunto]      = useState('')
+  const [msgId,        setMsgId]        = useState('')
+  const [dataPub,      setDataPub]      = useState(todayISO())
+  const [textoPub,     setTextoPub]     = useState('')
+  const [cliente,      setCliente]      = useState('')
+  const [parteContr,   setParteContr]   = useState('')
+  const [numProc,      setNumProc]      = useState('')
+  const [tribunal,     setTribunal]     = useState('')
+  const [comarca,      setComarca]      = useState('')
+  const [vara,         setVara]         = useState('')
+  const [urgencia,     setUrgencia]     = useState<'critica'|'alta'|'media'|'baixa'>('media')
+  const [prazoSug,     setPrazoSug]     = useState('')
+  const [loading,      setLoading]      = useState(false)
+  const [resultado,    setResultado]    = useState<{ importadas: number; duplicatas: number } | null>(null)
+  const [erro,         setErro]         = useState('')
+
+  // Auto-extrai número de processo do texto colado
+  useEffect(() => {
+    if (textoPub && !numProc) {
+      const nums = extrairNumeros(textoPub)
+      if (nums.length > 0) setNumProc(nums[0])
+    }
+  }, [textoPub])
+
+  async function importar() {
+    if (!fonteSel || !textoPub) { setErro('Selecione a fonte e cole o texto da publicação.'); return }
+    setErro(''); setLoading(true)
+    try {
+      const res = await fetch('/api/publicacoes/importar-fonte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fonte_codigo: fonteSel,
+          publicacoes: [{
+            numero_processo:  numProc || null,
+            tribunal:         tribunal || null,
+            comarca:          comarca || null,
+            vara:             vara || null,
+            data_publicacao:  dataPub || null,
+            texto_publicacao: textoPub,
+            cliente:          cliente || null,
+            parte_contraria:  parteContr || null,
+            email_remetente:  emailRem || null,
+            email_assunto:    assunto || null,
+            message_id:       msgId || null,
+            urgencia:         urgencia,
+            prazo_sugerido:   prazoSug || null,
+            prazo_detectado:  false,
+          }],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErro(data.error ?? `Erro ${res.status}`); return }
+      setResultado({ importadas: data.importadas, duplicatas: data.duplicatas })
+      if (data.importadas > 0) setTimeout(() => onImported(data.importadas), 1500)
+    } catch {
+      setErro('Erro de conexão.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const TIPO_COR: Record<string, string> = {
+    contratado_pago: 'text-violet-700 bg-violet-50 border-violet-200',
+    tribunal_oficial: 'text-blue-700 bg-blue-50 border-blue-200',
+    diario_oficial: 'text-slate-600 bg-slate-50 border-slate-200',
+    manual: 'text-[#6b7280] bg-[#f9fafb] border-[#e5e7eb]',
+  }
+  const TIPO_LABEL: Record<string, string> = {
+    contratado_pago: 'Paga/Contratada',
+    tribunal_oficial: 'Tribunal Oficial',
+    diario_oficial: 'Diário Oficial',
+    manual: 'Manual',
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6]">
+          <div>
+            <h2 className="text-[15px] font-bold text-[#0f1923] flex items-center gap-2">
+              <FileText size={15} className="text-violet-600" />
+              Importar Publicação por Fonte
+            </h2>
+            <p className="text-[11px] text-[#9ca3af] mt-0.5">
+              Cole o conteúdo do e-mail recebido da fonte. Deduplicação automática por 5 critérios.
+            </p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-[#9ca3af] hover:text-[#374151] hover:bg-[#f9fafb] rounded-lg transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        {resultado ? (
+          /* Resultado */
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center',
+              resultado.importadas > 0 ? 'bg-emerald-50' : 'bg-amber-50')}>
+              {resultado.importadas > 0
+                ? <CheckCircle2 size={28} className="text-emerald-500" />
+                : <AlertTriangle size={28} className="text-amber-500" />}
+            </div>
+            <div>
+              {resultado.importadas > 0 ? (
+                <>
+                  <p className="text-[15px] font-bold text-[#0f1923]">{resultado.importadas} publicação importada</p>
+                  <p className="text-[12px] text-[#9ca3af] mt-1">Aguarda revisão em "Pendentes de revisão"</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[15px] font-bold text-[#0f1923]">Publicação já existe</p>
+                  <p className="text-[12px] text-[#9ca3af] mt-1">{resultado.duplicatas} duplicata(s) detectada(s) — não importado.</p>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Formulário */
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+            {/* Fonte */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">
+                  Fonte <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {fontes.map(f => (
+                    <button key={f.codigo} onClick={() => setFonteSel(f.codigo)}
+                      className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-semibold transition-colors',
+                        fonteSel === f.codigo
+                          ? TIPO_COR[f.tipo]
+                          : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f9fafb]')}>
+                      {f.nome}
+                      <span className="text-[9px] font-normal opacity-70">{TIPO_LABEL[f.tipo]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Data da publicação</label>
+                <input type="date" value={dataPub} onChange={e => setDataPub(e.target.value)}
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+            </div>
+
+            {/* E-mail origem */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">E-mail remetente</label>
+                <input value={emailRem} onChange={e => setEmailRem(e.target.value)}
+                  placeholder="publicacoes@themis.com.br"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Assunto do e-mail</label>
+                <input value={assunto} onChange={e => setAssunto(e.target.value)}
+                  placeholder="Publicação DJe 0001234-56.2023..."
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+            </div>
+
+            {/* Message-ID (dedup) */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">
+                Message-ID{' '}
+                <span className="font-normal text-[#9ca3af]">(opcional — para deduplicação por e-mail)</span>
+              </label>
+              <input value={msgId} onChange={e => setMsgId(e.target.value)}
+                placeholder="<abc123@mail.themis.com.br>"
+                className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] font-mono text-[12px]" />
+            </div>
+
+            {/* Texto da publicação */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">
+                Texto integral da publicação <span className="text-red-500">*</span>
+              </label>
+              <textarea value={textoPub} onChange={e => setTextoPub(e.target.value)} rows={6}
+                placeholder="Cole aqui o conteúdo completo da publicação recebida no e-mail..."
+                className="w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] resize-none leading-relaxed" />
+              {textoPub && extrairNumeros(textoPub).length > 0 && (
+                <p className="text-[11px] text-emerald-600 mt-1">
+                  ✓ Número do processo detectado: {extrairNumeros(textoPub)[0]}
+                </p>
+              )}
+            </div>
+
+            {/* Processo e partes */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Número do processo</label>
+                <input value={numProc} onChange={e => setNumProc(e.target.value)}
+                  placeholder="0000000-00.0000.0.00.0000"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] font-mono" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Tribunal</label>
+                <input value={tribunal} onChange={e => setTribunal(e.target.value)}
+                  placeholder="TRT 3ª Região"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Comarca / Vara</label>
+                <input value={vara} onChange={e => setVara(e.target.value)}
+                  placeholder="11ª Vara do Trabalho de BH"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Comarca</label>
+                <input value={comarca} onChange={e => setComarca(e.target.value)}
+                  placeholder="Belo Horizonte - MG"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Cliente</label>
+                <input value={cliente} onChange={e => setCliente(e.target.value)}
+                  placeholder="Nome do cliente"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Parte contrária</label>
+                <input value={parteContr} onChange={e => setParteContr(e.target.value)}
+                  placeholder="Nome da parte contrária"
+                  className="w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B]" />
+              </div>
+            </div>
+
+            {/* Urgência e prazo sugerido */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <div>
+                <label className="block text-[12px] font-semibold text-amber-800 mb-1.5">
+                  Urgência sugerida
+                </label>
+                <div className="flex gap-1.5">
+                  {(['critica', 'alta', 'media', 'baixa'] as const).map(u => (
+                    <button key={u} onClick={() => setUrgencia(u)}
+                      className={cn('px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors border capitalize',
+                        urgencia === u
+                          ? u === 'critica' ? 'bg-red-600 text-white border-red-600'
+                            : u === 'alta' ? 'bg-orange-500 text-white border-orange-500'
+                            : u === 'media' ? 'bg-amber-400 text-white border-amber-400'
+                            : 'bg-slate-400 text-white border-slate-400'
+                          : 'bg-white text-[#6b7280] border-[#e5e7eb]')}>
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-amber-800 mb-1.5">
+                  Prazo sugerido{' '}
+                  <span className="font-normal text-amber-600">(não cria prazo automático)</span>
+                </label>
+                <input type="date" value={prazoSug} onChange={e => setPrazoSug(e.target.value)}
+                  className="w-full px-3 py-2 text-[13px] bg-white border border-amber-300 rounded-xl outline-none focus:border-amber-500" />
+              </div>
+            </div>
+
+            {erro && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-[12px] text-red-700">
+                <AlertTriangle size={13} /> {erro}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        {!resultado && (
+          <div className="px-6 py-4 border-t border-[#f3f4f6] flex items-center justify-between">
+            <p className="text-[11px] text-[#9ca3af]">
+              A publicação entrará em "Pendentes de Revisão". Nenhum prazo é criado automaticamente.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="px-4 py-2 text-[13px] text-[#6b7280] hover:text-[#374151] transition-colors">
+                Cancelar
+              </button>
+              <button onClick={importar} disabled={loading || !fonteSel || !textoPub}
+                className="flex items-center gap-2 px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-sm">
+                {loading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                {loading ? 'Importando…' : 'Importar publicação'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

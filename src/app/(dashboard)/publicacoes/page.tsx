@@ -10,6 +10,7 @@ export default async function PublicacoesRoute() {
     { data: publicacoes, error },
     { data: processos },
     { data: advogados },
+    { data: fontes },
   ] = await Promise.all([
     supabase
       .from('publicacoes')
@@ -18,6 +19,7 @@ export default async function PublicacoesRoute() {
       .limit(300),
     supabase.from('processos').select('id, titulo, numero_processo').order('titulo'),
     supabase.from('advogados_monitorados').select('id, nome_completo, oab_numero, oab_uf').eq('ativo', true).order('nome_completo'),
+    supabase.from('publicacao_fontes').select('id, nome, codigo, tipo, ativo').eq('ativo', true).order('nome'),
   ])
 
   if (error) {
@@ -52,6 +54,7 @@ export default async function PublicacoesRoute() {
       initialPublicacoes={publicacoes ?? []}
       processos={processos ?? []}
       advogados={advogados ?? []}
+      fontes={(fontes ?? []) as any}
     />
   )
 }
