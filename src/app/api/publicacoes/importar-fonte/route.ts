@@ -156,8 +156,8 @@ export async function POST(req: NextRequest) {
       data_publicacao:        p.data_publicacao ?? null,
       data_disponibilizacao:  p.data_disponibilizacao ?? null,
 
-      // Conteúdo
-      texto_publicacao:       p.texto_publicacao ?? null,
+      // Conteúdo — usa 'titulo' (coluna real do banco) e mantém texto_publicacao quando disponível
+      titulo:                 p.texto_publicacao ?? null,
       resumo:                 p.resumo ?? null,
       tipo_publicacao:        tipo,
       nome_pesquisado:        p.nome_pesquisado ?? '',

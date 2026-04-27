@@ -128,7 +128,7 @@ interface MockPublicacao {
   data_publicacao: string
   nome_pesquisado: string
   oab_pesquisada: string
-  texto_publicacao: string
+  titulo: string          // coluna real no banco (mapeada como texto_publicacao em versões futuras)
   tipo_publicacao: string
   prazo_detectado: boolean
   prazo_dias: number | null
@@ -244,7 +244,7 @@ async function gerarMockPublicacoes(
       data_publicacao:     hoje,
       nome_pesquisado:     adv.nome_completo,
       oab_pesquisada:      `${adv.oab_uf} ${adv.oab_numero}`,
-      texto_publicacao:    tpl.texto(adv.nome_completo, proc),
+      titulo:              tpl.texto(adv.nome_completo, proc),
       tipo_publicacao:     tpl.tipo_publicacao,
       prazo_detectado:     tpl.prazo_dias != null,
       prazo_dias:          tpl.prazo_dias ?? null,
@@ -337,7 +337,7 @@ export async function POST(request: Request) {
         pub.data_publicacao,
         pub.nome_pesquisado,
         pub.numero_processo,
-        pub.texto_publicacao,
+        pub.titulo,
       )
 
       // Deduplicação
@@ -349,9 +349,9 @@ export async function POST(request: Request) {
 
       if (existente) { tjmgDuplicadas++; totalDuplicadas++; continue }
 
-      const deteccao   = detectarPrazosEAudiencias(pub.texto_publicacao)
-      const tipo       = detectarTipoResultado(pub.texto_publicacao)
-      const analise    = analisarPublicacao(pub.texto_publicacao)
+      const deteccao   = detectarPrazosEAudiencias(pub.titulo)
+      const tipo       = detectarTipoResultado(pub.titulo)
+      const analise    = analisarPublicacao(pub.titulo)
       const processoId = pub.numero_processo
         ? processoMap.get(pub.numero_processo.replace(/\D/g, '')) ?? null
         : null
@@ -362,7 +362,7 @@ export async function POST(request: Request) {
         orgao:               pub.orgao,
         data_publicacao:     pub.data_publicacao,
         nome_pesquisado:     pub.nome_pesquisado,
-        texto_publicacao:    pub.texto_publicacao.slice(0, 5_000),
+        titulo:              pub.titulo.slice(0, 5_000),
         resumo:              analise.resumo.length ? analise.resumo.join(' · ') : null,
         tipo_publicacao:     tipo,
         prazo_detectado:     deteccao.prazo_detectado,

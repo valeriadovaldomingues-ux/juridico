@@ -33,7 +33,8 @@ interface Publicacao {
   data_publicacao?: string
   data_disponibilizacao?: string
   nome_pesquisado: string
-  texto_publicacao?: string
+  titulo?: string           // coluna real no banco (texto integral da publicação)
+  texto_publicacao?: string // alias de leitura — fallback quando titulo não presente
   resumo?: string
   tipo_publicacao: string
   prazo_detectado: boolean
@@ -144,7 +145,7 @@ function calcPrioridade(pub: Publicacao, today: string): Prioridade {
 }
 
 function sugestaoAcao(pub: Publicacao): { acao: string; confianca: number; tipo: 'prazo' | 'tarefa' | 'vincular' | 'revisar' } {
-  const texto = (pub.texto_publicacao ?? '').toLowerCase()
+  const texto = ((pub.titulo ?? pub.texto_publicacao) ?? '').toLowerCase()
 
   if (pub.prazo_detectado && pub.prazo_data) {
     return { acao: 'Criar prazo na agenda', confianca: 95, tipo: 'prazo' }
@@ -466,9 +467,9 @@ function PublicacaoModal({
   function setSaving(v: boolean) { setSalvando(v) }
 
   function analisarTexto() {
-    if (!pub.texto_publicacao) { setAnalise({ prazo_detectado: false, audiencia_detectada: false }); setShowGerarPrazo(true); return }
-    const resultado     = detectarPrazosEAudiencias(pub.texto_publicacao)
-    const tipoDetectado = detectarTipoResultado(pub.texto_publicacao)
+    if (!(pub.titulo ?? pub.texto_publicacao)) { setAnalise({ prazo_detectado: false, audiencia_detectada: false }); setShowGerarPrazo(true); return }
+    const resultado     = detectarPrazosEAudiencias((pub.titulo ?? pub.texto_publicacao) ?? '')
+    const tipoDetectado = detectarTipoResultado((pub.titulo ?? pub.texto_publicacao) ?? '')
 
     // Calcula data de vencimento usando prazo útil real (com feriados)
     let data = resultado.prazo_data ?? ''
@@ -607,11 +608,11 @@ function PublicacaoModal({
           </div>
 
           {/* Text */}
-          {pub.texto_publicacao && (
+          {(pub.titulo ?? pub.texto_publicacao) && (
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-2">Texto da publicação</p>
               <div className="bg-[#F7F9F9] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E8F0F0]">
-                {pub.texto_publicacao}
+                {(pub.titulo ?? pub.texto_publicacao)}
               </div>
             </div>
           )}
@@ -644,7 +645,7 @@ function PublicacaoModal({
             <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide">Ações</p>
 
             {/* Gerar prazo automaticamente */}
-            {!showGerarPrazo && pub.texto_publicacao && (
+            {!showGerarPrazo && (pub.titulo ?? pub.texto_publicacao) && (
               <button
                 onClick={analisarTexto}
                 className="w-full flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 text-[12px] font-semibold rounded-xl hover:bg-amber-100 transition-colors"
@@ -905,7 +906,7 @@ function AgendaQuickModal({
     setSaving(true)
     await supabase.from('agenda_items').insert({
       titulo:      titulo.trim(),
-      descricao:   pub.texto_publicacao?.slice(0, 500) ?? null,
+      descricao:   (pub.titulo ?? pub.texto_publicacao)?.slice(0, 500) ?? null,
       tipo,
       status:      'pendente',
       data_inicio: data,
@@ -1002,7 +1003,7 @@ function NovaPublicacaoModal({
     const { data: inserted, error } = await supabase
       .from('publicacoes')
       .insert({
-        texto_publicacao:    texto.trim(),
+        titulo:              texto.trim(),
         numero_processo:     numero.trim() || null,
         data_publicacao:     data || null,
         processo_id:         pid,
@@ -1088,7 +1089,7 @@ function KanbanFromPubModal({
   onClose:   () => void
 }) {
   const [profiles,    setProfiles]    = useState<{ id: string; nome: string }[]>([])
-  const [titulo,      setTitulo]      = useState(`Publicação: ${pub.numero_processo ?? pub.texto_publicacao?.slice(0, 50) ?? ''}`.trim())
+  const [titulo,      setTitulo]      = useState(`Publicação: ${pub.numero_processo ?? (pub.titulo ?? pub.texto_publicacao)?.slice(0, 50) ?? ''}`.trim())
   const [responsavel, setResponsavel] = useState('')
   const [prioridade,  setPrioridade]  = useState('media')
   const [prazo,       setPrazo]       = useState(pub.prazo_data ?? '')
@@ -1303,7 +1304,7 @@ export default function PublicacoesPage({
       const q = fBusca.toLowerCase()
       const ok = p.nome_pesquisado.toLowerCase().includes(q)
         || (p.numero_processo ?? '').includes(q)
-        || (p.texto_publicacao ?? '').toLowerCase().includes(q)
+        || ((p.titulo ?? p.texto_publicacao) ?? '').toLowerCase().includes(q)
         || (p.tribunal ?? '').toLowerCase().includes(q)
         || (p.cliente ?? '').toLowerCase().includes(q)
         || (p.parte_contraria ?? '').toLowerCase().includes(q)
@@ -1393,7 +1394,7 @@ export default function PublicacoesPage({
           tribunal:         r.tribunal || null,
           data_publicacao:  r.data_publicacao || null,
           nome_pesquisado:  r.nome_pesquisado ?? 'Importação',
-          texto_publicacao: r.texto_publicacao || null,
+          titulo:           r.texto_publicacao || null,
           status:           'nao_tratada' as const,
           origem:           'importacao' as const,
           processo_id:      processoId ?? null,
@@ -1729,14 +1730,14 @@ export default function PublicacoesPage({
                       {isNao && <PrioridadeBadge prioridade={prio} />}
                       {pub.prazo_detectado && <AlertTriangle size={11} className="text-orange-500 flex-shrink-0" />}
                       {pub.audiencia_detectada && <Gavel size={11} className="text-rose-500 flex-shrink-0" />}
-                      {!pub.prazo_detectado && !pub.audiencia_detectada && pub.texto_publicacao &&
-                        /\b(intime-se|intimar|manifestar-se|contestação|contrarrazões|impugnação|defesa)\b/i.test(pub.texto_publicacao) &&
+                      {!pub.prazo_detectado && !pub.audiencia_detectada && (pub.titulo ?? pub.texto_publicacao) &&
+                        /\b(intime-se|intimar|manifestar-se|contestação|contrarrazões|impugnação|defesa)\b/i.test((pub.titulo ?? pub.texto_publicacao) ?? '') &&
                         <Scale size={11} className="text-violet-500 flex-shrink-0" />
                       }
                       {isNao && <SugestaoChip pub={pub} onClick={tipo => handleSugestaoChip(pub, tipo)} />}
                     </div>
                     <p className="text-[13px] font-medium text-[#0f1923] truncate leading-tight">
-                      {pub.texto_publicacao?.slice(0, modoTrabalho ? 120 : 80) ?? '(sem texto)'}
+                      {(pub.titulo ?? pub.texto_publicacao)?.slice(0, modoTrabalho ? 120 : 80) ?? '(sem texto)'}
                     </p>
                     {!modoTrabalho && (
                       <p className="text-[11px] text-[#9aabb8] truncate">{pub.nome_pesquisado}</p>
@@ -1851,7 +1852,7 @@ export default function PublicacoesPage({
       {kanbanPub && (
         <ProvidenciaModal
           publicacaoId={kanbanPub.id}
-          publicacaoTexto={kanbanPub.texto_publicacao ?? undefined}
+          publicacaoTexto={(kanbanPub.titulo ?? kanbanPub.texto_publicacao) ?? undefined}
           processoId={kanbanPub.processo_id ?? null}
           processoNumero={kanbanPub.numero_processo ?? null}
           processoTitulo={kanbanPub.processo?.titulo ?? null}

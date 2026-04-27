@@ -39,7 +39,8 @@ export interface TJMGPublicacao {
   nome_pesquisado:  string
   numero_processo:  string
   data_publicacao:  string  // YYYY-MM-DD
-  texto_publicacao: string
+  titulo:           string  // coluna real na DB publicacoes
+  texto_publicacao: string  // alias — mesmo valor que titulo
   orgao:            string
   tribunal:         'TJMG'
   origem:           'dje_tjmg'
@@ -372,7 +373,8 @@ export async function buscarPublicacoesTJMG(
           nome_pesquisado:  oc.nome,
           numero_processo:  oc.numeroProcesso ?? '',
           data_publicacao:  dataISO,
-          texto_publicacao: oc.trecho.slice(0, 5_000),
+          titulo:           oc.trecho.slice(0, 5_000),
+          texto_publicacao: oc.trecho.slice(0, 5_000),  // alias para compatibilidade
           orgao:            caderno.orgao,
           tribunal:         'TJMG',
           origem:           'dje_tjmg',
