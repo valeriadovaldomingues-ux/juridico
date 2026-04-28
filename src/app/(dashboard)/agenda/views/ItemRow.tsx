@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Clock, AlarmClock, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Clock, AlarmClock, CheckCircle2, Trash2, CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AgendaItem, TIPO_CFG, PRIO_CFG, getAlertState, formatDateBR,
@@ -35,27 +35,58 @@ export function AlertBadge({ state }: { state: ReturnType<typeof getAlertState> 
   return null
 }
 
+interface ItemRowProps {
+  item:              AgendaItem
+  today:             string
+  in3:               string
+  onEdit:            (item: AgendaItem) => void
+  onToggleDone:      (item: AgendaItem) => void
+  // Seleção (opcional — só ativo na ListView)
+  checked?:          boolean
+  onCheck?:          (id: string, checked: boolean) => void
+  // Ações rápidas (opcional)
+  onQuickDelete?:    (item: AgendaItem) => void
+  onQuickReschedule?:(item: AgendaItem) => void
+}
+
 export default function ItemRow({
   item, today, in3, onEdit, onToggleDone,
-}: {
-  item: AgendaItem
-  today: string
-  in3: string
-  onEdit: (item: AgendaItem) => void
-  onToggleDone: (item: AgendaItem) => void
-}) {
+  checked, onCheck, onQuickDelete, onQuickReschedule,
+}: ItemRowProps) {
   const alert = getAlertState(item, today, in3)
   const prio  = PRIO_CFG[item.prioridade]
   const done  = item.status === 'concluido'
+  const hasActions = onQuickDelete || onQuickReschedule
 
   return (
     <div
       className={cn(
         'group flex gap-3 px-5 py-3.5 hover:bg-[#f9fafb] transition-colors cursor-pointer',
-        done && 'opacity-55'
+        done && 'opacity-55',
+        checked && 'bg-[#f0f7f7]',
       )}
       onClick={() => onEdit(item)}
     >
+      {/* Checkbox — só aparece quando seleção está ativa */}
+      {onCheck !== undefined && (
+        <button
+          onClick={e => { e.stopPropagation(); onCheck(item.id, !checked) }}
+          className={cn(
+            'flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 transition-colors flex items-center justify-center',
+            checked
+              ? 'bg-[#145A5B] border-[#145A5B]'
+              : 'border-[#c8d8d8] hover:border-[#145A5B]',
+          )}
+          title={checked ? 'Desmarcar' : 'Selecionar'}
+        >
+          {checked && (
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+              <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+      )}
+
       {/* Priority bar */}
       <div className={cn('w-0.5 rounded-full flex-shrink-0 self-stretch', prio.bar)} />
 
@@ -68,10 +99,12 @@ export default function ItemRow({
             ? 'bg-emerald-500 border-emerald-500'
             : 'border-[#c8d8d8] hover:border-emerald-400'
         )}
+        title={done ? 'Marcar como pendente' : 'Marcar como concluído'}
       >
         {done && <CheckCircle2 size={11} className="text-white" />}
       </button>
 
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-2 flex-wrap">
           <p className={cn(
@@ -104,6 +137,33 @@ export default function ItemRow({
           )}
         </div>
       </div>
+
+      {/* Ações rápidas — aparecem no hover, invisíveis por padrão */}
+      {hasActions && (
+        <div
+          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          onClick={e => e.stopPropagation()}
+        >
+          {onQuickReschedule && (
+            <button
+              onClick={() => onQuickReschedule(item)}
+              title="Remarcar"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              <CalendarClock size={13} />
+            </button>
+          )}
+          {onQuickDelete && (
+            <button
+              onClick={() => onQuickDelete(item)}
+              title="Excluir"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

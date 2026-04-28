@@ -3,7 +3,7 @@ import Link from 'next/link'
 import {
   Users, Scale, FolderCheck, Briefcase,
   Clock, ArrowUpRight, Activity, Plus, TrendingUp,
-  TrendingDown, AlertCircle, DollarSign, Handshake,
+  TrendingDown, AlertCircle, DollarSign, Handshake, Monitor,
 } from 'lucide-react'
 import AtividadesBlock from './_components/AtividadesBlock'
 import ProdutividadeColaboradores from './_components/ProdutividadeColaboradores'
@@ -246,13 +246,28 @@ export default async function DashboardPage() {
             {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <Link
-          href="/agenda"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
-        >
-          <Plus size={14} strokeWidth={2.5} />
-          Nova Tarefa
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Painel TV — apenas gerente e sócio */}
+          {['gerente', 'socio'].includes(userRole) && (
+            <Link
+              href="/dashboard/tv"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#374151] border border-[#e5e7eb] rounded-xl hover:bg-[#f9fafb] transition-colors"
+              title="Abrir painel de monitoramento em TV"
+            >
+              <Monitor size={14} className="text-[#145A5B]" />
+              Modo TV
+            </Link>
+          )}
+          <Link
+            href="/agenda"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            Nova Tarefa
+          </Link>
+        </div>
       </div>
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}

@@ -45,6 +45,7 @@ export default async function AgendaRoute() {
     supabase
       .from('agenda_items')
       .select('*, processo:processos(titulo), cliente:clientes(nome)')
+      .is('deleted_at', null)           // soft delete: exclui itens deletados
       .order('data_inicio', { ascending: true }),
     supabase.from('processos').select('id, titulo').order('titulo'),
     supabase.from('clientes').select('id, nome').order('nome'),
