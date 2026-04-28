@@ -27,10 +27,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
 
   if (!cliente) notFound()
 
-  // Processos primeiro, pois as tarefas dependem dos IDs
   const { data: processos } = await supabase
     .from('processos')
-    .select('id, titulo, numero_processo, area_direito, status, advogado_responsavel_id')
+    .select('id, titulo, numero_processo, area_direito, status, advogado_responsavel_id, tribunal, valor_causa')
     .eq('cliente_id', id)
     .order('created_at', { ascending: false })
 
@@ -40,29 +39,48 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     { data: interactions },
     { data: tarefas },
     { data: agenda },
+    { data: profiles },
+    { count: publicacoesCount },
   ] = await Promise.all([
     supabase
       .from('contact_interactions')
       .select('*, usuario:profiles(id, nome, role)')
       .eq('cliente_id', id)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(100),
 
     processoIds.length > 0
       ? supabase
           .from('kanban_tasks')
-          .select('id, titulo, status, data, tipo, processo_id')
+          .select('id, titulo, status, data, tipo, processo_id, responsavel_id, prioridade')
           .in('processo_id', processoIds)
-          .order('created_at', { ascending: false })
-          .limit(20)
+          .order('data', { ascending: true })
+          .limit(50)
       : Promise.resolve({ data: [] }),
 
+    // BUG FIX: coluna correta é data_fim (não data_final)
     supabase
       .from('agenda_items')
-      .select('id, titulo, data_inicio, data_final, tipo, status')
+      .select('id, titulo, data_inicio, data_fim, prazo_final, tipo, status, prioridade')
       .eq('cliente_id', id)
       .order('data_inicio', { ascending: false })
-      .limit(20),
+      .limit(30),
+
+    // Profiles para criação de tarefas
+    supabase
+      .from('profiles')
+      .select('id, nome, role')
+      .eq('ativo', true)
+      .order('nome'),
+
+    // Contagem de publicações vinculadas aos processos
+    processoIds.length > 0
+      ? supabase
+          .from('publicacoes')
+          .select('id', { count: 'exact', head: true })
+          .in('processo_id', processoIds)
+          .eq('status', 'nao_tratada')
+      : Promise.resolve({ data: null, count: 0, error: null, status: 200, statusText: 'OK' }),
   ])
 
   return (
@@ -72,6 +90,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       interactions={interactions ?? []}
       tarefas={tarefas ?? []}
       agenda={agenda ?? []}
+      profiles={(profiles ?? []) as any}
+      publicacoesPendentes={publicacoesCount ?? 0}
     />
   )
 }
