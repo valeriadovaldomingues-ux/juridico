@@ -13,16 +13,22 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     .select('*, responsavel:profiles!responsavel_id(id, nome, role)')
     .order('nome', { ascending: true })
 
-  if (params.nome)       query = query.ilike('nome', `%${params.nome}%`)
-  if (params.cpf_cnpj)   query = query.ilike('cpf_cnpj', `%${params.cpf_cnpj}%`)
-  if (params.cidade)     query = query.ilike('cidade', `%${params.cidade}%`)
-  if (params.tipo_contato) query = query.eq('tipo_contato', params.tipo_contato)
+  // Filtros server-side
+  if (params.nome)          query = query.ilike('nome', `%${params.nome}%`)
+  if (params.cpf_cnpj)      query = query.ilike('cpf_cnpj', `%${params.cpf_cnpj}%`)
+  if (params.cidade)        query = query.ilike('cidade', `%${params.cidade}%`)
+  if (params.tipo_contato)  query = query.eq('tipo_contato', params.tipo_contato)
   if (params.responsavel_id) query = query.eq('responsavel_id', params.responsavel_id)
-  if (params.ativo !== undefined) query = query.eq('ativo', params.ativo === 'true')
+  // Por padrão só ativos — passa ativo=false para incluir inativos também
+  if (params.ativo === 'false') {
+    // retorna todos (sem filtro)
+  } else {
+    query = query.eq('ativo', true)
+  }
 
   const { data: clientesRaw } = await query
 
-  // Busca contagem de processos por cliente
+  // Contagem de processos por cliente (usada para exibição e filtro)
   const { data: contagemProcessos } = await supabase
     .from('processos')
     .select('cliente_id')
@@ -37,7 +43,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     processos_count: countMap[c.id] ?? 0,
   }))
 
-  // Busca profiles para o filtro de responsável
+  // Profiles para o filtro de responsável
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, nome, role')
@@ -45,7 +51,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     .order('nome')
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight">Contatos</h1>
@@ -56,12 +62,13 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         </div>
         <Link
           href="/clientes/novo"
-          className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
         >
           <Plus size={15} />
           Novo Contato
         </Link>
       </div>
+
       <ClientesTable
         clientes={clientes}
         profiles={profiles as Profile[] ?? []}
