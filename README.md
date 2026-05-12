@@ -1,36 +1,172 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema Jurídico PEDV
 
-## Getting Started
+Sistema completo de gestão para escritórios de advocacia, desenvolvido com Next.js, TypeScript e Supabase.
 
-First, run the development server:
+## Funcionalidades
 
+### Módulos Principais
+- **Dashboard** - Visão geral com KPIs e métricas
+- **Kanban Jurídico** - Gestão de tarefas com drag & drop
+- **Agenda** - Calendário de compromissos e prazos
+- **CRM de Clientes** - Gestão completa de clientes
+- **Processos** - Acompanhamento de processos judiciais
+- **Publicações** - Monitoramento de publicações oficiais
+- **Documentos** - Geração automática de documentos
+- **Financeiro** - Controle financeiro (restrito a sócios/gerentes)
+- **IA Jurídica** - Assistente com OpenAI para análises jurídicas
+- **Relatórios** - Relatórios personalizados por cliente
+- **Comercial** - Gestão de leads e propostas
+- **Automações** - Tarefas automatizadas
+- **Integrações** - Importação do Trello e outras ferramentas
+
+### Recursos Avançados
+- Sistema de permissões por função (role-based access)
+- Importação de CSV do Trello
+- Interface profissional e responsiva
+- Autenticação segura com Supabase
+- API REST completa
+- Modo TV para apresentações
+
+## Tecnologias
+
+- **Framework:** Next.js (App Router + React 19)
+- **Linguagem:** TypeScript
+- **Banco de Dados:** Supabase (PostgreSQL)
+- **Autenticação:** Supabase Auth
+- **Estilização:** Tailwind CSS
+- **Drag & Drop:** DnD Kit
+- **IA:** OpenAI API
+- **Ícones:** Lucide React
+
+## Instalação
+
+### Pré-requisitos
+- Node.js 20 ou superior
+- npm ou yarn
+- Conta no Supabase
+- (Opcional) Conta OpenAI para IA Jurídica
+
+### Passo a Passo
+
+1. **Clone o repositório**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/valeriadovaldomingues-ux/juridico.git
+cd juridico
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Instale as dependências**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Configure as variáveis de ambiente**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Crie o arquivo `.env.local` na raiz do projeto:
 
-## Learn More
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+OPENAI_API_KEY=sk-sua-chave-openai (opcional)
+OPENAI_MODEL=gpt-4o-mini
+CRON_SECRET=seu-segredo-aleatorio
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. **Configure o banco de dados**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+No Supabase Dashboard → SQL Editor, execute os arquivos da pasta `/supabase/`:
+- Comece por `schema.sql`
+- Depois `auth_setup.sql`
+- Execute os demais conforme necessário
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Inicie o servidor de desenvolvimento**
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+6. **Acesse o sistema**
+```
+http://localhost:3000
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Configuração do Supabase
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Site URL e Redirect URLs
+
+No Supabase → Authentication → URL Configuration:
+
+| Campo | Valor |
+|-------|-------|
+| Site URL | `http://localhost:3000` (dev) ou `https://seu-dominio.com.br` (prod) |
+| Redirect URLs | `http://localhost:3000/**` |
+| Redirect URLs | `http://localhost:3000/auth/callback` |
+
+### Migrations
+
+Execute todos os arquivos `.sql` da pasta `supabase/` no SQL Editor do Supabase.
+
+## Deploy
+
+Veja instruções detalhadas em [`DEPLOY.md`](./DEPLOY.md)
+
+**Opções de deploy:**
+- Vercel (recomendado - mais simples)
+- VPS próprio (mais controle)
+
+## Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+npm run dev
+
+# Build de produção
+npm run build
+
+# Iniciar produção
+npm start
+
+# Verificar TypeScript
+npm run type-check
+
+# Lint
+npm run lint
+
+# Verificar erros de tipos e lint
+npm run check
+```
+
+## Permissões e Funções
+
+O sistema possui 4 níveis de acesso:
+
+- **Sócio** - Acesso total, incluindo financeiro
+- **Gerente** - Acesso total, incluindo financeiro
+- **Advogado** - Acesso completo exceto financeiro
+- **Estagiário** - Acesso básico de leitura
+
+## Resolução de Problemas
+
+### Build falha
+```bash
+npm run type-check
+```
+
+### Login não funciona
+- Verifique se o Site URL está correto no Supabase
+- Confirme se as variáveis SUPABASE estão corretas no .env.local
+
+### Sessão expira rapidamente
+- Verifique se o `proxy.ts` está sendo usado (deve aparecer no build)
+
+### API não autoriza
+- Verifique se SUPABASE_SERVICE_ROLE_KEY está correta
+- Confirme que não tem prefixo NEXT_PUBLIC_ nessa variável
+
+## Licença
+
+Propriedade de Pessoal do Val - Todos os direitos reservados.
+
+## Suporte
+
+Para dúvidas ou problemas, entre em contato com a equipe de desenvolvimento.

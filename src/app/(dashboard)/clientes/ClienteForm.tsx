@@ -52,6 +52,45 @@ function inputClass(state: 'idle' | 'error' | 'success', extra = '') {
 
 const labelClass = 'block text-[11px] font-semibold text-[#3d4a5c] mb-1.5 uppercase tracking-wide'
 
+// ─── FieldWrapper (fora do componente pai para evitar remontagem a cada render) ──
+
+function FieldWrapper({
+  field, label, required, errors, touched, form, children,
+}: {
+  field: keyof FormFields
+  label: string
+  required?: boolean
+  errors: Errors
+  touched: Touched
+  form: FormFields
+  children: React.ReactNode
+}) {
+  const err   = errors[field]
+  const state = fieldState(field, errors, touched, String(form[field]))
+  return (
+    <div>
+      <label className={labelClass}>
+        {label}
+        {required && <span className="text-[#e74c3c] ml-0.5">*</span>}
+      </label>
+      <div className="relative">
+        {children}
+        {state === 'success' && (
+          <CheckCircle2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2ecc71] pointer-events-none" />
+        )}
+        {state === 'error' && (
+          <AlertCircle size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#e74c3c] pointer-events-none" />
+        )}
+      </div>
+      {err && touched[field] && (
+        <p className="text-[11px] text-[#e74c3c] mt-1 flex items-center gap-1">
+          {err}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function ClienteForm({
@@ -274,41 +313,7 @@ export default function ClienteForm({
     }
   }
 
-  // ── Render helpers ─────────────────────────────────────────────────────────
-
-  function FieldWrapper({
-    field, label, required, children,
-  }: {
-    field: keyof FormFields
-    label: string
-    required?: boolean
-    children: React.ReactNode
-  }) {
-    const err = errors[field]
-    const state = fieldState(field, errors, touched, String(form[field]))
-    return (
-      <div>
-        <label className={labelClass}>
-          {label}
-          {required && <span className="text-[#e74c3c] ml-0.5">*</span>}
-        </label>
-        <div className="relative">
-          {children}
-          {state === 'success' && (
-            <CheckCircle2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2ecc71] pointer-events-none" />
-          )}
-          {state === 'error' && (
-            <AlertCircle size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#e74c3c] pointer-events-none" />
-          )}
-        </div>
-        {err && touched[field] && (
-          <p className="text-[11px] text-[#e74c3c] mt-1 flex items-center gap-1">
-            {err}
-          </p>
-        )}
-      </div>
-    )
-  }
+  // ── Estados derivados ──────────────────────────────────────────────────────
 
   const cpfState     = fieldState('cpf_cnpj', errors, touched, form.cpf_cnpj)
   const emailState   = fieldState('email',    errors, touched, form.email)
@@ -342,9 +347,8 @@ export default function ClienteForm({
 
           {/* Nome */}
           <div className="col-span-2">
-            <FieldWrapper field="nome" label="Nome / Razão Social" required>
+            <FieldWrapper field="nome" label="Nome / Razão Social" required errors={errors} touched={touched} form={form}>
               <input
-                autoFocus
                 required
                 value={form.nome}
                 onChange={e => { set('nome', e.target.value); if (touched.nome) validateField('nome', e.target.value) }}
@@ -361,6 +365,7 @@ export default function ClienteForm({
               field="cpf_cnpj"
               label={form.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}
               required={form.tipo_pessoa === 'fisica'}
+              errors={errors} touched={touched} form={form}
             >
               <input
                 value={form.cpf_cnpj}
@@ -375,7 +380,7 @@ export default function ClienteForm({
 
           {/* E-mail */}
           <div>
-            <FieldWrapper field="email" label="E-mail" required>
+            <FieldWrapper field="email" label="E-mail" required errors={errors} touched={touched} form={form}>
               <input
                 type="email"
                 value={form.email}
@@ -389,7 +394,7 @@ export default function ClienteForm({
 
           {/* Celular */}
           <div>
-            <FieldWrapper field="celular" label="Celular">
+            <FieldWrapper field="celular" label="Celular" errors={errors} touched={touched} form={form}>
               <input
                 value={form.celular}
                 onChange={e => handlePhone('celular', e.target.value)}
@@ -403,7 +408,7 @@ export default function ClienteForm({
 
           {/* Telefone */}
           <div>
-            <FieldWrapper field="telefone" label="Telefone">
+            <FieldWrapper field="telefone" label="Telefone" errors={errors} touched={touched} form={form}>
               <input
                 value={form.telefone}
                 onChange={e => handlePhone('telefone', e.target.value)}
