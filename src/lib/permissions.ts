@@ -1,5 +1,12 @@
 import type { UserRole } from '@/types'
 
+// ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
+// 'cliente' é um role externo do portal e não deve aparecer em
+// seletores de criação/edição de usuários do escritório.
+export const INTERNAL_ROLES: UserRole[] = [
+  'estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio',
+]
+
 // ─── Labels e cores por perfil ────────────────────────────────────────────────
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -9,6 +16,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   advogado:       'Advogado',
   gerente:        'Gerente',
   socio:          'Sócio',
+  cliente:        'Cliente',
 }
 
 export const ROLE_COLORS: Record<UserRole, string> = {
@@ -18,6 +26,7 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   advogado:       'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
   gerente:        'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80',
   socio:          'bg-violet-50 text-violet-700 ring-1 ring-violet-200/80',
+  cliente:        'bg-teal-50 text-teal-700 ring-1 ring-teal-200/80',
 }
 
 // ─── Módulos e Ações ──────────────────────────────────────────────────────────
@@ -165,6 +174,11 @@ const PERMISSIONS: PermMatrix = {
     usuarios:     ['view', 'create', 'edit', 'delete', 'manage'],
     configuracoes: ['view', 'edit', 'manage'],
   },
+
+  // ── Cliente (portal externo) ──────────────────────────────────────────────
+  // Sem acesso a nenhum módulo interno. Todo o acesso é via /portal/*.
+  // Este objeto existe apenas para satisfazer Record<UserRole, …>.
+  cliente: {},
 }
 
 // ─── Helper principal ─────────────────────────────────────────────────────────
@@ -268,6 +282,8 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/configuracoes/usuarios',
     '/configuracoes',
   ],
+  // Cliente externo: sem rotas internas — acesso exclusivo via /portal/*
+  cliente: [],
 }
 
 // ─── Rotas restritas (enforcement no proxy) ───────────────────────────────────
@@ -330,4 +346,5 @@ export const ROLE_REDIRECT: Record<UserRole, string> = {
   advogado:       '/dashboard',
   gerente:        '/dashboard',
   socio:          '/dashboard',
+  cliente:        '/portal',
 }

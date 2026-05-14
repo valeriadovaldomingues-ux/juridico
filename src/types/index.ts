@@ -2,7 +2,8 @@
 
 /**
  * Papéis de usuário do sistema.
- * Ordem crescente de permissão: estagiario < comercial < administrativo < advogado < gerente < socio
+ * Roles internos (staff): estagiario < comercial < administrativo < advogado < gerente < socio
+ * Role externo (portal): cliente — acesso exclusivo a /portal, sem acesso ao painel interno
  */
 export type UserRole =
   | 'estagiario'
@@ -11,6 +12,7 @@ export type UserRole =
   | 'advogado'
   | 'gerente'
   | 'socio'
+  | 'cliente'
 
 export interface Profile {
   id: string
