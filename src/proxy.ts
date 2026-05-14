@@ -98,6 +98,17 @@ export async function proxy(request: NextRequest) {
     const role  = profile?.role as string | undefined
     const ativo = profile?.ativo
 
+    // 3-orphan. Sessão órfã: usuário autenticado sem profile.
+    // Fail-secure: nunca concede acesso a rotas protegidas sem profile válido.
+    // API routes (/api/*) não passam por aqui — tratam a sessão localmente.
+    if (!profile && (isInternalPath || isPortalPath)) {
+      const url = request.nextUrl.clone()
+      url.pathname = isPortalPath ? '/portal/login' : '/login'
+      url.searchParams.set('erro', 'sessao-invalida')
+      console.warn(`[proxy] Sessão órfã detectada — user:${user.id} path:${pathname}`)
+      return NextResponse.redirect(url)
+    }
+
     // 3a. Role 'cliente' bloqueado de TODAS as rotas internas do escritório
     if (role === 'cliente' && isInternalPath) {
       const url = request.nextUrl.clone()

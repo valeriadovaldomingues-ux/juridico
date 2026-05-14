@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { portalGuard } from '@/lib/auth/portal-guard'
-import { createClient } from '@/lib/supabase/server'
+import { portalGuard }    from '@/lib/auth/portal-guard'
+import { createClient }   from '@/lib/supabase/server'
 import { logPortalAccess } from '@/lib/portal/access-log'
+import { isUUID }         from '@/lib/portal/validate'
+import { downloadByUser, checkRateLimit } from '@/lib/portal/rate-limit'
+
+const BUCKET = 'docs-pedv'
+const SIGNED_URL_TTL = 900  // 15 minutos
 
 /**
  * GET /api/portal/documentos
  * Lista documentos liberados para o cliente (liberado_cliente = true).
  *
  * Query param:
- *   download=<doc_id> — gera URL assinada (TTL 15min) para o documento solicitado
+ *   download=<doc_id> — redirect server-side para signed URL (TTL 15min).
+ *   O signed URL nunca é exposto no JSON — a response é um 302 redirect.
  */
 export async function GET(request: NextRequest) {
   const session = await portalGuard()
@@ -19,8 +25,23 @@ export async function GET(request: NextRequest) {
   const downloadId = searchParams.get('download')
 
   // ── Download de documento específico ──────────────────────────────────────
-  if (downloadId) {
-    // Confirma que o doc pertence ao cliente e está liberado (RLS + filtro explícito)
+  if (downloadId !== null) {
+    // Valida UUID antes de qualquer query
+    if (!isUUID(downloadId)) {
+      return NextResponse.json({ error: 'ID de documento inválido' }, { status: 400 })
+    }
+
+    // Rate limiting por usuário
+    const rl = await checkRateLimit(downloadByUser, session.userId)
+    if (!rl.allowed) {
+      console.warn(`[portal/documentos] Rate limit download — user:${session.userId}`)
+      return NextResponse.json(
+        { error: 'Limite de downloads atingido. Tente novamente mais tarde.' },
+        { status: 429 },
+      )
+    }
+
+    // Confirma propriedade + liberação (RLS + filtro explícito — dupla proteção)
     const { data: doc } = await supabase
       .from('documentos')
       .select('id, nome_arquivo, storage_path')
@@ -30,12 +51,16 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!doc?.storage_path) {
-      return NextResponse.json({ error: 'Documento não encontrado ou não liberado' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Documento não encontrado ou não liberado' },
+        { status: 404 },
+      )
     }
 
+    // Gera signed URL server-side
     const { data: signed, error } = await supabase.storage
-      .from('documentos')
-      .createSignedUrl(doc.storage_path, 900) // 15 minutos
+      .from(BUCKET)
+      .createSignedUrl(doc.storage_path, SIGNED_URL_TTL)
 
     if (error || !signed?.signedUrl) {
       return NextResponse.json({ error: 'Erro ao gerar link de download' }, { status: 500 })
@@ -50,11 +75,8 @@ export async function GET(request: NextRequest) {
       request,
     })
 
-    return NextResponse.json({
-      url:        signed.signedUrl,
-      expires_in: 900,
-      nome:       doc.nome_arquivo,
-    })
+    // Redirect server-side — signed URL nunca exposta no body JSON
+    return NextResponse.redirect(signed.signedUrl, { status: 302 })
   }
 
   // ── Lista de documentos liberados ─────────────────────────────────────────
@@ -69,27 +91,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao buscar documentos' }, { status: 500 })
   }
 
-  // doc_gerados liberados — documentos gerados pela IA vinculados a processos do cliente
-  const { data: gerados } = await supabase
-    .from('doc_gerados')
-    .select(`
-      id,
-      titulo,
-      created_at,
-      processo:processos(numero_processo, titulo)
-    `)
-    .eq('liberado_cliente', true)
-    .in(
-      'processo_id',
-      // Subquery via JS: busca os processo_ids visíveis do cliente
-      await supabase
-        .from('processos')
-        .select('id')
-        .eq('cliente_id', session.clienteId)
-        .eq('visivel_cliente', true)
-        .then(r => (r.data ?? []).map(p => p.id)),
-    )
-    .order('created_at', { ascending: false })
+  // doc_gerados liberados — vinculados a processos visíveis do cliente
+  const { data: processosIds } = await supabase
+    .from('processos')
+    .select('id')
+    .eq('cliente_id', session.clienteId)
+    .eq('visivel_cliente', true)
+
+  const ids = (processosIds ?? []).map(p => p.id)
+
+  const { data: gerados } = ids.length > 0
+    ? await supabase
+        .from('doc_gerados')
+        .select('id, titulo, created_at, processo:processos(numero_processo, titulo)')
+        .in('processo_id', ids)
+        .eq('liberado_cliente', true)
+        .order('created_at', { ascending: false })
+    : { data: [] }
 
   await logPortalAccess({
     userId:    session.userId,
@@ -99,7 +117,7 @@ export async function GET(request: NextRequest) {
   })
 
   return NextResponse.json({
-    documentos: docs   ?? [],
+    documentos: docs    ?? [],
     gerados:    gerados ?? [],
   })
 }

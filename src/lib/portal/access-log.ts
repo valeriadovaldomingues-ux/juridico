@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { extractIP, truncateUserAgent, isUUID } from '@/lib/portal/validate'
 
 export type PortalAcao =
   | 'login'
@@ -13,6 +14,7 @@ export type PortalAcao =
 /**
  * Registra uma ação do cliente no portal.
  * Falhas são silenciosas — nunca devem bloquear a resposta ao usuário.
+ * IP lido de headers confiáveis; user-agent truncado a 512 chars.
  */
 export async function logPortalAccess(params: {
   userId:     string
@@ -25,20 +27,22 @@ export async function logPortalAccess(params: {
   try {
     const supabase = await createClient()
 
-    const ip = params.request
-      ? (params.request.headers.get('x-forwarded-for') ?? params.request.headers.get('x-real-ip') ?? null)
+    const ip        = params.request ? extractIP(params.request)        : null
+    const userAgent = params.request
+      ? truncateUserAgent(params.request.headers.get('user-agent'))
       : null
 
-    const userAgent = params.request
-      ? params.request.headers.get('user-agent')
+    // Garante que resourceId é um UUID válido antes de persistir
+    const resourceId = params.resourceId && isUUID(params.resourceId)
+      ? params.resourceId
       : null
 
     await supabase.from('portal_access_logs').insert({
       user_id:     params.userId,
       cliente_id:  params.clienteId,
       acao:        params.acao,
-      resource_id: params.resourceId ?? null,
-      detalhes:    params.detalhes   ?? null,
+      resource_id: resourceId,
+      detalhes:    params.detalhes ?? null,
       ip_address:  ip,
       user_agent:  userAgent,
     })

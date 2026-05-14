@@ -9,7 +9,9 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     const supabase = createClient()
-    await supabase.auth.signOut()
+    // scope: 'global' invalida todos os tokens de refresh do usuário em todos
+    // os dispositivos, não apenas a sessão atual.
+    await supabase.auth.signOut({ scope: 'global' })
     router.push('/portal/login')
     router.refresh()
   }

@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { portalGuard } from '@/lib/auth/portal-guard'
-import { createClient } from '@/lib/supabase/server'
+import { portalGuard }    from '@/lib/auth/portal-guard'
+import { createClient }   from '@/lib/supabase/server'
 import { logPortalAccess } from '@/lib/portal/access-log'
+import { checkOrigin }    from '@/lib/portal/origin'
+import { checkContentLength, checkStringLength, isUUID, extractIP, LIMITS } from '@/lib/portal/validate'
+import { mensagensByUser, mensagensByIp, checkRateLimit } from '@/lib/portal/rate-limit'
+
+const TIPOS_VALIDOS = ['mensagem', 'solicitacao_documento', 'solicitacao_prazo', 'outro'] as const
 
 /**
  * GET /api/portal/mensagens
  * Lista as mensagens da thread do cliente.
- *
- * Query params:
- *   processo_id — filtra por processo (opcional)
+ * Query param: processo_id (UUID, opcional)
  */
 export async function GET(request: NextRequest) {
   const session = await portalGuard()
@@ -16,7 +19,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
   const { searchParams } = new URL(request.url)
-  const processoId = searchParams.get('processo_id')
+  const processoIdRaw = searchParams.get('processo_id')
+
+  // Valida UUID se fornecido — rejeita strings inválidas antes do banco
+  if (processoIdRaw !== null && !isUUID(processoIdRaw)) {
+    return NextResponse.json({ error: 'processo_id: formato UUID inválido' }, { status: 400 })
+  }
 
   let query = supabase
     .from('portal_mensagens')
@@ -25,8 +33,8 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: true })
     .limit(100)
 
-  if (processoId) {
-    query = query.eq('processo_id', processoId)
+  if (processoIdRaw) {
+    query = query.eq('processo_id', processoIdRaw)
   }
 
   const { data, error } = await query
@@ -35,7 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao buscar mensagens' }, { status: 500 })
   }
 
-  // Marca as mensagens do escritório como lidas
+  // Marca como lidas — apenas mensagens do escritório
   const naoLidasIds = (data ?? [])
     .filter(m => m.autor_tipo === 'escritorio' && !m.lida)
     .map(m => m.id)
@@ -60,13 +68,37 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/portal/mensagens
  * Envia uma mensagem do cliente para o escritório.
- *
- * Body: { conteudo, tipo?, processo_id? }
+ * Body: { conteudo: string, tipo?: string, processo_id?: UUID }
  */
 export async function POST(request: NextRequest) {
+  // ── CSRF ──────────────────────────────────────────────────────────────────
+  const originBlocked = checkOrigin(request)
+  if (originBlocked) return originBlocked
+
+  // ── Tamanho do payload ────────────────────────────────────────────────────
+  const sizeError = checkContentLength(request)
+  if (sizeError) return NextResponse.json({ error: sizeError }, { status: 413 })
+
+  // ── Autenticação ──────────────────────────────────────────────────────────
   const session = await portalGuard()
   if (session instanceof NextResponse) return session
 
+  // ── Rate limiting ─────────────────────────────────────────────────────────
+  const ip = extractIP(request) ?? 'unknown'
+  const [byUser, byIp] = await Promise.all([
+    checkRateLimit(mensagensByUser, session.userId),
+    checkRateLimit(mensagensByIp,   ip),
+  ])
+
+  if (!byUser.allowed || !byIp.allowed) {
+    console.warn(`[portal/mensagens] Rate limit — user:${session.userId} ip:${ip}`)
+    return NextResponse.json(
+      { error: 'Limite de mensagens atingido. Tente novamente mais tarde.' },
+      { status: 429 },
+    )
+  }
+
+  // ── Parse ─────────────────────────────────────────────────────────────────
   let body: { conteudo?: string; tipo?: string; processo_id?: string }
   try {
     body = await request.json()
@@ -78,18 +110,28 @@ export async function POST(request: NextRequest) {
   const tipo        = body.tipo ?? 'mensagem'
   const processo_id = body.processo_id ?? null
 
-  const TIPOS_VALIDOS = ['mensagem', 'solicitacao_documento', 'solicitacao_prazo', 'outro']
-
+  // ── Validações de campo ───────────────────────────────────────────────────
   if (!conteudo) {
     return NextResponse.json({ error: 'Conteúdo obrigatório' }, { status: 400 })
   }
-  if (!TIPOS_VALIDOS.includes(tipo)) {
+
+  const conteudoError = checkStringLength(conteudo, LIMITS.MENSAGEM_CHARS, 'conteudo')
+  if (conteudoError) {
+    return NextResponse.json({ error: conteudoError }, { status: 400 })
+  }
+
+  if (!TIPOS_VALIDOS.includes(tipo as typeof TIPOS_VALIDOS[number])) {
     return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })
   }
 
-  // Valida processo_id se fornecido (deve ser visível para o cliente)
+  if (processo_id !== null && !isUUID(processo_id)) {
+    return NextResponse.json({ error: 'processo_id: formato UUID inválido' }, { status: 400 })
+  }
+
+  // ── Verifica vínculo processo-cliente (se informado) ─────────────────────
+  const supabase = await createClient()
+
   if (processo_id) {
-    const supabase = await createClient()
     const { data: proc } = await supabase
       .from('processos')
       .select('id')
@@ -103,8 +145,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const supabase = await createClient()
-
+  // ── Persiste ──────────────────────────────────────────────────────────────
   const { data, error } = await supabase
     .from('portal_mensagens')
     .insert({

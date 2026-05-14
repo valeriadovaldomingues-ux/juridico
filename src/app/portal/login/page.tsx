@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import Logo from '@/components/ui/Logo'
 import { Mail, Loader2, CheckCircle2 } from 'lucide-react'
 
@@ -20,26 +19,23 @@ export default function PortalLoginPage() {
     setEstado('enviando')
     setErro('')
 
-    const supabase = createClient()
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/portal`,
-        // Garante que somente clientes com vínculo existente recebem o link
-        // O redirect_to aponta para o portal, não para o dashboard
-        shouldCreateUser: false,
-      },
+    // Chama o wrapper server-side — garante rate limiting e timing uniforme.
+    // Nunca chama Supabase diretamente para evitar exposição de informação.
+    const res = await fetch('/api/portal/auth/otp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: email.trim().toLowerCase() }),
     })
 
-    if (error) {
-      // shouldCreateUser: false retorna erro se o email não existir como usuário
-      // Usamos mensagem genérica para não revelar se o email está cadastrado
-      setErro('Não foi possível enviar o link. Verifique o e-mail ou entre em contato com o escritório.')
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({}))
+      setErro(data.error ?? 'Muitas tentativas. Aguarde e tente novamente.')
       setEstado('erro')
       return
     }
 
+    // Todos os outros casos (incluindo email não encontrado) mostram "enviado"
+    // para não revelar se o email existe no sistema.
     setEstado('enviado')
   }
 

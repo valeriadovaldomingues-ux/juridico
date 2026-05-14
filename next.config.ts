@@ -1,5 +1,34 @@
 import type { NextConfig } from 'next'
 
+// ── Content Security Policy ───────────────────────────────────────────────────
+// Extraído do env para poder usar o host real do Supabase no connect-src.
+// Fallback para *.supabase.co cobre todos os projetos Supabase.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const supabaseHost = supabaseUrl
+  ? (() => { try { return new URL(supabaseUrl).host } catch { return '*.supabase.co' } })()
+  : '*.supabase.co'
+
+const csp = [
+  "default-src 'self'",
+  // Next.js injeta scripts inline para hidratação — unsafe-inline necessário
+  // até suporte nativo a nonces no App Router ser estável.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  // Supabase Storage + data URIs para favicon/logo
+  `img-src 'self' data: blob: https://${supabaseHost}`,
+  "font-src 'self'",
+  // API calls para Supabase (auth, realtime, storage, REST)
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost}`,
+  // Bloqueia iframes externos (reforça X-Frame-Options)
+  "frame-ancestors 'none'",
+  // Bloqueia plugins (Flash, Java, etc.)
+  "object-src 'none'",
+  // Previne base tag hijacking
+  "base-uri 'self'",
+  // Restringe onde forms podem enviar dados
+  "form-action 'self'",
+].join('; ')
+
 // ── Headers de segurança HTTP ────────────────────────────────────────────────
 // Aplicados a todas as respostas. Protegem contra ataques comuns.
 const securityHeaders = [
@@ -32,6 +61,11 @@ const securityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',
     value: 'on',
+  },
+  // Content Security Policy — veja definição acima
+  {
+    key:   'Content-Security-Policy',
+    value: csp,
   },
 ]
 
