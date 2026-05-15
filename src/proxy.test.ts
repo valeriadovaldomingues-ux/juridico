@@ -17,33 +17,63 @@ import { NextRequest } from 'next/server'
 // vi.hoisted() runs before vi.mock(), so these refs are available inside the
 // factory and can be configured per-test.
 
-const { mockGetUser, mockSingle } = vi.hoisted(() => ({
-  mockGetUser: vi.fn<[], Promise<{ data: { user: { id: string } | null } }>>(),
-  mockSingle:  vi.fn<[], Promise<{ data: { role: string; ativo: boolean } | null; error: null }>>(),
+// mockQueryResult representa tanto .single() quanto .maybeSingle()
+const { mockGetUser, mockQueryResult } = vi.hoisted(() => ({
+  mockGetUser:     vi.fn<[], Promise<{ data: { user: { id: string; email?: string } | null } }>>(),
+  mockQueryResult: vi.fn<[], Promise<{ data: { role: string; ativo: boolean } | null; error: { code: string; message: string } | null }>>(),
 }))
 
+// Mock @supabase/ssr — auth client (anon key, usado por auth.getUser())
 vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
     auth: { getUser: mockGetUser },
     from: () => {
-      // Fluent query chain — every method except .single() returns itself
+      // Fluent chain — tanto .single() quanto .maybeSingle() usam o mesmo mock
       const chain: {
-        select: (_: string) => typeof chain
-        eq:     (_: string, __: unknown) => typeof chain
-        single: typeof mockSingle
+        select:      (_: string) => typeof chain
+        eq:          (_: string, __: unknown) => typeof chain
+        single:      typeof mockQueryResult
+        maybeSingle: typeof mockQueryResult
+        then:        (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => Promise<unknown>
       } = {
-        select: () => chain,
-        eq:     () => chain,
-        single: mockSingle,
+        select:      () => chain,
+        eq:          () => chain,
+        single:      mockQueryResult,
+        maybeSingle: mockQueryResult,
+        then:        (onfulfilled, onrejected) => mockQueryResult().then(onfulfilled, onrejected),
       }
       return chain
     },
   }),
 }))
 
-// ── Stub env (ignored by mock, but avoids TS ! assertion warnings) ─────────────
+// Mock @supabase/supabase-js — service client (usado pelo getServiceClient())
+// Nos testes, SUPABASE_SERVICE_ROLE_KEY não está definida, então getServiceClient()
+// retorna null e o proxy usa o client anon acima como fallback.
+// Este mock existe para o caso de testes futuros com service key.
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({
+    from: () => {
+      const chain: {
+        select:      (_: string) => typeof chain
+        eq:          (_: string, __: unknown) => typeof chain
+        maybeSingle: typeof mockQueryResult
+        then:        (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => Promise<unknown>
+      } = {
+        select:      () => chain,
+        eq:          () => chain,
+        maybeSingle: mockQueryResult,
+        then:        (onfulfilled, onrejected) => mockQueryResult().then(onfulfilled, onrejected),
+      }
+      return chain
+    },
+  }),
+}))
+
+// ── Stub env ───────────────────────────────────────────────────────────────────
 process.env.NEXT_PUBLIC_SUPABASE_URL      = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+// SUPABASE_SERVICE_ROLE_KEY não definido → getServiceClient() retorna null → fallback anon
 
 import { proxy } from './proxy'
 
@@ -84,19 +114,20 @@ function noSession() {
 
 function asUser(role: string, ativo = true) {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'uid-test' } } })
-  mockSingle.mockResolvedValue({ data: { role, ativo }, error: null })
+  mockQueryResult.mockResolvedValue({ data: { role, ativo }, error: null })
 }
 
 function asUserNoProfile() {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'uid-test' } } })
-  mockSingle.mockResolvedValue({ data: null, error: null })
+  // maybeSingle() retorna data=null, error=null quando não há rows (sem erro de query)
+  mockQueryResult.mockResolvedValue({ data: null, error: null })
 }
 
 // ── Reset mocks before every test ─────────────────────────────────────────────
 
 beforeEach(() => {
   mockGetUser.mockReset()
-  mockSingle.mockReset()
+  mockQueryResult.mockReset()
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -184,7 +215,7 @@ describe('staff autenticado em /login', () => {
     const res = await proxy(req('/login'))
     expectRedirect(res, '/dashboard')
     // Não deve ter consultado profiles (a verificação é feita antes do bloco 3)
-    expect(mockSingle).not.toHaveBeenCalled()
+    expect(mockQueryResult).not.toHaveBeenCalled()
   })
 })
 
@@ -487,7 +518,7 @@ describe('prevenção de redirect loops', () => {
     // Destino é /dashboard, não /login novamente
     const dest = expectRedirect(res, '/dashboard')
     expect(dest.pathname).not.toBe('/login')
-    expect(mockSingle).not.toHaveBeenCalled() // DB não consultado para /login
+    expect(mockQueryResult).not.toHaveBeenCalled() // DB não consultado para /login
   })
 })
 
@@ -568,30 +599,93 @@ describe('chamada ao banco de dados (eficiência)', () => {
     noSession()
     await proxy(req('/login'))
     expect(mockGetUser).toHaveBeenCalledTimes(1)
-    expect(mockSingle).not.toHaveBeenCalled()
+    expect(mockQueryResult).not.toHaveBeenCalled()
   })
 
   it('staff autenticado em /login → DB NÃO consultado (redireciona antes do bloco 3)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'uid-test' } } })
     await proxy(req('/login'))
-    expect(mockSingle).not.toHaveBeenCalled()
+    expect(mockQueryResult).not.toHaveBeenCalled()
   })
 
   it('staff em rota interna não-sensível (/processos) → DB consultado uma vez', async () => {
     asUser('advogado')
     await proxy(req('/processos'))
-    expect(mockSingle).toHaveBeenCalledTimes(1)
+    expect(mockQueryResult).toHaveBeenCalledTimes(1)
   })
 
   it('staff em rota sensível (/financeiro) → DB consultado uma vez', async () => {
     asUser('socio')
     await proxy(req('/financeiro'))
-    expect(mockSingle).toHaveBeenCalledTimes(1)
+    expect(mockQueryResult).toHaveBeenCalledTimes(1)
   })
 
   it('cliente em /portal → DB consultado uma vez', async () => {
     asUser('cliente')
     await proxy(req('/portal'))
-    expect(mockSingle).toHaveBeenCalledTimes(1)
+    expect(mockQueryResult).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BUGFIX: profile query retornando erro (RLS bloqueando em Edge Runtime)
+// Cenário que causava /login?erro=sessao-invalida para usuários legítimos
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('profile query com erro (regressão do bug de Edge Runtime)', () => {
+  // Simula o comportamento pré-fix: query retorna null com erro de RLS
+  // (PGRST116 = no rows returned — causado quando auth.uid() é null no PostgREST)
+  function asUserWithProfileQueryError(code = 'PGRST116') {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'uid-test', email: 'valeria@pessoaedoval.com.br' } } })
+    mockQueryResult.mockResolvedValue({
+      data:  null,
+      error: { code, message: 'The result contains 0 rows' },
+    })
+  }
+
+  it('query error em rota interna → redirect /login?erro=sessao-invalida (fail-secure)', async () => {
+    asUserWithProfileQueryError()
+    const res = await proxy(req('/dashboard'))
+    const dest = expectRedirect(res, '/login')
+    expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
+  })
+
+  it('query error em rota de portal → redirect /portal/login (fail-secure)', async () => {
+    asUserWithProfileQueryError()
+    const res = await proxy(req('/portal/processos'))
+    const dest = expectRedirect(res, '/portal/login')
+    expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
+  })
+
+  it('query error em /portal/login → passa através (sem redirect loop)', async () => {
+    asUserWithProfileQueryError()
+    const res = await proxy(req('/portal/login'))
+    expectPassThru(res)
+  })
+
+  it('query error em rota sensível → redirect /login (fail-secure, não /dashboard)', async () => {
+    asUserWithProfileQueryError()
+    const res = await proxy(req('/financeiro'))
+    const dest = expectRedirect(res, '/login')
+    expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
+  })
+
+  it('profile encontrado apesar de erro anterior → trata como válido', async () => {
+    // Após o fix: service role retorna profile corretamente
+    asUser('socio')
+    const res = await proxy(req('/dashboard'))
+    expectPassThru(res)
+  })
+
+  it('usuário socio com profile válido acessa /dashboard sem redirect', async () => {
+    asUser('socio')
+    const res = await proxy(req('/dashboard'))
+    expectPassThru(res)
+  })
+
+  it('usuário socio com profile válido acessa /financeiro sem redirect', async () => {
+    asUser('socio')
+    const res = await proxy(req('/financeiro'))
+    expectPassThru(res)
   })
 })

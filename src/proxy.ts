@@ -1,10 +1,42 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient }       from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
 
-// Rotas restritas por papel — inlined para compatibilidade com edge runtime.
-// Mais específicas primeiro (ex: /configuracoes/usuarios antes de /configuracoes).
-// Deve estar sincronizado com RESTRICTED_ROUTES em src/lib/permissions.ts.
+// ── Service client para leitura de profiles no middleware ─────────────────────
+//
+// O createServerClient (anon key) em Edge Runtime não propaga o JWT ao PostgREST
+// corretamente, fazendo auth.uid() retornar NULL nas políticas RLS.
+// Isso causa a policy "id = auth.uid()" avaliar para FALSE e suprimir o row.
+//
+// Solução: usar service_role para o check de profile no proxy.
+// É seguro porque:
+//   1. user.id já foi validado via Auth API (auth.getUser())
+//   2. lemos apenas role+ativo do próprio perfil do usuário
+//   3. a chave fica apenas server-side (nunca NEXT_PUBLIC_)
+//   4. fail-secure mantido: se profile null → redirect (orphan real ou indisponível)
+//
+// Singleton reutilizado entre requests no mesmo Edge instance.
+let _serviceClient: ReturnType<typeof createClient> | null = null
+
+function getServiceClient(): ReturnType<typeof createClient> | null {
+  if (_serviceClient) return _serviceClient
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    // Fallback seguro: sem service key, usa anon key (pode falhar por RLS em Edge)
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('[proxy] SUPABASE_SERVICE_ROLE_KEY não configurado — leitura de profiles via anon (pode falhar)')
+    }
+    return null
+  }
+  _serviceClient = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  return _serviceClient
+}
+
+// ── Rotas restritas ───────────────────────────────────────────────────────────
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/financeiro',             roles: ['socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
@@ -13,8 +45,6 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/configuracoes',          roles: ['socio'] },
 ]
 
-// Prefixos de rotas internas do escritório.
-// Role 'cliente' é bloqueado de todos esses caminhos e redirecionado para /portal.
 const INTERNAL_PREFIXES = [
   '/dashboard', '/clientes', '/processos', '/agenda', '/kanban',
   '/publicacoes', '/documentos', '/financeiro', '/comercial', '/relatorios',
@@ -29,9 +59,18 @@ function routeAllowed(role: string, pathname: string): boolean {
   return true
 }
 
+// ── Log de diagnóstico (ativado por PORTAL_DEBUG=true) ───────────────────────
+function diagLog(data: Record<string, unknown>) {
+  if (process.env.PORTAL_DEBUG === 'true') {
+    console.log('[proxy:diag]', JSON.stringify(data))
+  }
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // Client anon — usado para auth.getUser() (chama Auth REST API diretamente,
+  // não depende de RLS/PostgREST).
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,21 +92,21 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Renova o token de sessão automaticamente (tokens expiram a cada hora)
+  // Valida sessão via Auth API (não depende de PostgREST nem de RLS)
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
 
-  // ── Classificação de caminhos ───────────────────────────────────────────────
+  // ── Classificação de caminhos ─────────────────────────────────────────────
 
   const isPortalPath  = pathname.startsWith('/portal')
   const isPortalLogin = pathname === '/portal/login'
   const isAuthPage    = pathname === '/login'
   const isPublicPath  =
     isAuthPage       ||
-    isPortalLogin    ||                           // login do portal é público
-    pathname.startsWith('/auth') ||              // callbacks OAuth do Supabase
-    pathname.startsWith('/reset-password')       // fluxo de reset de senha
+    isPortalLogin    ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/reset-password')
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
@@ -75,65 +114,93 @@ export async function proxy(request: NextRequest) {
   // ── 1. Sem sessão ─────────────────────────────────────────────────────────
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
-    // Portal sem sessão → login do portal; rotas internas → login do escritório
     url.pathname = isPortalPath ? '/portal/login' : '/login'
     if (pathname !== '/') url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  // ── 2. Usuário autenticado no login do escritório ─────────────────────────
+  // ── 2. Autenticado tentando acessar /login do escritório ─────────────────
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // ── 3. Verificações por papel (uma única query quando necessário) ──────────
+  // ── 3. Verificações por papel ─────────────────────────────────────────────
   if (user && (isInternalPath || isSensitive || isPortalPath)) {
-    const { data: profile } = await supabase
+
+    // Busca profile usando service role (bypassa RLS — necessário em Edge Runtime
+    // porque o client anon não propaga o JWT ao PostgREST neste contexto).
+    // Fallback para anon se service key não estiver configurada.
+    const client = getServiceClient() ?? supabase
+    const { data: profile, error: profileError } = await client
       .from('profiles')
       .select('role, ativo')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
+
+    // Log de diagnóstico (ativado por PORTAL_DEBUG=true — remover após validar)
+    diagLog({
+      path:        pathname,
+      userId:      user.id,
+      email:       user.email,
+      hasProfile:  !!profile,
+      role:        profile?.role,
+      ativo:       profile?.ativo,
+      queryError:  profileError ? { code: profileError.code, msg: profileError.message } : null,
+    })
+
+    // Log de erro silencioso da query (sempre)
+    if (profileError) {
+      console.error('[proxy] Erro na query de profiles:', {
+        userId: user.id,
+        code:   profileError.code,
+        msg:    profileError.message,
+        path:   pathname,
+      })
+    }
 
     const role  = profile?.role as string | undefined
     const ativo = profile?.ativo
 
-    // 3-orphan. Sessão órfã: usuário autenticado sem profile.
-    // Fail-secure: nunca concede acesso a rotas protegidas sem profile válido.
-    // Exclui /portal/login — sessão órfã nessa rota renderiza o login normalmente
-    // (evita redirect loop: /portal/login → /portal/login → ...).
-    // API routes (/api/*) não passam por aqui — tratam a sessão localmente.
+    // 3-orphan. Sessão órfã: usuário autenticado sem profile válido no banco.
+    // Fail-secure: bloqueia acesso sem profile. Exclui /portal/login para
+    // evitar redirect loop.
     if (!profile && (isInternalPath || (isPortalPath && !isPortalLogin))) {
       const url = request.nextUrl.clone()
       url.pathname = isPortalPath ? '/portal/login' : '/login'
       url.searchParams.set('erro', 'sessao-invalida')
-      logSecurity({ type: 'orphan_session', endpoint: pathname, userId: user.id })
+      logSecurity({
+        type:     'orphan_session',
+        endpoint: pathname,
+        userId:   user.id,
+        detail:   profileError ? `query_error:${profileError.code}` : 'no_profile',
+      })
       return NextResponse.redirect(url)
     }
 
-    // 3a. Role 'cliente' bloqueado de TODAS as rotas internas do escritório
+    // 3a. Role 'cliente' bloqueado de rotas internas → /portal
     if (role === 'cliente' && isInternalPath) {
       const url = request.nextUrl.clone()
       url.pathname = '/portal'
       return NextResponse.redirect(url)
     }
 
-    // 3b. Role 'cliente' autenticado tentando acessar login do portal → portal home
+    // 3b. Role 'cliente' no login do portal → portal home
     if (role === 'cliente' && isPortalLogin) {
       const url = request.nextUrl.clone()
       url.pathname = '/portal'
       return NextResponse.redirect(url)
     }
 
-    // 3c. Role não-cliente tentando acessar /portal → dashboard do escritório
+    // 3c. Staff tentando acessar /portal → dashboard
     if (role && role !== 'cliente' && isPortalPath && !isPortalLogin) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
     }
 
-    // 3d. Rotas restritas do escritório: verifica papel e conta ativa
+    // 3d. Rotas restritas: verifica papel e conta ativa
     if (isSensitive && role !== 'cliente') {
       if (!role || !ativo || !routeAllowed(role, pathname)) {
         const url = request.nextUrl.clone()
