@@ -51,11 +51,20 @@ export function isAllowedOrigin(
  *   const blocked = checkOrigin(request)
  *   if (blocked) return blocked
  */
-export function checkOrigin(request: Request): Response | null {
+export function checkOrigin(
+  request: Request,
+  endpoint = request.url,
+): Response | null {
   if (!isAllowedOrigin(request)) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[portal/origin] Blocked origin: ${request.headers.get('origin')}`)
-    }
+    // Import dinâmico evita circular dependency (logger não depende de origin)
+    import('@/lib/portal/logger').then(({ logSecurity }) => {
+      logSecurity({
+        type:     'csrf_block',
+        endpoint,
+        detail:   request.headers.get('origin') ?? 'no-origin',
+      })
+    }).catch(() => {/* silencioso */})
+
     return new Response(
       JSON.stringify({ error: 'Origin não autorizado' }),
       {

@@ -11,9 +11,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkOrigin } from '@/lib/portal/origin'
+import { checkOrigin }  from '@/lib/portal/origin'
 import { checkContentLength, extractIP } from '@/lib/portal/validate'
 import { otpByEmail, otpByIp, checkRateLimit } from '@/lib/portal/rate-limit'
+import { logSecurity } from '@/lib/portal/logger'
 
 const MIN_RESPONSE_MS = 800  // normaliza timing para prevenir enumeração
 
@@ -57,7 +58,12 @@ export async function POST(request: NextRequest) {
     const key   = !byEmail.allowed ? `email:${email}` : `ip:${ip}`
     const reset = byEmail.allowed ? byIp.reset : byEmail.reset
 
-    console.warn(`[portal/otp] Rate limit atingido — ${key}`)
+    logSecurity({
+      type:     'rate_limit',
+      endpoint: 'POST /api/portal/auth/otp',
+      ip,
+      detail:   !byEmail.allowed ? 'by_email' : 'by_ip',
+    })
 
     await normalizeDelay(started)
     return NextResponse.json(

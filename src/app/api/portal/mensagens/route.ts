@@ -5,6 +5,7 @@ import { logPortalAccess } from '@/lib/portal/access-log'
 import { checkOrigin }    from '@/lib/portal/origin'
 import { checkContentLength, checkStringLength, isUUID, extractIP, LIMITS } from '@/lib/portal/validate'
 import { mensagensByUser, mensagensByIp, checkRateLimit } from '@/lib/portal/rate-limit'
+import { logSecurity } from '@/lib/portal/logger'
 
 const TIPOS_VALIDOS = ['mensagem', 'solicitacao_documento', 'solicitacao_prazo', 'outro'] as const
 
@@ -91,7 +92,13 @@ export async function POST(request: NextRequest) {
   ])
 
   if (!byUser.allowed || !byIp.allowed) {
-    console.warn(`[portal/mensagens] Rate limit — user:${session.userId} ip:${ip}`)
+    logSecurity({
+      type:     'rate_limit',
+      endpoint: 'POST /api/portal/mensagens',
+      ip,
+      userId:   session.userId,
+      detail:   !byUser.allowed ? 'by_user' : 'by_ip',
+    })
     return NextResponse.json(
       { error: 'Limite de mensagens atingido. Tente novamente mais tarde.' },
       { status: 429 },

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { logSecurity } from '@/lib/portal/logger'
 
 // Rotas restritas por papel — inlined para compatibilidade com edge runtime.
 // Mais específicas primeiro (ex: /configuracoes/usuarios antes de /configuracoes).
@@ -100,12 +101,14 @@ export async function proxy(request: NextRequest) {
 
     // 3-orphan. Sessão órfã: usuário autenticado sem profile.
     // Fail-secure: nunca concede acesso a rotas protegidas sem profile válido.
+    // Exclui /portal/login — sessão órfã nessa rota renderiza o login normalmente
+    // (evita redirect loop: /portal/login → /portal/login → ...).
     // API routes (/api/*) não passam por aqui — tratam a sessão localmente.
-    if (!profile && (isInternalPath || isPortalPath)) {
+    if (!profile && (isInternalPath || (isPortalPath && !isPortalLogin))) {
       const url = request.nextUrl.clone()
       url.pathname = isPortalPath ? '/portal/login' : '/login'
       url.searchParams.set('erro', 'sessao-invalida')
-      console.warn(`[proxy] Sessão órfã detectada — user:${user.id} path:${pathname}`)
+      logSecurity({ type: 'orphan_session', endpoint: pathname, userId: user.id })
       return NextResponse.redirect(url)
     }
 

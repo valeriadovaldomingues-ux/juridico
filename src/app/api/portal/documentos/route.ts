@@ -4,6 +4,7 @@ import { createClient }   from '@/lib/supabase/server'
 import { logPortalAccess } from '@/lib/portal/access-log'
 import { isUUID }         from '@/lib/portal/validate'
 import { downloadByUser, checkRateLimit } from '@/lib/portal/rate-limit'
+import { logSecurity } from '@/lib/portal/logger'
 
 const BUCKET = 'docs-pedv'
 const SIGNED_URL_TTL = 900  // 15 minutos
@@ -34,7 +35,12 @@ export async function GET(request: NextRequest) {
     // Rate limiting por usuário
     const rl = await checkRateLimit(downloadByUser, session.userId)
     if (!rl.allowed) {
-      console.warn(`[portal/documentos] Rate limit download — user:${session.userId}`)
+      logSecurity({
+        type:     'rate_limit',
+        endpoint: 'GET /api/portal/documentos?download',
+        userId:   session.userId,
+        detail:   'by_user',
+      })
       return NextResponse.json(
         { error: 'Limite de downloads atingido. Tente novamente mais tarde.' },
         { status: 429 },

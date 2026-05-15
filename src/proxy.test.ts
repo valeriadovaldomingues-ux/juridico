@@ -336,21 +336,20 @@ describe('usuário autenticado sem profile (sessão órfã)', () => {
     expectRedirect(res, '/portal/login')
   })
 
-  it('/portal/login sem profile → passa através (rota pública)', async () => {
-    // /portal/login é isPublicPath=true — bloco 1 não dispara pois user existe
-    // Bloco 3-orphan só dispara em isInternalPath ou isPortalPath — /portal/login
-    // é isPortalPath=true MAS também isPortalLogin=true.
-    // O check de orphan ocorre ANTES de 3a,3b,3c, então deve disparar.
-    // Comportamento: redireciona para /portal/login (que já é a destino)
-    // — parece loop, mas na prática o usuário já está na página certa.
-    // Implementação atual: block 3-orphan dispara para isPortalPath incluindo login.
-    // Este teste documenta o comportamento real.
+  it('/portal/login com sessão órfã → passa através (sem redirect loop)', async () => {
+    // Bug anterior: 3-orphan redirecionava /portal/login → /portal/login (loop infinito).
+    // Fix: isPortalLogin é excluído da condição de sessão órfã.
+    // Comportamento correto: orphan em /portal/login vê o formulário normalmente.
+    // Sem redirect, sem loop. O usuário pode submeter o OTP.
     asUserNoProfile()
     const res = await proxy(req('/portal/login'))
-    // Sessão órfã em /portal/login → redirect para /portal/login (mesma página)
-    // O browser não entra em loop porque a resposta é um redirect 307 e a página
-    // é public (sem sessão necessária). Na prática, o usuário só vê o login.
-    expect(res.status).toBe(307)
+    expectPassThru(res)
+  })
+
+  it('/portal/login com sessão órfã não tem header Location', async () => {
+    asUserNoProfile()
+    const res = await proxy(req('/portal/login'))
+    expect(location(res)).toBeNull()
   })
 })
 
