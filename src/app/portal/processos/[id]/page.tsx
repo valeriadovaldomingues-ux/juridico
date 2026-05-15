@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { notFound }     from 'next/navigation'
+import { isUUID }       from '@/lib/portal/validate'
+import Link             from 'next/link'
 import { ArrowLeft, Scale, Users, Newspaper } from 'lucide-react'
 
 const TIPO_PARTE_LABELS: Record<string, string> = {
@@ -18,6 +19,10 @@ export default async function PortalProcessoDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+
+  // Valida UUID antes de qualquer query — nunca enviar string arbitrária ao banco
+  if (!isUUID(id)) notFound()
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -31,9 +36,14 @@ export default async function PortalProcessoDetailPage({
 
   if (!pc) return null
 
+  // Campos expostos ao cliente — mínimo necessário.
+  // EXCLUÍDOS intencionalmente:
+  //   observacoes      — campo interno estratégico: nunca expor ao cliente
+  //   valor_causa      — oculto até definição formal de política de exposição
+  //   advogado_responsavel_id — UUID interno sem valor para o cliente
   const { data: processo } = await supabase
     .from('processos')
-    .select('id, numero_processo, titulo, area_direito, status, fase, tribunal, vara, valor_causa, data_distribuicao, observacoes')
+    .select('id, numero_processo, titulo, area_direito, status, fase, tribunal, vara, data_distribuicao')
     .eq('id', id)
     .eq('cliente_id', pc.cliente_id)
     .eq('visivel_cliente', true)
@@ -42,8 +52,15 @@ export default async function PortalProcessoDetailPage({
   if (!processo) notFound()
 
   const [{ data: partes }, { data: publicacoes }] = await Promise.all([
-    supabase.from('partes_processo').select('id, pessoa_nome, tipo_parte').eq('processo_id', id),
-    supabase.from('publicacoes')
+    // EXCLUÍDOS: documento (CPF/CNPJ — dado pessoal de terceiro), observacoes (notas internas)
+    supabase
+      .from('partes_processo')
+      .select('id, pessoa_nome, tipo_parte')
+      .eq('processo_id', id),
+    // EXCLUÍDOS: texto_publicacao, hash, status, advogado_monitorado_id, oab_pesquisada,
+    //            termo_encontrado, origem — todos campos de workflow e monitoramento interno
+    supabase
+      .from('publicacoes')
       .select('id, tipo_publicacao, data_publicacao, resumo, prazo_detectado, prazo_data, audiencia_detectada, audiencia_data')
       .eq('processo_id', id)
       .order('data_publicacao', { ascending: false })
@@ -53,7 +70,10 @@ export default async function PortalProcessoDetailPage({
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link href="/portal/processos" className="text-[12px] text-[#7a8899] hover:text-[#145A5B] flex items-center gap-1 transition-colors">
+        <Link
+          href="/portal/processos"
+          className="text-[12px] text-[#7a8899] hover:text-[#145A5B] flex items-center gap-1 transition-colors"
+        >
           <ArrowLeft size={13} /> Processos
         </Link>
       </div>
@@ -72,19 +92,17 @@ export default async function PortalProcessoDetailPage({
           </div>
         </div>
         <dl className="grid grid-cols-2 gap-3 mt-5 text-[13px]">
-          {[
-            ['Tribunal', processo.tribunal],
-            ['Vara', processo.vara],
-            ['Fase', processo.fase],
-            ['Status', processo.status],
+          {([
+            ['Tribunal',     processo.tribunal],
+            ['Vara',         processo.vara],
+            ['Fase',         processo.fase],
+            ['Status',       processo.status],
             ['Distribuição', processo.data_distribuicao
               ? new Date(processo.data_distribuicao).toLocaleDateString('pt-BR')
               : null],
-            ['Valor da causa', processo.valor_causa
-              ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(processo.valor_causa)
-              : null],
-          ].filter(([, v]) => v).map(([k, v]) => (
-            <div key={String(k)}>
+            // valor_causa removido — oculto até definição formal de política de exposição
+          ] as [string, string | null][]).filter(([, v]) => v).map(([k, v]) => (
+            <div key={k}>
               <dt className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wide">{k}</dt>
               <dd className="text-[#374151] mt-0.5">{v}</dd>
             </div>
