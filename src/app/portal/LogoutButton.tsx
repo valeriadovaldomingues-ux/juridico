@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { LogOut }    from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LogoutButton() {
@@ -9,8 +9,6 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     const supabase = createClient()
-    // scope: 'global' invalida todos os tokens de refresh do usuário em todos
-    // os dispositivos, não apenas a sessão atual.
     await supabase.auth.signOut({ scope: 'global' })
     router.push('/portal/login')
     router.refresh()
@@ -19,9 +17,9 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="flex items-center gap-1.5 text-[12px] text-[#7a8899] hover:text-[#0f1923] transition-colors"
+      className="flex items-center gap-1.5 text-[11px] tracking-[0.08em] uppercase text-white/40 hover:text-white/80 transition-colors"
     >
-      <LogOut size={13} />
+      <LogOut size={12} />
       Sair
     </button>
   )

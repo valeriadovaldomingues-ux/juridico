@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CalendarDays, Clock } from 'lucide-react'
+import { CalendarDays, AlertTriangle } from 'lucide-react'
 
 const TIPO_LABELS: Record<string, string> = {
   tarefa: 'Tarefa', evento: 'Evento', prazo: 'Prazo', audiencia: 'Audiência',
@@ -7,11 +7,25 @@ const TIPO_LABELS: Record<string, string> = {
   reuniao: 'Reunião', diligencia: 'Diligência', outro: 'Outro',
 }
 
-const PRIORIDADE_COLORS: Record<string, string> = {
-  baixa:   'bg-[#f3f4f6] text-[#7a8899]',
-  media:   'bg-amber-50 text-amber-700',
-  alta:    'bg-orange-50 text-orange-700',
-  urgente: 'bg-red-50 text-red-700',
+const PRIORIDADE_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
+  baixa:   { label: 'Baixa',   dot: 'bg-[#D1D5DB]', text: 'text-[#9CA3AF]' },
+  media:   { label: 'Média',   dot: 'bg-amber-400',  text: 'text-amber-700' },
+  alta:    { label: 'Alta',    dot: 'bg-orange-400', text: 'text-orange-700' },
+  urgente: { label: 'Urgente', dot: 'bg-red-500',    text: 'text-red-700'   },
+}
+
+const MESES: Record<string, string> = {
+  Jan: 'Jan', Feb: 'Fev', Mar: 'Mar', Apr: 'Abr', May: 'Mai', Jun: 'Jun',
+  Jul: 'Jul', Aug: 'Ago', Sep: 'Set', Oct: 'Out', Nov: 'Nov', Dec: 'Dez',
+}
+
+function formatData(dateStr: string) {
+  const d = new Date(dateStr + 'T12:00:00')
+  const dia = String(d.getDate()).padStart(2, '0')
+  const mesEn = d.toLocaleString('en', { month: 'short' })
+  const mes = MESES[mesEn] ?? mesEn
+  const ano = d.getFullYear()
+  return { dia, mes, ano }
 }
 
 export default async function PortalAgendaPage() {
@@ -30,7 +44,6 @@ export default async function PortalAgendaPage() {
 
   const hoje = new Date().toISOString().split('T')[0]
 
-  // IDs dos processos visíveis do cliente
   const { data: processoIds } = await supabase
     .from('processos')
     .select('id')
@@ -63,60 +76,107 @@ export default async function PortalAgendaPage() {
 
   const itens = [
     ...(agenda ?? []).map(a => ({ ...a, _origem: 'agenda', _data: a.data_inicio })),
-    ...(prazos ?? []).map(p => ({ ...p, _origem: 'prazo',  _data: p.data_final })),
+    ...(prazos ?? []).map(p => ({ ...p, _origem: 'prazo',  _data: p.data_final  })),
   ].sort((a, b) => (a._data ?? '').localeCompare(b._data ?? ''))
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-[20px] font-semibold text-[#0f1923]">Agenda e Prazos</h1>
+    <div className="space-y-6">
+
+      <div>
+        <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
+        <h1
+          className="text-[28px] text-[#1C1C2E] leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+        >
+          Agenda e Prazos
+        </h1>
+      </div>
 
       {itens.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] p-12 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <CalendarDays size={32} className="mx-auto text-[#D0DCDC] mb-3" />
-          <p className="text-[13px] text-[#9ca3af]">Nenhum evento ou prazo próximo.</p>
+
+        <div className="bg-white border border-[#E8E3D8] px-8 py-14 text-center">
+          <CalendarDays size={28} className="mx-auto text-[#E8E3D8] mb-4" strokeWidth={1} />
+          <p className="text-[13px] text-[#9CA3AF]">Nenhum evento ou prazo próximo.</p>
         </div>
+
       ) : (
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          {itens.map((item, i) => {
-            const dataFormatada = item._data
-              ? new Date(item._data + 'T12:00:00').toLocaleDateString('pt-BR', {
-                  day: '2-digit', month: 'short', year: 'numeric',
-                })
-              : '—'
+
+        <div className="space-y-2">
+          {itens.map(item => {
+            const { dia, mes, ano } = item._data ? formatData(item._data) : { dia: '—', mes: '', ano: 0 }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const processo = (item as any).processo as { numero_processo: string | null; titulo: string } | null
+            const prio = PRIORIDADE_CONFIG[item.prioridade] ?? PRIORIDADE_CONFIG.media
+            const isUrgente = item.prioridade === 'urgente'
 
             return (
               <div
                 key={item.id + item._origem}
-                className={`flex items-start gap-4 px-5 py-4 ${i > 0 ? 'border-t border-[#f5f7fa]' : ''}`}
+                className={`bg-white border flex gap-0 overflow-hidden ${
+                  isUrgente ? 'border-amber-200' : 'border-[#E8E3D8]'
+                }`}
               >
-                <div className="w-9 h-9 rounded-xl bg-[#E8F0F0] flex items-center justify-center shrink-0 mt-0.5">
-                  <CalendarDays size={15} className="text-[#145A5B]" />
+                {/* Calendário data */}
+                <div className={`w-16 flex-col items-center justify-center py-4 border-r flex shrink-0 ${
+                  isUrgente ? 'bg-amber-50 border-amber-200' : 'bg-[#FDFAF7] border-[#F0EBE4]'
+                }`}>
+                  <span className={`text-[22px] leading-none font-semibold ${
+                    isUrgente ? 'text-amber-700' : 'text-[#1C1C2E]'
+                  }`}
+                    style={{ fontFamily: 'var(--font-serif)' }}
+                  >
+                    {dia}
+                  </span>
+                  <span className={`text-[9px] tracking-widest uppercase mt-0.5 ${
+                    isUrgente ? 'text-amber-600' : 'text-[#C49557]'
+                  }`}>
+                    {mes}
+                  </span>
+                  <span className="text-[9px] text-[#C5C0B8] mt-0.5">{ano}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#0f1923]">{item.titulo}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORIDADE_COLORS[item.prioridade] ?? 'bg-[#f3f4f6] text-[#7a8899]'}`}>
-                      {item.prioridade}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f3f4f6] text-[#9ca3af]">
+
+                {/* Conteúdo */}
+                <div className="flex-1 min-w-0 px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[#1C1C2E] leading-snug">{item.titulo}</p>
+                      {processo && (
+                        <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">
+                          {processo.numero_processo ?? processo.titulo}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                      <span className={`text-[9px] tracking-wider uppercase font-medium ${prio.text}`}>
+                        {prio.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-[9px] text-[#9CA3AF] border border-[#E8E3D8] px-1.5 py-0.5 tracking-wide uppercase">
                       {TIPO_LABELS[item.tipo] ?? item.tipo}
                     </span>
-                    {processo && (
-                      <span className="text-[11px] text-[#c5cdd8]">
-                        {processo.numero_processo ?? processo.titulo}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {(item as any).hora_inicio && (
+                      <span className="text-[10px] text-[#9CA3AF]">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {String((item as any).hora_inicio).slice(0, 5)}h
+                      </span>
+                    )}
+                    {isUrgente && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-700">
+                        <AlertTriangle size={10} /> Urgente
                       </span>
                     )}
                   </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-[12px] font-medium text-[#374151]">{dataFormatada}</span>
                 </div>
               </div>
             )
           })}
         </div>
+
       )}
     </div>
   )

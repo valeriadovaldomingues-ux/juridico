@@ -1,11 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import Logo from '@/components/ui/Logo'
+import { redirect }      from 'next/navigation'
+import Link              from 'next/link'
+import { Cormorant_Garamond } from 'next/font/google'
 import LogoutButton from './LogoutButton'
-import PortalNav from './PortalNav'
+import PortalNav    from './PortalNav'
 
-export const metadata = { title: 'Portal do Cliente — PEDV' }
+export const metadata = { title: 'Portal do Cliente — Pessoa e do Val' }
+
+// Fonte serif da identidade Pessoa e do Val
+const cormorant = Cormorant_Garamond({
+  subsets:  ['latin'],
+  weight:   ['300', '400', '600', '700'],
+  style:    ['normal', 'italic'],
+  display:  'swap',
+  variable: '--font-serif',
+})
 
 export default async function PortalLayout({
   children,
@@ -29,28 +38,58 @@ export default async function PortalLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9F9]">
+    <div className={`${cormorant.variable} min-h-screen bg-[#F5F0E8]`}>
 
-      {/* Header */}
-      <header className="bg-white border-b border-[#D0DCDC] px-6 py-3 flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-3">
-          <Link href="/portal">
-            <Logo variant="sidebar" />
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header className="bg-[#0C1B2A] border-b border-[#C49557]/20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+
+          {/* Marca */}
+          <Link href="/portal" className="flex flex-col leading-none group">
+            <span
+              className="text-white text-[20px] tracking-tight group-hover:text-[#D4A86A] transition-colors"
+              style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+            >
+              Pessoa e do Val
+            </span>
+            <span className="text-[#C49557] text-[9px] tracking-[0.2em] uppercase mt-0.5">
+              Consultoria Jurídica
+            </span>
           </Link>
-          <span className="text-[12px] text-[#9ca3af] border-l border-[#e5e7eb] pl-3 hidden sm:block">
-            Portal do Cliente
-          </span>
+
+          {/* Ações */}
+          <div className="flex items-center gap-4">
+            <span className="text-white/25 text-[11px] tracking-wider uppercase hidden sm:block">
+              Portal do Cliente
+            </span>
+            <div className="w-px h-4 bg-white/10 hidden sm:block" />
+            <LogoutButton />
+          </div>
         </div>
-        <LogoutButton />
+
+        {/* Linha dourada sutil — assinatura visual da marca */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#C49557]/40 to-transparent" />
       </header>
 
-      {/* Navegação */}
+      {/* ── Navegação ───────────────────────────────────────────────────────── */}
       <PortalNav />
 
-      {/* Conteúdo */}
+      {/* ── Conteúdo ────────────────────────────────────────────────────────── */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {children}
       </main>
+
+      {/* ── Rodapé ──────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-[#EDE8DF] mt-12 py-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+          <span className="text-[11px] text-[#9CA3AF] tracking-wide">
+            Pessoa e do Val Consultoria Jurídica · Belo Horizonte, MG
+          </span>
+          <span className="text-[11px] text-[#C49557]/60 tracking-wider uppercase">
+            P&amp;V · Desde 2002
+          </span>
+        </div>
+      </footer>
 
     </div>
   )

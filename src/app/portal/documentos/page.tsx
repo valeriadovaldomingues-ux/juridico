@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { FileText, Download } from 'lucide-react'
+import { FileText, Download, ArrowDownToLine } from 'lucide-react'
 
 export default async function PortalDocumentosPage() {
   const supabase = await createClient()
@@ -15,7 +15,6 @@ export default async function PortalDocumentosPage() {
 
   if (!pc) return null
 
-  // Documentos uploaded liberados
   const { data: documentos } = await supabase
     .from('documentos')
     .select('id, nome_arquivo, tipo_documento, created_at')
@@ -23,7 +22,6 @@ export default async function PortalDocumentosPage() {
     .eq('liberado_cliente', true)
     .order('created_at', { ascending: false })
 
-  // Documentos gerados (por IA) liberados
   const { data: processoIds } = await supabase
     .from('processos')
     .select('id')
@@ -44,80 +42,97 @@ export default async function PortalDocumentosPage() {
   const temDocs = (documentos?.length ?? 0) + (gerados?.length ?? 0) > 0
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-[20px] font-semibold text-[#0f1923]">Documentos</h1>
+    <div className="space-y-6">
+
+      <div>
+        <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
+        <h1
+          className="text-[28px] text-[#1C1C2E] leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+        >
+          Documentos
+        </h1>
+      </div>
 
       {!temDocs ? (
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] p-12 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <FileText size={32} className="mx-auto text-[#D0DCDC] mb-3" />
-          <p className="text-[13px] text-[#9ca3af]">Nenhum documento disponível no momento.</p>
+
+        <div className="bg-white border border-[#E8E3D8] px-8 py-14 text-center">
+          <FileText size={28} className="mx-auto text-[#E8E3D8] mb-4" strokeWidth={1} />
+          <p className="text-[13px] text-[#9CA3AF]">Nenhum documento disponível no momento.</p>
+          <p className="text-[11px] text-[#C5C0B8] mt-1">
+            Os documentos liberados pelo escritório aparecerão aqui.
+          </p>
         </div>
+
       ) : (
-        <div className="space-y-5">
-          {/* Documentos gerados */}
+        <div className="space-y-6">
+
+          {/* Documentos gerados pelo escritório */}
           {gerados && gerados.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-              <div className="px-5 py-3 border-b border-[#f5f7fa]">
-                <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wide">Documentos do escritório</p>
+            <div className="bg-white border border-[#E8E3D8] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#F0EBE4] bg-[#FDFAF7]">
+                <p className="text-[9px] font-medium text-[#C49557] tracking-[0.2em] uppercase">
+                  Documentos do escritório
+                </p>
               </div>
-              {gerados.map((g, i) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const proc = (g as any).processo as { numero_processo: string | null; titulo: string } | null
-                return (
-                  <div
-                    key={g.id}
-                    className={`flex items-center gap-4 px-5 py-4 ${i > 0 ? 'border-t border-[#f5f7fa]' : ''}`}
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-[#fef3e2] flex items-center justify-center shrink-0">
-                      <FileText size={15} className="text-[#b8903a]" />
+              <div className="divide-y divide-[#F5F2EE]">
+                {gerados.map(g => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const proc = (g as any).processo as { numero_processo: string | null; titulo: string } | null
+                  return (
+                    <div key={g.id} className="flex items-center gap-4 px-5 py-4">
+                      <div className="w-8 h-8 border border-[#E8E3D8] flex items-center justify-center shrink-0">
+                        <FileText size={13} className="text-[#C49557]" strokeWidth={1.5} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-[#1C1C2E] truncate">{g.titulo}</p>
+                        {proc && (
+                          <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">
+                            {proc.numero_processo ?? proc.titulo}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[#C5C0B8] shrink-0">
+                        {new Date(g.created_at).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[#0f1923] truncate">{g.titulo}</p>
-                      {proc && (
-                        <p className="text-[11px] text-[#9ca3af] mt-0.5">
-                          {proc.numero_processo ?? proc.titulo}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-[#c5cdd8]">
-                      {new Date(g.created_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           )}
 
-          {/* Arquivos enviados pelo escritório */}
+          {/* Arquivos para download */}
           {documentos && documentos.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-              <div className="px-5 py-3 border-b border-[#f5f7fa]">
-                <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wide">Arquivos disponíveis</p>
+            <div className="bg-white border border-[#E8E3D8] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#F0EBE4] bg-[#FDFAF7]">
+                <p className="text-[9px] font-medium text-[#C49557] tracking-[0.2em] uppercase">
+                  Arquivos disponíveis para download
+                </p>
               </div>
-              {documentos.map((d, i) => (
-                <div
-                  key={d.id}
-                  className={`flex items-center gap-4 px-5 py-4 ${i > 0 ? 'border-t border-[#f5f7fa]' : ''}`}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-[#E8F0F0] flex items-center justify-center shrink-0">
-                    <FileText size={15} className="text-[#145A5B]" />
+              <div className="divide-y divide-[#F5F2EE]">
+                {documentos.map(d => (
+                  <div key={d.id} className="flex items-center gap-4 px-5 py-4">
+                    <div className="w-8 h-8 border border-[#E8E3D8] flex items-center justify-center shrink-0">
+                      <ArrowDownToLine size={13} className="text-[#C49557]" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[#1C1C2E] truncate">{d.nome_arquivo}</p>
+                      <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">{d.tipo_documento}</p>
+                    </div>
+                    <a
+                      href={`/api/portal/documentos?download=${d.id}`}
+                      className="flex items-center gap-1.5 text-[10px] text-white bg-[#C49557] hover:bg-[#A8803D] px-3 py-1.5 tracking-[0.1em] uppercase transition-colors shrink-0"
+                    >
+                      <Download size={11} />
+                      Baixar
+                    </a>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-[#0f1923] truncate">{d.nome_arquivo}</p>
-                    <p className="text-[11px] text-[#9ca3af] mt-0.5">{d.tipo_documento}</p>
-                  </div>
-                  {/* Download via API para gerar signed URL */}
-                  <a
-                    href={`/api/portal/documentos?download=${d.id}`}
-                    className="flex items-center gap-1.5 text-[12px] text-[#145A5B] font-medium hover:underline"
-                  >
-                    <Download size={13} />
-                    Baixar
-                  </a>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
+
         </div>
       )}
     </div>

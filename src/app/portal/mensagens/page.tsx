@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Loader2, MessageSquare } from 'lucide-react'
+import { Send, Loader2, MessageSquare, ArrowRight } from 'lucide-react'
 
 interface Mensagem {
   id:          string
@@ -15,10 +15,17 @@ interface Mensagem {
 }
 
 const TIPO_LABELS: Record<string, string> = {
-  mensagem:               'Mensagem',
-  solicitacao_documento:  'Solicitação de documento',
-  solicitacao_prazo:      'Solicitação sobre prazo',
-  outro:                  'Outro',
+  mensagem:              'Mensagem',
+  solicitacao_documento: 'Solicitação de documento',
+  solicitacao_prazo:     'Solicitação sobre prazo',
+  outro:                 'Outro',
+}
+
+function formatHora(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
 }
 
 export default function PortalMensagensPage() {
@@ -67,21 +74,34 @@ export default function PortalMensagensPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
-      <h1 className="text-[20px] font-semibold text-[#0f1923]">Mensagens</h1>
+    <div className="space-y-6 max-w-2xl">
+
+      <div>
+        <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
+        <h1
+          className="text-[28px] text-[#1C1C2E] leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+        >
+          Mensagens
+        </h1>
+      </div>
 
       {/* Thread */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="h-[420px] overflow-y-auto p-5 space-y-4">
+      <div className="bg-white border border-[#E8E3D8] overflow-hidden">
+
+        {/* Área de mensagens */}
+        <div className="h-[420px] overflow-y-auto p-5 space-y-4 bg-[#FDFAF7]">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 size={20} className="animate-spin text-[#D0DCDC]" />
+              <Loader2 size={18} className="animate-spin text-[#E8E3D8]" />
             </div>
           ) : mensagens.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <MessageSquare size={28} className="text-[#D0DCDC]" />
-              <p className="text-[13px] text-[#9ca3af]">Nenhuma mensagem ainda.</p>
-              <p className="text-[12px] text-[#c5cdd8]">Envie uma mensagem para o escritório.</p>
+              <MessageSquare size={24} className="text-[#E8E3D8]" strokeWidth={1} />
+              <p className="text-[13px] text-[#9CA3AF]">Nenhuma mensagem ainda.</p>
+              <p className="text-[11px] text-[#C5C0B8]">
+                Envie uma mensagem para o escritório abaixo.
+              </p>
             </div>
           ) : (
             mensagens.map(m => (
@@ -90,20 +110,24 @@ export default function PortalMensagensPage() {
                 className={`flex ${m.autor_tipo === 'cliente' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[78%] px-4 py-3 ${
                     m.autor_tipo === 'cliente'
-                      ? 'bg-[#0F3D3E] text-white rounded-br-sm'
-                      : 'bg-[#f3f4f6] text-[#374151] rounded-bl-sm'
+                      ? 'bg-[#0C1B2A] text-white'
+                      : 'bg-white border border-[#E8E3D8] text-[#1C1C2E]'
                   }`}
                 >
                   {m.tipo !== 'mensagem' && (
-                    <p className={`text-[10px] font-semibold mb-1 ${m.autor_tipo === 'cliente' ? 'text-white/70' : 'text-[#9ca3af]'}`}>
+                    <p className={`text-[9px] font-medium tracking-[0.1em] uppercase mb-1.5 ${
+                      m.autor_tipo === 'cliente' ? 'text-[#C49557]' : 'text-[#C49557]'
+                    }`}>
                       {TIPO_LABELS[m.tipo] ?? m.tipo}
                     </p>
                   )}
                   <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.conteudo}</p>
-                  <p className={`text-[10px] mt-1.5 ${m.autor_tipo === 'cliente' ? 'text-white/50' : 'text-[#c5cdd8]'}`}>
-                    {new Date(m.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  <p className={`text-[10px] mt-2 ${
+                    m.autor_tipo === 'cliente' ? 'text-white/30' : 'text-[#C5C0B8]'
+                  }`}>
+                    {formatHora(m.created_at)}
                   </p>
                 </div>
               </div>
@@ -113,40 +137,51 @@ export default function PortalMensagensPage() {
         </div>
 
         {/* Formulário */}
-        <div className="border-t border-[#f3f4f6] p-4 space-y-3">
+        <div className="border-t border-[#E8E3D8] p-4 space-y-3 bg-white">
           {erro && (
-            <p className="text-[12px] text-[#e74c3c] bg-[#fde8e8] px-3 py-2 rounded-xl">{erro}</p>
+            <p className="text-[12px] text-[#e74c3c] bg-[#fde8e8] border border-[#f5c6c6] px-3 py-2">
+              {erro}
+            </p>
           )}
-          <div>
-            <select
-              value={tipo}
-              onChange={e => setTipo(e.target.value)}
-              className="w-full text-[12px] px-3 py-2 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] text-[#374151]"
-            >
-              {Object.entries(TIPO_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </div>
+
+          <select
+            value={tipo}
+            onChange={e => setTipo(e.target.value)}
+            className="w-full text-[11px] px-3 py-2 bg-[#FDFAF7] border border-[#E8E3D8] outline-none focus:border-[#C49557]/50 text-[#5A5A70] tracking-wide transition-colors"
+          >
+            {Object.entries(TIPO_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+
           <form onSubmit={enviar} className="flex gap-2">
             <textarea
               value={conteudo}
               onChange={e => setConteudo(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(e as unknown as React.FormEvent) } }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  enviar(e as unknown as React.FormEvent)
+                }
+              }}
               placeholder="Escreva sua mensagem… (Enter para enviar)"
               rows={2}
-              className="flex-1 text-[13px] px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] resize-none text-[#374151] placeholder:text-[#c5cdd8]"
+              className="flex-1 text-[13px] px-3 py-2.5 bg-[#FDFAF7] border border-[#E8E3D8] outline-none focus:border-[#C49557]/50 resize-none text-[#1C1C2E] placeholder:text-[#C5C0B8] transition-colors"
             />
             <button
               type="submit"
               disabled={enviando || !conteudo.trim()}
-              className="px-4 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white rounded-xl transition-colors disabled:opacity-50 self-end"
+              className="px-4 py-2.5 bg-[#C49557] hover:bg-[#A8803D] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-end"
             >
-              {enviando ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              {enviando
+                ? <Loader2 size={14} className="animate-spin" />
+                : <ArrowRight size={14} />
+              }
             </button>
           </form>
         </div>
       </div>
+
     </div>
   )
 }
