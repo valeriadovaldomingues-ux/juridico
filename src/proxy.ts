@@ -59,12 +59,6 @@ function routeAllowed(role: string, pathname: string): boolean {
   return true
 }
 
-// ── Log de diagnóstico (ativado por PORTAL_DEBUG=true) ───────────────────────
-function diagLog(data: Record<string, unknown>) {
-  if (process.env.PORTAL_DEBUG === 'true') {
-    console.log('[proxy:diag]', JSON.stringify(data))
-  }
-}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -139,18 +133,7 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    // Log de diagnóstico (ativado por PORTAL_DEBUG=true — remover após validar)
-    diagLog({
-      path:        pathname,
-      userId:      user.id,
-      email:       user.email,
-      hasProfile:  !!profile,
-      role:        profile?.role,
-      ativo:       profile?.ativo,
-      queryError:  profileError ? { code: profileError.code, msg: profileError.message } : null,
-    })
-
-    // Log de erro silencioso da query (sempre)
+    // Log de erro silencioso da query (apenas em caso de falha real)
     if (profileError) {
       console.error('[proxy] Erro na query de profiles:', {
         userId: user.id,
