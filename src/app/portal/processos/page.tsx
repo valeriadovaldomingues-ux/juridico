@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link             from 'next/link'
 import { Scale, ArrowRight } from 'lucide-react'
+import EmptyState from '../_components/EmptyState'
 
 const AREA_LABELS: Record<string, string> = {
   civil: 'Cível', trabalhista: 'Trabalhista', criminal: 'Criminal',
@@ -9,11 +10,11 @@ const AREA_LABELS: Record<string, string> = {
   empresarial: 'Empresarial', outro: 'Outro',
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  ativo:     { label: 'Ativo',     color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
-  suspenso:  { label: 'Suspenso',  color: 'text-amber-700  bg-amber-50  border-amber-100'  },
-  arquivado: { label: 'Arquivado', color: 'text-[#9CA3AF]  bg-[#F9F9F9] border-[#E8E3D8]' },
-  encerrado: { label: 'Encerrado', color: 'text-[#6B7280]  bg-[#F3F4F6] border-[#E5E7EB]' },
+const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string; bg: string }> = {
+  ativo:     { label: 'Ativo',     dot: 'bg-emerald-400', text: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100' },
+  suspenso:  { label: 'Suspenso',  dot: 'bg-amber-400',   text: 'text-amber-700',   bg: 'bg-amber-50  border-amber-100'   },
+  arquivado: { label: 'Arquivado', dot: 'bg-[#C5C0B8]',   text: 'text-[#6B7280]',  bg: 'bg-[#F5F2EE] border-[#E8E3D8]'  },
+  encerrado: { label: 'Encerrado', dot: 'bg-[#9CA3AF]',   text: 'text-[#9CA3AF]',  bg: 'bg-[#F9F9F9] border-[#E8E3D8]'  },
 }
 
 export default async function PortalProcessosPage() {
@@ -51,35 +52,33 @@ export default async function PortalProcessosPage() {
           </h1>
         </div>
         {processos?.length ? (
-          <span className="text-[11px] text-[#9CA3AF] tracking-wide">
+          <span className="text-[11px] text-[#9CA3AF] tracking-wide tabular-nums">
             {processos.length} {processos.length === 1 ? 'processo' : 'processos'}
           </span>
         ) : null}
       </div>
 
       {!processos?.length ? (
-
-        <div className="bg-white border border-[#E8E3D8] px-8 py-14 text-center">
-          <Scale size={28} className="mx-auto text-[#E8E3D8] mb-4" strokeWidth={1} />
-          <p className="text-[13px] text-[#9CA3AF]">Nenhum processo disponível no momento.</p>
-          <p className="text-[11px] text-[#C5C0B8] mt-1">
-            Os processos liberados pelo escritório aparecerão aqui.
-          </p>
-        </div>
-
+        <EmptyState
+          icon={Scale}
+          titulo="Nenhum processo disponível"
+          descricao="Os processos liberados pelo escritório aparecerão aqui."
+        />
       ) : (
-
-        <div className="bg-white border border-[#E8E3D8] overflow-hidden divide-y divide-[#F0EBE4]">
+        <div className="bg-white border border-[#E8E3D8] overflow-hidden divide-y divide-[#F5F2EE]">
           {processos.map(p => {
-            const status = STATUS_CONFIG[p.status] ?? { label: p.status, color: 'text-[#9CA3AF] bg-[#F9F9F9] border-[#E8E3D8]' }
+            const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.arquivado
             return (
               <Link
                 key={p.id}
                 href={`/portal/processos/${p.id}`}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-[#FDFAF7] transition-colors group"
+                className="relative flex items-center gap-4 px-5 py-4 hover:bg-[#FDFAF7] transition-all duration-200 group overflow-hidden"
               >
+                {/* Gold left border — aparece no hover com escala */}
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#C49557] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-200" />
+
                 {/* Ícone */}
-                <div className="w-9 h-9 border border-[#E8E3D8] group-hover:border-[#C49557]/30 flex items-center justify-center shrink-0 transition-colors">
+                <div className="w-9 h-9 border border-[#E8E3D8] group-hover:border-[#C49557]/30 flex items-center justify-center shrink-0 transition-colors duration-200">
                   <Scale size={14} className="text-[#C49557]" strokeWidth={1.5} />
                 </div>
 
@@ -94,33 +93,33 @@ export default async function PortalProcessosPage() {
                         {p.numero_processo}
                       </span>
                     )}
-                    <span className="text-[10px] text-[#C5C0B8]">·</span>
+                    <span className="text-[10px] text-[#DDD8D0]">·</span>
                     <span className="text-[10px] text-[#9CA3AF]">
                       {AREA_LABELS[p.area_direito] ?? p.area_direito}
                     </span>
                     {p.tribunal && (
                       <>
-                        <span className="text-[10px] text-[#C5C0B8]">·</span>
+                        <span className="text-[10px] text-[#DDD8D0]">·</span>
                         <span className="text-[10px] text-[#9CA3AF]">{p.tribunal}</span>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Status */}
-                <span className={`text-[9px] font-medium px-2 py-0.5 border tracking-wide uppercase hidden sm:block ${status.color}`}>
-                  {status.label}
-                </span>
+                {/* Status badge com dot */}
+                <div className={`hidden sm:flex items-center gap-1.5 text-[9px] font-medium px-2 py-1 border tracking-wide uppercase ${st.bg} ${st.text}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                  {st.label}
+                </div>
 
                 <ArrowRight
                   size={13}
-                  className="text-[#E8E3D8] group-hover:text-[#C49557] shrink-0 transition-colors"
+                  className="text-[#DDD8D0] group-hover:text-[#C49557] shrink-0 transition-colors duration-200"
                 />
               </Link>
             )
           })}
         </div>
-
       )}
     </div>
   )
