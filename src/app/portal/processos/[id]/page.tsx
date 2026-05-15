@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound }     from 'next/navigation'
 import { isUUID }       from '@/lib/portal/validate'
 import Link             from 'next/link'
-import { ArrowLeft, Scale, Users } from 'lucide-react'
+import { ArrowLeft, Scale, Users, CalendarDays, FileText, ArrowRight } from 'lucide-react'
 import ProcessStatusBadge from '../../_components/ProcessStatusBadge'
 import TimelineItem       from '../../_components/TimelineItem'
 
@@ -244,6 +244,30 @@ export default async function PortalProcessoDetailPage({
             </div>
           ))}
         </dl>
+      </div>
+
+      {/* ── Atalhos contextuais ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2">
+        {(audiencias?.length ?? 0) + (prazos?.length ?? 0) > 0 && (
+          <Link
+            href={`/portal/agenda`}
+            className="inline-flex items-center gap-1.5 text-[10px] text-[#6B7280] border border-[#E8E3D8] px-3 py-1.5 hover:border-[#C49557]/40 hover:text-[#C49557] transition-all duration-150 tracking-wide uppercase"
+          >
+            <CalendarDays size={11} />
+            Ver agenda
+            <ArrowRight size={10} className="text-[#C5C0B8]" />
+          </Link>
+        )}
+        {(documentos?.length ?? 0) > 0 && (
+          <Link
+            href="/portal/documentos"
+            className="inline-flex items-center gap-1.5 text-[10px] text-[#6B7280] border border-[#E8E3D8] px-3 py-1.5 hover:border-[#C49557]/40 hover:text-[#C49557] transition-all duration-150 tracking-wide uppercase"
+          >
+            <FileText size={11} />
+            Documentos disponíveis ({documentos?.length})
+            <ArrowRight size={10} className="text-[#C5C0B8]" />
+          </Link>
+        )}
       </div>
 
       {/* ── Grid: Timeline + Partes ───────────────────────────────────────── */}

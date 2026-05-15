@@ -1,9 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
-import { FileText }     from 'lucide-react'
-import EmptyState        from '../_components/EmptyState'
+import { createClient }   from '@/lib/supabase/server'
+import { FileText }       from 'lucide-react'
+import EmptyState         from '../_components/EmptyState'
 import SecureDocumentCard from '../_components/SecureDocumentCard'
+import FilterTabs, { type FilterOption } from '../_components/FilterTabs'
 
-export default async function PortalDocumentosPage() {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function PortalDocumentosPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const filtro = typeof params.tipo === 'string' ? params.tipo : 'todos'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -47,13 +54,23 @@ export default async function PortalDocumentosPage() {
         .order('created_at', { ascending: false })
     : { data: [] }
 
-  const temDocs = (documentos?.length ?? 0) + (gerados?.length ?? 0) > 0
+  // Aplica filtro (client-side — dados já carregados)
+  const docsVisiveis   = filtro === 'gerados'  ? [] : (documentos ?? [])
+  const geradosVisiveis = filtro === 'arquivos' ? [] : (gerados ?? [])
+
+  const temDocs       = docsVisiveis.length + geradosVisiveis.length > 0
   const totalArquivos = (documentos?.length ?? 0) + (gerados?.length ?? 0)
 
-  return (
-    <div className="space-y-6">
+  const FILTRO_OPTIONS: FilterOption[] = [
+    { label: 'Todos',        value: 'todos',    count: totalArquivos              },
+    { label: 'Arquivos',     value: 'arquivos', count: documentos?.length ?? 0   },
+    { label: 'Do escritório',value: 'gerados',  count: gerados?.length ?? 0      },
+  ].filter(o => o.value === 'todos' || (o.count ?? 0) > 0)
 
-      <div className="flex items-end justify-between">
+  return (
+    <div className="space-y-5">
+
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
           <h1
@@ -63,33 +80,44 @@ export default async function PortalDocumentosPage() {
             Documentos
           </h1>
         </div>
-        {temDocs && (
-          <span className="text-[11px] text-[#9CA3AF] tracking-wide tabular-nums">
-            {totalArquivos} arquivo{totalArquivos !== 1 ? 's' : ''}
-          </span>
-        )}
+        <span className="text-[11px] text-[#9CA3AF] tracking-wide tabular-nums self-end pb-0.5">
+          {totalArquivos} arquivo{totalArquivos !== 1 ? 's' : ''}
+        </span>
       </div>
+
+      {/* Filtros */}
+      {FILTRO_OPTIONS.length > 1 && (
+        <FilterTabs
+          options={FILTRO_OPTIONS}
+          current={filtro}
+          paramName="tipo"
+          basePath="/portal/documentos"
+        />
+      )}
 
       {!temDocs ? (
         <EmptyState
           icon={FileText}
-          titulo="Nenhum documento disponível"
-          descricao="Os arquivos liberados pelo escritório aparecerão aqui para download seguro."
+          titulo={filtro === 'todos' ? 'Nenhum documento disponível' : 'Nenhum arquivo nesta categoria'}
+          descricao={filtro === 'todos'
+            ? 'Os arquivos liberados pelo escritório aparecerão aqui para download seguro.'
+            : 'Tente outro filtro ou aguarde novas liberações do escritório.'
+          }
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
 
           {/* Documentos gerados — sem download (só visualização de título) */}
-          {gerados && gerados.length > 0 && (
+          {geradosVisiveis.length > 0 && (
             <div className="bg-white border border-[#E8E3D8] overflow-hidden">
               <div className="px-5 py-3 border-b border-[#F0EBE4] bg-[#FDFAF7] flex items-center justify-between">
                 <p className="text-[9px] font-semibold text-[#C49557] tracking-[0.2em] uppercase">
                   Documentos do escritório
                 </p>
-                <span className="text-[9px] text-[#C5C0B8] tabular-nums">{gerados.length}</span>
+                <span className="text-[9px] text-[#C5C0B8] tabular-nums">{geradosVisiveis.length}</span>
               </div>
               <div className="divide-y divide-[#F5F2EE]">
-                {gerados.map(g => {
+                {geradosVisiveis.map(g => {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   const proc = (g as any).processo as { numero_processo: string | null; titulo: string } | null
                   const processoRef = proc?.numero_processo ?? proc?.titulo ?? undefined
@@ -115,16 +143,16 @@ export default async function PortalDocumentosPage() {
           )}
 
           {/* Arquivos físicos — com download seguro */}
-          {documentos && documentos.length > 0 && (
+          {docsVisiveis.length > 0 && (
             <div className="bg-white border border-[#E8E3D8] overflow-hidden">
               <div className="px-5 py-3 border-b border-[#F0EBE4] bg-[#FDFAF7] flex items-center justify-between">
                 <p className="text-[9px] font-semibold text-[#C49557] tracking-[0.2em] uppercase">
                   Arquivos para download
                 </p>
-                <span className="text-[9px] text-[#C5C0B8] tabular-nums">{documentos.length}</span>
+                <span className="text-[9px] text-[#C5C0B8] tabular-nums">{docsVisiveis.length}</span>
               </div>
               <div className="divide-y divide-[#F5F2EE]">
-                {documentos.map(d => (
+                {docsVisiveis.map(d => (
                   <SecureDocumentCard
                     key={d.id}
                     id={d.id}

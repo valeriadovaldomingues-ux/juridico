@@ -1,7 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
-import Link             from 'next/link'
-import { Scale, ArrowRight } from 'lucide-react'
-import EmptyState from '../_components/EmptyState'
+import { createClient }      from '@/lib/supabase/server'
+import Link                   from 'next/link'
+import { Scale, ArrowRight }  from 'lucide-react'
+import EmptyState              from '../_components/EmptyState'
+import ProcessStatusBadge      from '../_components/ProcessStatusBadge'
+import FilterTabs, { type FilterOption } from '../_components/FilterTabs'
+import Pagination              from '../_components/Pagination'
+
+const PAGE_SIZE = 20
 
 const AREA_LABELS: Record<string, string> = {
   civil: 'Cível', trabalhista: 'Trabalhista', criminal: 'Criminal',
@@ -10,14 +15,16 @@ const AREA_LABELS: Record<string, string> = {
   empresarial: 'Empresarial', outro: 'Outro',
 }
 
-const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string; bg: string }> = {
-  ativo:     { label: 'Ativo',     dot: 'bg-emerald-400', text: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100' },
-  suspenso:  { label: 'Suspenso',  dot: 'bg-amber-400',   text: 'text-amber-700',   bg: 'bg-amber-50  border-amber-100'   },
-  arquivado: { label: 'Arquivado', dot: 'bg-[#C5C0B8]',   text: 'text-[#6B7280]',  bg: 'bg-[#F5F2EE] border-[#E8E3D8]'  },
-  encerrado: { label: 'Encerrado', dot: 'bg-[#9CA3AF]',   text: 'text-[#9CA3AF]',  bg: 'bg-[#F9F9F9] border-[#E8E3D8]'  },
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function PortalProcessosPage() {
+export default async function PortalProcessosPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const status = typeof params.status === 'string' ? params.status : 'todos'
+  const page   = Math.max(1, parseInt(typeof params.page === 'string' ? params.page : '1', 10) || 1)
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -31,17 +38,52 @@ export default async function PortalProcessosPage() {
 
   if (!pc) return null
 
-  const { data: processos } = await supabase
-    .from('processos')
-    .select('id, numero_processo, titulo, area_direito, status, tribunal, created_at')
-    .eq('cliente_id', pc.cliente_id)
-    .eq('visivel_cliente', true)
-    .order('created_at', { ascending: false })
+  // ── Queries: todos os processos (para contagens) + página atual ─────────
+  const [
+    { data: todos },
+    { data: processos, count: totalCount },
+  ] = await Promise.all([
+    // Todos os processos — só para contar por status (sem campos extras)
+    supabase.from('processos')
+      .select('id, status')
+      .eq('cliente_id', pc.cliente_id)
+      .eq('visivel_cliente', true),
+
+    // Processos da página atual com filtro aplicado
+    (() => {
+      let q = supabase.from('processos')
+        .select('id, numero_processo, titulo, area_direito, status, tribunal, created_at', { count: 'exact' })
+        .eq('cliente_id', pc.cliente_id)
+        .eq('visivel_cliente', true)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1)
+      if (status !== 'todos') q = q.eq('status', status)
+      return q
+    })(),
+  ])
+
+  // Contagens por status para os badges dos filtros
+  const contagens = (todos ?? []).reduce<Record<string, number>>((acc, p) => {
+    acc[p.status] = (acc[p.status] ?? 0) + 1
+    return acc
+  }, {})
+  const total = todos?.length ?? 0
+
+  const STATUS_OPTIONS: FilterOption[] = [
+    { label: 'Todos',     value: 'todos',     count: total },
+    { label: 'Ativos',    value: 'ativo',     count: contagens.ativo      ?? 0 },
+    { label: 'Suspensos', value: 'suspenso',  count: contagens.suspenso   ?? 0 },
+    { label: 'Encerrados',value: 'encerrado', count: contagens.encerrado  ?? 0 },
+    { label: 'Arquivados',value: 'arquivado', count: contagens.arquivado  ?? 0 },
+  ].filter(o => o.value === 'todos' || (o.count ?? 0) > 0)
+
+  const extraParams: Record<string, string> = status !== 'todos' ? { status } : {}
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      <div className="flex items-end justify-between">
+      {/* ── Cabeçalho ──────────────────────────────────────────────────── */}
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
           <h1
@@ -51,30 +93,41 @@ export default async function PortalProcessosPage() {
             Meus Processos
           </h1>
         </div>
-        {processos?.length ? (
-          <span className="text-[11px] text-[#9CA3AF] tracking-wide tabular-nums">
-            {processos.length} {processos.length === 1 ? 'processo' : 'processos'}
-          </span>
-        ) : null}
+        <span className="text-[11px] text-[#9CA3AF] tracking-wide tabular-nums self-end pb-0.5">
+          {total} {total === 1 ? 'processo' : 'processos'}
+        </span>
       </div>
 
+      {/* ── Filtros de status ──────────────────────────────────────────── */}
+      {STATUS_OPTIONS.length > 1 && (
+        <FilterTabs
+          options={STATUS_OPTIONS}
+          current={status}
+          paramName="status"
+          basePath="/portal/processos"
+        />
+      )}
+
+      {/* ── Lista ──────────────────────────────────────────────────────── */}
       {!processos?.length ? (
         <EmptyState
           icon={Scale}
-          titulo="Nenhum processo disponível"
-          descricao="Os processos liberados pelo escritório aparecerão aqui."
+          titulo={status === 'todos' ? 'Nenhum processo disponível' : `Nenhum processo ${AREA_LABELS[status] ?? status}`}
+          descricao={status === 'todos'
+            ? 'Os processos liberados pelo escritório aparecerão aqui.'
+            : 'Tente outro filtro ou aguarde a atualização pelo escritório.'
+          }
         />
       ) : (
-        <div className="bg-white border border-[#E8E3D8] overflow-hidden divide-y divide-[#F5F2EE]">
-          {processos.map(p => {
-            const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.arquivado
-            return (
+        <div className="space-y-4">
+          <div className="bg-white border border-[#E8E3D8] overflow-hidden divide-y divide-[#F5F2EE]">
+            {processos.map(p => (
               <Link
                 key={p.id}
                 href={`/portal/processos/${p.id}`}
-                className="relative flex items-center gap-4 px-5 py-4 hover:bg-[#FDFAF7] transition-all duration-200 group overflow-hidden"
+                className="relative flex items-center gap-4 px-4 sm:px-5 py-4 hover:bg-[#FDFAF7] transition-all duration-200 group overflow-hidden"
               >
-                {/* Gold left border — aparece no hover com escala */}
+                {/* Gold left border on hover */}
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#C49557] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-200" />
 
                 {/* Ícone */}
@@ -93,23 +146,22 @@ export default async function PortalProcessosPage() {
                         {p.numero_processo}
                       </span>
                     )}
-                    <span className="text-[10px] text-[#DDD8D0]">·</span>
+                    {p.numero_processo && <span className="text-[10px] text-[#DDD8D0]">·</span>}
                     <span className="text-[10px] text-[#9CA3AF]">
                       {AREA_LABELS[p.area_direito] ?? p.area_direito}
                     </span>
                     {p.tribunal && (
                       <>
-                        <span className="text-[10px] text-[#DDD8D0]">·</span>
-                        <span className="text-[10px] text-[#9CA3AF]">{p.tribunal}</span>
+                        <span className="text-[10px] text-[#DDD8D0] hidden sm:inline">·</span>
+                        <span className="text-[10px] text-[#9CA3AF] hidden sm:inline">{p.tribunal}</span>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Status badge com dot */}
-                <div className={`hidden sm:flex items-center gap-1.5 text-[9px] font-medium px-2 py-1 border tracking-wide uppercase ${st.bg} ${st.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                  {st.label}
+                {/* Status — escondido em mobile para não poluir */}
+                <div className="hidden sm:block shrink-0">
+                  <ProcessStatusBadge status={p.status} size="sm" />
                 </div>
 
                 <ArrowRight
@@ -117,8 +169,17 @@ export default async function PortalProcessosPage() {
                   className="text-[#DDD8D0] group-hover:text-[#C49557] shrink-0 transition-colors duration-200"
                 />
               </Link>
-            )
-          })}
+            ))}
+          </div>
+
+          {/* Paginação */}
+          <Pagination
+            page={page}
+            total={totalCount ?? total}
+            pageSize={PAGE_SIZE}
+            basePath="/portal/processos"
+            extraParams={extraParams}
+          />
         </div>
       )}
     </div>
