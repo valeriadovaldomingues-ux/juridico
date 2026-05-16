@@ -24,7 +24,10 @@ export default async function PortalLayout({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/portal/login')
+  // Sem sessão: o proxy já redireciona qualquer rota não-pública para /portal/login.
+  // A única rota sem sessão que chega aqui é o próprio /portal/login (isPublicPath=true).
+  // Redirecionar para /portal/login aqui causaria loop infinito — renderizar children diretamente.
+  if (!user) return <>{children}</>
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -32,8 +35,11 @@ export default async function PortalLayout({
     .eq('id', user.id)
     .single()
 
+  // Staff autenticado (qualquer role que não seja 'cliente'): redireciona para painel interno.
+  // Segregação preservada: staff nunca acessa dados do cliente via portal.
   if (!profile || !profile.ativo || profile.role !== 'cliente') {
     if (profile?.role && profile.role !== 'cliente') redirect('/dashboard')
+    // Sem profile ou inativo: fail-secure → login (portalGuard() bloqueia as APIs também)
     redirect('/portal/login')
   }
 
