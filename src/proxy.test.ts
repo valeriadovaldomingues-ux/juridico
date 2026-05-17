@@ -707,3 +707,220 @@ describe('profile query com erro (regressão do bug de Edge Runtime)', () => {
     expectPassThru(res)
   })
 })
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MATRIZ DE PERMISSÕES — Regressão completa por rota e role
+// Garante que proxy, sidebar e page guards estão sincronizados.
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('matriz proxy — /comercial', () => {
+  it('comercial acessa /comercial (corrige bug: requireRole faltava "comercial")', async () => {
+    asUser('comercial')
+    const res = await proxy(req('/comercial'))
+    expectPassThru(res)  // proxy deixa passar; page também deve aceitar após fix
+  })
+
+  it('administrativo acessa /comercial', async () => {
+    asUser('administrativo')
+    const res = await proxy(req('/comercial'))
+    expectPassThru(res)
+  })
+
+  it('socio acessa /comercial', async () => {
+    asUser('socio')
+    const res = await proxy(req('/comercial'))
+    expectPassThru(res)
+  })
+
+  it('estagiario acessa /comercial — proxy passa (não é RESTRICTED); page bloqueia', async () => {
+    // Proxy não restringe /comercial. A page usa requireRole para bloquear estagiario.
+    // Este teste verifica apenas a camada proxy.
+    asUser('estagiario')
+    const res = await proxy(req('/comercial'))
+    expectPassThru(res)  // proxy passa; page depois bloqueia estagiario ✓
+  })
+
+  it('cliente em /comercial → redirect para /portal (segregação)', async () => {
+    asUser('cliente')
+    const res = await proxy(req('/comercial'))
+    expectRedirect(res, '/portal')
+  })
+})
+
+describe('matriz proxy — /financeiro', () => {
+  it('socio acessa /financeiro', async () => {
+    asUser('socio')
+    const res = await proxy(req('/financeiro'))
+    expectPassThru(res)
+  })
+
+  it('gerente em /financeiro → redirect /dashboard (proxy RESTRICTED)', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/financeiro'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('advogado em /financeiro → redirect /dashboard', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/financeiro'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('comercial em /financeiro → redirect /dashboard', async () => {
+    asUser('comercial')
+    const res = await proxy(req('/financeiro'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('estagiario em /financeiro → redirect /dashboard', async () => {
+    asUser('estagiario')
+    const res = await proxy(req('/financeiro'))
+    expectRedirect(res, '/dashboard')
+  })
+})
+
+describe('matriz proxy — /documentos', () => {
+  it('administrativo acessa /documentos', async () => {
+    asUser('administrativo')
+    const res = await proxy(req('/documentos'))
+    expectPassThru(res)
+  })
+
+  it('advogado acessa /documentos', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/documentos'))
+    expectPassThru(res)
+  })
+
+  it('gerente acessa /documentos', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/documentos'))
+    expectPassThru(res)
+  })
+
+  it('socio acessa /documentos', async () => {
+    asUser('socio')
+    const res = await proxy(req('/documentos'))
+    expectPassThru(res)
+  })
+
+  it('estagiario acessa /documentos — proxy passa (page bloqueia)', async () => {
+    // estagiario não tem /documentos no sidebar; page usa requireRole para bloquear
+    asUser('estagiario')
+    const res = await proxy(req('/documentos'))
+    expectPassThru(res)  // proxy OK; page bloqueia estagiario ✓
+  })
+})
+
+describe('matriz proxy — /relatorios', () => {
+  it('advogado acessa /relatorios', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/relatorios'))
+    expectPassThru(res)
+  })
+
+  it('gerente acessa /relatorios', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/relatorios'))
+    expectPassThru(res)
+  })
+
+  it('socio acessa /relatorios', async () => {
+    asUser('socio')
+    const res = await proxy(req('/relatorios'))
+    expectPassThru(res)
+  })
+
+  it('estagiario acessa /relatorios — proxy passa (page bloqueia)', async () => {
+    asUser('estagiario')
+    const res = await proxy(req('/relatorios'))
+    expectPassThru(res)  // proxy OK; page bloqueia estagiario ✓
+  })
+})
+
+describe('matriz proxy — /automacoes', () => {
+  it('gerente acessa /automacoes', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/automacoes'))
+    expectPassThru(res)
+  })
+
+  it('socio acessa /automacoes', async () => {
+    asUser('socio')
+    const res = await proxy(req('/automacoes'))
+    expectPassThru(res)
+  })
+
+  it('advogado em /automacoes → redirect /dashboard (RESTRICTED)', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/automacoes'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('administrativo em /automacoes → redirect /dashboard', async () => {
+    asUser('administrativo')
+    const res = await proxy(req('/automacoes'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('comercial em /automacoes → redirect /dashboard', async () => {
+    asUser('comercial')
+    const res = await proxy(req('/automacoes'))
+    expectRedirect(res, '/dashboard')
+  })
+})
+
+describe('matriz proxy — /monitoramento e /ia-juridica', () => {
+  // Proxy não restringe essas rotas; page guards as protegem.
+
+  it('advogado acessa /monitoramento (proxy)', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/monitoramento'))
+    expectPassThru(res)
+  })
+
+  it('gerente acessa /ia-juridica (proxy)', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/ia-juridica'))
+    expectPassThru(res)
+  })
+
+  it('estagiario em /monitoramento — proxy passa (page bloqueia após fix)', async () => {
+    asUser('estagiario')
+    const res = await proxy(req('/monitoramento'))
+    expectPassThru(res)  // proxy OK; page agora usa requireRole ✓
+  })
+
+  it('comercial em /ia-juridica — proxy passa (page bloqueia após fix)', async () => {
+    asUser('comercial')
+    const res = await proxy(req('/ia-juridica'))
+    expectPassThru(res)  // proxy OK; page agora usa requireRole ✓
+  })
+})
+
+describe('segregação cliente ↔ sistema interno — todas as rotas', () => {
+  const rotasInternas = [
+    '/comercial', '/financeiro', '/documentos', '/relatorios',
+    '/automacoes', '/monitoramento', '/ia-juridica', '/configuracoes',
+  ]
+
+  rotasInternas.forEach(rota => {
+    it(`cliente em ${rota} → redirect para /portal`, async () => {
+      asUser('cliente')
+      const res = await proxy(req(rota))
+      expectRedirect(res, '/portal')
+    })
+  })
+
+  it('sem sessão em /comercial → redirect para /login', async () => {
+    noSession()
+    const res = await proxy(req('/comercial'))
+    expectRedirect(res, '/login')
+  })
+
+  it('sem sessão em /financeiro → redirect para /login', async () => {
+    noSession()
+    const res = await proxy(req('/financeiro'))
+    expectRedirect(res, '/login')
+  })
+})

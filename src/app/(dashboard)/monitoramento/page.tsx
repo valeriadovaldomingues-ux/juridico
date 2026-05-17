@@ -1,7 +1,10 @@
+import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import MonitoramentoPage from './MonitoramentoPage'
 
 export default async function MonitoramentoRoute() {
+  // Sincronizado com ALLOWED_ROUTES: advogado, gerente, socio.
+  await requireRole(['advogado', 'gerente', 'socio'])
   const supabase = await createClient()
 
   const [

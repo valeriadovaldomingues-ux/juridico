@@ -1,10 +1,11 @@
-import { requireAuth } from '@/lib/auth/guards'
+import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import FinanceiroPage from './FinanceiroPage'
 
 export default async function FinanceiroRoute() {
-  // TODO: reativar requireRole(['gerente', 'socio']) após testes
-  const { profile } = await requireAuth()
+  // Apenas sócios acessam o financeiro — alinhado com proxy RESTRICTED e ALLOWED_ROUTES.
+  // O proxy já bloqueia outros roles, mas requireRole adiciona defense-in-depth.
+  const { profile } = await requireRole(['socio'])
   const supabase = await createClient()
 
   const [

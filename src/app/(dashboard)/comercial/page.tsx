@@ -5,7 +5,9 @@ import ComercialPage from './ComercialPage'
 export const metadata = { title: 'Comercial — PEDV' }
 
 export default async function Page() {
-  const { profile } = await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
+  // 'comercial' incluído — este role tem acesso completo ao módulo CRM/funil.
+  // Sincronizado com ALLOWED_ROUTES[comercial] e PERMISSIONS[comercial].comercial.
+  const { profile } = await requireRole(['comercial', 'administrativo', 'advogado', 'gerente', 'socio'])
 
   const supabase = await createClient()
 

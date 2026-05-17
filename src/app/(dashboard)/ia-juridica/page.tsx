@@ -1,3 +1,4 @@
+import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
 import { FileText, Newspaper, Bot, ArrowRight, Sparkles } from 'lucide-react'
 import TestePublicacaoIA from './TestePublicacaoIA'
@@ -29,7 +30,9 @@ const modulos = [
   },
 ]
 
-export default function IAJuridicaPage() {
+export default async function IAJuridicaPage() {
+  // Sincronizado com ALLOWED_ROUTES: advogado, gerente, socio.
+  await requireRole(['advogado', 'gerente', 'socio'])
   // Verificação feita no servidor — OPENAI_API_KEY nunca é exposta ao cliente
   const iaConfigurada = !!process.env.OPENAI_API_KEY
 
