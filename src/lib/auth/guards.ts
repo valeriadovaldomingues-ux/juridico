@@ -35,12 +35,21 @@ export async function requireAuth() {
  * Garante que o usuário autenticado possui um dos papéis permitidos.
  * Redireciona para /dashboard se o papel não for suficiente.
  *
+ * Regra de negócio: ROLE=socio tem acesso irrestrito a TODAS as rotas internas.
+ * O bypass de socio é aplicado aqui para que páginas novas herdem a regra
+ * automaticamente, sem depender de cada requireRole incluir 'socio' manualmente.
+ *
  * Uso:
- *   const { profile } = await requireRole(['socio'])
  *   const { profile } = await requireRole(['gerente', 'socio'])
+ *   const { profile } = await requireRole(['advogado', 'gerente', 'socio'])
  */
 export async function requireRole(allowedRoles: UserRole[]) {
   const result = await requireAuth()
+
+  // Sócio tem acesso irrestrito a todas as rotas internas do sistema.
+  // Este bypass codifica a regra de negócio no nível correto da arquitetura.
+  if (result.profile.role === 'socio') return result
+
   if (!allowedRoles.includes(result.profile.role)) {
     redirect('/dashboard')
   }

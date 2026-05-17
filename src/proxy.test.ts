@@ -924,3 +924,84 @@ describe('segregação cliente ↔ sistema interno — todas as rotas', () => {
     expectRedirect(res, '/login')
   })
 })
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REGRA GLOBAL: role=socio acessa TODAS as rotas internas sem redirect
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('socio — acesso irrestrito a todas as rotas internas (proxy)', () => {
+  const TODAS_ROTAS_INTERNAS = [
+    '/dashboard',
+    '/clientes',
+    '/clientes/novo',
+    '/processos',
+    '/processos/novo',
+    '/agenda',
+    '/kanban',
+    '/publicacoes',
+    '/documentos',
+    '/comercial',
+    '/financeiro',
+    '/relatorios',
+    '/importar',
+    '/automacoes',
+    '/monitoramento',
+    '/ia-juridica',
+    '/ia-juridica/peca',
+    '/ia-juridica/publicacao',
+    '/integracoes',
+    '/integracoes/trello',
+    '/configuracoes',
+    '/configuracoes/usuarios',
+  ]
+
+  TODAS_ROTAS_INTERNAS.forEach(rota => {
+    it(`socio em ${rota} → proxy passa sem redirect`, async () => {
+      asUser('socio')
+      const res = await proxy(req(rota))
+      expectPassThru(res)
+    })
+  })
+
+  it('socio em /portal → redirect para /dashboard (não acessa portal como cliente)', async () => {
+    asUser('socio')
+    const res = await proxy(req('/portal'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('socio em /portal/processos → redirect para /dashboard', async () => {
+    asUser('socio')
+    const res = await proxy(req('/portal/processos'))
+    expectRedirect(res, '/dashboard')
+  })
+})
+
+describe('cliente — bloqueado de TODAS as rotas internas (regressão)', () => {
+  const ROTAS_INTERNAS_AMOSTRA = [
+    '/dashboard', '/clientes', '/processos', '/financeiro',
+    '/comercial', '/documentos', '/relatorios', '/automacoes',
+    '/configuracoes', '/configuracoes/usuarios',
+  ]
+
+  ROTAS_INTERNAS_AMOSTRA.forEach(rota => {
+    it(`cliente em ${rota} → redirect para /portal`, async () => {
+      asUser('cliente')
+      const res = await proxy(req(rota))
+      expectRedirect(res, '/portal')
+    })
+  })
+})
+
+describe('sem sessão — todas as rotas internas vão para /login', () => {
+  const ROTAS_AMOSTRA = [
+    '/dashboard', '/financeiro', '/comercial', '/configuracoes',
+  ]
+
+  ROTAS_AMOSTRA.forEach(rota => {
+    it(`sem sessão em ${rota} → redirect para /login`, async () => {
+      noSession()
+      const res = await proxy(req(rota))
+      expectRedirect(res, '/login')
+    })
+  })
+})
