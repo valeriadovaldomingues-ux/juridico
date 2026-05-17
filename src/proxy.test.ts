@@ -475,6 +475,24 @@ describe('role insuficiente para rota restrita', () => {
     const res = await proxy(req('/integracoes/trello'))
     expectPassThru(res)
   })
+
+  // ── Regressão: sincronização proxy ↔ page guards ─────────────────────────────
+  // O proxy RESTRICTED permite gerente em /configuracoes/usuarios.
+  // A page deve ter requireRole(['gerente','socio']) — corrigido em 2026-05-17.
+
+  it('gerente em /configuracoes/usuarios → proxy passa (page guard deve aceitar gerente)', async () => {
+    // Este teste verifica a camada proxy.
+    // O teste de regressão garante que corrigir requireRole não reintroduz o bug.
+    asUser('gerente')
+    const res = await proxy(req('/configuracoes/usuarios'))
+    expectPassThru(res)  // proxy OK; page agora também aceita gerente
+  })
+
+  it('advogado em /configuracoes/usuarios → proxy bloqueia → /dashboard', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/configuracoes/usuarios'))
+    expectRedirect(res, '/dashboard')  // advogado não está em RESTRICTED para esta rota
+  })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════

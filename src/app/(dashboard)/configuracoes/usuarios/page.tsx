@@ -3,8 +3,10 @@ import { createServiceClient } from '@/lib/supabase/service'
 import UsuariosPage from './UsuariosPage'
 
 export default async function UsuariosServerPage() {
-  // Apenas sócios gerenciam usuários
-  const { profile: currentProfile } = await requireRole(['socio'])
+  // Gerentes e sócios acessam a lista de usuários.
+  // O UsuariosPage.tsx controla quais ações cada role pode executar (isSocio).
+  // Sincronizado com RESTRICTED em proxy.ts: { '/configuracoes/usuarios': ['gerente','socio'] }
+  const { profile: currentProfile } = await requireRole(['gerente', 'socio'])
 
   // Usa service_role para listar todos os profiles sem depender de RLS
   const service = createServiceClient()
