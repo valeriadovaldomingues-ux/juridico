@@ -27,8 +27,8 @@ export default async function PublicacoesRoute() {
           <h1 className="text-[24px] font-bold text-[#0f1923] tracking-tight">Publicações</h1>
           <p className="text-[13px] text-[#9aabb8] mt-0.5">Publicações, intimações e prazos do escritório</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm p-8">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mb-5">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm p-8">
+          <div className="w-12 h-12 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center mb-5">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b8903a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
@@ -38,8 +38,8 @@ export default async function PublicacoesRoute() {
             Execute os arquivos SQL no <strong>SQL Editor</strong> do Supabase, nesta ordem:
           </p>
           <ol className="list-decimal list-inside space-y-1.5 text-[13px] text-[#4a5a6a] mb-6">
-            <li><code className="font-mono text-[12px] bg-[#F7F9F9] px-1.5 py-0.5 rounded">supabase/monitoramento_migration.sql</code></li>
-            <li><code className="font-mono text-[12px] bg-[#F7F9F9] px-1.5 py-0.5 rounded">supabase/publicacoes_migration.sql</code></li>
+            <li><code className="font-mono text-[12px] bg-[#F3F1EE] px-1.5 py-0.5 rounded">supabase/monitoramento_migration.sql</code></li>
+            <li><code className="font-mono text-[12px] bg-[#F3F1EE] px-1.5 py-0.5 rounded">supabase/publicacoes_migration.sql</code></li>
           </ol>
           <p className="text-[12px] text-[#9aabb8]">Após executar, recarregue a página.</p>
         </div>

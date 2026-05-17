@@ -31,7 +31,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
         </div>
         <Link
           href="/processos/novo"
-          className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
         >
           <Plus size={15} />
           Novo Processo

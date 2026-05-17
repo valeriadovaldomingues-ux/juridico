@@ -783,12 +783,12 @@ export default function ImportadorPage() {
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'bg-white rounded-2xl border-2 border-dashed p-12 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all',
+            'bg-white rounded-lg border-2 border-dashed p-12 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all',
             dragging ? 'border-[#145A5B] bg-[#145A5B]/4' : 'border-[#e5e7eb] hover:border-[#145A5B]/40 hover:bg-[#f9fafb]'
           )}
         >
-          <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center', dragging ? 'bg-[#145A5B]/10' : 'bg-[#f3f4f6]')}>
-            <Upload size={24} className={dragging ? 'text-[#145A5B]' : 'text-[#9ca3af]'} />
+          <div className={cn('w-14 h-14 rounded-lg flex items-center justify-center', dragging ? 'bg-[#145A5B]/10' : 'bg-[#f3f4f6]')}>
+            <Upload size={24} className={dragging ? 'text-[#1D5F60]' : 'text-[#9ca3af]'} />
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-[#1a1d23]">
@@ -814,7 +814,7 @@ export default function ImportadorPage() {
 
       {/* Referência de colunas */}
       {etapa === 'upload' && tipo !== 'csv_juridico' && (
-        <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+        <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
           <p className="text-xs font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">
             Colunas esperadas — {tipo === 'clientes' ? 'Clientes' : 'Processos'}
           </p>
@@ -850,7 +850,7 @@ export default function ImportadorPage() {
         <>
           <PreviewHeader arquivo={arquivo!} total={rows.length} ok={totalOk} erros={totalErros} />
 
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
             <div className="overflow-x-auto">
               {tipo === 'clientes'   ? <TabelaClientes rows={clientesRows} />
               : tipo === 'processos' ? <TabelaProcessos rows={processosRows} />
@@ -884,8 +884,8 @@ export default function ImportadorPage() {
 
       {/* Importando */}
       {etapa === 'importando' && (
-        <div className="bg-white rounded-2xl border border-[#e5e7eb] py-20 flex flex-col items-center gap-4">
-          <Loader2 size={32} className="text-[#145A5B] animate-spin" />
+        <div className="bg-white rounded-lg border border-[#e5e7eb] py-20 flex flex-col items-center gap-4">
+          <Loader2 size={32} className="text-[#1D5F60] animate-spin" />
           <p className="text-sm font-medium text-[#374151]">Importando dados...</p>
           <p className="text-xs text-[#9ca3af]">Não feche esta janela</p>
         </div>
@@ -901,7 +901,7 @@ export default function ImportadorPage() {
             <StatCard label="Erros" value={log.erros} cor="red" />
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
             <div className="px-5 py-4 border-b border-[#f3f4f6]">
               <h2 className="text-sm font-semibold text-[#1a1d23]">Log de importação</h2>
             </div>
@@ -938,7 +938,7 @@ function TipoCard({ ativo, icon, label, desc, onClick }: { ativo: boolean; icon:
     <button
       onClick={onClick}
       className={cn(
-        'flex-1 flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all',
+        'flex-1 flex items-center gap-3 p-4 rounded-lg border-2 text-left transition-all',
         ativo ? 'border-[#145A5B] bg-[#145A5B]/4' : 'border-[#e5e7eb] bg-white hover:border-[#145A5B]/30'
       )}
     >
@@ -946,7 +946,7 @@ function TipoCard({ ativo, icon, label, desc, onClick }: { ativo: boolean; icon:
         {icon}
       </div>
       <div>
-        <p className={cn('text-sm font-semibold', ativo ? 'text-[#145A5B]' : 'text-[#1a1d23]')}>{label}</p>
+        <p className={cn('text-sm font-semibold', ativo ? 'text-[#1D5F60]' : 'text-[#1a1d23]')}>{label}</p>
         <p className="text-xs text-[#9ca3af] font-mono mt-0.5">{desc}</p>
       </div>
     </button>
@@ -958,7 +958,7 @@ function ColunasRef({ cols }: { cols: { nome: string; req: boolean; desc: string
     <div className="space-y-2">
       {cols.map((c) => (
         <div key={c.nome} className="flex items-center gap-3">
-          <code className="text-xs bg-[#f3f4f6] text-[#145A5B] px-2 py-0.5 rounded font-mono min-w-[160px]">{c.nome}</code>
+          <code className="text-xs bg-[#f3f4f6] text-[#1D5F60] px-2 py-0.5 rounded font-mono min-w-[160px]">{c.nome}</code>
           {c.req && <span className="text-xs text-red-500 font-medium">obrigatório</span>}
           <span className="text-xs text-[#6b7280]">{c.desc}</span>
         </div>
@@ -969,7 +969,7 @@ function ColunasRef({ cols }: { cols: { nome: string; req: boolean; desc: string
 
 function PreviewHeader({ arquivo, total, ok, erros }: { arquivo: File; total: number; ok: number; erros: number }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-4 flex items-center gap-4">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] p-4 flex items-center gap-4">
       <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
         <FileSpreadsheet size={18} className="text-green-600" />
       </div>
@@ -1096,7 +1096,7 @@ function StatCard({ label, value, cor }: { label: string; value: number; cor: 'g
     red: 'text-red-600',
   }
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
       <p className="text-xs text-[#9ca3af] mb-2">{label}</p>
       <p className={cn('text-3xl font-bold', cores[cor])}>{value}</p>
     </div>

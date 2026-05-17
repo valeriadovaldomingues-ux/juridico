@@ -46,7 +46,7 @@ export default function KanbanPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e5e7eb] text-[#374151] text-[13px] font-semibold rounded-xl hover:bg-[#f9fafb] transition-colors shadow-sm"
               title="Importar tarefas a partir de CSV exportado do Trello"
             >
-              <Upload size={14} className="text-[#145A5B]" />
+              <Upload size={14} className="text-[#1D5F60]" />
               Importar CSV do Trello
             </button>
           </div>

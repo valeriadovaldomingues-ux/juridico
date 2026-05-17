@@ -79,16 +79,16 @@ export default function ClientesTable({
   const hasFilters = nome || cpf || cidade || tipo || responsavel
 
   return (
-    <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
       {/* Barra de filtros */}
-      <div className="px-5 py-4 border-b border-[#E8F0F0]">
+      <div className="px-5 py-4 border-b border-[#E2DDD8]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
               showFilters || hasFilters
-                ? 'bg-[#0F3D3E] text-white'
+                ? 'bg-[#1D5F60] text-white'
                 : 'text-[#7a8899] hover:bg-[#f5f7fa]'
             }`}
           >
@@ -108,13 +108,13 @@ export default function ClientesTable({
               onChange={(e) => setNome(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="Buscar por nome..."
-              className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
             />
           </div>
 
           <button
             onClick={applyFilters}
-            className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-lg transition-colors"
           >
             Buscar
           </button>
@@ -134,7 +134,7 @@ export default function ClientesTable({
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] text-[#0f1923]"
+              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#0f1923]"
             >
               <option value="">Todos os tipos</option>
               {(Object.entries(TIPO_LABELS) as [TipoContato, string][]).map(([k, v]) => (
@@ -145,7 +145,7 @@ export default function ClientesTable({
             <select
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] text-[#0f1923]"
+              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#0f1923]"
             >
               <option value="">Todos os responsáveis</option>
               {profiles.map((p) => (
@@ -158,7 +158,7 @@ export default function ClientesTable({
               onChange={(e) => setCpf(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="CPF / CNPJ"
-              className="w-40 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-40 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
             />
 
             <input
@@ -166,7 +166,7 @@ export default function ClientesTable({
               onChange={(e) => setCidade(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="Cidade"
-              className="w-32 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-32 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
             />
           </div>
         )}
@@ -180,7 +180,7 @@ export default function ClientesTable({
       ) : (
         <table className="w-full">
           <thead>
-            <tr className="bg-[#f9fafb] border-b border-[#E8F0F0]">
+            <tr className="bg-[#f9fafb] border-b border-[#E2DDD8]">
               <Th first>Nome</Th>
               <Th>Tipo</Th>
               <Th>Contato</Th>
@@ -202,10 +202,10 @@ export default function ClientesTable({
                   {/* Nome */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#E8F0F0] flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[#E8F2F2] flex items-center justify-center flex-shrink-0">
                         {cliente.tipo_pessoa === 'juridica'
-                          ? <Building2 size={13} className="text-[#145A5B]" />
-                          : <User size={13} className="text-[#145A5B]" />
+                          ? <Building2 size={13} className="text-[#1D5F60]" />
+                          : <User size={13} className="text-[#1D5F60]" />
                         }
                       </div>
                       <div>
@@ -232,7 +232,7 @@ export default function ClientesTable({
                           href={`tel:${cliente.celular ?? cliente.telefone}`}
                           title={cliente.celular ?? cliente.telefone ?? ''}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F0F0] transition-all"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
                         >
                           <Phone size={13} />
                         </a>
@@ -254,7 +254,7 @@ export default function ClientesTable({
                           href={`mailto:${cliente.email}`}
                           title={cliente.email}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F0F0] transition-all"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
                         >
                           <Mail size={13} />
                         </a>
@@ -297,7 +297,7 @@ export default function ClientesTable({
                   <td className="px-4 py-3">
                     <Link
                       href={`/clientes/${cliente.id}`}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F0F0] transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
                     >
                       <ChevronRight size={14} />
                     </Link>

@@ -112,12 +112,12 @@ export default function ModeloModal({ modelo, onSalvar, onFechar }: Props) {
     if (err) setErro(err)
   }
 
-  const inputCls = 'w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#145A5B] text-[#1a1d23] placeholder:text-[#c5cdd8] transition-all'
+  const inputCls = 'w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#c5cdd8] transition-all'
   const labelCls = 'block text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider mb-1.5'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6] shrink-0">
@@ -187,7 +187,7 @@ export default function ModeloModal({ modelo, onSalvar, onFechar }: Props) {
                     type="button"
                     onClick={() => inserirPlaceholder(p.key)}
                     title={p.label}
-                    className="text-[11px] px-2 py-1 rounded-lg bg-white border border-[#e5e7eb] text-[#145A5B] font-mono hover:border-[#145A5B] hover:bg-[#E8F0F0] transition-all"
+                    className="text-[11px] px-2 py-1 rounded-lg bg-white border border-[#e5e7eb] text-[#1D5F60] font-mono hover:border-[#145A5B] hover:bg-[#E8F2F2] transition-all"
                   >
                     {p.key}
                   </button>
@@ -220,7 +220,7 @@ export default function ModeloModal({ modelo, onSalvar, onFechar }: Props) {
               Cancelar
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold bg-[#0F3D3E] hover:bg-[#145A5B] text-white rounded-xl transition-colors disabled:opacity-50">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold bg-[#1D5F60] hover:bg-[#27777A] text-white rounded-xl transition-colors disabled:opacity-50">
               {loading && <Loader2 size={13} className="animate-spin" />}
               {loading ? 'Salvando…' : isEdicao ? 'Salvar alterações' : 'Criar modelo'}
             </button>

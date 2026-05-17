@@ -85,14 +85,14 @@ function TabBtn({
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all ${
         active
-          ? 'bg-[#0F3D3E] text-white'
+          ? 'bg-[#1D5F60] text-white'
           : 'text-[#7a8899] hover:bg-[#f5f7fa] hover:text-[#0f1923]'
       }`}
     >
       {children}
       {count !== undefined && (
         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-          active ? 'bg-white/20 text-white' : 'bg-[#E8F0F0] text-[#7a8899]'
+          active ? 'bg-white/20 text-white' : 'bg-[#E8F2F2] text-[#7a8899]'
         }`}>
           {count}
         </span>
@@ -148,7 +148,7 @@ function InteracoesTab({
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoInteracao)}
-            className="px-3 py-2 text-[13px] bg-white border border-[#D0DCDC] rounded-lg outline-none focus:border-[#0F3D3E] text-[#0f1923]"
+            className="px-3 py-2 text-[13px] bg-white border border-[#E2DDD8] rounded-lg outline-none focus:border-[#0F3D3E] text-[#0f1923]"
           >
             {(Object.entries(INTERACAO_LABELS) as [TipoInteracao, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -161,13 +161,13 @@ function InteracoesTab({
           onChange={(e) => setDescricao(e.target.value)}
           placeholder="Descreva o que aconteceu..."
           rows={3}
-          className="w-full px-3 py-2 text-[13px] bg-white border border-[#D0DCDC] rounded-lg outline-none focus:border-[#0F3D3E] placeholder:text-[#a8b3c4] resize-none"
+          className="w-full px-3 py-2 text-[13px] bg-white border border-[#E2DDD8] rounded-lg outline-none focus:border-[#0F3D3E] placeholder:text-[#a8b3c4] resize-none"
         />
         {error && <p className="text-[12px] text-red-600">{error}</p>}
         <button
           onClick={handleAdd}
           disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-60"
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-60"
         >
           <Plus size={13} />
           {saving ? 'Salvando...' : 'Registrar'}
@@ -181,8 +181,8 @@ function InteracoesTab({
         <div className="space-y-2">
           {interactions.map((i) => (
             <div key={i.id} className="flex gap-3 p-3 rounded-xl hover:bg-[#f9fafb] group transition-colors">
-              <div className="w-8 h-8 rounded-full bg-[#E8F0F0] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Clock size={12} className="text-[#145A5B]" />
+              <div className="w-8 h-8 rounded-full bg-[#E8F2F2] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Clock size={12} className="text-[#1D5F60]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -399,14 +399,14 @@ export default function ClienteDetail({
           {cliente.email && (
             <a
               href={`mailto:${cliente.email}`}
-              className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#3d4a5c] border border-[#D0DCDC] rounded-xl hover:bg-[#f5f7fa] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#3d4a5c] border border-[#E2DDD8] rounded-xl hover:bg-[#f5f7fa] transition-colors"
             >
               <Mail size={14} /> E-mail
             </a>
           )}
           <button
             onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#3d4a5c] border border-[#D0DCDC] rounded-xl hover:bg-[#f5f7fa] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#3d4a5c] border border-[#E2DDD8] rounded-xl hover:bg-[#f5f7fa] transition-colors"
           >
             <Edit size={14} /> Editar
           </button>
@@ -420,12 +420,12 @@ export default function ClienteDetail({
         <div className="space-y-4">
 
           {/* Avatar + métricas de relacionamento */}
-          <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#E8F0F0] flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-[#E8F2F2] flex items-center justify-center flex-shrink-0">
                 {cliente.tipo_pessoa === 'juridica'
-                  ? <Building2 size={20} className="text-[#145A5B]" />
-                  : <User size={20} className="text-[#145A5B]" />
+                  ? <Building2 size={20} className="text-[#1D5F60]" />
+                  : <User size={20} className="text-[#1D5F60]" />
                 }
               </div>
               <div>
@@ -461,7 +461,7 @@ export default function ClienteDetail({
           </div>
 
           {/* Contato */}
-          <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
             <p className="text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider">Contato</p>
             <InfoRow icon={Phone}  label="Celular"  value={cliente.celular} />
             <InfoRow icon={Phone}  label="Telefone" value={cliente.telefone} />
@@ -469,7 +469,7 @@ export default function ClienteDetail({
           </div>
 
           {/* Dados */}
-          <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
             <p className="text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider">Dados</p>
             <InfoRow icon={User}     label="CPF / CNPJ" value={cliente.cpf_cnpj} />
             <InfoRow icon={Briefcase} label="Empresa"   value={cliente.empresa} />
@@ -478,7 +478,7 @@ export default function ClienteDetail({
 
           {/* Endereço */}
           {(cliente.endereco || cliente.cidade) && (
-            <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
+            <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
               <p className="text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider">Endereço</p>
               <InfoRow
                 icon={MapPin}
@@ -492,7 +492,7 @@ export default function ClienteDetail({
           )}
 
           {/* Responsável + tags */}
-          <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
             <p className="text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider">Relacionamento</p>
             {cliente.responsavel && (
               <div className="flex items-center gap-2">
@@ -511,7 +511,7 @@ export default function ClienteDetail({
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {cliente.tags.map((tag) => (
-                    <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8F0F0] text-[#145A5B]">
+                    <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8F2F2] text-[#1D5F60]">
                       {tag}
                     </span>
                   ))}
@@ -528,10 +528,10 @@ export default function ClienteDetail({
         </div>
 
         {/* Coluna direita */}
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] shadow-[0_1px_4px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-[0_1px_4px_rgba(0,0,0,0.04)] overflow-hidden">
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 px-5 py-3 border-b border-[#E8F0F0] bg-[#f9fafb]">
+          <div className="flex items-center gap-1 px-5 py-3 border-b border-[#E2DDD8] bg-[#f9fafb]">
             <TabBtn active={tab === 'historico'} onClick={() => setTab('historico')} count={interactions.length}>
               <Clock size={13} /> Histórico
             </TabBtn>

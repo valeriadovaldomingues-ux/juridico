@@ -125,10 +125,10 @@ function StatusPill({ status, onChange }: { status: string; onChange: (s: string
         <ChevronDown size={9} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 right-0 z-30 bg-white rounded-xl shadow-lg border border-[#E8F0F0] py-1 min-w-[140px]">
+        <div className="absolute top-full mt-1 right-0 z-30 bg-white rounded-xl shadow-lg border border-[#E2DDD8] py-1 min-w-[140px]">
           {Object.entries(STATUS_CFG).map(([k, v]) => (
             <button key={k} onClick={() => { onChange(k); setOpen(false) }}
-              className={cn('w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-[#F7F9F9] text-left',
+              className={cn('w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-[#F3F1EE] text-left',
                 k === status ? `${v.text} font-semibold` : 'text-[#4a5a6a]')}>
               <span className={cn('w-2 h-2 rounded-full', v.dot)} /> {v.label}
             </button>
@@ -154,7 +154,7 @@ function DetalheModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-[#F0F6F6]">
@@ -231,7 +231,7 @@ function DetalheModal({
           {pub.resumo && (
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-2">Texto da publicação</p>
-              <div className="bg-[#F7F9F9] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E8F0F0]">
+              <div className="bg-[#F3F1EE] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E2DDD8]">
                 {pub.resumo}
               </div>
             </div>
@@ -246,7 +246,7 @@ function DetalheModal({
                   className={cn('flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-[12px] font-semibold transition-all',
                     pub.status_tratamento === k
                       ? `${v.bg} ${v.text} ${v.border}`
-                      : 'border-[#E8F0F0] text-[#9aabb8] hover:border-[#c8d8d8]'
+                      : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
                   )}>
                   <span className={cn('w-2 h-2 rounded-full', v.dot)} /> {v.label}
                 </button>
@@ -393,7 +393,7 @@ export default function MonitoramentoPage({
     })
   }
 
-  const inputCls = 'rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors w-full'
+  const inputCls = 'rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors w-full'
 
   return (
     <div className="space-y-5 max-w-6xl">
@@ -407,14 +407,14 @@ export default function MonitoramentoPage({
         <div className="flex items-center gap-2">
           <Link
             href="/publicacoes"
-            className="flex items-center gap-1.5 text-[12px] font-medium text-[#0F3D3E] border border-[#D0DCDC] px-3 py-2 rounded-xl hover:bg-[#F0F6F6] transition-colors"
+            className="flex items-center gap-1.5 text-[12px] font-medium text-[#0F3D3E] border border-[#E2DDD8] px-3 py-2 rounded-xl hover:bg-[#F0F6F6] transition-colors"
           >
             <ExternalLink size={12} /> Publicações gerais
           </Link>
           <button
             onClick={triggerSearch}
             disabled={searching}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
           >
             {searching
               ? <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
@@ -447,7 +447,7 @@ export default function MonitoramentoPage({
           <button
             key={label}
             onClick={onClick}
-            className={cn('rounded-2xl border border-[#E8F0F0] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}
+            className={cn('rounded-lg border border-[#E2DDD8] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}
           >
             <p className={cn('text-[28px] font-black leading-none', text)}>{value}</p>
             <p className="text-[11px] text-[#9aabb8] mt-1.5 font-medium">{label}</p>
@@ -456,7 +456,7 @@ export default function MonitoramentoPage({
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex border-b border-[#E8F0F0]">
+      <div className="flex border-b border-[#E2DDD8]">
         {([
           { key: 'publicacoes', label: 'Publicações monitoradas', icon: FileText },
           { key: 'advogados',   label: 'Advogados monitorados',   icon: Users },
@@ -481,7 +481,7 @@ export default function MonitoramentoPage({
       {tab === 'publicacoes' && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-4 space-y-3">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 space-y-3">
             <div className="flex items-center gap-3 flex-wrap">
               {/* Busca */}
               <div className="relative flex-1 min-w-[180px] max-w-sm">
@@ -490,7 +490,7 @@ export default function MonitoramentoPage({
                   placeholder="Buscar texto, processo, nome…"
                   value={fBusca}
                   onChange={e => { setFBusca(e.target.value); resetPage() }}
-                  className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                  className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
                 />
               </div>
 
@@ -498,7 +498,7 @@ export default function MonitoramentoPage({
               <select
                 value={fAdvogado}
                 onChange={e => { setFAdvogado(e.target.value); resetPage() }}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[220px]"
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[220px]"
               >
                 <option value="">Todos os advogados</option>
                 {advogados.map(a => (
@@ -510,7 +510,7 @@ export default function MonitoramentoPage({
               <select
                 value={fTribunal}
                 onChange={e => { setFTribunal(e.target.value); resetPage() }}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]"
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]"
               >
                 <option value="">Todos os tribunais</option>
                 {tribunais.map(t => <option key={t} value={t}>{t}</option>)}
@@ -537,27 +537,27 @@ export default function MonitoramentoPage({
 
               <button onClick={() => { setFPrazo(f => !f); resetPage() }}
                 className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-colors',
-                  fPrazo ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]')}>
+                  fPrazo ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-[#E2DDD8] text-[#7a8899] hover:border-[#c8d8d8]')}>
                 <AlertTriangle size={11} /> Com prazo
               </button>
               <button onClick={() => { setFAudiencia(f => !f); resetPage() }}
                 className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-colors',
-                  fAudiencia ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]')}>
+                  fAudiencia ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-[#E2DDD8] text-[#7a8899] hover:border-[#c8d8d8]')}>
                 <Gavel size={11} /> Com audiência
               </button>
 
               <div className="flex items-center gap-2 ml-auto">
                 <input type="date" value={fDe} onChange={e => { setFDe(e.target.value); resetPage() }}
-                  className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
+                  className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
                 <span className="text-[11px] text-[#9aabb8]">até</span>
                 <input type="date" value={fAte} onChange={e => { setFAte(e.target.value); resetPage() }}
-                  className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
+                  className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
               </div>
             </div>
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
             {/* Header */}
             <div className="grid grid-cols-[1fr_120px_130px_100px_90px_120px] gap-3 px-5 py-3 border-b border-[#F0F6F6] bg-[#FAFCFC]">
               {['Publicação', 'Tribunal', 'Advogado/OAB', 'Data', 'Critério', 'Status'].map(h => (
@@ -652,12 +652,12 @@ export default function MonitoramentoPage({
                 </p>
                 <div className="flex items-center gap-1">
                   <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
+                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
                     <ChevronLeft size={13} />
                   </button>
                   <span className="text-[12px] text-[#4a5a6a] px-2">{page} / {totalPages}</span>
                   <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
+                    className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
                     <ChevronRight size={13} />
                   </button>
                 </div>
@@ -670,7 +670,7 @@ export default function MonitoramentoPage({
       {/* ══ Tab: Advogados ════════════════════════════════════════════════════ */}
       {tab === 'advogados' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0F6F6]">
               <div>
                 <h2 className="text-[14px] font-bold text-[#0f1923]">Advogados monitorados</h2>
@@ -678,13 +678,13 @@ export default function MonitoramentoPage({
                   A busca usa sempre o nome completo exato e a OAB exata
                 </p>
               </div>
-              <button onClick={() => setAdding(a => !a)} className="text-[12px] font-semibold text-[#0F3D3E] hover:text-[#145A5B]">
+              <button onClick={() => setAdding(a => !a)} className="text-[12px] font-semibold text-[#0F3D3E] hover:text-[#1D5F60]">
                 + Adicionar
               </button>
             </div>
 
             {adding && (
-              <div className="px-5 py-4 bg-[#F7F9F9] border-b border-[#F0F6F6] space-y-2.5">
+              <div className="px-5 py-4 bg-[#F3F1EE] border-b border-[#F0F6F6] space-y-2.5">
                 <input
                   className={inputCls}
                   placeholder="NOME COMPLETO (ex: CRISTIANO PESSOA SOUSA)"
@@ -698,8 +698,8 @@ export default function MonitoramentoPage({
                     value={form.oab_uf} onChange={e => setForm(f => ({ ...f, oab_uf: e.target.value }))} />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setAdding(false)} className="flex-1 py-2 rounded-xl border border-[#D0DCDC] text-[12px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
-                  <button onClick={handleAdd} disabled={saving} className="flex-1 py-2 rounded-xl bg-[#0F3D3E] text-white text-[12px] font-semibold disabled:opacity-40">
+                  <button onClick={() => setAdding(false)} className="flex-1 py-2 rounded-xl border border-[#E2DDD8] text-[12px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
+                  <button onClick={handleAdd} disabled={saving} className="flex-1 py-2 rounded-xl bg-[#1D5F60] text-white text-[12px] font-semibold disabled:opacity-40">
                     {saving ? 'Salvando…' : 'Adicionar'}
                   </button>
                 </div>
@@ -737,17 +737,17 @@ export default function MonitoramentoPage({
           </div>
 
           {/* Cron info */}
-          <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-4">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4">
             <p className="text-[12px] font-semibold text-[#0f1923] mb-2">Automação via cron</p>
             <p className="text-[12px] text-[#7a8899] leading-relaxed mb-3">
               Configure um cron job externo (Vercel Cron, Railway, GitHub Actions) para executar automaticamente:
             </p>
-            <div className="bg-[#F7F9F9] rounded-xl p-3 font-mono text-[11px] text-[#4a5a6a] border border-[#E8F0F0] space-y-1">
+            <div className="bg-[#F3F1EE] rounded-xl p-3 font-mono text-[11px] text-[#4a5a6a] border border-[#E2DDD8] space-y-1">
               <p>POST {typeof window !== 'undefined' ? window.location.origin : ''}/api/monitoramento/buscar</p>
               <p className="text-[#9aabb8]">Authorization: Bearer {'{'}{'{'}CRON_SECRET{'}'}{'}'}</p>
             </div>
             <p className="text-[11px] text-[#9aabb8] mt-2">
-              Defina <code className="bg-[#F7F9F9] px-1 rounded">CRON_SECRET</code> no <code className="bg-[#F7F9F9] px-1 rounded">.env.local</code> para proteger o endpoint.
+              Defina <code className="bg-[#F3F1EE] px-1 rounded">CRON_SECRET</code> no <code className="bg-[#F3F1EE] px-1 rounded">.env.local</code> para proteger o endpoint.
             </p>
           </div>
         </div>
@@ -755,7 +755,7 @@ export default function MonitoramentoPage({
 
       {/* ══ Tab: Logs ════════════════════════════════════════════════════════ */}
       {tab === 'logs' && (
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[#F0F6F6]">
             <h2 className="text-[14px] font-bold text-[#0f1923]">Histórico de execuções</h2>
             <p className="text-[12px] text-[#9aabb8] mt-0.5">Registros de cada busca realizada</p>

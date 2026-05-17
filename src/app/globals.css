@@ -1,42 +1,70 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-navy:        #0F3D3E;
-  --color-navy-mid:   #145A5B;
-  --color-navy-light: #1B6E70;
-  --color-gold:       #b8903a;
-  --color-gold-light: #d4a94e;
-  --color-bg:         #F7F9F9;
-  --color-surface:    #ffffff;
-  --color-border:     #D0DCDC;
-  --color-border-2:   #E8F0F0;
-  --color-ink:        #0f1923;
-  --color-ink-2:      #3d4a5c;
-  --color-ink-3:      #7a8899;
+  /* ── Sistema interno — paleta operacional enterprise ────────────────────── */
+
+  /* Sidebar dark slate — mais sofisticado que teal genérico */
+  --color-sidebar:       #162030;
+  --color-sidebar-alt:   #1E2D3D;
+
+  /* Fundo — neutro quente (não frio azulado) */
+  --color-bg:            #F3F1EE;
+  --color-surface:       #ffffff;
+
+  /* Bordas — quentes, não frias */
+  --color-border:        #E2DDD8;
+  --color-border-mid:    #CBC5BC;
+
+  /* Texto */
+  --color-ink:           #111827;
+  --color-ink-2:         #4B5563;
+  --color-ink-3:         #9CA3AF;
+
+  /* Acento operacional (teal refinado, menos saturado) */
+  --color-teal:          #1D5F60;
+  --color-teal-hover:    #27777A;
+  --color-teal-light:    #E8F2F2;
+
+  /* Acento de marca (harmonizado com P&V gold do portal) */
+  --color-gold:          #C49557;
+  --color-gold-muted:    #A07840;
+  --color-gold-light:    #FBF5EC;
+
+  /* Legado — mantidos para compatibilidade com componentes existentes */
+  --color-navy:          #1D5F60;
+  --color-navy-mid:      #27777A;
+  --color-navy-light:    #348B8C;
+  --color-gold-legacy:   #b8903a;
+  --color-gold-light-legacy: #d4a94e;
+  --color-border-2:      #E8F2F2;
+  --color-ink-2-legacy:  #3d4a5c;
+  --color-ink-3-legacy:  #7a8899;
 }
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
 
 html { -webkit-font-smoothing: antialiased; }
 
 body {
-  background: #F7F9F9;
-  color: #0f1923;
+  background: #F3F1EE;
+  color: #111827;
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   letter-spacing: -0.01em;
 }
 
 * { box-sizing: border-box; }
 
-/* Scrollbar */
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cdd4e0; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #a8b3c4; }
+::-webkit-scrollbar-thumb { background: #CBC5BC; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 
-/* Focus ring global */
+/* ── Focus ring ──────────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #1B6E70;
+  outline: 2px solid #27777A;
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 /* Input base */
@@ -48,21 +76,26 @@ input, select, textarea {
 /* Transições suaves */
 a, button { transition: all 0.15s ease; }
 
+/* ── Animações internas ──────────────────────────────────────────────────── */
+
+@keyframes internal-enter {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.internal-page { animation: internal-enter 0.18s ease-out both; }
+
 /* ── Portal ────────────────────────────────────────────────────────────── */
 
-/* Entrada suave nas páginas do portal */
 @keyframes portal-enter {
   from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
 .portal-page { animation: portal-enter 0.22s ease-out both; }
 
-/* Scrollbar interna do chat */
 .portal-scroll::-webkit-scrollbar { width: 3px; }
 .portal-scroll::-webkit-scrollbar-thumb { background: #E8E3D8; border-radius: 2px; }
 .portal-scroll::-webkit-scrollbar-thumb:hover { background: #C49557; }
 
-/* Focus ring no portal — dourado discreto */
 .portal-focus:focus-visible {
   outline: 1.5px solid rgba(196, 149, 87, 0.5);
   outline-offset: 2px;

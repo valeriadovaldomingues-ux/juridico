@@ -311,14 +311,14 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
 
           <Link
             href="/agenda/importar"
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-[#D0DCDC] hover:border-[#145A5B] hover:bg-[#f5f7fa] text-[#3d4a5c] text-[13px] font-medium rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2DDD8] hover:border-[#145A5B] hover:bg-[#f5f7fa] text-[#3d4a5c] text-[13px] font-medium rounded-xl transition-colors"
           >
             <FileUp size={14} /> Importar CSV
           </Link>
 
           <button
             onClick={() => openNew(view === 'dia' ? { data_inicio: dayDate } : undefined)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
           >
             <Plus size={14} /> Novo
           </button>
@@ -326,7 +326,7 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
       </div>
 
       {/* ── Filters ── */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-4 space-y-3">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 space-y-3">
         {/* Row 1 — main filters */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Busca */}
@@ -336,7 +336,7 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
               placeholder="Buscar…"
               value={filterBusca}
               onChange={e => setFilterBusca(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] text-[13px] text-[#0f1923] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors"
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] text-[13px] text-[#0f1923] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors"
             />
           </div>
 
@@ -344,7 +344,7 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
           <select
             value={filterTipo}
             onChange={e => setFilterTipo(e.target.value)}
-            className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+            className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
           >
             <option value="todos">Todos os tipos</option>
             <option value="tarefa">Tarefa</option>
@@ -380,13 +380,13 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
               'flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[12px] font-medium transition-colors',
               showExtraFilters || hasExtraFilters
                 ? 'border-[#0F3D3E] text-[#0F3D3E] bg-emerald-50'
-                : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]'
+                : 'border-[#E2DDD8] text-[#7a8899] hover:border-[#c8d8d8]'
             )}
           >
             <Filter size={12} />
             Mais filtros
             {hasExtraFilters && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0F3D3E]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1D5F60]" />
             )}
           </button>
         </div>
@@ -398,7 +398,7 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
             <select
               value={filterProcesso}
               onChange={e => setFilterProcesso(e.target.value)}
-              className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors max-w-[220px]"
+              className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors max-w-[220px]"
             >
               <option value="">Todos os processos</option>
               {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
@@ -409,7 +409,7 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
               placeholder="Responsável…"
               value={filterResponsavel}
               onChange={e => setFilterResponsavel(e.target.value)}
-              className="rounded-xl border border-[#D0DCDC] bg-white px-3.5 py-2 text-[13px] text-[#0f1923] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors w-36"
+              className="rounded-xl border border-[#E2DDD8] bg-white px-3.5 py-2 text-[13px] text-[#0f1923] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors w-36"
             />
 
             {/* Período */}
@@ -418,14 +418,14 @@ export default function AgendaPage({ initialItems, processos, clientes }: Props)
                 type="date"
                 value={filterDe}
                 onChange={e => setFilterDe(e.target.value)}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
               />
               <span className="text-[12px] text-[#9aabb8]">até</span>
               <input
                 type="date"
                 value={filterAte}
                 onChange={e => setFilterAte(e.target.value)}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] transition-colors"
               />
             </div>
 

@@ -111,15 +111,15 @@ function formatPrazoDate(dateStr: string, todayStr: string): { label: string; cl
   const tom = new Date(todayStr)
   tom.setDate(tom.getDate() + 1)
   if (dateStr === tom.toISOString().split('T')[0]) {
-    return { label: 'Amanhã', cls: 'bg-[#E8F0F0] text-[#145A5B] border border-[#D0DCDC]' }
+    return { label: 'Amanhã', cls: 'bg-[#E8F2F2] text-[#1D5F60] border border-[#E2DDD8]' }
   }
   const [, m, d] = dateStr.split('-')
-  return { label: `${d}/${m}`, cls: 'bg-[#F7F9F9] text-[#7a8899] border border-[#E8F0F0]' }
+  return { label: `${d}/${m}`, cls: 'bg-[#F3F1EE] text-[#7a8899] border border-[#E2DDD8]' }
 }
 
 // ─── Shared card class ───────────────────────────────────────────────────────
 
-const card = 'bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden'
+const card = 'bg-white rounded-lg border border-[#E2DDD8] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden'
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -248,7 +248,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/agenda"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
         >
           <Plus size={14} strokeWidth={2.5} />
           Nova Tarefa
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
         {/* Featured: Processos Ativos */}
         <Link
           href="/processos"
-          className="group relative bg-gradient-to-br from-[#0F3D3E] via-[#145A5B] to-[#1B6E70] rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-200 overflow-hidden"
+          className="group relative bg-gradient-to-br from-[#162030] via-[#1D5F60] to-[#27777A] rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-200 overflow-hidden"
         >
           {/* Decorative */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.06] pointer-events-none" />
@@ -285,11 +285,11 @@ export default async function DashboardPage() {
         {/* Total de Processos */}
         <Link
           href="/processos"
-          className="group bg-white rounded-2xl border border-[#E8F0F0] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#D0DCDC] transition-all duration-200"
+          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
-            <div className="w-10 h-10 rounded-xl bg-[#E8F0F0] flex items-center justify-center">
-              <Scale size={18} className="text-[#145A5B]" />
+            <div className="w-10 h-10 rounded-xl bg-[#E8F2F2] flex items-center justify-center">
+              <Scale size={18} className="text-[#1D5F60]" />
             </div>
             <ArrowUpRight size={14} className="text-[#D8E2E2] group-hover:text-[#9aabb8] transition-colors" />
           </div>
@@ -300,7 +300,7 @@ export default async function DashboardPage() {
         {/* Encerrados */}
         <Link
           href="/processos"
-          className="group bg-white rounded-2xl border border-[#E8F0F0] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#D0DCDC] transition-all duration-200"
+          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
             <div className="w-10 h-10 rounded-xl bg-[#e6f4ea] flex items-center justify-center">
@@ -315,7 +315,7 @@ export default async function DashboardPage() {
         {/* Clientes */}
         <Link
           href="/clientes"
-          className="group bg-white rounded-2xl border border-[#E8F0F0] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#D0DCDC] transition-all duration-200"
+          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
             <div className="w-10 h-10 rounded-xl bg-[#fef3e2] flex items-center justify-center">
@@ -330,7 +330,7 @@ export default async function DashboardPage() {
 
       {/* ── Resumo Financeiro (gerente / sócio) ──────────────────────────────── */}
       {verFinanceiro && (
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#F0F4F4]">
             <div className="flex items-center gap-2.5">
               <DollarSign size={14} className="text-[#9aabb8]" />
@@ -374,7 +374,7 @@ export default async function DashboardPage() {
 
       {/* ── Bloco Comercial (comercial / sócio) ──────────────────────────────── */}
       {verComercial && (
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#F0F4F4]">
             <div className="flex items-center gap-2.5">
               <Handshake size={14} className="text-[#9aabb8]" />
@@ -405,7 +405,7 @@ export default async function DashboardPage() {
                       <span className="text-[12px] text-[#4a5a6a]">{label}</span>
                       <span className="text-[12px] font-bold text-[#0f1923]">{count}</span>
                     </div>
-                    <div className="h-1.5 bg-[#F7F9F9] rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-[#F3F1EE] rounded-full overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
@@ -433,7 +433,7 @@ export default async function DashboardPage() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#145A5B] transition-colors">
+                        <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#1D5F60] transition-colors">
                           {lead.nome}
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -475,7 +475,7 @@ export default async function DashboardPage() {
             <div className="flex items-center gap-2.5">
               <Clock size={14} className="text-[#9aabb8]" />
               <h2 className="text-[14px] font-semibold text-[#0f1923]">Próximos Prazos</h2>
-              <span className="text-[11px] text-[#9aabb8] bg-[#F7F9F9] px-2 py-0.5 rounded-md border border-[#E8F0F0]">
+              <span className="text-[11px] text-[#9aabb8] bg-[#F3F1EE] px-2 py-0.5 rounded-md border border-[#E2DDD8]">
                 7 dias
               </span>
             </div>
@@ -486,7 +486,7 @@ export default async function DashboardPage() {
 
           {!proximosPrazos || proximosPrazos.length === 0 ? (
             <div className="px-6 py-14 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-[#F7F9F9] flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-lg bg-[#F3F1EE] flex items-center justify-center mx-auto mb-3">
                 <Clock size={20} className="text-[#D0DCDC]" />
               </div>
               <p className="text-[13px] text-[#9aabb8]">Nenhum prazo pendente nos próximos 7 dias</p>
@@ -532,7 +532,7 @@ export default async function DashboardPage() {
               <Briefcase size={14} className="text-[#9aabb8]" />
               <h2 className="text-[14px] font-semibold text-[#0f1923]">Por Área</h2>
             </div>
-            <span className="text-[11px] text-[#9aabb8] bg-[#F7F9F9] px-2 py-0.5 rounded-md border border-[#E8F0F0]">
+            <span className="text-[11px] text-[#9aabb8] bg-[#F3F1EE] px-2 py-0.5 rounded-md border border-[#E2DDD8]">
               {totalProcessos} total
             </span>
           </div>
@@ -545,7 +545,7 @@ export default async function DashboardPage() {
                   <span className="text-[12px] font-medium text-[#4a5a6a]">{areaLabel[area] ?? area}</span>
                   <span className="text-[12px] font-bold text-[#0f1923]">{count}</span>
                 </div>
-                <div className="h-2 bg-[#F7F9F9] rounded-full overflow-hidden">
+                <div className="h-2 bg-[#F3F1EE] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${areaColor[area] ?? 'bg-slate-400'}`}
                     style={{ width: `${Math.round((count / maxAreaCount) * 100)}%` }}
@@ -563,7 +563,7 @@ export default async function DashboardPage() {
               <Scale size={14} className="text-[#9aabb8]" />
               <h2 className="text-[14px] font-semibold text-[#0f1923]">Por Status</h2>
             </div>
-            <span className="text-[11px] text-[#9aabb8] bg-[#F7F9F9] px-2 py-0.5 rounded-md border border-[#E8F0F0]">
+            <span className="text-[11px] text-[#9aabb8] bg-[#F3F1EE] px-2 py-0.5 rounded-md border border-[#E2DDD8]">
               {totalProcessos} total
             </span>
           </div>
@@ -576,7 +576,7 @@ export default async function DashboardPage() {
                   <span className="text-[12px] font-medium text-[#4a5a6a]">{statusLabel[status] ?? status}</span>
                   <span className="text-[12px] font-bold text-[#0f1923]">{count}</span>
                 </div>
-                <div className="h-2 bg-[#F7F9F9] rounded-full overflow-hidden">
+                <div className="h-2 bg-[#F3F1EE] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${statusBarColor[status] ?? 'bg-slate-400'}`}
                     style={{ width: `${Math.round((count / maxStatusCount) * 100)}%` }}
@@ -594,17 +594,17 @@ export default async function DashboardPage() {
               <Activity size={14} className="text-[#9aabb8]" />
               <h2 className="text-[14px] font-semibold text-[#0f1923]">Movimentações</h2>
             </div>
-            <span className="text-[11px] text-[#9aabb8] bg-[#F7F9F9] px-2 py-0.5 rounded-md border border-[#E8F0F0]">
+            <span className="text-[11px] text-[#9aabb8] bg-[#F3F1EE] px-2 py-0.5 rounded-md border border-[#E2DDD8]">
               30 dias
             </span>
           </div>
           <div className="px-6 py-5 space-y-3">
-            <div className="flex items-center justify-between px-4 py-4 bg-[#E8F0F0] rounded-xl">
+            <div className="flex items-center justify-between px-4 py-4 bg-[#E8F2F2] rounded-xl">
               <div>
-                <p className="text-[13px] font-semibold text-[#0F3D3E]">Com movimentação</p>
+                <p className="text-[13px] font-semibold text-[#1D5F60]">Com movimentação</p>
                 <p className="text-[11px] text-[#7a9a9a] mt-0.5">Últimos 30 dias</p>
               </div>
-              <span className="text-[32px] font-black text-[#0F3D3E] leading-none">{processosComMovimentacao}</span>
+              <span className="text-[32px] font-black text-[#1D5F60] leading-none">{processosComMovimentacao}</span>
             </div>
 
             <div className="flex items-center justify-between px-4 py-4 bg-rose-50 rounded-xl border border-rose-100">
@@ -620,7 +620,7 @@ export default async function DashboardPage() {
                 <span>Processos movimentados</span>
                 <span className="font-semibold text-[#4a5a6a]">{movPct}%</span>
               </div>
-              <div className="h-2 bg-[#F7F9F9] rounded-full overflow-hidden border border-[#E8F0F0]">
+              <div className="h-2 bg-[#F3F1EE] rounded-full overflow-hidden border border-[#E2DDD8]">
                 <div
                   className="h-full bg-[#145A5B] rounded-full transition-all duration-700"
                   style={{ width: `${movPct}%` }}
@@ -664,7 +664,7 @@ export default async function DashboardPage() {
                     <Scale size={15} className="text-[#5b3fa6]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#145A5B] transition-colors">
+                    <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#1D5F60] transition-colors">
                       {processo.titulo}
                     </p>
                     <p className="text-[11px] text-[#9aabb8] mt-0.5 truncate">
@@ -704,12 +704,12 @@ export default async function DashboardPage() {
                   className="flex items-center gap-3.5 px-6 py-4 hover:bg-[#FAFBFB] transition-colors group"
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E8F0F0] to-[#D0DCDC] flex items-center justify-center flex-shrink-0">
-                    <span className="text-[13px] font-bold text-[#145A5B]">
+                    <span className="text-[13px] font-bold text-[#1D5F60]">
                       {cliente.nome.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#145A5B] transition-colors">
+                    <p className="text-[13px] font-medium text-[#0f1923] truncate group-hover:text-[#1D5F60] transition-colors">
                       {cliente.nome}
                     </p>
                     {(cliente.cidade || cliente.uf) && (

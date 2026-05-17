@@ -48,26 +48,26 @@ export default function MonthView({
     <div className="space-y-3">
       {/* Month nav */}
       <div className="flex items-center gap-3">
-        <button onClick={onPrevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+        <button onClick={onPrevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronLeft size={15} className="text-[#4a5a6a]" />
         </button>
         <h2 className="text-[16px] font-bold text-[#0f1923] min-w-[180px] text-center">
           {MESES[month]} {year}
         </h2>
-        <button onClick={onNextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+        <button onClick={onNextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronRight size={15} className="text-[#4a5a6a]" />
         </button>
         {!isCurrentMonth && (
-          <button onClick={onGoToday} className="ml-1 text-[12px] font-medium text-[#0F3D3E] border border-[#D0DCDC] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
+          <button onClick={onGoToday} className="ml-1 text-[12px] font-medium text-[#0F3D3E] border border-[#E2DDD8] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
             Hoje
           </button>
         )}
       </div>
 
       {/* Calendar grid */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
         {/* Day name headers */}
-        <div className="grid grid-cols-7 border-b border-[#E8F0F0]">
+        <div className="grid grid-cols-7 border-b border-[#E2DDD8]">
           {DIAS_SEMANA_SHORT.map(d => (
             <div key={d} className="text-center text-[11px] font-semibold text-[#9aabb8] py-3 tracking-wide uppercase">
               {d}
@@ -110,7 +110,7 @@ export default function MonthView({
                   <span className={cn(
                     'text-[12px] font-semibold w-6 h-6 flex items-center justify-center rounded-full',
                     isTodayCell
-                      ? 'bg-[#0F3D3E] text-white'
+                      ? 'bg-[#1D5F60] text-white'
                       : isCurrentMo ? 'text-[#4a5a6a]' : 'text-[#c8d8d8]'
                   )}>
                     {cell.getDate()}

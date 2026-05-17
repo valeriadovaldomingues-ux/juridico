@@ -19,7 +19,7 @@ function GroupSection({
   if (items.length === 0) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2.5 px-5 py-3.5 border-b border-[#F0F6F6] hover:bg-[#f9fafb] transition-colors"
@@ -60,13 +60,13 @@ export default function ListView({ items, today, in3Days, in7Days, onEdit, onTog
 
   if (items.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm p-12 text-center">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm p-12 text-center">
         <CalendarDays size={32} className="text-[#c8d8d8] mx-auto mb-3" />
         <p className="text-[14px] font-medium text-[#7a8899]">Nenhum item encontrado</p>
         <p className="text-[12px] text-[#9aabb8] mt-1">Ajuste os filtros ou crie um novo compromisso.</p>
         <button
           onClick={onNew}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] transition-colors"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] transition-colors"
         >
           <Plus size={13} /> Criar item
         </button>
@@ -89,7 +89,7 @@ export default function ListView({ items, today, in3Days, in7Days, onEdit, onTog
         today={today} in3={in3Days} onEdit={onEdit} onToggleDone={onToggleDone} />
 
       <GroupSection title="Próximos" count={proximos.length}
-        colorClass="bg-[#E8F0F0] text-[#4a5a6a]" items={proximos}
+        colorClass="bg-[#E8F2F2] text-[#4a5a6a]" items={proximos}
         today={today} in3={in3Days} onEdit={onEdit} onToggleDone={onToggleDone} />
 
       <GroupSection title="Concluídos" count={concluidos.length}

@@ -114,17 +114,17 @@ function DropZone({ onFile }: { onFile: (f: File) => void }) {
       onClick={() => inputRef.current?.click()}
       className={`
         relative flex flex-col items-center justify-center gap-4 w-full
-        border-2 border-dashed rounded-2xl p-14 cursor-pointer
+        border-2 border-dashed rounded-lg p-14 cursor-pointer
         transition-all duration-150 select-none
         ${dragging
-          ? 'border-[#145A5B] bg-[#E8F0F0]'
-          : 'border-[#D0DCDC] bg-white hover:border-[#145A5B]/50 hover:bg-[#f9fafb]'
+          ? 'border-[#145A5B] bg-[#E8F2F2]'
+          : 'border-[#E2DDD8] bg-white hover:border-[#145A5B]/50 hover:bg-[#f9fafb]'
         }
       `}
     >
       <input ref={inputRef} type="file" accept=".xlsx" className="hidden" onChange={handleChange} />
 
-      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${dragging ? 'bg-[#145A5B]' : 'bg-[#f3f4f6]'}`}>
+      <div className={`w-14 h-14 rounded-lg flex items-center justify-center transition-colors ${dragging ? 'bg-[#145A5B]' : 'bg-[#f3f4f6]'}`}>
         <FileSpreadsheet size={26} className={dragging ? 'text-white' : 'text-[#9ca3af]'} />
       </div>
 
@@ -171,7 +171,7 @@ function PreviewTable({ rows }: { rows: XlsxPreviewRow[] }) {
             key={f}
             onClick={() => { setFilter(f); setShowAll(false) }}
             className={`text-[11px] font-semibold px-3 py-1 rounded-full transition-colors ${
-              filter === f ? 'bg-[#0F3D3E] text-white' : 'bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]'
+              filter === f ? 'bg-[#1D5F60] text-white' : 'bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]'
             }`}
           >
             {f === 'all'
@@ -182,7 +182,7 @@ function PreviewTable({ rows }: { rows: XlsxPreviewRow[] }) {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-[#e5e7eb] overflow-hidden">
+      <div className="rounded-lg border border-[#e5e7eb] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
             <thead>
@@ -254,7 +254,7 @@ function DoneScreen({ result, filename, onReset }: {
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-center gap-3 py-6">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${hasErrors ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+        <div className={`w-16 h-16 rounded-lg flex items-center justify-center ${hasErrors ? 'bg-amber-50' : 'bg-emerald-50'}`}>
           {hasErrors
             ? <AlertCircle size={32} className="text-amber-500" />
             : <CheckCircle2 size={32} className="text-emerald-500" />
@@ -292,7 +292,7 @@ function DoneScreen({ result, filename, onReset }: {
         </button>
         <Link
           href="/agenda"
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors"
         >
           Ver agenda
         </Link>
@@ -359,7 +359,7 @@ export default function ImportarXlsxPage() {
         <div className="space-y-4">
           <DropZone onFile={handleFile} />
 
-          <div className="bg-[#f9fafb] rounded-2xl border border-[#e5e7eb] p-5">
+          <div className="bg-[#f9fafb] rounded-lg border border-[#e5e7eb] p-5">
             <p className="text-[12px] font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
               Campos importados automaticamente
             </p>
@@ -391,7 +391,7 @@ export default function ImportarXlsxPage() {
       {/* ── UPLOADING ── */}
       {stage.name === 'uploading' && (
         <div className="flex flex-col items-center gap-4 py-20">
-          <div className="w-12 h-12 rounded-full border-4 border-[#D0DCDC] border-t-[#145A5B] animate-spin" />
+          <div className="w-12 h-12 rounded-full border-4 border-[#E2DDD8] border-t-[#145A5B] animate-spin" />
           <p className="text-[14px] font-medium text-[#6b7280]">Lendo planilha…</p>
         </div>
       )}
@@ -406,12 +406,12 @@ export default function ImportarXlsxPage() {
           <div className="space-y-5">
             {/* Arquivo + tipo detectado */}
             <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-[#e5e7eb]">
-              <FileSpreadsheet size={16} className="text-[#145A5B] shrink-0" />
+              <FileSpreadsheet size={16} className="text-[#1D5F60] shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-[#1a1d23] truncate">{file.name}</p>
                 <p className="text-[11px] text-[#9ca3af]">
                   {(file.size / 1024).toFixed(1)} KB &middot; {summary.total} linha{summary.total !== 1 ? 's' : ''} &middot;
-                  <span className="ml-1 text-[#145A5B] font-medium">{result.detectedType}</span>
+                  <span className="ml-1 text-[#1D5F60] font-medium">{result.detectedType}</span>
                 </p>
               </div>
               <button onClick={reset} className="p-1.5 rounded-lg hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors"><X size={14} /></button>
@@ -438,7 +438,7 @@ export default function ImportarXlsxPage() {
               <button
                 onClick={() => handleConfirm(result, file)}
                 disabled={!importable}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-xl transition-colors"
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[13px] font-semibold rounded-xl transition-colors"
               >
                 <CheckCircle2 size={15} />
                 Confirmar importação
@@ -459,7 +459,7 @@ export default function ImportarXlsxPage() {
       {/* ── CONFIRMING ── */}
       {stage.name === 'confirming' && (
         <div className="flex flex-col items-center gap-4 py-20">
-          <div className="w-12 h-12 rounded-full border-4 border-[#D0DCDC] border-t-[#145A5B] animate-spin" />
+          <div className="w-12 h-12 rounded-full border-4 border-[#E2DDD8] border-t-[#145A5B] animate-spin" />
           <div className="text-center">
             <p className="text-[14px] font-medium text-[#1a1d23]">Importando eventos…</p>
             <p className="text-[12px] text-[#9ca3af] mt-1">

@@ -147,7 +147,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight flex items-center gap-2">
-            <FileText size={20} className="text-[#145A5B]" />
+            <FileText size={20} className="text-[#1D5F60]" />
             Documentos
           </h1>
           <p className="text-[13px] text-[#7a8899] mt-0.5">Modelos e geração automática de documentos jurídicos</p>
@@ -156,7 +156,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
           {podeCriarGerado && (
             <button
               onClick={() => setGeradorModal({ open: true })}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#145A5B]/10 hover:bg-[#145A5B]/20 text-[#145A5B] text-[13px] font-medium rounded-xl transition-colors border border-[#145A5B]/20"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#145A5B]/10 hover:bg-[#145A5B]/20 text-[#1D5F60] text-[13px] font-medium rounded-xl transition-colors border border-[#145A5B]/20"
             >
               <Wand2 size={14} />
               Gerar Documento
@@ -165,7 +165,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
           {podeCriarModelo && (
             <button
               onClick={() => setModeloModal({ open: true, editando: null })}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
             >
               <Plus size={15} />
               Novo Modelo
@@ -175,7 +175,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
       </div>
 
       {/* Container com abas */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         {/* Tab nav */}
         <div className="flex border-b border-[#f3f4f6]">
@@ -189,12 +189,12 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
               <button key={tab.id} onClick={() => setAba(tab.id)}
                 className={cn(
                   'flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-all border-b-2 -mb-px',
-                  ativo ? 'border-[#145A5B] text-[#145A5B] bg-[#f0f7f7]' : 'border-transparent text-[#7a8899] hover:text-[#374151] hover:bg-[#f9fafb]',
+                  ativo ? 'border-[#145A5B] text-[#1D5F60] bg-[#f0f7f7]' : 'border-transparent text-[#7a8899] hover:text-[#374151] hover:bg-[#f9fafb]',
                 )}
               >
                 <Icon size={14} />
                 {tab.label}
-                <span className={cn('ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold', ativo ? 'bg-[#145A5B]/10 text-[#145A5B]' : 'bg-[#f3f4f6] text-[#9ca3af]')}>
+                <span className={cn('ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold', ativo ? 'bg-[#145A5B]/10 text-[#1D5F60]' : 'bg-[#f3f4f6] text-[#9ca3af]')}>
                   {tab.count}
                 </span>
               </button>
@@ -210,7 +210,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
               <p className="text-[13px] text-[#9ca3af]">Nenhum modelo cadastrado</p>
               {podeCriarModelo && (
                 <button onClick={() => setModeloModal({ open: true, editando: null })}
-                  className="mt-3 text-[12px] text-[#145A5B] font-semibold hover:underline">
+                  className="mt-3 text-[12px] text-[#1D5F60] font-semibold hover:underline">
                   Criar primeiro modelo →
                 </button>
               )}
@@ -219,15 +219,15 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
             <div className="divide-y divide-[#f5f7fa]">
               {modelos.map(m => (
                 <div key={m.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[#fafbfb] transition-colors group">
-                  <div className="w-10 h-10 rounded-xl bg-[#E8F0F0] flex items-center justify-center shrink-0">
-                    <LayoutTemplate size={16} className="text-[#145A5B]" />
+                  <div className="w-10 h-10 rounded-xl bg-[#E8F2F2] flex items-center justify-center shrink-0">
+                    <LayoutTemplate size={16} className="text-[#1D5F60]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-[#0f1923]">{m.nome}</p>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-[11px] text-[#9ca3af]">{labelTipo(m.tipo_documento)}</span>
                       {labelArea(m.area_direito) && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F0F0] text-[#145A5B]">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E8F2F2] text-[#1D5F60]">
                           {labelArea(m.area_direito)}
                         </span>
                       )}
@@ -241,7 +241,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
                       <button
                         onClick={() => setGeradorModal({ open: true, modeloId: m.id })}
                         title="Gerar documento a partir deste modelo"
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-[#145A5B] bg-[#E8F0F0] hover:bg-[#D0DCDC] rounded-lg transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-[#1D5F60] bg-[#E8F2F2] hover:bg-[#D0DCDC] rounded-lg transition-colors"
                       >
                         <Wand2 size={11} /> Gerar
                       </button>
@@ -278,7 +278,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
               <p className="text-[13px] text-[#9ca3af]">Nenhum documento gerado ainda</p>
               {podeCriarGerado && (
                 <button onClick={() => setGeradorModal({ open: true })}
-                  className="mt-3 text-[12px] text-[#145A5B] font-semibold hover:underline">
+                  className="mt-3 text-[12px] text-[#1D5F60] font-semibold hover:underline">
                   Gerar primeiro documento →
                 </button>
               )}
@@ -334,7 +334,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
       {/* Visualizador de documento */}
       {visualizando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6] shrink-0">
               <div>
                 <h2 className="text-[14px] font-semibold text-[#0f1923]">{visualizando.titulo}</h2>

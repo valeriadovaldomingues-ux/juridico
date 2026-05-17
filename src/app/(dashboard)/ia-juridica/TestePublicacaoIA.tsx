@@ -90,7 +90,7 @@ export default function TestePublicacaoIA() {
       </p>
 
       {/* Card de entrada */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] p-5 space-y-4">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 space-y-4">
         <textarea
           value={texto}
           onChange={e => { setTexto(e.target.value); setErro('') }}
@@ -125,7 +125,7 @@ export default function TestePublicacaoIA() {
 
       {/* Resultado — mesma estrutura da análise oficial */}
       {analise && urgCfg && (
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden">
 
           {/* Cabeçalho do resultado */}
           <div className="px-6 py-4 border-b border-[#f3f4f6] flex items-center justify-between gap-3">
@@ -163,7 +163,7 @@ export default function TestePublicacaoIA() {
                     </div>
                     <div>
                       {analise.tipo_prazo && (
-                        <p className="text-[12px] font-semibold text-[#145A5B] mb-0.5">{analise.tipo_prazo}</p>
+                        <p className="text-[12px] font-semibold text-[#1D5F60] mb-0.5">{analise.tipo_prazo}</p>
                       )}
                       {analise.prazo_data && (
                         <p className="text-[14px] font-bold text-[#1a1d23]">

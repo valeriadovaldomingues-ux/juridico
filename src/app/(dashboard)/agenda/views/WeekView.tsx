@@ -63,27 +63,27 @@ export default function WeekView({
   return (
     <div className="space-y-3">
       {/* Week nav */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-3.5 flex items-center gap-3">
-        <button onClick={onPrevWeek} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-3.5 flex items-center gap-3">
+        <button onClick={onPrevWeek} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronLeft size={15} className="text-[#4a5a6a]" />
         </button>
         <div className="flex-1 text-center">
           <p className="text-[15px] font-bold text-[#0f1923]">{startLabel} — {endLabel}</p>
         </div>
-        <button onClick={onNextWeek} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+        <button onClick={onNextWeek} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronRight size={15} className="text-[#4a5a6a]" />
         </button>
         {!isCurrentWeek && (
-          <button onClick={onGoToday} className="text-[12px] font-medium text-[#0F3D3E] border border-[#D0DCDC] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
+          <button onClick={onGoToday} className="text-[12px] font-medium text-[#0F3D3E] border border-[#E2DDD8] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
             Hoje
           </button>
         )}
       </div>
 
       {/* Week grid */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-[#E8F0F0]">
+        <div className="grid grid-cols-7 border-b border-[#E2DDD8]">
           {days.map((day, idx) => {
             const iso     = toLocalISODate(day)
             const isToday = iso === today
@@ -102,7 +102,7 @@ export default function WeekView({
                 </p>
                 <div className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center mx-auto mt-1',
-                  isToday ? 'bg-[#0F3D3E] text-white' : 'text-[#4a5a6a]'
+                  isToday ? 'bg-[#1D5F60] text-white' : 'text-[#4a5a6a]'
                 )}>
                   <span className="text-[13px] font-bold">{day.getDate()}</span>
                 </div>

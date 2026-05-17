@@ -30,7 +30,7 @@ function fmtRelativo(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#145A5B] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
+const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
 const selectCls = inputCls
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ export default function TrelloIntegracaoPage({
       </div>
 
       {/* ── Credenciais ──────────────────────────────────────────────────────── */}
-      <section className="bg-white rounded-2xl border border-[#e5e7eb] shadow-sm overflow-hidden">
+      <section className="bg-white rounded-lg border border-[#e5e7eb] shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-[#f3f4f6] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-semibold text-[#0f1923]">Credenciais</span>
@@ -259,7 +259,7 @@ export default function TrelloIntegracaoPage({
           {/* Ajuda */}
           <button
             onClick={() => setHelpOpen(v => !v)}
-            className="flex items-center gap-1.5 text-[12px] text-[#145A5B] font-medium hover:underline"
+            className="flex items-center gap-1.5 text-[12px] text-[#1D5F60] font-medium hover:underline"
           >
             {helpOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             Como obter as credenciais do Trello
@@ -268,7 +268,7 @@ export default function TrelloIntegracaoPage({
           {helpOpen && (
             <div className="bg-[#f9fafb] rounded-xl px-4 py-3 space-y-1.5 text-[12px] text-[#374151] border border-[#e5e7eb]">
               <p><strong>API Key:</strong> acesse{' '}
-                <a href="https://trello.com/app-key" target="_blank" rel="noreferrer" className="text-[#145A5B] underline inline-flex items-center gap-1">
+                <a href="https://trello.com/app-key" target="_blank" rel="noreferrer" className="text-[#1D5F60] underline inline-flex items-center gap-1">
                   trello.com/app-key <ExternalLink size={10} />
                 </a>
                 {' '}e copie a chave.
@@ -321,7 +321,7 @@ export default function TrelloIntegracaoPage({
             <button
               onClick={handleSaveCredentials}
               disabled={saving || (!apiKey.trim() || !apiToken.trim() || !boardId.trim())}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
             >
               {saving && <Loader2 size={13} className="animate-spin" />}
               {saving ? 'Conectando…' : integration ? 'Atualizar credenciais' : 'Conectar board'}
@@ -332,12 +332,12 @@ export default function TrelloIntegracaoPage({
 
       {/* ── Mapeamento de Listas ─────────────────────────────────────────────── */}
       {integration && (
-        <section className="bg-white rounded-2xl border border-[#e5e7eb] shadow-sm overflow-hidden">
+        <section className="bg-white rounded-lg border border-[#e5e7eb] shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-[#f3f4f6] flex items-center justify-between">
             <span className="text-[14px] font-semibold text-[#0f1923]">Mapeamento de Listas</span>
             <button
               onClick={loadTrelloData}
-              className="flex items-center gap-1.5 text-[12px] text-[#7a8899] hover:text-[#145A5B] transition-colors"
+              className="flex items-center gap-1.5 text-[12px] text-[#7a8899] hover:text-[#1D5F60] transition-colors"
             >
               <RefreshCw size={12} className={loadingData ? 'animate-spin' : ''} />
               Recarregar
@@ -433,7 +433,7 @@ export default function TrelloIntegracaoPage({
                 <button
                   onClick={handleSaveMappings}
                   disabled={savingMap}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
                 >
                   {savingMap && <Loader2 size={13} className="animate-spin" />}
                   {savingMap ? 'Salvando…' : 'Salvar mapeamentos'}
@@ -446,7 +446,7 @@ export default function TrelloIntegracaoPage({
 
       {/* ── Sincronização ────────────────────────────────────────────────────── */}
       {integration && (
-        <section className="bg-white rounded-2xl border border-[#e5e7eb] shadow-sm overflow-hidden">
+        <section className="bg-white rounded-lg border border-[#e5e7eb] shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-[#f3f4f6]">
             <span className="text-[14px] font-semibold text-[#0f1923]">Sincronização</span>
           </div>
@@ -474,7 +474,7 @@ export default function TrelloIntegracaoPage({
               <button
                 onClick={handleSync}
                 disabled={syncing}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-40 transition-colors"
               >
                 {syncing
                   ? <><Loader2 size={13} className="animate-spin" /> Sincronizando…</>

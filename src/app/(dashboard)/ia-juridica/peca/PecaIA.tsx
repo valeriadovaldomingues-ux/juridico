@@ -109,7 +109,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
         </Link>
         <div>
           <h1 className="text-[20px] font-semibold text-[#0f1923] tracking-tight flex items-center gap-2">
-            <FileText size={18} className="text-[#145A5B]" />
+            <FileText size={18} className="text-[#1D5F60]" />
             Gerar Peça Jurídica
           </h1>
           <p className="text-[12px] text-[#7a8899] mt-0.5">Selecione o processo e o tipo de documento</p>
@@ -117,7 +117,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
       </div>
 
       {/* Formulário */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] p-6 space-y-5">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] p-6 space-y-5">
 
         {/* Tipo de peça */}
         <div>
@@ -128,7 +128,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
             <select
               value={tipoPeca}
               onChange={e => { setTipoPeca(e.target.value); setErro('') }}
-              className="w-full px-3 py-2.5 pr-9 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl appearance-none outline-none focus:bg-white focus:border-[#145A5B] text-[#1a1d23] transition-all"
+              className="w-full px-3 py-2.5 pr-9 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl appearance-none outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23] transition-all"
             >
               <option value="">Selecione o tipo de peça…</option>
               {TIPOS_PECA.map(t => (
@@ -148,7 +148,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
             <select
               value={processoId}
               onChange={e => { setProcessoId(e.target.value); setErro('') }}
-              className="w-full px-3 py-2.5 pr-9 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl appearance-none outline-none focus:bg-white focus:border-[#145A5B] text-[#1a1d23] transition-all"
+              className="w-full px-3 py-2.5 pr-9 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl appearance-none outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23] transition-all"
             >
               <option value="">Selecione o processo…</option>
               {processos.map(p => (
@@ -194,7 +194,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
             onChange={e => setInstrucoes(e.target.value)}
             rows={3}
             placeholder="Ex: enfatizar o dano moral; incluir pedido de tutela de urgência; mencionar que o cliente é aposentado…"
-            className="w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#145A5B] text-[#1a1d23] placeholder:text-[#c5cdd8] resize-none transition-all"
+            className="w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#c5cdd8] resize-none transition-all"
           />
         </div>
 
@@ -205,7 +205,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
         <button
           onClick={gerar}
           disabled={loading || !tipoPeca || !processoId}
-          className="flex items-center gap-2 px-6 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-6 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
           {loading ? 'Gerando…' : `Gerar ${tipoLabel ?? 'Peça'}`}
@@ -214,10 +214,10 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
 
       {/* Resultado */}
       {(loading || texto) && (
-        <div ref={resultRef} className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden">
+        <div ref={resultRef} className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6]">
             <h2 className="text-[13px] font-semibold text-[#1a1d23] flex items-center gap-2">
-              <FileText size={14} className="text-[#145A5B]" />
+              <FileText size={14} className="text-[#1D5F60]" />
               {tipoLabel ?? 'Peça gerada'}
               {loading && <Loader2 size={12} className="animate-spin text-[#9ca3af] ml-1" />}
             </h2>

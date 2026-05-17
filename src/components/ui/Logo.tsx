@@ -36,13 +36,14 @@ export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant })
 
   if (variant === 'sidebar') {
     return (
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#b8903a] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-          <LogoImg size={36} />
+      <div className="flex items-center gap-2.5">
+        {/* Ícone — borda sutil no dark sidebar */}
+        <div className="w-8 h-8 rounded-lg bg-[#C49557]/15 border border-[#C49557]/25 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <LogoImg size={32} padding="p-0.5" />
         </div>
         <div>
-          <p className="text-[#d4a94e] font-semibold text-[13px] leading-none tracking-tight">PEDV</p>
-          <p className="text-white/35 text-[10px] mt-1 tracking-wide uppercase">Sistema Jurídico</p>
+          <p className="text-white font-semibold text-[13px] leading-none tracking-tight">Pessoa e do Val</p>
+          <p className="text-[#C49557]/50 text-[9px] mt-0.5 tracking-[0.1em] uppercase">Consultoria Jurídica</p>
         </div>
       </div>
     )
@@ -51,12 +52,12 @@ export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant })
   // variant === 'login'
   return (
     <div className="inline-flex flex-col items-center gap-3">
-      <div className="w-16 h-16 rounded-2xl bg-[#0F3D3E] flex items-center justify-center shadow-lg overflow-hidden">
+      <div className="w-16 h-16 rounded-2xl bg-[#162030] flex items-center justify-center shadow-lg overflow-hidden border border-[#E2DDD8]">
         <LogoImg size={64} padding="p-1.5" />
       </div>
       <div className="text-center">
-        <h1 className="text-[18px] font-bold text-[#0f1923] tracking-tight">PEDV</h1>
-        <p className="text-[12px] text-[#7a8899] mt-0.5 tracking-wide uppercase">Sistema Jurídico</p>
+        <h1 className="text-[16px] font-semibold text-[#111827] tracking-tight">Pessoa e do Val</h1>
+        <p className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-[0.08em] uppercase">Sistema Jurídico</p>
       </div>
     </div>
   )

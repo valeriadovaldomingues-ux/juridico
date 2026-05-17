@@ -92,7 +92,7 @@ const statusOptions = [
 const statusConfig: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   ativo:     { label: 'Ativo',     bg: 'bg-[#e6f4ee]', text: 'text-[#1a7a45]', dot: 'bg-[#2ecc71]' },
   suspenso:  { label: 'Suspenso',  bg: 'bg-[#fef8ec]', text: 'text-[#8a6000]', dot: 'bg-[#f39c12]' },
-  arquivado: { label: 'Arquivado', bg: 'bg-[#F7F9F9]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]' },
+  arquivado: { label: 'Arquivado', bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]' },
   encerrado: { label: 'Encerrado', bg: 'bg-[#fde8e8]', text: 'text-[#a93226]', dot: 'bg-[#e74c3c]' },
 }
 
@@ -129,10 +129,10 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
   const hasFilters = titulo || numero || area || status
 
   return (
-    <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
       {/* Filtros */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E8F0F0] flex-wrap">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E2DDD8] flex-wrap">
         <SlidersHorizontal size={14} className="text-[#7a8899] flex-shrink-0" />
 
         <div className="relative flex-1 min-w-[220px]">
@@ -142,7 +142,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
             onChange={(e) => setTitulo(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
             placeholder="Buscar por título..."
-            className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+            className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
           />
         </div>
 
@@ -151,13 +151,13 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
           onChange={(e) => setNumero(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
           placeholder="Nº processo"
-          className="w-44 px-3 py-2 text-[13px] font-mono bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+          className="w-44 px-3 py-2 text-[13px] font-mono bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
         />
 
         <select
           value={area}
           onChange={(e) => setArea(e.target.value)}
-          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] text-[#3d4a5c] transition-all"
+          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#3d4a5c] transition-all"
         >
           {areaOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -165,14 +165,14 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#D0DCDC] text-[#3d4a5c] transition-all"
+          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#3d4a5c] transition-all"
         >
           {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
         <button
           onClick={applyFilters}
-          className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-lg transition-colors"
         >
           Filtrar
         </button>
@@ -195,7 +195,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
       ) : (
         <table className="w-full">
           <thead>
-            <tr className="bg-[#f9fafb] border-b border-[#E8F0F0]">
+            <tr className="bg-[#f9fafb] border-b border-[#E2DDD8]">
               <Th first>Processo</Th>
               <Th>Cliente</Th>
               <Th>Parte Contrária</Th>
@@ -223,7 +223,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
                     <ParteContrariaCell partes={processo.partes_processo} />
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="text-[11px] font-medium text-[#3d4a5c] bg-[#F7F9F9] px-2.5 py-1 rounded-full">
+                    <span className="text-[11px] font-medium text-[#3d4a5c] bg-[#F3F1EE] px-2.5 py-1 rounded-full">
                       {areaLabels[processo.area_direito] ?? processo.area_direito}
                     </span>
                   </td>
@@ -243,7 +243,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
                   <td className="px-4 py-3.5">
                     <Link
                       href={`/processos/${processo.id}`}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F0F0] transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
                     >
                       <ChevronRight size={14} />
                     </Link>

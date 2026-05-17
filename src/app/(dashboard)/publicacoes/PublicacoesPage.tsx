@@ -169,13 +169,13 @@ function StatusPill({ status, onChange }: { status: string; onChange: (s: string
         <ChevronDown size={9} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 right-0 z-30 bg-white rounded-xl shadow-lg border border-[#E8F0F0] py-1 min-w-[140px]">
+        <div className="absolute top-full mt-1 right-0 z-30 bg-white rounded-xl shadow-lg border border-[#E2DDD8] py-1 min-w-[140px]">
           {Object.entries(STATUS_CFG).map(([k, v]) => (
             <button
               key={k}
               onClick={() => { onChange(k); setOpen(false) }}
               className={cn(
-                'w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-[#F7F9F9] text-left',
+                'w-full flex items-center gap-2 px-3 py-2 text-[12px] hover:bg-[#F3F1EE] text-left',
                 k === status ? `${v.text} font-semibold` : 'text-[#4a5a6a]'
               )}
             >
@@ -256,7 +256,7 @@ function QuickActions({
         <select
           value={processoSel}
           onChange={e => setProcessoSel(e.target.value)}
-          className="text-[11px] rounded-lg border border-[#D0DCDC] bg-white px-2 py-1 focus:outline-none focus:border-[#0F3D3E] max-w-[180px]"
+          className="text-[11px] rounded-lg border border-[#E2DDD8] bg-white px-2 py-1 focus:outline-none focus:border-[#0F3D3E] max-w-[180px]"
           autoFocus
         >
           <option value="">— Selecione —</option>
@@ -267,7 +267,7 @@ function QuickActions({
         <button
           onClick={vincular}
           disabled={!processoSel || saving}
-          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#0F3D3E] text-white hover:bg-[#145A5B] disabled:opacity-40"
+          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#1D5F60] text-white hover:bg-[#145A5B] disabled:opacity-40"
         >
           {saving ? '…' : 'Ok'}
         </button>
@@ -295,14 +295,14 @@ function QuickActions({
           )}
           <button
             onClick={() => onCreateAgenda(pub, 'tarefa')}
-            className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-[#F0F6F6] text-[#0F3D3E] border border-[#D0DCDC] hover:bg-[#e0ecec] transition-colors"
+            className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-[#F0F6F6] text-[#0F3D3E] border border-[#E2DDD8] hover:bg-[#e0ecec] transition-colors"
           >
             <Plus size={10} /> Tarefa
           </button>
           {!pub.processo_id && (
             <button
               onClick={() => setShowVincular(true)}
-              className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-[#F7F9F9] text-[#4a5a6a] border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors"
+              className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-[#F3F1EE] text-[#4a5a6a] border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors"
             >
               <Link2 size={10} /> Vincular
             </button>
@@ -355,7 +355,7 @@ function SugestaoPrazoModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onCancelar}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-t-2xl px-6 py-5 text-white">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -391,10 +391,10 @@ function SugestaoPrazoModal({
           {pub.processo && <p className="text-[11px] text-[#9aabb8] mt-0.5">{pub.processo.titulo}</p>}
         </div>
         <div className="px-6 py-5 space-y-2">
-          <button onClick={onCriarPrazo} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-bold transition-colors shadow-sm">
+          <button onClick={onCriarPrazo} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-bold transition-colors shadow-sm">
             <Plus size={14} /> Criar prazo na agenda
           </button>
-          <button onClick={onCriarTarefa} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#D0DCDC] text-[#4a5a6a] text-[13px] font-medium hover:bg-[#F7F9F9] transition-colors">
+          <button onClick={onCriarTarefa} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E2DDD8] text-[#4a5a6a] text-[13px] font-medium hover:bg-[#F3F1EE] transition-colors">
             <CheckCircle2 size={13} /> Criar tarefa na agenda
           </button>
           <div className="flex gap-2 pt-1">
@@ -479,7 +479,7 @@ function PublicacaoModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
 
         {/* Priority bar */}
         <div className={cn('h-1 w-full rounded-t-2xl', prioCfg.bar)} />
@@ -576,7 +576,7 @@ function PublicacaoModal({
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-1">Processo vinculado</p>
               {pub.processo
-                ? <p className="text-[13px] text-[#145A5B] font-medium">{pub.processo.titulo}</p>
+                ? <p className="text-[13px] text-[#1D5F60] font-medium">{pub.processo.titulo}</p>
                 : <p className="text-[12px] text-[#9aabb8]">Não vinculado</p>}
             </div>
             <div>
@@ -589,7 +589,7 @@ function PublicacaoModal({
           {pub.texto_publicacao && (
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-2">Texto da publicação</p>
-              <div className="bg-[#F7F9F9] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E8F0F0]">
+              <div className="bg-[#F3F1EE] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E2DDD8]">
                 {pub.texto_publicacao}
               </div>
             </div>
@@ -597,12 +597,12 @@ function PublicacaoModal({
 
           {/* Vincular processo */}
           {vinculando ? (
-            <div className="space-y-2 p-3 bg-[#F7F9F9] rounded-xl border border-[#E8F0F0]">
+            <div className="space-y-2 p-3 bg-[#F3F1EE] rounded-xl border border-[#E2DDD8]">
               <p className="text-[12px] font-semibold text-[#0f1923]">Vincular ao processo</p>
               <select
                 value={processoSelecionado}
                 onChange={e => setProcessoSelecionado(e.target.value)}
-                className="w-full rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E]"
+                className="w-full rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E]"
               >
                 <option value="">— Selecione um processo —</option>
                 {processos.map(p => (
@@ -610,8 +610,8 @@ function PublicacaoModal({
                 ))}
               </select>
               <div className="flex gap-2">
-                <button onClick={() => setVinculando(false)} className="flex-1 py-2 rounded-xl border border-[#D0DCDC] text-[12px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
-                <button onClick={salvarVinculo} disabled={!processoSelecionado || salvando} className="flex-1 py-2 rounded-xl bg-[#0F3D3E] text-white text-[12px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
+                <button onClick={() => setVinculando(false)} className="flex-1 py-2 rounded-xl border border-[#E2DDD8] text-[12px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
+                <button onClick={salvarVinculo} disabled={!processoSelecionado || salvando} className="flex-1 py-2 rounded-xl bg-[#1D5F60] text-white text-[12px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
                   {salvando ? 'Salvando…' : 'Vincular'}
                 </button>
               </div>
@@ -693,14 +693,14 @@ function PublicacaoModal({
             )}
 
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => onCreateAgenda(pub, 'tarefa')} className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[12px] font-semibold rounded-xl transition-colors">
+              <button onClick={() => onCreateAgenda(pub, 'tarefa')} className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[12px] font-semibold rounded-xl transition-colors">
                 <Plus size={12} /> Criar tarefa
               </button>
               <button onClick={() => onCreateAgenda(pub, 'prazo')} className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-[12px] font-semibold rounded-xl transition-colors">
                 <AlertTriangle size={12} /> Criar prazo
               </button>
               {!pub.processo_id && (
-                <button onClick={() => setVinculando(true)} className="flex items-center gap-2 px-4 py-2.5 border border-[#D0DCDC] text-[#4a5a6a] text-[12px] font-medium rounded-xl hover:bg-[#F7F9F9] transition-colors">
+                <button onClick={() => setVinculando(true)} className="flex items-center gap-2 px-4 py-2.5 border border-[#E2DDD8] text-[#4a5a6a] text-[12px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors">
                   <Link2 size={12} /> Vincular processo
                 </button>
               )}
@@ -710,7 +710,7 @@ function PublicacaoModal({
               <button onClick={() => onKanban(pub)} className="flex items-center gap-2 px-4 py-2.5 border border-violet-200 bg-violet-50 text-violet-700 text-[12px] font-medium rounded-xl hover:bg-violet-100 transition-colors">
                 <FileText size={12} /> Enviar para Kanban
               </button>
-              <button onClick={() => { onStatusChange(pub.id, 'descartada'); onClose() }} className="flex items-center gap-2 px-4 py-2.5 border border-[#D0DCDC] text-[#9aabb8] text-[12px] font-medium rounded-xl hover:bg-[#F7F9F9] transition-colors">
+              <button onClick={() => { onStatusChange(pub.id, 'descartada'); onClose() }} className="flex items-center gap-2 px-4 py-2.5 border border-[#E2DDD8] text-[#9aabb8] text-[12px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors">
                 <XCircle size={12} /> Descartar
               </button>
             </div>
@@ -723,7 +723,7 @@ function PublicacaoModal({
               {Object.entries(STATUS_CFG).map(([k, v]) => (
                 <button key={k} onClick={() => onStatusChange(pub.id, k)}
                   className={cn('flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-[12px] font-semibold transition-all',
-                    pub.status === k ? `${v.bg} ${v.text} ${v.border}` : 'border-[#E8F0F0] text-[#9aabb8] hover:border-[#c8d8d8]'
+                    pub.status === k ? `${v.bg} ${v.text} ${v.border}` : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
                   )}>
                   <span className={cn('w-2 h-2 rounded-full', v.dot)} /> {v.label}
                 </button>
@@ -813,7 +813,7 @@ function ImportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#F0F6F6]">
           <h2 className="text-[15px] font-bold text-[#0f1923]">Importar publicações</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F0F6F6] text-[#9aabb8]"><X size={15} /></button>
@@ -824,18 +824,18 @@ function ImportModal({
             <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-3" />
             <p className="text-[14px] font-semibold text-[#0f1923]">{rows.length} publicações importadas</p>
             <p className="text-[12px] text-[#9aabb8] mt-1">Processos vinculados automaticamente quando o número foi encontrado</p>
-            <button onClick={onClose} className="mt-4 px-4 py-2 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B]">Fechar</button>
+            <button onClick={onClose} className="mt-4 px-4 py-2 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B]">Fechar</button>
           </div>
         ) : (
           <div className="px-6 py-5 space-y-4">
             <p className="text-[13px] text-[#7a8899] leading-relaxed">
               Selecione um arquivo <strong>Excel (.xlsx)</strong> ou <strong>CSV (.csv)</strong>. Processos serão vinculados automaticamente pelo número.
             </p>
-            <div className="bg-[#F7F9F9] rounded-xl p-3 text-[11px] font-mono text-[#4a5a6a] leading-relaxed border border-[#E8F0F0]">
+            <div className="bg-[#F3F1EE] rounded-xl p-3 text-[11px] font-mono text-[#4a5a6a] leading-relaxed border border-[#E2DDD8]">
               numero_processo · texto_publicacao · data_publicacao · tribunal · nome_pesquisado
             </div>
             <label className="block">
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#D0DCDC] rounded-2xl cursor-pointer hover:border-[#0F3D3E] hover:bg-[#F7F9F9] transition-colors">
+              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#E2DDD8] rounded-lg cursor-pointer hover:border-[#0F3D3E] hover:bg-[#F3F1EE] transition-colors">
                 <Upload size={24} className="text-[#9aabb8] mb-2" />
                 <p className="text-[13px] font-medium text-[#4a5a6a]">Clique para selecionar arquivo</p>
                 <p className="text-[11px] text-[#9aabb8] mt-0.5">.xlsx, .xls ou .csv</p>
@@ -848,8 +848,8 @@ function ImportModal({
               </div>
             )}
             <div className="flex gap-2 pt-2">
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#D0DCDC] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
-              <button onClick={doImport} disabled={!rows.length || loading} className="flex-1 py-2.5 rounded-xl bg-[#0F3D3E] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
+              <button onClick={doImport} disabled={!rows.length || loading} className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
                 {loading ? 'Importando…' : `Importar ${rows.length} linha(s)`}
               </button>
             </div>
@@ -897,12 +897,12 @@ function AgendaQuickModal({
     onDone()
   }
 
-  const inputCls = 'w-full rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] px-3.5 py-2.5 text-[13px] text-[#0f1923] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors'
+  const inputCls = 'w-full rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] px-3.5 py-2.5 text-[13px] text-[#0f1923] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors'
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#F0F6F6]">
           <h3 className="text-[14px] font-bold text-[#0f1923]">
             {tipo === 'prazo' ? 'Criar prazo na agenda' : 'Criar tarefa na agenda'}
@@ -933,8 +933,8 @@ function AgendaQuickModal({
           </div>
         </div>
         <div className="px-6 pb-5 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#D0DCDC] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
-          <button onClick={save} disabled={!titulo.trim() || !data || saving} className="flex-1 py-2.5 rounded-xl bg-[#0F3D3E] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
+          <button onClick={save} disabled={!titulo.trim() || !data || saving} className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
             {saving ? 'Criando…' : 'Criar na agenda'}
           </button>
         </div>
@@ -1001,12 +1001,12 @@ function NovaPublicacaoModal({
     onDone(inserted as Publicacao)
   }
 
-  const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#F7F9F9] border border-[#E8F0F0] rounded-xl outline-none focus:bg-white focus:border-[#145A5B] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
+  const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#F3F1EE] border border-[#E2DDD8] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#F0F6F6]">
           <h2 className="text-[15px] font-bold text-[#0f1923]">Nova publicação</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#F0F6F6] text-[#9aabb8]"><X size={15} /></button>
@@ -1046,8 +1046,8 @@ function NovaPublicacaoModal({
           </div>
           {erro && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
           <div className="flex gap-2 pt-1">
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#D0DCDC] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
-            <button onClick={salvar} disabled={!texto.trim() || saving} className="flex-1 py-2.5 rounded-xl bg-[#0F3D3E] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
+            <button onClick={salvar} disabled={!texto.trim() || saving} className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
               {saving ? 'Salvando…' : 'Salvar publicação'}
             </button>
           </div>
@@ -1116,12 +1116,12 @@ function KanbanFromPubModal({
     setDone(true)
   }
 
-  const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#145A5B] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
+  const inputCls = 'w-full px-3 py-2.5 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8] transition-all'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#f3f4f6]">
           <h2 className="text-[15px] font-bold text-[#0f1923]">Enviar para Kanban</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-[#f3f4f6] text-[#9ca3af]"><X size={15} /></button>
@@ -1132,7 +1132,7 @@ function KanbanFromPubModal({
             <CheckCircle2 size={32} className="text-emerald-500 mx-auto mb-3" />
             <p className="text-[14px] font-semibold text-[#0f1923]">Tarefa criada no Kanban!</p>
             <p className="text-[12px] text-[#9ca3af] mt-1">Acesse o módulo Kanban para acompanhar.</p>
-            <button onClick={onClose} className="mt-4 px-5 py-2.5 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B]">Fechar</button>
+            <button onClick={onClose} className="mt-4 px-5 py-2.5 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B]">Fechar</button>
           </div>
         ) : (
           <div className="px-6 py-5 space-y-4">
@@ -1167,8 +1167,8 @@ function KanbanFromPubModal({
             )}
             {erro && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
             <div className="flex gap-2 pt-1">
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#D0DCDC] text-[13px] text-[#7a8899] hover:bg-[#f9fafb]">Cancelar</button>
-              <button onClick={enviar} disabled={saving || !titulo.trim()} className="flex-1 py-2.5 rounded-xl bg-[#0F3D3E] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] text-[#7a8899] hover:bg-[#f9fafb]">Cancelar</button>
+              <button onClick={enviar} disabled={saving || !titulo.trim()} className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] text-white text-[13px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
                 {saving ? 'Criando…' : 'Enviar para Kanban'}
               </button>
             </div>
@@ -1410,7 +1410,7 @@ export default function PublicacoesPage({
 
       {/* ── Modo Trabalho banner ── */}
       {modoTrabalho && (
-        <div className="flex items-center gap-4 px-5 py-3.5 bg-[#0F3D3E] rounded-2xl text-white">
+        <div className="flex items-center gap-4 px-5 py-3.5 bg-[#1D5F60] rounded-lg text-white">
           <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
             <Target size={15} className="text-white" />
           </div>
@@ -1447,7 +1447,7 @@ export default function PublicacoesPage({
               <button
                 onClick={executarMonitoramento}
                 disabled={monitoramentoLoading}
-                className="flex items-center gap-2 px-4 py-2 border border-[#D0DCDC] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F7F9F9] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 border border-[#E2DDD8] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {monitoramentoLoading ? (
                   <>
@@ -1460,13 +1460,13 @@ export default function PublicacoesPage({
               </button>
               <button
                 onClick={toggleModoTrabalho}
-                className="flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
               >
                 <Play size={13} /> Trabalhar agora
               </button>
               <button
                 onClick={() => setShowImport(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-[#D0DCDC] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F7F9F9] transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-[#E2DDD8] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors"
               >
                 <Upload size={13} /> Importar
               </button>
@@ -1505,7 +1505,7 @@ export default function PublicacoesPage({
               action: () => { setFStatus('nao_tratada'); setFPrazo(true); setFDe(''); setFAte(''); resetPage() } },
           ].map(({ label, value, bg, text, action }) => (
             <button key={label} onClick={action}
-              className={cn('rounded-2xl border border-[#E8F0F0] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}>
+              className={cn('rounded-lg border border-[#E2DDD8] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}>
               <p className={cn('text-[28px] font-black leading-none', text)}>{value}</p>
               <p className="text-[11px] text-[#9aabb8] mt-1.5 font-medium leading-tight">{label}</p>
             </button>
@@ -1515,7 +1515,7 @@ export default function PublicacoesPage({
 
       {/* ── Filters ── */}
       {!modoTrabalho && (
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-4 space-y-3">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9aabb8]" />
@@ -1523,19 +1523,19 @@ export default function PublicacoesPage({
                 placeholder="Buscar texto, processo, nome…"
                 value={fBusca}
                 onChange={e => { setFBusca(e.target.value); resetPage() }}
-                className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
               />
             </div>
             <select value={fTribunal} onChange={e => { setFTribunal(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]">
+              className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]">
               <option value="">Todos os tribunais</option>
               {tribunais.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <input placeholder="Nome pesquisado…" value={fAdvogado}
               onChange={e => { setFAdvogado(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#D0DCDC] bg-[#F7F9F9] px-3.5 py-2 text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors w-44" />
+              className="rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] px-3.5 py-2 text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors w-44" />
             <select value={fProcesso} onChange={e => { setFProcesso(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[200px]">
+              className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[200px]">
               <option value="">Todos os processos</option>
               {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
             </select>
@@ -1558,20 +1558,20 @@ export default function PublicacoesPage({
             </div>
             <button onClick={() => { setFPrazo(f => !f); resetPage() }}
               className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-colors',
-                fPrazo ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]')}>
+                fPrazo ? 'border-orange-300 bg-orange-50 text-orange-700' : 'border-[#E2DDD8] text-[#7a8899] hover:border-[#c8d8d8]')}>
               <AlertTriangle size={11} /> Com prazo
             </button>
             <button onClick={() => { setFAudiencia(f => !f); resetPage() }}
               className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-medium transition-colors',
-                fAudiencia ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-[#D0DCDC] text-[#7a8899] hover:border-[#c8d8d8]')}>
+                fAudiencia ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-[#E2DDD8] text-[#7a8899] hover:border-[#c8d8d8]')}>
               <Gavel size={11} /> Com audiência
             </button>
             <div className="flex items-center gap-2 ml-auto">
               <input type="date" value={fDe}  onChange={e => { setFDe(e.target.value);  resetPage() }}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
               <span className="text-[11px] text-[#9aabb8]">até</span>
               <input type="date" value={fAte} onChange={e => { setFAte(e.target.value); resetPage() }}
-                className="rounded-xl border border-[#D0DCDC] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
+                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-1.5 text-[12px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]" />
             </div>
           </div>
         </div>
@@ -1585,13 +1585,13 @@ export default function PublicacoesPage({
             placeholder="Buscar publicação…"
             value={fBusca}
             onChange={e => { setFBusca(e.target.value); resetPage() }}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#D0DCDC] bg-white text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] shadow-sm transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E2DDD8] bg-white text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] shadow-sm transition-colors"
           />
         </div>
       )}
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
         {/* Header row */}
         <div className={cn(
           'grid gap-3 px-5 py-3 border-b border-[#F0F6F6] bg-[#FAFCFC]',
@@ -1663,7 +1663,7 @@ export default function PublicacoesPage({
                       <p className="text-[11px] text-[#9aabb8] truncate">{pub.nome_pesquisado}</p>
                     )}
                     {modoTrabalho && pub.processo && (
-                      <p className="text-[11px] text-[#145A5B] font-medium truncate">{pub.processo.titulo}</p>
+                      <p className="text-[11px] text-[#1D5F60] font-medium truncate">{pub.processo.titulo}</p>
                     )}
                   </div>
 
@@ -1685,7 +1685,7 @@ export default function PublicacoesPage({
                       <p className="text-[12px] text-[#4a5a6a] truncate pt-0.5">{pub.tribunal ?? '—'}</p>
                       <div className="min-w-0 pt-0.5">
                         {pub.processo
-                          ? <p className="text-[11px] text-[#145A5B] font-medium truncate">{pub.processo.titulo}</p>
+                          ? <p className="text-[11px] text-[#1D5F60] font-medium truncate">{pub.processo.titulo}</p>
                           : pub.numero_processo
                             ? <p className="text-[11px] text-[#9aabb8] font-mono truncate">{pub.numero_processo}</p>
                             : <p className="text-[11px] text-[#c8d8d8]">—</p>}
@@ -1712,12 +1712,12 @@ export default function PublicacoesPage({
             </p>
             <div className="flex items-center gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
                 <ChevronLeft size={13} />
               </button>
               <span className="text-[12px] text-[#4a5a6a] px-2">{page} / {totalPages}</span>
               <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] disabled:opacity-30 hover:bg-[#F0F6F6] transition-colors">
                 <ChevronRight size={13} />
               </button>
             </div>

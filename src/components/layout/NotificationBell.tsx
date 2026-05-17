@@ -103,7 +103,7 @@ export default function NotificationBell() {
         className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center transition-all relative',
           open
-            ? 'text-[#0F3D3E] bg-[#E8F0F0]'
+            ? 'text-[#0F3D3E] bg-[#E8F2F2]'
             : 'text-[#7a8899] hover:text-[#0f1923] hover:bg-[#F7F9F9]',
         )}
         title="Notificações"
@@ -117,7 +117,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 w-80 bg-white rounded-2xl shadow-xl border border-[#E8F0F0] z-50 overflow-hidden">
+        <div className="absolute right-0 top-10 w-80 bg-white rounded-lg shadow-xl border border-[#E8F0F0] z-50 overflow-hidden">
 
           {/* Header do dropdown */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#F0F4F4]">
@@ -126,7 +126,7 @@ export default function NotificationBell() {
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="flex items-center gap-1 text-[11px] text-[#145A5B] hover:underline font-medium"
+                  className="flex items-center gap-1 text-[11px] text-[#1D5F60] hover:underline font-medium"
                 >
                   <Check size={10} /> Marcar todas como lidas
                 </button>
@@ -166,7 +166,7 @@ export default function NotificationBell() {
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[10px] text-[#9ca3af]">{fmtRelativo(n.created_at)}</span>
                       {n.link && (
-                        <Link href={n.link} onClick={() => setOpen(false)} className="text-[10px] text-[#145A5B] hover:underline flex items-center gap-0.5">
+                        <Link href={n.link} onClick={() => setOpen(false)} className="text-[10px] text-[#1D5F60] hover:underline flex items-center gap-0.5">
                           Ver <ExternalLink size={9} />
                         </Link>
                       )}
@@ -182,7 +182,7 @@ export default function NotificationBell() {
             <Link
               href="/automacoes"
               onClick={() => setOpen(false)}
-              className="text-[11px] text-[#145A5B] font-medium hover:underline"
+              className="text-[11px] text-[#1D5F60] font-medium hover:underline"
             >
               Ver automações →
             </Link>

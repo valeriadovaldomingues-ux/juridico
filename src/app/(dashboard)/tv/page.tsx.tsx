@@ -29,22 +29,22 @@ export default function DashboardTV() {
       {/* Cards principais */}
       <div className="grid grid-cols-4 gap-6 flex-1">
         
-        <div className="bg-red-600 rounded-2xl p-6">
+        <div className="bg-red-600 rounded-lg p-6">
           <h2 className="text-lg">Atrasadas</h2>
           <p className="text-5xl font-bold">12</p>
         </div>
 
-        <div className="bg-yellow-500 rounded-2xl p-6">
+        <div className="bg-yellow-500 rounded-lg p-6">
           <h2 className="text-lg">Vencem hoje</h2>
           <p className="text-5xl font-bold">5</p>
         </div>
 
-        <div className="bg-blue-500 rounded-2xl p-6">
+        <div className="bg-blue-500 rounded-lg p-6">
           <h2 className="text-lg">Em andamento</h2>
           <p className="text-5xl font-bold">18</p>
         </div>
 
-        <div className="bg-green-600 rounded-2xl p-6">
+        <div className="bg-green-600 rounded-lg p-6">
           <h2 className="text-lg">Concluídas</h2>
           <p className="text-5xl font-bold">23</p>
         </div>

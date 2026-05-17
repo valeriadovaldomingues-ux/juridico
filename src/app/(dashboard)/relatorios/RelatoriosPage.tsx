@@ -221,7 +221,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight flex items-center gap-2">
-            <BarChart3 size={20} className="text-[#145A5B]" />
+            <BarChart3 size={20} className="text-[#1D5F60]" />
             Relatórios
           </h1>
           <p className="text-[13px] text-[#7a8899] mt-0.5">Análises estratégicas e exportação de dados</p>
@@ -229,7 +229,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
       </div>
 
       {/* Filtros globais */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] px-5 py-3.5 flex items-center gap-3 flex-wrap shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] px-5 py-3.5 flex items-center gap-3 flex-wrap shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <span className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider shrink-0">Filtros</span>
         <SelectFiltro value={periodo} onChange={setPeriodo} options={[
           { value: 'todos',    label: 'Todo o período'   },
@@ -249,7 +249,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
       </div>
 
       {/* Abas */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         <div className="flex border-b border-[#f3f4f6] overflow-x-auto">
           {ABAS.filter(a => !a.roles || a.roles.includes(role)).map(a => {
             const Icon  = a.icon
@@ -258,7 +258,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
               <button key={a.id} onClick={() => setAba(a.id)}
                 className={cn(
                   'flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-all border-b-2 -mb-px shrink-0',
-                  ativo ? 'border-[#145A5B] text-[#145A5B] bg-[#f0f7f7]' : 'border-transparent text-[#7a8899] hover:text-[#374151] hover:bg-[#f9fafb]',
+                  ativo ? 'border-[#145A5B] text-[#1D5F60] bg-[#f0f7f7]' : 'border-transparent text-[#7a8899] hover:text-[#374151] hover:bg-[#f9fafb]',
                 )}
               >
                 <Icon size={14} /> {a.label}
@@ -487,7 +487,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
                           {i.prioridade}
                         </span>
                         <span className={cn('text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0',
-                          diasFaltam === 0 ? 'bg-amber-100 text-amber-700' : urgente ? 'bg-orange-50 text-orange-700' : 'bg-[#F7F9F9] text-[#7a8899]')}>
+                          diasFaltam === 0 ? 'bg-amber-100 text-amber-700' : urgente ? 'bg-orange-50 text-orange-700' : 'bg-[#F3F1EE] text-[#7a8899]')}>
                           {diasFaltam === 0 ? 'Hoje' : diasFaltam === 1 ? 'Amanhã' : `${diasFaltam}d`}
                         </span>
                       </div>
@@ -562,7 +562,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <Link href="/publicacoes" className="text-[11px] text-[#145A5B] hover:underline flex items-center gap-0.5">
+                          <Link href="/publicacoes" className="text-[11px] text-[#1D5F60] hover:underline flex items-center gap-0.5">
                             Tratar <ArrowUpRight size={10} />
                           </Link>
                         </td>
@@ -663,7 +663,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
               />
             ) : (
               <div className="py-16 flex flex-col items-center gap-3 text-center">
-                <div className="w-14 h-14 bg-[#f3f4f6] rounded-2xl flex items-center justify-center">
+                <div className="w-14 h-14 bg-[#f3f4f6] rounded-lg flex items-center justify-center">
                   <Building2 size={22} className="text-[#D0DCDC]" />
                 </div>
                 <p className="text-[13px] font-medium text-[#9ca3af]">Selecione um cliente para gerar o relatório</p>
@@ -712,7 +712,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
               </div>
             </div>
             <div className="flex justify-end">
-              <Link href="/financeiro" className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#145A5B] border border-[#145A5B]/30 rounded-xl hover:bg-[#E8F0F0] transition-colors">
+              <Link href="/financeiro" className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#1D5F60] border border-[#145A5B]/30 rounded-xl hover:bg-[#E8F2F2] transition-colors">
                 Ver módulo financeiro completo <ArrowUpRight size={14} />
               </Link>
             </div>
@@ -727,7 +727,7 @@ function SelectFiltro({ value, onChange, options }: { value: string; onChange: (
   return (
     <div className="relative">
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="pl-3 pr-7 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151] appearance-none">
+        className="pl-3 pr-7 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] appearance-none">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none">

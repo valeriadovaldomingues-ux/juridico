@@ -49,8 +49,8 @@ export default function DayView({
   return (
     <div className="space-y-4">
       {/* Day nav */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm px-5 py-4 flex items-center gap-3">
-        <button onClick={onPrev} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 flex items-center gap-3">
+        <button onClick={onPrev} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronLeft size={15} className="text-[#4a5a6a]" />
         </button>
         <div className="flex-1 text-center">
@@ -59,23 +59,23 @@ export default function DayView({
             {isToday && <span className="ml-2 text-[11px] font-semibold text-[#0F3D3E] bg-emerald-50 px-2 py-0.5 rounded-full">Hoje</span>}
           </p>
         </div>
-        <button onClick={onNext} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#D0DCDC] hover:bg-[#F0F6F6] transition-colors">
+        <button onClick={onNext} className="w-8 h-8 flex items-center justify-center rounded-xl border border-[#E2DDD8] hover:bg-[#F0F6F6] transition-colors">
           <ChevronRight size={15} className="text-[#4a5a6a]" />
         </button>
         {!isToday && (
-          <button onClick={onGoToday} className="text-[12px] font-medium text-[#0F3D3E] border border-[#D0DCDC] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
+          <button onClick={onGoToday} className="text-[12px] font-medium text-[#0F3D3E] border border-[#E2DDD8] px-3 py-1.5 rounded-xl hover:bg-[#F0F6F6] transition-colors">
             Hoje
           </button>
         )}
       </div>
 
       {dayItems.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm p-10 text-center">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm p-10 text-center">
           <CalendarDays size={28} className="text-[#c8d8d8] mx-auto mb-3" />
           <p className="text-[14px] font-medium text-[#7a8899]">Nenhum item para este dia</p>
           <button
             onClick={() => onNew(date)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] transition-colors"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] transition-colors"
           >
             <Plus size={13} /> Adicionar item
           </button>
@@ -84,7 +84,7 @@ export default function DayView({
         <div className="space-y-3">
           {/* Sem horário */}
           {untimed.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
               <div className="px-5 py-3 border-b border-[#F0F6F6]">
                 <p className="text-[11px] font-semibold text-[#9aabb8] uppercase tracking-wide">Dia todo / Sem horário</p>
               </div>
@@ -96,7 +96,7 @@ export default function DayView({
 
           {/* Com horário */}
           {timed.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
               <div className="px-5 py-3 border-b border-[#F0F6F6]">
                 <p className="text-[11px] font-semibold text-[#9aabb8] uppercase tracking-wide">Agendados</p>
               </div>
@@ -111,7 +111,7 @@ export default function DayView({
       {/* Quick add at bottom */}
       <button
         onClick={() => onNew(date)}
-        className="w-full py-3 rounded-2xl border-2 border-dashed border-[#D0DCDC] text-[13px] text-[#9aabb8] font-medium hover:border-[#0F3D3E] hover:text-[#0F3D3E] hover:bg-[#f9fafb] transition-all flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-lg border-2 border-dashed border-[#E2DDD8] text-[13px] text-[#9aabb8] font-medium hover:border-[#0F3D3E] hover:text-[#0F3D3E] hover:bg-[#f9fafb] transition-all flex items-center justify-center gap-2"
       >
         <Plus size={14} /> Adicionar para este dia
       </button>

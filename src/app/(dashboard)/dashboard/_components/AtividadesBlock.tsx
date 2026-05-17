@@ -54,7 +54,7 @@ export default function AtividadesBlock({ atividades }: { atividades: PrazoResum
   ]
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden flex flex-col">
 
       {/* Header */}
       <div className="px-6 pt-5 pb-4 border-b border-[#F0F4F4]">
@@ -66,14 +66,14 @@ export default function AtividadesBlock({ atividades }: { atividades: PrazoResum
         </div>
 
         {/* Segmented control */}
-        <div className="flex bg-[#F7F9F9] rounded-xl p-[3px] border border-[#E8F0F0]">
+        <div className="flex bg-[#F3F1EE] rounded-xl p-[3px] border border-[#E2DDD8]">
           {periodos.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setPeriodo(key)}
               className={`flex-1 text-[11px] font-semibold py-1.5 rounded-lg transition-all duration-200 ${
                 periodo === key
-                  ? 'bg-[#0F3D3E] text-white shadow-sm'
+                  ? 'bg-[#1D5F60] text-white shadow-sm'
                   : 'text-[#9aabb8] hover:text-[#4a5a6a]'
               }`}
             >
@@ -134,7 +134,7 @@ export default function AtividadesBlock({ atividades }: { atividades: PrazoResum
             <span className="text-[11px] text-[#9aabb8]">Progresso</span>
             <span className="text-[13px] font-bold text-[#0f1923]">{progressPct}%</span>
           </div>
-          <div className="h-2 bg-[#F7F9F9] rounded-full overflow-hidden border border-[#E8F0F0]">
+          <div className="h-2 bg-[#F3F1EE] rounded-full overflow-hidden border border-[#E2DDD8]">
             <div
               className="h-full bg-gradient-to-r from-emerald-400 to-[#1B6E70] rounded-full transition-all duration-700"
               style={{ width: `${progressPct}%` }}

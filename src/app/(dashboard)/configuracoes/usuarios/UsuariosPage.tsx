@@ -151,7 +151,7 @@ export default function UsuariosPage({
         {isSocio && (
           <button
             onClick={() => { setShowModal(true); setFlash(null) }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors flex-shrink-0"
           >
             <Plus size={15} /> Novo Usuário
           </button>
@@ -171,7 +171,7 @@ export default function UsuariosPage({
       )}
 
       {/* Tabela */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
         {usuarios.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-20 text-center">
             <div className="w-12 h-12 rounded-full bg-[#f3f4f6] flex items-center justify-center">
@@ -181,7 +181,7 @@ export default function UsuariosPage({
             {isSocio && (
               <button
                 onClick={() => setShowModal(true)}
-                className="mt-1 text-[13px] font-semibold text-[#145A5B] hover:underline inline-flex items-center gap-1"
+                className="mt-1 text-[13px] font-semibold text-[#1D5F60] hover:underline inline-flex items-center gap-1"
               >
                 <Plus size={12} /> Criar primeiro usuário
               </button>
@@ -225,11 +225,11 @@ export default function UsuariosPage({
                           value={editForm.nome}
                           onChange={e => setEditForm(prev => ({ ...prev, nome: e.target.value }))}
                           placeholder="Nome completo"
-                          className="w-full px-3 py-1.5 text-sm border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+                          className="w-full px-3 py-1.5 text-sm border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
                         />
                       ) : (
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#0F3D3E] flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#1D5F60] flex items-center justify-center flex-shrink-0">
                             <span className="text-[11px] font-bold text-white leading-none select-none">
                               {getInitials(u.nome)}
                             </span>
@@ -254,7 +254,7 @@ export default function UsuariosPage({
                           <select
                             value={editForm.role}
                             onChange={e => setEditForm(prev => ({ ...prev, role: e.target.value as UserRole }))}
-                            className="appearance-none pl-3 pr-8 py-1.5 text-[13px] border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] bg-white cursor-pointer"
+                            className="appearance-none pl-3 pr-8 py-1.5 text-[13px] border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] bg-white cursor-pointer"
                           >
                             {ROLES.map(r => (
                               <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -312,7 +312,7 @@ export default function UsuariosPage({
                               </button>
                               <button
                                 onClick={() => enviarReset(u.email)}
-                                className="p-1.5 rounded-lg text-[#9ca3af] hover:text-[#145A5B] hover:bg-[#E8F0F0] transition-colors"
+                                className="p-1.5 rounded-lg text-[#9ca3af] hover:text-[#1D5F60] hover:bg-[#E8F2F2] transition-colors"
                                 title="Enviar e-mail de redefinição de senha"
                               >
                                 <Mail size={14} />
@@ -353,7 +353,7 @@ export default function UsuariosPage({
           />
 
           {/* Card */}
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md">
             {/* Header do modal */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#f3f4f6]">
               <h2 className="text-[16px] font-semibold text-[#1a1d23]">Novo Usuário</h2>
@@ -377,7 +377,7 @@ export default function UsuariosPage({
                   value={novoForm.nome}
                   onChange={e => setNovoForm(prev => ({ ...prev, nome: e.target.value }))}
                   placeholder="Ex: Maria Silva"
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
                 />
               </div>
 
@@ -391,7 +391,7 @@ export default function UsuariosPage({
                   value={novoForm.email}
                   onChange={e => setNovoForm(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="usuario@escritorio.com"
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
                 />
               </div>
 
@@ -404,7 +404,7 @@ export default function UsuariosPage({
                     <select
                       value={novoForm.role}
                       onChange={e => setNovoForm(prev => ({ ...prev, role: e.target.value as UserRole }))}
-                      className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] bg-white cursor-pointer"
+                      className="w-full appearance-none pl-3.5 pr-8 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white cursor-pointer"
                     >
                       {ROLES.map(r => (
                         <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -425,7 +425,7 @@ export default function UsuariosPage({
                     value={novoForm.senha}
                     onChange={e => setNovoForm(prev => ({ ...prev, senha: e.target.value }))}
                     placeholder="Mín. 6 caracteres"
-                    className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
+                    className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
                   />
                 </div>
               </div>
@@ -444,7 +444,7 @@ export default function UsuariosPage({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                  className="flex-1 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
                 >
                   {saving ? (
                     <span className="flex items-center justify-center gap-2">

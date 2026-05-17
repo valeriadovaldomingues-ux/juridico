@@ -58,8 +58,8 @@ export default async function AgendaRoute() {
           <p className="text-[13px] text-[#9aabb8] mt-0.5">Compromissos, prazos e eventos do escritório</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm p-8">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mb-5">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm p-8">
+          <div className="w-12 h-12 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center mb-5">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b8903a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
@@ -69,7 +69,7 @@ export default async function AgendaRoute() {
             Execute o SQL abaixo no <strong>SQL Editor</strong> do Supabase Dashboard
             e recarregue esta página.
           </p>
-          <pre className="bg-[#F7F9F9] border border-[#E8F0F0] rounded-xl p-5 text-[11px] text-[#4a5a6a] overflow-x-auto whitespace-pre font-mono leading-relaxed">
+          <pre className="bg-[#F3F1EE] border border-[#E2DDD8] rounded-xl p-5 text-[11px] text-[#4a5a6a] overflow-x-auto whitespace-pre font-mono leading-relaxed">
             {SETUP_SQL}
           </pre>
           <p className="text-[12px] text-[#9aabb8] mt-4">

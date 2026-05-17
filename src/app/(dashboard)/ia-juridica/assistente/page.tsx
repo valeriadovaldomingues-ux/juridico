@@ -171,7 +171,7 @@ export default function AssistenteJuridico() {
       </div>
 
       {/* Contexto de processo (opcional) */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] px-4 py-3 mb-3">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] px-4 py-3 mb-3">
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider shrink-0">
             Contexto
@@ -206,7 +206,7 @@ export default function AssistenteJuridico() {
 
         {mensagens.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-lg bg-amber-50 flex items-center justify-center">
               <Sparkles size={22} className="text-amber-500" />
             </div>
             <p className="text-[14px] font-medium text-[#374151]">Como posso ajudar?</p>
@@ -239,9 +239,9 @@ export default function AssistenteJuridico() {
               </div>
             )}
             <div className={cn(
-              'relative max-w-[85%] rounded-2xl px-4 py-3 group',
+              'relative max-w-[85%] rounded-lg px-4 py-3 group',
               msg.role === 'user'
-                ? 'bg-[#0F3D3E] text-white rounded-tr-sm'
+                ? 'bg-[#1D5F60] text-white rounded-tr-sm'
                 : 'bg-white border border-[#e5e7eb] text-[#374151] rounded-tl-sm shadow-sm',
             )}>
               <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
@@ -270,7 +270,7 @@ export default function AssistenteJuridico() {
       </div>
 
       {/* Input */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] p-3 flex items-end gap-2 mt-auto">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] p-3 flex items-end gap-2 mt-auto">
         <textarea
           ref={textareaRef}
           value={pergunta}

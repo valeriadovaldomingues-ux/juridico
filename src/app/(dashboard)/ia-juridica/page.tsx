@@ -6,7 +6,7 @@ const modulos = [
   {
     href:   '/ia-juridica/peca',
     icon:   FileText,
-    cor:    { bg: 'bg-[#E8F0F0]', icon: 'text-[#145A5B]', btn: 'text-[#145A5B]', hover: 'hover:border-[#145A5B] hover:shadow-[0_4px_20px_rgba(20,90,91,0.1)]' },
+    cor:    { bg: 'bg-[#E8F2F2]', icon: 'text-[#1D5F60]', btn: 'text-[#1D5F60]', hover: 'hover:border-[#145A5B] hover:shadow-[0_4px_20px_rgba(20,90,91,0.1)]' },
     titulo: 'Gerar Peça Jurídica',
     desc:   'Selecione o processo e o tipo de documento. A IA redigirá a peça completa com fundamentos legais, qualificação das partes e pedidos estruturados.',
     tags:   ['Petição Inicial', 'Contestação', 'Recurso', 'Memoriais'],
@@ -41,7 +41,7 @@ export default function IAJuridicaPage() {
         <div>
           <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight flex items-center gap-2">
             IA Jurídica
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#145A5B] bg-[#E8F0F0] px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1D5F60] bg-[#E8F2F2] px-2 py-0.5 rounded-full uppercase tracking-wider">
               <Sparkles size={9} /> Beta
             </span>
           </h1>
@@ -59,7 +59,7 @@ export default function IAJuridicaPage() {
             <Link
               key={mod.href}
               href={mod.href}
-              className={`group bg-white rounded-2xl border border-[#D0DCDC] p-6 flex flex-col gap-4 transition-all duration-200 ${mod.cor.hover}`}
+              className={`group bg-white rounded-lg border border-[#E2DDD8] p-6 flex flex-col gap-4 transition-all duration-200 ${mod.cor.hover}`}
             >
               <div className={`w-11 h-11 rounded-xl ${mod.cor.bg} flex items-center justify-center`}>
                 <Icon size={20} className={mod.cor.icon} />

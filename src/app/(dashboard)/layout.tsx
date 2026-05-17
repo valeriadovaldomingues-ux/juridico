@@ -30,11 +30,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isDev = process.env.NODE_ENV === 'development'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F7F9F9]">
+    <div className="flex h-screen overflow-hidden bg-[#F3F1EE]">
       <Sidebar role={role} devMode={isDev} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header profile={profile} />
-        <main className="flex-1 overflow-y-auto p-7">
+        <main className="flex-1 overflow-y-auto p-6 internal-page">
           {children}
         </main>
       </div>

@@ -12,18 +12,9 @@ import Logo from '@/components/ui/Logo'
 import { ALLOWED_ROUTES } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 
-interface NavItem {
-  href: string
-  label: string
-  icon: React.ElementType
-}
+interface NavItem  { href: string; label: string; icon: React.ElementType }
+interface NavGroup { label: string; items: NavItem[] }
 
-interface NavGroup {
-  label: string
-  items: NavItem[]
-}
-
-// Todos os itens disponíveis — filtrados por role ao renderizar
 const ALL_NAV_GROUPS: NavGroup[] = [
   {
     label: 'Principal',
@@ -88,26 +79,27 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
     .filter(group => group.items.length > 0)
 
   function isActive(href: string): boolean {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    // Evita que /configuracoes fique ativo quando a rota ativa é /configuracoes/usuarios
+    if (href === '/dashboard')     return pathname === '/dashboard'
     if (href === '/configuracoes') return pathname === '/configuracoes'
     return pathname.startsWith(href)
   }
 
   return (
-    <aside className="w-[220px] flex-shrink-0 flex flex-col bg-[#0F3D3E]">
+    <aside className="w-[216px] flex-shrink-0 flex flex-col bg-[#162030] select-none">
+
       {/* Logo */}
-      <div className="px-5 pt-6 pb-5">
+      <div className="px-4 pt-5 pb-4">
         <Logo variant="sidebar" />
       </div>
 
-      <div className="mx-5 border-t border-[#b8903a]/20" />
+      {/* Divider dourado sutil */}
+      <div className="mx-4 h-px bg-gradient-to-r from-[#C49557]/25 via-[#C49557]/8 to-transparent" />
 
       {/* Navegação */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
+      <nav className="flex-1 px-2.5 py-4 overflow-y-auto space-y-5">
         {visibleGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+            <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/20">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -119,25 +111,26 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'group relative flex items-center gap-3 px-3 py-[9px] rounded-xl text-[13px] font-medium transition-all duration-150',
+                      'group relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150',
                       active
-                        ? 'bg-white/[0.12] text-white'
-                        : 'text-white/45 hover:text-white/85 hover:bg-white/[0.07]'
+                        ? 'bg-white/[0.09] text-white'
+                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.05]'
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 inset-y-[5px] w-[3px] rounded-r-full bg-[#d4a94e]" />
+                      <span className="absolute left-0 inset-y-[6px] w-[2.5px] rounded-r-full bg-[#C49557]" />
                     )}
                     <Icon
-                      size={15}
+                      size={14}
+                      strokeWidth={active ? 1.75 : 1.5}
                       className={cn(
-                        'flex-shrink-0 transition-colors',
-                        active ? 'text-[#d4a94e]' : 'text-white/35 group-hover:text-white/65'
+                        'flex-shrink-0 transition-colors duration-150',
+                        active ? 'text-[#C49557]' : 'text-white/30 group-hover:text-white/60'
                       )}
                     />
-                    {item.label}
+                    <span className="flex-1 truncate">{item.label}</span>
                     {active && (
-                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#d4a94e]/70" />
+                      <span className="w-1 h-1 rounded-full bg-[#C49557]/60 flex-shrink-0" />
                     )}
                   </Link>
                 )
@@ -147,9 +140,12 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
         ))}
       </nav>
 
-      <div className="mx-5 border-t border-[#b8903a]/20" />
-      <div className="px-5 py-4">
-        <p className="text-[10px] text-[#b8903a]/40 tracking-wide">v1.0 &mdash; MVP</p>
+      {/* Rodapé */}
+      <div className="mx-4 h-px bg-white/[0.06]" />
+      <div className="px-5 py-3.5">
+        <p className="text-[9px] text-white/15 tracking-[0.08em] uppercase">
+          P&V · Sistema Jurídico
+        </p>
       </div>
     </aside>
   )

@@ -40,7 +40,7 @@ export default function AgendaModal({
   const hasPrazo = form.tipo === 'prazo'  || form.tipo === 'audiencia'
 
   const inputCls = [
-    'w-full rounded-xl border border-[#D0DCDC] bg-[#F7F9F9]',
+    'w-full rounded-xl border border-[#E2DDD8] bg-[#F3F1EE]',
     'px-3.5 py-2.5 text-[13px] text-[#0f1923] placeholder:text-[#9aabb8]',
     'focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors',
   ].join(' ')
@@ -50,7 +50,7 @@ export default function AgendaModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -99,7 +99,7 @@ export default function AgendaModal({
                     'flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 text-[11px] font-semibold transition-all',
                     form.tipo === k
                       ? `${v.bg} ${v.text} ${v.border} border-opacity-100`
-                      : 'border-[#E8F0F0] text-[#9aabb8] hover:border-[#c8d8d8]'
+                      : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
                   )}
                 >
                   <span className={cn('w-2.5 h-2.5 rounded-full', v.dot)} />
@@ -121,7 +121,7 @@ export default function AgendaModal({
                     'flex-1 py-2 rounded-xl border-2 text-[12px] font-semibold transition-all',
                     form.prioridade === k
                       ? `${v.bg} ${v.text} border-current`
-                      : 'border-[#E8F0F0] text-[#9aabb8] hover:border-[#c8d8d8]'
+                      : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
                   )}
                 >
                   {v.label}
@@ -228,14 +228,14 @@ export default function AgendaModal({
           )}
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#D0DCDC] text-[13px] font-medium text-[#4a5a6a] hover:bg-[#F7F9F9] transition-colors"
+            className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] font-medium text-[#4a5a6a] hover:bg-[#F3F1EE] transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={onSave}
             disabled={!form.titulo.trim() || !form.data_inicio || saving}
-            className="flex-1 py-2.5 rounded-xl bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? 'Salvando…' : isEdit ? 'Salvar' : 'Criar'}
           </button>

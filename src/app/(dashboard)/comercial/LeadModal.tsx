@@ -113,7 +113,7 @@ function AgendarReuniaoModal({ lead, currentUserId, onClose, onAgendado }: {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-zinc-900">Agendar Reunião</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-zinc-100 text-zinc-400">
@@ -131,7 +131,7 @@ function AgendarReuniaoModal({ lead, currentUserId, onClose, onAgendado }: {
             <input
               value={titulo}
               onChange={e => setTitulo(e.target.value)}
-              className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+              className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -141,7 +141,7 @@ function AgendarReuniaoModal({ lead, currentUserId, onClose, onAgendado }: {
                 type="date"
                 value={data}
                 onChange={e => setData(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
               />
             </div>
             <div>
@@ -150,7 +150,7 @@ function AgendarReuniaoModal({ lead, currentUserId, onClose, onAgendado }: {
                 type="time"
                 value={hora}
                 onChange={e => setHora(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
               />
             </div>
           </div>
@@ -340,7 +340,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
   if (convertidoCliente) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
           <ConversaoSucesso
             clienteId={convertidoCliente.id}
             clienteNome={convertidoCliente.nome}
@@ -354,7 +354,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
           {/* ── Header ── */}
           <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-zinc-100">
@@ -394,7 +394,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                   {lead?.cliente && (
                     <a
                       href={`/clientes/${lead.cliente.id}`}
-                      className="flex items-center gap-1 text-xs text-[#145A5B] hover:underline"
+                      className="flex items-center gap-1 text-xs text-[#1D5F60] hover:underline"
                     >
                       Ver cliente <ExternalLink size={11} />
                     </a>
@@ -419,7 +419,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                   key={t}
                   onClick={() => setTab(t)}
                   className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                    tab === t ? 'border-[#145A5B] text-[#145A5B]' : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                    tab === t ? 'border-[#145A5B] text-[#1D5F60]' : 'border-transparent text-zinc-500 hover:text-zinc-700'
                   }`}
                 >
                   {l}
@@ -443,7 +443,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <input
                       value={nome}
                       onChange={e => setNome(e.target.value)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       placeholder="Nome completo"
                     />
                   </div>
@@ -454,7 +454,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <input
                       value={telefone}
                       onChange={e => setTelefone(e.target.value)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
@@ -466,7 +466,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       type="email"
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       placeholder="email@exemplo.com"
                     />
                   </div>
@@ -475,7 +475,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <select
                       value={origem}
                       onChange={e => setOrigem(e.target.value as LeadOrigem)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                     >
                       {Object.entries(ORIGEM_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
@@ -489,7 +489,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                       onChange={e => setValorEstimado(e.target.value)}
                       type="number"
                       min="0"
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       placeholder="0,00"
                     />
                   </div>
@@ -498,7 +498,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <input
                       value={areaInteresse}
                       onChange={e => setAreaInteresse(e.target.value)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       placeholder="Ex: Trabalhista, Família…"
                     />
                   </div>
@@ -509,7 +509,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <select
                       value={responsavelId}
                       onChange={e => setResponsavelId(e.target.value)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                     >
                       <option value="">Sem responsável</option>
                       {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -521,7 +521,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                       <select
                         value={status}
                         onChange={e => setStatus(e.target.value as Lead['status'])}
-                        className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30"
+                        className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
                       >
                         {Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
@@ -533,7 +533,7 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                       value={observacoes}
                       onChange={e => setObservacoes(e.target.value)}
                       rows={3}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#145A5B]/30 resize-none"
+                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30 resize-none"
                       placeholder="Observações relevantes sobre o lead…"
                     />
                   </div>

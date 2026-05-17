@@ -23,6 +23,7 @@ const routeLabels: Record<string, string> = {
   '/publicacoes':            'Publicações',
   '/automacoes':             'Automações',
   '/monitoramento':          'Monitoramento',
+  '/comercial':              'Comercial',
 }
 
 function getLabel(pathname: string): string {
@@ -42,12 +43,7 @@ function getBreadcrumb(pathname: string): string[] {
 }
 
 function getInitials(nome: string): string {
-  return nome
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(n => n[0].toUpperCase())
-    .join('')
+  return nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
 }
 
 export default function Header({ profile }: { profile: Profile | null }) {
@@ -66,16 +62,17 @@ export default function Header({ profile }: { profile: Profile | null }) {
   const roleColor = profile?.role ? ROLE_COLORS[profile.role] : null
 
   return (
-    <header className="h-[52px] bg-white border-b border-[#D0DCDC] flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-[50px] bg-white border-b border-[#E2DDD8] flex items-center justify-between px-5 flex-shrink-0">
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5">
         {crumbs.map((crumb, i) => (
           <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight size={13} className="text-[#c5cdd8]" />}
+            {i > 0 && <ChevronRight size={12} className="text-[#CBC5BC]" />}
             <span className={
               i === crumbs.length - 1
-                ? 'text-[13px] font-semibold text-[#0f1923]'
-                : 'text-[13px] text-[#7a8899]'
+                ? 'text-[13px] font-semibold text-[#111827]'
+                : 'text-[13px] text-[#9CA3AF]'
             }>
               {crumb}
             </span>
@@ -84,42 +81,40 @@ export default function Header({ profile }: { profile: Profile | null }) {
       </div>
 
       {/* Perfil e ações */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
 
-        {/* Info do usuário logado */}
         {profile && (
           <div className="flex items-center gap-2.5">
-            {/* Badge de papel */}
             {roleLabel && roleColor && (
-              <span className={`hidden sm:inline-flex text-[11px] font-medium px-2.5 py-0.5 rounded-full ${roleColor}`}>
+              <span className={`hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide ${roleColor}`}>
                 {roleLabel}
               </span>
             )}
-            {/* Avatar + nome */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#0F3D3E] flex items-center justify-center flex-shrink-0">
-                <span className="text-[11px] font-bold text-white leading-none select-none">
+              {/* Avatar */}
+              <div className="w-6 h-6 rounded-full bg-[#1D5F60] flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-white leading-none select-none">
                   {getInitials(profile.nome)}
                 </span>
               </div>
-              <span className="hidden md:block text-[13px] font-medium text-[#374151] max-w-[140px] truncate">
+              <span className="hidden md:block text-[12px] font-medium text-[#4B5563] max-w-[140px] truncate">
                 {profile.nome}
               </span>
             </div>
           </div>
         )}
 
-        <div className="w-px h-5 bg-[#D0DCDC]" />
+        <div className="w-px h-4 bg-[#E2DDD8]" />
 
         <NotificationBell />
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] text-[#7a8899] hover:text-[#0f1923] hover:bg-[#F7F9F9] transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F1EE] transition-all"
           title="Sair"
         >
-          <LogOut size={14} />
-          <span>Sair</span>
+          <LogOut size={13} />
+          <span className="hidden sm:inline">Sair</span>
         </button>
       </div>
     </header>

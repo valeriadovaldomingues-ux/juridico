@@ -46,7 +46,7 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   pendente:  { bg: 'bg-[#fef8ec]', text: 'text-[#8a6000]', dot: 'bg-amber-400',  label: 'Pendente'  },
   pago:      { bg: 'bg-[#e6f4ee]', text: 'text-[#1a7a45]', dot: 'bg-[#2ecc71]',  label: 'Pago'      },
   vencido:   { bg: 'bg-[#fde8e8]', text: 'text-[#a93226]', dot: 'bg-[#e74c3c]',  label: 'Vencido'   },
-  cancelado: { bg: 'bg-[#F7F9F9]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
+  cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
 type Aba = 'lancamentos' | 'receber' | 'pagar' | 'relatorios'
@@ -247,7 +247,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight flex items-center gap-2">
-            <Wallet size={20} className="text-[#145A5B]" />
+            <Wallet size={20} className="text-[#1D5F60]" />
             Financeiro
           </h1>
           <p className="text-[13px] text-[#7a8899] mt-0.5">Controle de receitas, despesas e relatórios</p>
@@ -255,7 +255,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
         {podeCriar && (
           <button
             onClick={abrirNovo}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
           >
             <Plus size={15} />
             Novo Lançamento
@@ -273,7 +273,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
         ].map(m => {
           const Icon = m.icon
           return (
-            <div key={m.label} className="bg-white rounded-2xl border border-[#D0DCDC] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+            <div key={m.label} className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[12px] font-medium text-[#7a8899]">{m.label}</p>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${m.iconBg}`}>
@@ -290,7 +290,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
 
       {/* Saldo */}
       <div className={cn(
-        'rounded-2xl border px-5 py-3.5 flex items-center justify-between',
+        'rounded-lg border px-5 py-3.5 flex items-center justify-between',
         metricas.saldo >= 0 ? 'bg-[#e6f4ee] border-[#b8dfc9]' : 'bg-[#fde8e8] border-[#f5c6c6]',
       )}>
         <p className={`text-[13px] font-semibold ${metricas.saldo >= 0 ? 'text-[#1a7a45]' : 'text-[#a93226]'}`}>
@@ -302,7 +302,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
       </div>
 
       {/* Abas */}
-      <div className="bg-white rounded-2xl border border-[#D0DCDC] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         <div className="flex border-b border-[#f3f4f6]">
           {ABAS.map(a => {
@@ -315,7 +315,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
                 className={cn(
                   'flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-all border-b-2 -mb-px',
                   ativo
-                    ? 'border-[#145A5B] text-[#145A5B] bg-[#f0f7f7]'
+                    ? 'border-[#145A5B] text-[#1D5F60] bg-[#f0f7f7]'
                     : 'border-transparent text-[#7a8899] hover:text-[#374151] hover:bg-[#f9fafb]',
                 )}
               >
@@ -353,7 +353,7 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
                   placeholder="Buscar descrição…"
-                  className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151] placeholder:text-[#c5cdd8]"
+                  className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8]"
                 />
               </div>
 
@@ -558,7 +558,7 @@ function SelectFiltro({ value, onChange, options }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="pl-3 pr-7 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151] appearance-none"
+        className="pl-3 pr-7 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] appearance-none"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

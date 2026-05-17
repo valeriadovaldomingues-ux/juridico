@@ -193,12 +193,12 @@ export default function CsvJuridicoImporter() {
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
             className={cn(
-              'bg-white rounded-2xl border-2 border-dashed p-14 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all',
+              'bg-white rounded-lg border-2 border-dashed p-14 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all',
               dragging ? 'border-[#145A5B] bg-[#145A5B]/5' : 'border-[#e5e7eb] hover:border-[#145A5B]/40 hover:bg-[#f9fafb]',
             )}
           >
-            <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center', dragging ? 'bg-[#145A5B]/10' : 'bg-[#f3f4f6]')}>
-              <Upload size={24} className={dragging ? 'text-[#145A5B]' : 'text-[#9ca3af]'} />
+            <div className={cn('w-14 h-14 rounded-lg flex items-center justify-center', dragging ? 'bg-[#145A5B]/10' : 'bg-[#f3f4f6]')}>
+              <Upload size={24} className={dragging ? 'text-[#1D5F60]' : 'text-[#9ca3af]'} />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-[#1a1d23]">
@@ -218,9 +218,9 @@ export default function CsvJuridicoImporter() {
           </div>
 
           {/* Mapeamento de colunas */}
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Info size={14} className="text-[#145A5B]" />
+              <Info size={14} className="text-[#1D5F60]" />
               <p className="text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">
                 O que será importado
               </p>
@@ -238,7 +238,7 @@ export default function CsvJuridicoImporter() {
                 { campo: 'card_id',                 destino: 'kanban_tasks.origem_id',           obs: 'Deduplicado — atualiza se já existir' },
               ].map(item => (
                 <div key={item.campo} className="flex items-start gap-2.5 bg-[#f9fafb] rounded-xl px-3 py-2.5">
-                  <code className="text-[10px] bg-white border border-[#e5e7eb] text-[#145A5B] px-1.5 py-0.5 rounded shrink-0 mt-0.5 font-mono">
+                  <code className="text-[10px] bg-white border border-[#e5e7eb] text-[#1D5F60] px-1.5 py-0.5 rounded shrink-0 mt-0.5 font-mono">
                     {item.campo}
                   </code>
                   <div className="min-w-0">
@@ -281,7 +281,7 @@ export default function CsvJuridicoImporter() {
           </div>
 
           {/* Tabela de preview (primeiras 10 linhas) */}
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#f3f4f6] flex items-center justify-between">
               <p className="text-sm font-semibold text-[#1a1d23]">Preview — primeiras 10 linhas</p>
               <span className="text-xs text-[#9ca3af]">{rows.length} itens no total</span>
@@ -315,7 +315,7 @@ export default function CsvJuridicoImporter() {
                         </td>
                         <td className="px-4 py-2">
                           {r.responsavel_principal?.trim()
-                            ? <span className="bg-[#E8F0F0] text-[#145A5B] px-2 py-0.5 rounded-full font-medium text-[10px]">{r.responsavel_principal}</span>
+                            ? <span className="bg-[#E8F2F2] text-[#1D5F60] px-2 py-0.5 rounded-full font-medium text-[10px]">{r.responsavel_principal}</span>
                             : <span className="bg-[#f3f4f6] text-[#9ca3af] px-2 py-0.5 rounded-full text-[10px]">sem responsável</span>
                           }
                         </td>
@@ -367,8 +367,8 @@ export default function CsvJuridicoImporter() {
 
       {/* Importando */}
       {etapa === 'importando' && (
-        <div className="bg-white rounded-2xl border border-[#e5e7eb] py-24 flex flex-col items-center gap-5">
-          <Loader2 size={36} className="text-[#145A5B] animate-spin" />
+        <div className="bg-white rounded-lg border border-[#e5e7eb] py-24 flex flex-col items-center gap-5">
+          <Loader2 size={36} className="text-[#1D5F60] animate-spin" />
           <div className="text-center">
             <p className="text-sm font-semibold text-[#374151]">Importando dados…</p>
             <p className="text-xs text-[#9ca3af] mt-1">
@@ -400,7 +400,7 @@ export default function CsvJuridicoImporter() {
             <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Rastreabilidade</p>
             <p className="text-sm text-[#374151]">
               <span className="font-medium">Batch ID:</span>{' '}
-              <code className="bg-white border border-[#e5e7eb] px-2 py-0.5 rounded text-[12px] text-[#145A5B]">{relatorio.batch_id}</code>
+              <code className="bg-white border border-[#e5e7eb] px-2 py-0.5 rounded text-[12px] text-[#1D5F60]">{relatorio.batch_id}</code>
             </p>
             <p className="text-sm text-[#374151]">
               <span className="font-medium">Tabelas afetadas:</span>{' '}
@@ -418,7 +418,7 @@ export default function CsvJuridicoImporter() {
           </div>
 
           {/* Log */}
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#f3f4f6] flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[#1a1d23]">Log de importação</h2>
               <span className="text-xs text-[#9ca3af]">{relatorio.log.length} entradas</span>
@@ -444,9 +444,9 @@ export default function CsvJuridicoImporter() {
           </div>
 
           {/* Como testar */}
-          <div className="bg-[#E8F0F0] rounded-2xl px-5 py-4 space-y-2">
-            <p className="text-[11px] font-semibold text-[#145A5B] uppercase tracking-wider">Como testar no sistema</p>
-            <ul className="text-[12px] text-[#145A5B] space-y-1 list-disc list-inside">
+          <div className="bg-[#E8F2F2] rounded-lg px-5 py-4 space-y-2">
+            <p className="text-[11px] font-semibold text-[#1D5F60] uppercase tracking-wider">Como testar no sistema</p>
+            <ul className="text-[12px] text-[#1D5F60] space-y-1 list-disc list-inside">
               <li>Acesse <strong>/processos</strong> — verifique se os processos importados aparecem com parte contrária e responsável corretos</li>
               <li>Acesse <strong>/kanban</strong> — o quadro pessoal deve mostrar só suas tarefas; o geral, por responsável</li>
               <li>Acesse um processo importado e verifique a aba de partes — a parte contrária deve estar listada</li>
@@ -479,7 +479,7 @@ function StatCard({ label, value, cor }: { label: string; value: number; cor: 'g
     red:   'text-red-600',
   }
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
       <p className="text-xs text-[#9ca3af] mb-2 leading-tight">{label}</p>
       <p className={cn('text-3xl font-bold', cores[cor])}>{value}</p>
     </div>
@@ -489,7 +489,7 @@ function StatCard({ label, value, cor }: { label: string; value: number; cor: 'g
 function InfoCard({ icon, label, value, total }: { icon: React.ReactNode; label: string; value: number; total: number }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-4">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] p-4">
       <div className="flex items-center gap-2 mb-2">
         <span className="text-[#9ca3af]">{icon}</span>
         <span className="text-[11px] font-medium text-[#6b7280]">{label}</span>

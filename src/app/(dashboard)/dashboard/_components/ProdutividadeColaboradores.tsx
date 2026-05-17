@@ -119,7 +119,7 @@ export default function ProdutividadeColaboradores() {
   const totalGeral = rows.reduce((s, r) => s + r.total, 0)
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[#F0F4F4]">
@@ -127,7 +127,7 @@ export default function ProdutividadeColaboradores() {
           <Users size={14} className="text-[#9aabb8]" />
           <h2 className="text-[14px] font-semibold text-[#0f1923]">Tarefas concluídas por colaborador</h2>
           {!loading && totalGeral > 0 && (
-            <span className="text-[11px] text-[#9aabb8] bg-[#F7F9F9] px-2 py-0.5 rounded-md border border-[#E8F0F0]">
+            <span className="text-[11px] text-[#9aabb8] bg-[#F3F1EE] px-2 py-0.5 rounded-md border border-[#E2DDD8]">
               {totalGeral} concluídas
             </span>
           )}
@@ -142,8 +142,8 @@ export default function ProdutividadeColaboradores() {
               className={cn(
                 'px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors',
                 periodo === o.v
-                  ? 'bg-[#0F3D3E] text-white'
-                  : 'bg-[#F7F9F9] text-[#7a8899] hover:bg-[#E8F0F0] border border-[#E8F0F0]',
+                  ? 'bg-[#1D5F60] text-white'
+                  : 'bg-[#F3F1EE] text-[#7a8899] hover:bg-[#E8F2F2] border border-[#E2DDD8]',
               )}
             >
               {o.l}
@@ -161,14 +161,14 @@ export default function ProdutividadeColaboradores() {
             type="date"
             value={customInicio}
             onChange={e => setCustomInicio(e.target.value)}
-            className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151]"
+            className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]"
           />
           <span className="text-[12px] text-[#7a8899] font-medium">até</span>
           <input
             type="date"
             value={customFim}
             onChange={e => setCustomFim(e.target.value)}
-            className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151]"
+            className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]"
           />
         </div>
       )}
@@ -183,7 +183,7 @@ export default function ProdutividadeColaboradores() {
         <p className="text-[13px] text-red-500 bg-red-50 px-6 py-4 m-4 rounded-xl">{erro}</p>
       ) : sorted.length === 0 ? (
         <div className="px-6 py-14 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[#F7F9F9] flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 rounded-lg bg-[#F3F1EE] flex items-center justify-center mx-auto mb-3">
             <Users size={20} className="text-[#D0DCDC]" />
           </div>
           <p className="text-[13px] text-[#9aabb8]">Nenhuma tarefa concluída no período selecionado</p>
@@ -192,7 +192,7 @@ export default function ProdutividadeColaboradores() {
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="bg-[#F7F9F9] border-b border-[#F0F4F4]">
+              <tr className="bg-[#F3F1EE] border-b border-[#F0F4F4]">
                 <SortTh label="Colaborador" col="nome"     current={sortKey} asc={sortAsc} onClick={toggleSort} align="left"  />
                 <SortTh label="Total"       col="total"    current={sortKey} asc={sortAsc} onClick={toggleSort} align="right" />
                 <SortTh label="No prazo"    col="no_prazo" current={sortKey} asc={sortAsc} onClick={toggleSort} align="right" hint="Concluído até a data-limite" />
@@ -209,7 +209,7 @@ export default function ProdutividadeColaboradores() {
             {/* Rodapé de totais */}
             {sorted.length > 1 && (
               <tfoot>
-                <tr className="bg-[#F7F9F9] border-t border-[#E8F0F0]">
+                <tr className="bg-[#F3F1EE] border-t border-[#E2DDD8]">
                   <td className="px-5 py-3 text-[12px] font-bold text-[#4a5a6a]">
                     Total — {sorted.length} colaboradores
                   </td>
@@ -295,7 +295,7 @@ function ProdutividadeRow({ row, index }: { row: ProdutividadeRow; index: number
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E8F0F0] to-[#D0DCDC] flex items-center justify-center flex-shrink-0">
-            <span className="text-[12px] font-bold text-[#145A5B]">
+            <span className="text-[12px] font-bold text-[#1D5F60]">
               {row.nome.charAt(0).toUpperCase()}
             </span>
           </div>

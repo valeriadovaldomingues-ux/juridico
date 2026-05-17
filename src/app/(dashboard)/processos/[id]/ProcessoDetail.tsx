@@ -156,7 +156,7 @@ export default function ProcessoDetail({
         <div className="col-span-2 space-y-4">
 
           {/* Dados do processo */}
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-[#1a1d23]">Dados do Processo</h2>
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[processo.status] ?? 'bg-gray-100'}`}>
@@ -193,7 +193,7 @@ export default function ProcessoDetail({
         <div className="space-y-4">
 
           {/* Prazos */}
-          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
             <h2 className="text-xs text-[#9ca3af] uppercase tracking-wider mb-3 flex items-center gap-2">
               <CalendarDays size={12} /> Prazos ({prazos.length})
             </h2>
@@ -336,7 +336,7 @@ function PartesSection({
   const crudAtivo = showAddForm || editingId !== null
 
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
 
       {/* ── Cabeçalho ── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#f3f4f6]">
@@ -355,7 +355,7 @@ function PartesSection({
             </button>
             <button
               onClick={abrirAddForm}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#145A5B] bg-[#E8F0F0] hover:bg-[#d0e5e5] rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#1D5F60] bg-[#E8F2F2] hover:bg-[#d0e5e5] rounded-lg transition-colors"
             >
               <Plus size={13} /> Adicionar
             </button>
@@ -375,14 +375,14 @@ function PartesSection({
               </span>
             </div>
             <div className="flex items-center gap-4 px-6 pb-4">
-              <div className="shrink-0 w-8 h-8 rounded-full bg-[#E8F0F0] flex items-center justify-center">
-                <span className="text-[12px] font-bold text-[#145A5B] leading-none select-none">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-[#E8F2F2] flex items-center justify-center">
+                <span className="text-[12px] font-bold text-[#1D5F60] leading-none select-none">
                   {cliente.nome.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <Link href={`/clientes/${cliente.id}`} className="group inline-flex items-center gap-1.5">
-                  <span className="text-sm font-semibold text-[#111827] group-hover:text-[#145A5B] transition-colors leading-tight">
+                  <span className="text-sm font-semibold text-[#111827] group-hover:text-[#1D5F60] transition-colors leading-tight">
                     {cliente.nome}
                   </span>
                   <ExternalLink size={11} className="text-[#9ca3af] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -393,7 +393,7 @@ function PartesSection({
                   </p>
                 )}
               </div>
-              <span className="shrink-0 text-[11px] font-medium tracking-wide px-2.5 py-0.5 rounded-full bg-[#E8F0F0] text-[#145A5B] ring-1 ring-[#c5dede]/60">
+              <span className="shrink-0 text-[11px] font-medium tracking-wide px-2.5 py-0.5 rounded-full bg-[#E8F2F2] text-[#1D5F60] ring-1 ring-[#c5dede]/60">
                 Cliente
               </span>
             </div>
@@ -422,7 +422,7 @@ function PartesSection({
             <p className="text-xs text-[#9ca3af]">Adicione as partes envolvidas neste processo</p>
             <button
               onClick={abrirAddForm}
-              className="mt-1 text-xs font-semibold text-[#145A5B] hover:underline inline-flex items-center gap-1"
+              className="mt-1 text-xs font-semibold text-[#1D5F60] hover:underline inline-flex items-center gap-1"
             >
               <Plus size={11} /> Adicionar parte
             </button>
@@ -553,7 +553,7 @@ function ParteFormUI({
             value={form.pessoa_nome}
             onChange={e => onChange({ ...form, pessoa_nome: e.target.value })}
             placeholder="Nome completo da parte"
-            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#1a1d23] placeholder:text-[#d1d5db] transition-colors"
+            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#d1d5db] transition-colors"
           />
         </div>
 
@@ -563,7 +563,7 @@ function ParteFormUI({
           <select
             value={form.tipo_parte}
             onChange={e => onChange({ ...form, tipo_parte: e.target.value as TipoParte })}
-            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#374151] transition-colors"
+            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] transition-colors"
           >
             <option value="reu">Réu</option>
             <option value="autor">Autor</option>
@@ -579,7 +579,7 @@ function ParteFormUI({
             value={form.documento}
             onChange={e => onChange({ ...form, documento: e.target.value })}
             placeholder="Opcional"
-            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#1a1d23] placeholder:text-[#d1d5db] font-mono transition-colors"
+            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#d1d5db] font-mono transition-colors"
           />
         </div>
 
@@ -590,7 +590,7 @@ function ParteFormUI({
             value={form.observacoes}
             onChange={e => onChange({ ...form, observacoes: e.target.value })}
             placeholder="Opcional"
-            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#145A5B] text-[#1a1d23] placeholder:text-[#d1d5db] transition-colors"
+            className="w-full px-3 py-2 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#d1d5db] transition-colors"
           />
         </div>
       </div>
@@ -640,14 +640,14 @@ function AgendaTimeline({
   const concluded = items.filter(i => i.status !== 'pendente')
 
   return (
-    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs text-[#9ca3af] uppercase tracking-wider flex items-center gap-2">
           <CalendarDays size={12} /> Agenda ({items.length})
         </h2>
         <Link
           href={`/agenda?processo=${processoId}`}
-          className="text-[11px] font-semibold text-[#145A5B] hover:underline"
+          className="text-[11px] font-semibold text-[#1D5F60] hover:underline"
         >
           Ver tudo
         </Link>
@@ -658,7 +658,7 @@ function AgendaTimeline({
           <p className="text-sm text-[#9ca3af]">Nenhum item na agenda</p>
           <Link
             href="/agenda"
-            className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-[#145A5B] hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1D5F60] hover:underline"
           >
             <Plus size={11} /> Adicionar
           </Link>

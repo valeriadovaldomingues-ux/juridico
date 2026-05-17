@@ -119,7 +119,7 @@ export default function AutomacoesPage({ initialAutomations, initialTemplates }:
         <button
           onClick={handleRunNow}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#0F3D3E] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-50 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] text-white text-[13px] font-semibold rounded-xl hover:bg-[#145A5B] disabled:opacity-50 transition-colors shadow-sm"
         >
           {running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
           {running ? 'Executando…' : 'Executar agora'}
@@ -147,22 +147,22 @@ export default function AutomacoesPage({ initialAutomations, initialTemplates }:
 
       {/* KPIs rápidos */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] p-4 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] p-4 shadow-sm">
           <p className="text-[11px] text-[#9aabb8] font-semibold uppercase tracking-wide mb-1">Regras ativas</p>
           <p className="text-[28px] font-bold text-emerald-600">{activeCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] p-4 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] p-4 shadow-sm">
           <p className="text-[11px] text-[#9aabb8] font-semibold uppercase tracking-wide mb-1">Inativas</p>
           <p className="text-[28px] font-bold text-[#9aabb8]">{inactiveCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8F0F0] p-4 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] p-4 shadow-sm">
           <p className="text-[11px] text-[#9aabb8] font-semibold uppercase tracking-wide mb-1">Total de regras</p>
           <p className="text-[28px] font-bold text-[#0f1923]">{automations.length}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-[#E8F0F0] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
         <div className="flex border-b border-[#F0F4F4]">
           {([
             { v: 'regras',    l: 'Regras ativas',   icon: Zap },
@@ -219,7 +219,7 @@ export default function AutomacoesPage({ initialAutomations, initialTemplates }:
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="bg-[#F7F9F9] border-b border-[#F0F4F4] text-[#9aabb8] text-[11px] uppercase tracking-wide">
+                    <tr className="bg-[#F3F1EE] border-b border-[#F0F4F4] text-[#9aabb8] text-[11px] uppercase tracking-wide">
                       <th className="text-left px-5 py-3">Quando</th>
                       <th className="text-left px-5 py-3">Automação</th>
                       <th className="text-left px-5 py-3">Entidade</th>
@@ -276,7 +276,7 @@ export default function AutomacoesPage({ initialAutomations, initialTemplates }:
       </div>
 
       {/* Aviso sobre agendamento */}
-      <div className="bg-[#F7F9F9] rounded-xl border border-[#E8F0F0] px-5 py-3.5 flex items-start gap-3">
+      <div className="bg-[#F3F1EE] rounded-xl border border-[#E2DDD8] px-5 py-3.5 flex items-start gap-3">
         <AlertCircle size={14} className="text-[#b8903a] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-[12px] font-semibold text-[#0f1923]">Execução automática</p>
@@ -305,7 +305,7 @@ function CategorySection({ label, automations, onToggle }: {
     <div>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-3 bg-[#FAFBFB] hover:bg-[#F7F9F9] transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3 bg-[#FAFBFB] hover:bg-[#F3F1EE] transition-colors"
       >
         <div className="flex items-center gap-2">
           {open ? <ChevronDown size={13} className="text-[#9aabb8]" /> : <ChevronRight size={13} className="text-[#9aabb8]" />}
@@ -360,10 +360,10 @@ function AutomationRow({ auto, onToggle }: { auto: Automation; onToggle: (a: Aut
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[13px] font-semibold text-[#0f1923]">{auto.name}</span>
-          <span className="text-[10px] bg-[#E8F0F0] text-[#145A5B] px-2 py-0.5 rounded-full font-medium">
+          <span className="text-[10px] bg-[#E8F2F2] text-[#1D5F60] px-2 py-0.5 rounded-full font-medium">
             {TRIGGER_LABELS[auto.trigger_type] ?? auto.trigger_type}
           </span>
-          <span className="text-[10px] bg-[#F7F9F9] text-[#7a8899] px-2 py-0.5 rounded-full border border-[#E8F0F0]">
+          <span className="text-[10px] bg-[#F3F1EE] text-[#7a8899] px-2 py-0.5 rounded-full border border-[#E2DDD8]">
             {ACTION_LABELS[auto.action_type] ?? auto.action_type}
           </span>
         </div>
@@ -382,11 +382,11 @@ function AutomationRow({ auto, onToggle }: { auto: Automation; onToggle: (a: Aut
                   type="number"
                   value={days}
                   onChange={e => setDays(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-14 px-2 py-1 text-[12px] border border-[#e5e7eb] rounded-lg text-center outline-none focus:border-[#145A5B]"
+                  className="w-14 px-2 py-1 text-[12px] border border-[#e5e7eb] rounded-lg text-center outline-none focus:border-[#1D5F60]"
                   min={1}
                 />
                 <span className="text-[11px] text-[#7a8899]">dias sem atualização</span>
-                <button onClick={saveDays} disabled={saving} className="text-[11px] text-white bg-[#0F3D3E] px-2.5 py-1 rounded-lg hover:bg-[#145A5B] disabled:opacity-50">
+                <button onClick={saveDays} disabled={saving} className="text-[11px] text-white bg-[#1D5F60] px-2.5 py-1 rounded-lg hover:bg-[#145A5B] disabled:opacity-50">
                   {saving ? '…' : 'Salvar'}
                 </button>
                 <button onClick={() => setEditing(false)} className="text-[11px] text-[#9aabb8] hover:text-[#374151]">Cancelar</button>
@@ -394,7 +394,7 @@ function AutomationRow({ auto, onToggle }: { auto: Automation; onToggle: (a: Aut
             ) : (
               <>
                 <span className="text-[11px] text-[#9aabb8]">Após <strong className="text-[#374151]">{auto.trigger_conditions.days}</strong> dias</span>
-                <button onClick={() => setEditing(true)} className="text-[10px] text-[#145A5B] hover:underline">Editar</button>
+                <button onClick={() => setEditing(true)} className="text-[10px] text-[#1D5F60] hover:underline">Editar</button>
               </>
             )}
           </div>
@@ -426,14 +426,14 @@ function TemplateRow({ template }: { template: MessageTemplate }) {
       >
         <div>
           <p className="text-[13px] font-semibold text-[#0f1923]">{template.name}</p>
-          <span className="text-[10px] bg-[#F7F9F9] text-[#7a8899] px-2 py-0.5 rounded-full border border-[#E8F0F0] mt-1 inline-block">
+          <span className="text-[10px] bg-[#F3F1EE] text-[#7a8899] px-2 py-0.5 rounded-full border border-[#E2DDD8] mt-1 inline-block">
             {template.template_type}
           </span>
         </div>
         {open ? <ChevronDown size={14} className="text-[#9aabb8] flex-shrink-0 mt-0.5" /> : <ChevronRight size={14} className="text-[#9aabb8] flex-shrink-0 mt-0.5" />}
       </button>
       {open && (
-        <div className="mt-3 bg-[#F7F9F9] rounded-xl px-4 py-3 text-[12px] text-[#374151] border border-[#E8F0F0]">
+        <div className="mt-3 bg-[#F3F1EE] rounded-xl px-4 py-3 text-[12px] text-[#374151] border border-[#E2DDD8]">
           <p className="mb-2 text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide">Mensagem</p>
           <p className="leading-relaxed whitespace-pre-wrap">{template.content}</p>
           <p className="mt-3 text-[10px] text-[#9aabb8]">

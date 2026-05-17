@@ -73,7 +73,7 @@ function PainelExecutivo({ stats, reunioesPendentes }: {
   ]
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-0 bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-0 bg-white rounded-lg border border-zinc-100 shadow-sm overflow-hidden">
       {items.map((item, i) => (
         <div
           key={item.label}
@@ -239,7 +239,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Nome, telefone ou e-mail…"
-                className="pl-8 pr-3 py-2 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#145A5B]/25 w-52 bg-white"
+                className="pl-8 pr-3 py-2 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/25 w-52 bg-white"
               />
             </div>
             <select
@@ -280,7 +280,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
           </div>
 
           {/* Tabela */}
-          <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-lg border border-zinc-100 overflow-hidden shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/80">
@@ -382,7 +382,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
           {/* Leads por origem */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          <div className="bg-white rounded-lg border border-zinc-100 p-5 shadow-sm">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Leads por Origem</h3>
             <div className="space-y-3">
               {Object.entries(ORIGEM_LABEL).map(([origem, label]) => {
@@ -407,7 +407,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
           </div>
 
           {/* Funil visual */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          <div className="bg-white rounded-lg border border-zinc-100 p-5 shadow-sm">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Distribuição no Funil</h3>
             <div className="space-y-2.5">
               {FUNIL_COLUNAS.map(col => {
@@ -435,7 +435,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
           </div>
 
           {/* Desempenho por responsável */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+          <div className="bg-white rounded-lg border border-zinc-100 p-5 shadow-sm">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Desempenho por Responsável</h3>
             <div className="space-y-1">
               {profiles.map(p => {
@@ -476,7 +476,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
           </div>
 
           {/* Resumo executivo */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm space-y-5">
+          <div className="bg-white rounded-lg border border-zinc-100 p-5 shadow-sm space-y-5">
             <div>
               <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Resumo de Conversão</h3>
               {[
@@ -486,7 +486,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
                 { label: 'Propostas enviadas',         v: stats.propostas, c: 'text-indigo-700 font-semibold' },
                 { label: 'Convertidos em clientes',    v: stats.fechados,  c: 'text-emerald-700 font-semibold' },
                 { label: 'Perdidos',                   v: stats.perdidos,  c: 'text-red-600 font-semibold' },
-                { label: 'Taxa de conversão',          v: `${stats.taxa}%`, c: 'text-[#145A5B] font-bold text-base' },
+                { label: 'Taxa de conversão',          v: `${stats.taxa}%`, c: 'text-[#1D5F60] font-bold text-base' },
                 { label: 'Tempo médio até fechamento', v: stats.tempoMedio != null ? `${stats.tempoMedio} dias` : '—', c: 'text-zinc-600 font-semibold' },
               ].map(item => (
                 <div key={item.label} className="flex justify-between items-center py-2 border-b border-zinc-50">
@@ -513,7 +513,7 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
           </div>
 
           {/* Fechamentos do mês */}
-          <div className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm md:col-span-2">
+          <div className="bg-white rounded-lg border border-zinc-100 p-5 shadow-sm md:col-span-2">
             <div className="flex items-baseline justify-between mb-4">
               <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
                 Fechamentos — {new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}

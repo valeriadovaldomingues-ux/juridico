@@ -420,7 +420,7 @@ export default function PublicacaoIA({
         {/* ════════════════════════════════════════════════════════════
             PAINEL ESQUERDO — ENTRADA
         ════════════════════════════════════════════════════════════ */}
-        <div className="bg-white rounded-2xl border border-[#D0DCDC] shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
 
           {/* Cabeçalho do painel */}
           <div className="px-5 py-4 border-b border-[#f3f4f6]">
@@ -610,7 +610,7 @@ export default function PublicacaoIA({
             <button
               onClick={analisar}
               disabled={loading || (modo === 'sistema' && !pubId) || (modo === 'manual' && !textoManual.trim())}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
             >
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
               {loading ? 'Analisando…' : 'Analisar publicação'}
@@ -622,14 +622,14 @@ export default function PublicacaoIA({
             PAINEL DIREITO — RESULTADO
         ════════════════════════════════════════════════════════════ */}
         <div className={cn(
-          'rounded-2xl border overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex flex-col transition-all',
-          urgCfg ? `border-l-4 ${urgCfg.border} border-t border-r border-b border-[#D0DCDC] bg-white` : 'border-[#D0DCDC] bg-white',
+          'rounded-lg border overflow-hidden shadow-[0_1px_6px_rgba(0,0,0,0.04)] flex flex-col transition-all',
+          urgCfg ? `border-l-4 ${urgCfg.border} border-t border-r border-b border-[#E2DDD8] bg-white` : 'border-[#E2DDD8] bg-white',
         )}>
 
           {/* Estado vazio */}
           {!loading && !analise && (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-[#f3f4f6] flex items-center justify-center">
+              <div className="w-16 h-16 rounded-lg bg-[#f3f4f6] flex items-center justify-center">
                 <Newspaper size={26} className="text-[#d1d5db]" />
               </div>
               <div>
@@ -653,7 +653,7 @@ export default function PublicacaoIA({
           {/* Loading */}
           {loading && (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20">
-              <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-violet-50 flex items-center justify-center">
                 <Loader2 size={22} className="text-violet-500 animate-spin" />
               </div>
               <div className="text-center">
@@ -720,7 +720,7 @@ export default function PublicacaoIA({
                     </span>
                   )}
                   {analise.tipo_prazo && (
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#145A5B] bg-[#E8F0F0] border border-[#D0DCDC] px-2.5 py-1 rounded-lg">
+                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#1D5F60] bg-[#E8F2F2] border border-[#E2DDD8] px-2.5 py-1 rounded-lg">
                       <CalendarDays size={11} />
                       {analise.tipo_prazo}
                     </span>
@@ -751,7 +751,7 @@ export default function PublicacaoIA({
                         </div>
                         <div>
                           {analise.tipo_prazo && (
-                            <p className="text-[11px] font-bold text-[#145A5B] uppercase tracking-wide mb-0.5">
+                            <p className="text-[11px] font-bold text-[#1D5F60] uppercase tracking-wide mb-0.5">
                               {analise.tipo_prazo}
                             </p>
                           )}
@@ -811,8 +811,8 @@ export default function PublicacaoIA({
 
                 {/* ── Estado: delegado com sucesso ── */}
                 {delegado ? (
-                  <div className="rounded-2xl overflow-hidden border border-emerald-200">
-                    <div className="bg-[#0F3D3E] px-4 py-3 flex items-center gap-2.5">
+                  <div className="rounded-lg overflow-hidden border border-emerald-200">
+                    <div className="bg-[#1D5F60] px-4 py-3 flex items-center gap-2.5">
                       <CheckCircle2 size={16} className="text-white shrink-0" />
                       <div>
                         <p className="text-[13px] font-bold text-white">Providência gerada!</p>
@@ -823,7 +823,7 @@ export default function PublicacaoIA({
                     </div>
                     <div className="bg-white px-4 py-3 flex items-center gap-2 flex-wrap">
                       {delegado.kanban && (
-                        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#145A5B] bg-[#E8F0F0] px-2.5 py-1 rounded-full">
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1D5F60] bg-[#E8F2F2] px-2.5 py-1 rounded-full">
                           <CheckCircle2 size={10} /> Card no Kanban
                         </span>
                       )}
@@ -834,7 +834,7 @@ export default function PublicacaoIA({
                       )}
                       <a
                         href="/kanban"
-                        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[11px] font-semibold rounded-lg transition-colors"
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[11px] font-semibold rounded-lg transition-colors"
                       >
                         Ver no Kanban <ArrowRight size={11} />
                       </a>
@@ -843,10 +843,10 @@ export default function PublicacaoIA({
                 ) : (
                   <>
                     {/* ── Card de delegação rápida ── */}
-                    <div className="bg-[#0F3D3E]/[0.04] border border-[#0F3D3E]/20 rounded-2xl p-4 space-y-3">
+                    <div className="bg-[#1D5F60]/[0.04] border border-[#0F3D3E]/20 rounded-lg p-4 space-y-3">
                       <div className="flex items-center gap-1.5">
-                        <Zap size={11} className="text-[#145A5B]" />
-                        <span className="text-[10px] font-bold text-[#145A5B] uppercase tracking-wider">
+                        <Zap size={11} className="text-[#1D5F60]" />
+                        <span className="text-[10px] font-bold text-[#1D5F60] uppercase tracking-wider">
                           Providência pronta para delegação
                         </span>
                       </div>
@@ -866,7 +866,7 @@ export default function PublicacaoIA({
                             </span>
                           )}
                           {analise.tipo_prazo && (
-                            <span className="text-[9px] font-semibold text-[#145A5B] bg-[#E8F0F0] px-2 py-0.5 rounded-full">
+                            <span className="text-[9px] font-semibold text-[#1D5F60] bg-[#E8F2F2] px-2 py-0.5 rounded-full">
                               {analise.tipo_prazo}
                             </span>
                           )}
@@ -889,7 +889,7 @@ export default function PublicacaoIA({
                         <select
                           value={responsavelDelegacao}
                           onChange={e => setResponsavelDelegacao(e.target.value)}
-                          className="flex-1 px-3 py-2 text-[12px] bg-white border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] text-[#374151] transition-all"
+                          className="flex-1 px-3 py-2 text-[12px] bg-white border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] text-[#374151] transition-all"
                         >
                           <option value="">— Sem responsável —</option>
                           {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -907,7 +907,7 @@ export default function PublicacaoIA({
                         <button
                           onClick={delegarDireto}
                           disabled={delegando}
-                          className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-bold rounded-xl transition-colors disabled:opacity-40 shadow-sm"
+                          className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-bold rounded-xl transition-colors disabled:opacity-40 shadow-sm"
                         >
                           {delegando
                             ? <><Loader2 size={13} className="animate-spin" /> Delegando…</>

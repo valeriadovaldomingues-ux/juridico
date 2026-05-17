@@ -165,7 +165,7 @@ export default function ProcessoForm({
     <form onSubmit={handleSubmit} className="space-y-5">
 
       {/* ── Identificação ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
         <h2 className="text-sm font-semibold text-[#1a1d23] mb-5">Identificação</h2>
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
@@ -175,7 +175,7 @@ export default function ProcessoForm({
               value={form.titulo}
               onChange={(e) => handleChange('titulo', e.target.value)}
               placeholder="Ex: João Silva x Empresa ABC"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
           <div>
@@ -184,7 +184,7 @@ export default function ProcessoForm({
               value={form.numero_processo}
               onChange={(e) => handleChange('numero_processo', e.target.value)}
               placeholder="0000000-00.0000.0.00.0000"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 font-mono"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 font-mono"
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function ProcessoForm({
             <select
               value={form.area_direito}
               onChange={(e) => handleChange('area_direito', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] bg-white"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
             >
               {areaOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -204,7 +204,7 @@ export default function ProcessoForm({
             <select
               value={form.status}
               onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] bg-white"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
             >
               <option value="ativo">Ativo</option>
               <option value="suspenso">Suspenso</option>
@@ -219,14 +219,14 @@ export default function ProcessoForm({
               value={form.fase}
               onChange={(e) => handleChange('fase', e.target.value)}
               placeholder="Ex: Instrução, Recursal..."
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
         </div>
       </div>
 
       {/* ── Partes do Processo ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
         <div className="mb-5">
           <h2 className="text-sm font-semibold text-[#1a1d23]">Partes do Processo</h2>
           <p className="text-xs text-[#9ca3af] mt-0.5">
@@ -245,7 +245,7 @@ export default function ProcessoForm({
             <select
               value={form.cliente_id}
               onChange={(e) => handleChange('cliente_id', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] bg-white"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
             >
               <option value="">Selecionar cliente...</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -264,7 +264,7 @@ export default function ProcessoForm({
                   value={parteForm.nome}
                   onChange={(e) => setParteForm(prev => ({ ...prev, nome: e.target.value }))}
                   placeholder="Nome completo da parte contrária"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 bg-white"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-white"
                 />
               </div>
               <div>
@@ -272,7 +272,7 @@ export default function ProcessoForm({
                 <select
                   value={parteForm.tipo_parte}
                   onChange={(e) => setParteForm(prev => ({ ...prev, tipo_parte: e.target.value as TipoParte }))}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] bg-white"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
                 >
                   <option value="reu">Réu</option>
                   <option value="autor">Autor</option>
@@ -286,7 +286,7 @@ export default function ProcessoForm({
                   value={parteForm.documento}
                   onChange={(e) => setParteForm(prev => ({ ...prev, documento: e.target.value }))}
                   placeholder="Opcional"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 font-mono bg-white"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 font-mono bg-white"
                 />
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function ProcessoForm({
       </div>
 
       {/* ── Localização e Valores ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
         <h2 className="text-sm font-semibold text-[#1a1d23] mb-5">Localização e Valores</h2>
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -304,7 +304,7 @@ export default function ProcessoForm({
               value={form.tribunal}
               onChange={(e) => handleChange('tribunal', e.target.value)}
               placeholder="Ex: TJSP, TRT-2..."
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
           <div>
@@ -313,7 +313,7 @@ export default function ProcessoForm({
               value={form.vara}
               onChange={(e) => handleChange('vara', e.target.value)}
               placeholder="Ex: 3ª Vara Cível"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
           <div>
@@ -322,7 +322,7 @@ export default function ProcessoForm({
               type="date"
               value={form.data_distribuicao}
               onChange={(e) => handleChange('data_distribuicao', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
           <div>
@@ -333,20 +333,20 @@ export default function ProcessoForm({
               value={form.valor_causa}
               onChange={(e) => handleChange('valor_causa', e.target.value)}
               placeholder="0,00"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10"
+              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
             />
           </div>
         </div>
       </div>
 
       {/* ── Observações ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
         <label className="block text-xs font-medium text-[#374151] mb-1.5">Observações</label>
         <textarea
           value={form.observacoes}
           onChange={(e) => handleChange('observacoes', e.target.value)}
           rows={3}
-          className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#145A5B] focus:ring-2 focus:ring-[#145A5B]/10 resize-none"
+          className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 resize-none"
         />
       </div>
 
