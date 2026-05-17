@@ -136,7 +136,7 @@ export default function PortalMensagensPage() {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span className="text-[10px] text-[#6B7280] tracking-wide uppercase font-medium">
-              Pessoa e do Val
+              Pessoa e do Val Advocacia
             </span>
           </div>
           <div className="flex items-center gap-3">

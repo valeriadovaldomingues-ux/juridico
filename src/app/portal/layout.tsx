@@ -5,7 +5,7 @@ import { Cormorant_Garamond } from 'next/font/google'
 import LogoutButton from './LogoutButton'
 import PortalNav    from './PortalNav'
 
-export const metadata = { title: 'Portal do Cliente — Pessoa e do Val' }
+export const metadata = { title: 'Portal do Cliente — Pessoa e do Val Advocacia' }
 
 // Fonte serif da identidade Pessoa e do Val
 const cormorant = Cormorant_Garamond({
@@ -59,7 +59,7 @@ export default async function PortalLayout({
               Pessoa e do Val
             </span>
             <span className="text-[#C49557] text-[9px] tracking-[0.2em] uppercase mt-0.5">
-              Consultoria Jurídica
+              Advocacia
             </span>
           </Link>
 
@@ -89,7 +89,7 @@ export default async function PortalLayout({
       <footer className="border-t border-[#EDE8DF] mt-12 py-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <span className="text-[11px] text-[#9CA3AF] tracking-wide">
-            Pessoa e do Val Consultoria Jurídica · Belo Horizonte, MG
+            Pessoa e do Val Advocacia · Belo Horizonte, MG
           </span>
           <span className="text-[11px] text-[#C49557]/60 tracking-wider uppercase">
             P&amp;V · Desde 2002

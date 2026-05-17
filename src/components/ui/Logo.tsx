@@ -43,7 +43,7 @@ export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant })
         </div>
         <div>
           <p className="text-white font-semibold text-[13px] leading-none tracking-tight">Pessoa e do Val</p>
-          <p className="text-[#C49557]/50 text-[9px] mt-0.5 tracking-[0.1em] uppercase">Consultoria Jurídica</p>
+          <p className="text-[#C49557]/50 text-[9px] mt-0.5 tracking-[0.1em] uppercase">Advocacia</p>
         </div>
       </div>
     )

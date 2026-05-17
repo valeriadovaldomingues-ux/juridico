@@ -58,7 +58,7 @@ export default function PortalLoginPage() {
           Pessoa e do Val
         </h1>
         <p className="text-[#C49557] text-[9px] tracking-[0.3em] uppercase">
-          Consultoria Jurídica
+          Advocacia
         </p>
       </div>
 
