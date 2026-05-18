@@ -20,6 +20,8 @@ export interface PublicacaoAurora {
   orgao: string | null
   diario: string | null
   data_publicacao: string | null
+  created_at?: string | null
+  titulo?: string | null
   resumo: string | null
   tipo_publicacao: string
   prazo_detectado: boolean
@@ -64,6 +66,15 @@ function getHojeBRT() {
   const month = parts.find(part => part.type === 'month')?.value
   const day = parts.find(part => part.type === 'day')?.value
   return `${year}-${month}-${day}`
+}
+
+function getAmanhaBRT(date: string) {
+  const [year, month, day] = date.split('-').map(Number)
+  const next = new Date(Date.UTC(year, month - 1, day + 1, 12, 0, 0))
+  const y = next.getUTCFullYear()
+  const m = String(next.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(next.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function resumoSeguro(text: string | null | undefined, limit = 240) {
@@ -115,6 +126,8 @@ export async function buscarPublicacoesParaAurora(
       orgao,
       diario,
       data_publicacao,
+      created_at,
+      titulo,
       resumo,
       tipo_publicacao,
       prazo_detectado,
@@ -134,7 +147,10 @@ export async function buscarPublicacoesParaAurora(
     .limit(limit)
 
   if (opcoes.hoje) {
-    query = query.eq('data_publicacao', getHojeBRT())
+    const hoje = getHojeBRT()
+    query = query
+      .gte('created_at', `${hoje}T00:00:00-03:00`)
+      .lt('created_at', `${getAmanhaBRT(hoje)}T00:00:00-03:00`)
   }
   if (opcoes.pendentes || opcoes.triagem) {
     query = query.eq('status', 'nao_tratada')
@@ -179,7 +195,7 @@ export function montarContextoPublicacoesParaAurora(publicacoes: PublicacaoAuror
       `   Tribunal/órgão/diário: ${[pub.tribunal, pub.orgao, pub.diario].filter(Boolean).join(' | ') || 'não informado'}`,
       `   Processo: ${processo}`,
       `   Número informado: ${pub.numero_processo ?? 'não informado'}`,
-      `   Resumo cadastrado: ${resumoSeguro(pub.resumo) ?? 'não informado'}`,
+      `   Resumo cadastrado: ${resumoSeguro(pub.resumo ?? pub.titulo) ?? 'não informado'}`,
       `   Prazo detectado: ${pub.prazo_detectado ? 'sim' : 'não'}${pub.prazo_dias ? ` (${pub.prazo_dias} dias)` : ''}${pub.prazo_data ? ` - data ${pub.prazo_data}` : ''}`,
       `   Descrição do prazo: ${resumoSeguro(pub.prazo_descricao, 180) ?? 'não informada'}`,
       `   Audiência detectada: ${pub.audiencia_detectada ? 'sim' : 'não'}${pub.audiencia_data ? ` - data ${pub.audiencia_data}` : ''}`,

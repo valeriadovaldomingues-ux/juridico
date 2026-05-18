@@ -132,7 +132,7 @@ interface MockPublicacao {
   data_publicacao: string
   nome_pesquisado: string
   oab_pesquisada: string
-  texto_publicacao: string
+  titulo: string
   tipo_publicacao: string
   prazo_detectado: boolean
   prazo_dias: number | null
@@ -142,7 +142,7 @@ interface MockPublicacao {
   audiencia_data: string | null
   audiencia_descricao: string | null
   status: 'nao_tratada'
-  origem: string
+  origem: 'datajud_nome'
   hash: string
 }
 
@@ -248,7 +248,7 @@ async function gerarMockPublicacoes(
       data_publicacao:     hoje,
       nome_pesquisado:     adv.nome_completo,
       oab_pesquisada:      `${adv.oab_uf} ${adv.oab_numero}`,
-      texto_publicacao:    tpl.texto(adv.nome_completo, proc),
+      titulo:              tpl.texto(adv.nome_completo, proc),
       tipo_publicacao:     tpl.tipo_publicacao,
       prazo_detectado:     tpl.prazo_dias != null,
       prazo_dias:          tpl.prazo_dias ?? null,
@@ -258,7 +258,7 @@ async function gerarMockPublicacoes(
       audiencia_data:      null,
       audiencia_descricao: tpl.audiencia_detectada ? (tpl as typeof tpl & { audiencia_descricao?: string }).audiencia_descricao ?? null : null,
       status:              'nao_tratada' as const,
-      origem:              'monitoramento_mock',
+      origem:              'datajud_nome',
       hash,
       ...(processoId ? { processo_id: processoId } : {}),
     }
@@ -354,13 +354,14 @@ export async function POST(request: Request) {
         ? processoMap.get(pub.numero_processo.replace(/\D/g, '')) ?? null
         : null
 
-      await supabase.from('publicacoes').insert({
+      const { error: insertError } = await supabase.from('publicacoes').insert({
         numero_processo:     pub.numero_processo || null,
         tribunal:            pub.tribunal,
         orgao:               pub.orgao,
+        diario:              'TJMG DJe',
         data_publicacao:     pub.data_publicacao,
         nome_pesquisado:     pub.nome_pesquisado,
-        texto_publicacao:    pub.texto_publicacao.slice(0, 5_000),
+        titulo:              pub.texto_publicacao.slice(0, 5_000),
         resumo:              analise.resumo.length ? analise.resumo.join(' · ') : null,
         tipo_publicacao:     tipo,
         prazo_detectado:     deteccao.prazo_detectado,
@@ -371,10 +372,24 @@ export async function POST(request: Request) {
         audiencia_data:      deteccao.audiencia_data ?? null,
         audiencia_descricao: deteccao.audiencia_descricao ?? null,
         status:              'nao_tratada',
-        origem:              pub.origem,
+        origem:              'datajud_nome',
+        termo_encontrado:    pub.nome_pesquisado,
         processo_id:         processoId,
         hash,
       })
+
+      if (insertError) {
+        console.warn('[monitoramento] Falha ao inserir publicação TJMG:', insertError.message)
+        detalhes.push({
+          advogado: pub.nome_pesquisado,
+          oab: 'TJMG DJe',
+          encontrados: 1,
+          novos: 0,
+          duplicados: 0,
+          erro: insertError.message,
+        })
+        continue
+      }
 
       tjmgInseridas++
       totalNovas++
@@ -469,7 +484,11 @@ export async function POST(request: Request) {
 
       if (existing) { totalDuplicadas++; continue }
 
-      await supabase.from('publicacoes').insert(mock)
+      const { error: mockError } = await supabase.from('publicacoes').insert(mock)
+      if (mockError) {
+        console.warn('[monitoramento] Falha ao inserir mock de publicação:', mockError.message)
+        continue
+      }
       mockInseridas++
       totalNovas++
     }
