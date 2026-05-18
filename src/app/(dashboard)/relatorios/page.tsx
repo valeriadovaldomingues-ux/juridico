@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import RelatoriosPage from './RelatoriosPage'
 
 export default async function RelatoriosRoute() {
-  const { profile } = await requireRole(['advogado', 'gerente', 'socio'])
+  // advogado removido — relatorios apenas para gerente e sócio na nova matriz
+  const { profile } = await requireRole(['gerente', 'socio'])
   const supabase = await createClient()
 
   const verFinanceiro = ['gerente', 'socio'].includes(profile.role)

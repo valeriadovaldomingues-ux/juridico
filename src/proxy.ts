@@ -37,11 +37,19 @@ function getServiceClient(): ReturnType<typeof createClient> | null {
 }
 
 // ── Rotas restritas ───────────────────────────────────────────────────────────
+// Deve espelhar RESTRICTED_ROUTES em src/lib/permissions.ts.
+// Inlined por compatibilidade com Edge Runtime. Paths mais específicos primeiro.
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
+  { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
   { prefix: '/financeiro',             roles: ['socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
   { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
-  { prefix: '/configuracoes/usuarios', roles: ['gerente', 'socio'] },
+  { prefix: '/relatorios',             roles: ['gerente', 'socio'] },
+  { prefix: '/comercial',              roles: ['comercial', 'administrativo', 'socio'] },
+  { prefix: '/monitoramento',          roles: ['advogado', 'gerente', 'socio'] },
+  { prefix: '/importar',               roles: ['administrativo', 'gerente', 'socio'] },
+  { prefix: '/ia-juridica',            roles: ['advogado', 'gerente', 'socio'] },
+  { prefix: '/configuracoes/usuarios', roles: ['socio'] },
   { prefix: '/configuracoes',          roles: ['socio'] },
 ]
 

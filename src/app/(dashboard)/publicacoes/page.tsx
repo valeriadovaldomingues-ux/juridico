@@ -1,9 +1,12 @@
+import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import PublicacoesPage from './PublicacoesPage'
 
 const SETUP_SQL = `supabase/publicacoes_migration.sql`
 
 export default async function PublicacoesRoute() {
+  // comercial e administrativo não acessam publicações jurídicas
+  await requireRole(['estagiario', 'advogado', 'gerente', 'socio'])
   const supabase = await createClient()
 
   const [

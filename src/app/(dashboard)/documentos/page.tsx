@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import DocumentosPage from './DocumentosPage'
 
 export default async function DocumentosRoute() {
-  const { profile } = await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
+  // estagiario adicionado — pode visualizar documentos na nova matriz
+  const { profile } = await requireRole(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
   const supabase = await createClient()
 
   const [

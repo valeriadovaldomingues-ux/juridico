@@ -1,6 +1,9 @@
+import { requireRole } from '@/lib/auth/guards'
 import ClienteForm from '../ClienteForm'
 
-export default function NovoClientePage() {
+export default async function NovoClientePage() {
+  // estagiario só visualiza — não cria clientes
+  await requireRole(['comercial', 'administrativo', 'advogado', 'gerente', 'socio'])
   return (
     <div className="space-y-5">
       <div>

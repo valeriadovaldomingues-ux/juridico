@@ -92,20 +92,17 @@ const PERMISSIONS: PermMatrix = {
   },
 
   // ── Comercial ────────────────────────────────────────────────────────────────
-  // Foco no pipeline comercial e CRM. Sem acesso a módulos jurídicos, financeiros
-  // ou de configuração. Pode criar e editar clientes e leads.
+  // Foco exclusivo no pipeline CRM. Acesso apenas ao módulo comercial e clientes.
+  // Não acessa agenda, kanban, documentos, publicações, ia-juridica ou financeiro.
   comercial: {
     dashboard:  ['view'],
     clientes:   ['view', 'create', 'edit'],
-    agenda:     ['view', 'create', 'edit'],
-    kanban:     ['view', 'create', 'edit'],
-    documentos: ['view', 'create'],
     comercial:  ['view', 'create', 'edit', 'delete'],
   },
 
   // ── Administrativo ───────────────────────────────────────────────────────────
-  // Acesso operacional completo, sem exclusão generalizada e sem módulos
-  // estratégicos (financeiro completo, relatórios gerenciais, configurações).
+  // Acesso operacional completo. Sem publicacoes, financeiro, relatórios,
+  // monitoramento, ia-juridica, automações, integrações ou configurações.
   administrativo: {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
@@ -113,16 +110,14 @@ const PERMISSIONS: PermMatrix = {
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
-    publicacoes:  ['view', 'edit'],
     documentos:   ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
     comercial:    ['view'],
-    monitoramento: ['view'],
   },
 
   // ── Advogado ─────────────────────────────────────────────────────────────────
-  // Acesso jurídico completo. Pode tratar publicações, criar prazos, editar
-  // registros vinculados à sua atuação. Sem financeiro e sem gestão de usuários.
+  // Acesso jurídico completo. Sem financeiro, relatórios, automações,
+  // integrações, comercial ou configurações.
   advogado: {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
@@ -132,13 +127,12 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
-    relatorios:   ['view'],
     monitoramento: ['view'],
   },
 
   // ── Gerente ──────────────────────────────────────────────────────────────────
-  // Visão operacional completa. Acesso de leitura ao financeiro e relatórios.
-  // Pode visualizar equipe, redistribuir tarefas. Sem gestão de usuários por padrão.
+  // Visão operacional completa, incluindo automações, monitoramento e relatórios.
+  // Sem financeiro, comercial (CRM interno) ou configurações.
   gerente: {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
@@ -151,7 +145,6 @@ const PERMISSIONS: PermMatrix = {
     importacao:   ['view', 'create'],
     relatorios:   ['view'],
     monitoramento: ['view'],
-    usuarios:     ['view', 'create', 'edit'],
   },
 
   // ── Sócio ────────────────────────────────────────────────────────────────────
@@ -213,16 +206,17 @@ export const canManage = (role: UserRole, module: Module) => can(role, module, '
 export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
   estagiario: [
     '/dashboard',
+    '/clientes',
     '/processos',
     '/agenda',
     '/kanban',
+    '/publicacoes',
+    '/documentos',
   ],
   comercial: [
     '/dashboard',
     '/clientes',
     '/comercial',
-    '/agenda',
-    '/kanban',
   ],
   administrativo: [
     '/dashboard',
@@ -230,10 +224,9 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/processos',
     '/agenda',
     '/kanban',
-    '/publicacoes',
     '/documentos',
-    '/comercial',
     '/importar',
+    '/comercial',
   ],
   advogado: [
     '/dashboard',
@@ -243,7 +236,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/documentos',
-    '/relatorios',
     '/monitoramento',
     '/ia-juridica',
   ],
@@ -261,7 +253,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/monitoramento',
     '/ia-juridica',
     '/integracoes/trello',
-    '/configuracoes/usuarios',
   ],
   socio: [
     '/dashboard',
@@ -291,12 +282,36 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
 // Paths mais específicos devem vir antes dos mais genéricos.
 // Esta lista é inlined em proxy.ts por compatibilidade com edge runtime.
 
+// Paths mais específicos DEVEM vir antes dos genéricos (ex: /ia-juridica/aurora antes de /ia-juridica).
 export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
-  { prefix: '/financeiro',             roles: ['socio'] },
-  { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
-  { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
-  { prefix: '/configuracoes/usuarios', roles: ['gerente', 'socio'] },
-  { prefix: '/configuracoes',          roles: ['socio'] },
+  // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
+  { prefix: '/ia-juridica/aurora',    roles: ['socio'] },
+
+  // ── Financeiro ────────────────────────────────────────────────────────────────
+  { prefix: '/financeiro',            roles: ['socio'] },
+
+  // ── Automação e integrações ───────────────────────────────────────────────────
+  { prefix: '/automacoes',            roles: ['gerente', 'socio'] },
+  { prefix: '/integracoes',           roles: ['gerente', 'socio'] },
+
+  // ── Relatórios (gerente e sócio — advogado removido) ─────────────────────────
+  { prefix: '/relatorios',            roles: ['gerente', 'socio'] },
+
+  // ── Comercial (CRM interno — somente quem o usa) ─────────────────────────────
+  { prefix: '/comercial',             roles: ['comercial', 'administrativo', 'socio'] },
+
+  // ── Monitoramento (advogado, gerente, sócio) ──────────────────────────────────
+  { prefix: '/monitoramento',         roles: ['advogado', 'gerente', 'socio'] },
+
+  // ── Importar (administrativo, gerente, sócio) ─────────────────────────────────
+  { prefix: '/importar',             roles: ['administrativo', 'gerente', 'socio'] },
+
+  // ── IA Jurídica (/aurora já tratado acima) ────────────────────────────────────
+  { prefix: '/ia-juridica',           roles: ['advogado', 'gerente', 'socio'] },
+
+  // ── Configurações (/usuarios mais específico antes) ───────────────────────────
+  { prefix: '/configuracoes/usuarios', roles: ['socio'] },
+  { prefix: '/configuracoes',         roles: ['socio'] },
 ]
 
 /**

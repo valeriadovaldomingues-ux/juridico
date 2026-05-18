@@ -452,10 +452,10 @@ describe('role insuficiente para rota restrita', () => {
     expectRedirect(res, '/dashboard')
   })
 
-  it('gerente em /configuracoes/usuarios → passa através', async () => {
+  it('gerente em /configuracoes/usuarios → redirect /dashboard (nova matriz: socio exclusivo)', async () => {
     asUser('gerente')
     const res = await proxy(req('/configuracoes/usuarios'))
-    expectPassThru(res)
+    expectRedirect(res, '/dashboard')
   })
 
   it('gerente em /configuracoes (requer socio) → redirect para /dashboard', async () => {
@@ -480,12 +480,11 @@ describe('role insuficiente para rota restrita', () => {
   // O proxy RESTRICTED permite gerente em /configuracoes/usuarios.
   // A page deve ter requireRole(['gerente','socio']) — corrigido em 2026-05-17.
 
-  it('gerente em /configuracoes/usuarios → proxy passa (page guard deve aceitar gerente)', async () => {
-    // Este teste verifica a camada proxy.
-    // O teste de regressão garante que corrigir requireRole não reintroduz o bug.
+  it('gerente em /configuracoes/usuarios → redirect /dashboard (nova matriz: socio exclusivo)', async () => {
+    // Nova regra: /configuracoes/usuarios é exclusivo para sócio.
     asUser('gerente')
     const res = await proxy(req('/configuracoes/usuarios'))
-    expectPassThru(res)  // proxy OK; page agora também aceita gerente
+    expectRedirect(res, '/dashboard')
   })
 
   it('advogado em /configuracoes/usuarios → proxy bloqueia → /dashboard', async () => {
@@ -732,12 +731,10 @@ describe('matriz proxy — /comercial', () => {
     expectPassThru(res)
   })
 
-  it('estagiario acessa /comercial — proxy passa (não é RESTRICTED); page bloqueia', async () => {
-    // Proxy não restringe /comercial. A page usa requireRole para bloquear estagiario.
-    // Este teste verifica apenas a camada proxy.
+  it('estagiario em /comercial → redirect /dashboard (nova RESTRICTED bloqueia no proxy)', async () => {
     asUser('estagiario')
     const res = await proxy(req('/comercial'))
-    expectPassThru(res)  // proxy passa; page depois bloqueia estagiario ✓
+    expectRedirect(res, '/dashboard')
   })
 
   it('cliente em /comercial → redirect para /portal (segregação)', async () => {
@@ -813,10 +810,10 @@ describe('matriz proxy — /documentos', () => {
 })
 
 describe('matriz proxy — /relatorios', () => {
-  it('advogado acessa /relatorios', async () => {
+  it('advogado em /relatorios → redirect /dashboard (nova matriz: gerente+socio apenas)', async () => {
     asUser('advogado')
     const res = await proxy(req('/relatorios'))
-    expectPassThru(res)
+    expectRedirect(res, '/dashboard')
   })
 
   it('gerente acessa /relatorios', async () => {
@@ -831,10 +828,10 @@ describe('matriz proxy — /relatorios', () => {
     expectPassThru(res)
   })
 
-  it('estagiario acessa /relatorios — proxy passa (page bloqueia)', async () => {
+  it('estagiario em /relatorios → redirect /dashboard (nova RESTRICTED bloqueia no proxy)', async () => {
     asUser('estagiario')
     const res = await proxy(req('/relatorios'))
-    expectPassThru(res)  // proxy OK; page bloqueia estagiario ✓
+    expectRedirect(res, '/dashboard')  // bloqueado no proxy agora ✓
   })
 })
 
@@ -885,23 +882,90 @@ describe('matriz proxy — /monitoramento e /ia-juridica', () => {
     expectPassThru(res)
   })
 
-  it('estagiario em /monitoramento — proxy passa (page bloqueia após fix)', async () => {
+  it('estagiario em /monitoramento → redirect /dashboard (nova RESTRICTED)', async () => {
     asUser('estagiario')
     const res = await proxy(req('/monitoramento'))
-    expectPassThru(res)  // proxy OK; page agora usa requireRole ✓
+    expectRedirect(res, '/dashboard')  // bloqueado no proxy agora ✓
   })
 
-  it('comercial em /ia-juridica — proxy passa (page bloqueia após fix)', async () => {
+  it('comercial em /ia-juridica → redirect /dashboard (nova RESTRICTED)', async () => {
     asUser('comercial')
     const res = await proxy(req('/ia-juridica'))
-    expectPassThru(res)  // proxy OK; page agora usa requireRole ✓
+    expectRedirect(res, '/dashboard')  // bloqueado no proxy agora ✓
+  })
+})
+
+describe('matriz proxy — /ia-juridica/aurora exclusiva para socio', () => {
+  it('socio acessa /ia-juridica/aurora', async () => {
+    asUser('socio')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectPassThru(res)
+  })
+
+  it('advogado não acessa /ia-juridica/aurora', async () => {
+    asUser('advogado')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('gerente não acessa /ia-juridica/aurora', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('administrativo não acessa /ia-juridica/aurora', async () => {
+    asUser('administrativo')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('comercial não acessa /ia-juridica/aurora', async () => {
+    asUser('comercial')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('estagiario não acessa /ia-juridica/aurora', async () => {
+    asUser('estagiario')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/dashboard')
+  })
+
+  it('cliente em /ia-juridica/aurora → redirect para /portal', async () => {
+    asUser('cliente')
+    const res = await proxy(req('/ia-juridica/aurora'))
+    expectRedirect(res, '/portal')
+  })
+
+  it('sem sessão em /ia-juridica/aurora → redirect para /login', async () => {
+    noSession()
+    const res = await proxy(req('/ia-juridica/aurora'))
+    const dest = expectRedirect(res, '/login')
+    expect(dest.searchParams.get('next')).toBe('/ia-juridica/aurora')
+  })
+
+  it('demais rotas de IA Jurídica continuam passando no proxy para gerente', async () => {
+    const rotas = [
+      '/ia-juridica',
+      '/ia-juridica/peca',
+      '/ia-juridica/publicacao',
+      '/ia-juridica/assistente',
+    ]
+
+    for (const rota of rotas) {
+      asUser('gerente')
+      const res = await proxy(req(rota))
+      expectPassThru(res)
+    }
   })
 })
 
 describe('segregação cliente ↔ sistema interno — todas as rotas', () => {
   const rotasInternas = [
     '/comercial', '/financeiro', '/documentos', '/relatorios',
-    '/automacoes', '/monitoramento', '/ia-juridica', '/configuracoes',
+    '/automacoes', '/monitoramento', '/ia-juridica', '/ia-juridica/aurora',
+    '/configuracoes',
   ]
 
   rotasInternas.forEach(rota => {
@@ -947,8 +1011,10 @@ describe('socio — acesso irrestrito a todas as rotas internas (proxy)', () => 
     '/automacoes',
     '/monitoramento',
     '/ia-juridica',
+    '/ia-juridica/aurora',
     '/ia-juridica/peca',
     '/ia-juridica/publicacao',
+    '/ia-juridica/assistente',
     '/integracoes',
     '/integracoes/trello',
     '/configuracoes',
@@ -1003,5 +1069,193 @@ describe('sem sessão — todas as rotas internas vão para /login', () => {
       const res = await proxy(req(rota))
       expectRedirect(res, '/login')
     })
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NOVA MATRIZ COMPLETA — testes por role (fonte de verdade)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('nova matriz — /relatorios (gerente+socio apenas)', () => {
+  it('gerente acessa /relatorios', async () => {
+    asUser('gerente')
+    expectPassThru(await proxy(req('/relatorios')))
+  })
+  it('advogado em /relatorios → /dashboard (removido da nova matriz)', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/relatorios')), '/dashboard')
+  })
+  it('administrativo em /relatorios → /dashboard', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/relatorios')), '/dashboard')
+  })
+  it('comercial em /relatorios → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/relatorios')), '/dashboard')
+  })
+  it('estagiario em /relatorios → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/relatorios')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /comercial (comercial+administrativo+socio)', () => {
+  it('comercial acessa /comercial', async () => {
+    asUser('comercial')
+    expectPassThru(await proxy(req('/comercial')))
+  })
+  it('administrativo acessa /comercial', async () => {
+    asUser('administrativo')
+    expectPassThru(await proxy(req('/comercial')))
+  })
+  it('socio acessa /comercial', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/comercial')))
+  })
+  it('gerente em /comercial → /dashboard (removido da nova matriz)', async () => {
+    asUser('gerente')
+    expectRedirect(await proxy(req('/comercial')), '/dashboard')
+  })
+  it('advogado em /comercial → /dashboard', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/comercial')), '/dashboard')
+  })
+  it('estagiario em /comercial → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/comercial')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /ia-juridica (advogado+gerente+socio)', () => {
+  it('advogado acessa /ia-juridica', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/ia-juridica')))
+  })
+  it('gerente acessa /ia-juridica', async () => {
+    asUser('gerente')
+    expectPassThru(await proxy(req('/ia-juridica')))
+  })
+  it('administrativo em /ia-juridica → /dashboard', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/ia-juridica')), '/dashboard')
+  })
+  it('comercial em /ia-juridica → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/ia-juridica')), '/dashboard')
+  })
+  it('estagiario em /ia-juridica → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/ia-juridica')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /ia-juridica/aurora (socio exclusivo)', () => {
+  it('socio acessa /ia-juridica/aurora', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/ia-juridica/aurora')))
+  })
+  it('gerente em /ia-juridica/aurora → /dashboard', async () => {
+    asUser('gerente')
+    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('advogado em /ia-juridica/aurora → /dashboard', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('comercial em /ia-juridica/aurora → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('administrativo em /ia-juridica/aurora → /dashboard', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('estagiario em /ia-juridica/aurora → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('/ia-juridica sem /aurora → advogado passa (aurora mais específico)', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/ia-juridica/peca')))
+  })
+})
+
+describe('nova matriz — /monitoramento (advogado+gerente+socio)', () => {
+  it('advogado acessa /monitoramento', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/monitoramento')))
+  })
+  it('administrativo em /monitoramento → /dashboard', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/monitoramento')), '/dashboard')
+  })
+  it('comercial em /monitoramento → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/monitoramento')), '/dashboard')
+  })
+  it('estagiario em /monitoramento → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/monitoramento')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /importar (administrativo+gerente+socio)', () => {
+  it('administrativo acessa /importar', async () => {
+    asUser('administrativo')
+    expectPassThru(await proxy(req('/importar')))
+  })
+  it('gerente acessa /importar', async () => {
+    asUser('gerente')
+    expectPassThru(await proxy(req('/importar')))
+  })
+  it('advogado em /importar → /dashboard', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/importar')), '/dashboard')
+  })
+  it('comercial em /importar → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/importar')), '/dashboard')
+  })
+  it('estagiario em /importar → /dashboard', async () => {
+    asUser('estagiario')
+    expectRedirect(await proxy(req('/importar')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /configuracoes/usuarios (socio exclusivo)', () => {
+  it('socio acessa /configuracoes/usuarios', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/configuracoes/usuarios')))
+  })
+  it('gerente em /configuracoes/usuarios → /dashboard', async () => {
+    asUser('gerente')
+    expectRedirect(await proxy(req('/configuracoes/usuarios')), '/dashboard')
+  })
+  it('advogado em /configuracoes/usuarios → /dashboard', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/configuracoes/usuarios')), '/dashboard')
+  })
+})
+
+describe('nova matriz — /financeiro (socio exclusivo)', () => {
+  it('socio acessa /financeiro', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/financeiro')))
+  })
+  it('gerente em /financeiro → /dashboard', async () => {
+    asUser('gerente')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+  })
+  it('advogado em /financeiro → /dashboard', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+  })
+  it('administrativo em /financeiro → /dashboard', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+  })
+  it('comercial em /financeiro → /dashboard', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
 })

@@ -1,7 +1,10 @@
+import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import ProcessoForm from '../ProcessoForm'
 
 export default async function NovoProcessoPage() {
+  // estagiario e comercial não criam processos
+  await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
   const supabase = await createClient()
   const { data: clientes } = await supabase
     .from('clientes')
