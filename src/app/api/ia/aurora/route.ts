@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { streamTexto } from '@/lib/ai/service'
+import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
+
+const IS_DEV = process.env.NODE_ENV === 'development'
+
+function getErrorMessage(err: unknown) {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return 'Erro desconhecido'
+}
 
 /**
  * POST /api/ia/aurora
@@ -35,7 +43,34 @@ export async function POST(request: NextRequest) {
   try {
     const historico = Array.isArray(body.historico) ? body.historico : []
     const messages  = buildMensagensAurora(mensagem, historico)
-    const stream    = streamTexto(messages, { maxTokens: 3072, temperature: 0.45 })
+
+    let stream: ReadableStream<Uint8Array>
+    try {
+      stream = await streamTextoPreflight(messages, { maxTokens: 3072, temperature: 0.45 })
+    } catch (streamErr) {
+      const streamMsg = getErrorMessage(streamErr)
+      if (IS_DEV) {
+        console.error('[Aurora API] falha no preflight do streaming', streamErr)
+      }
+
+      try {
+        const resposta = await completarTexto(messages, { maxTokens: 3072, temperature: 0.45 })
+        return NextResponse.json({
+          resposta,
+          modo: 'json',
+          aviso: `Streaming indisponível nesta requisição: ${streamMsg}`,
+        })
+      } catch (fallbackErr) {
+        const fallbackMsg = getErrorMessage(fallbackErr)
+        if (IS_DEV) {
+          console.error('[Aurora API] falha no fallback sem streaming', fallbackErr)
+        }
+        return NextResponse.json(
+          { error: `Erro ao chamar Aurora: ${fallbackMsg}` },
+          { status: 500 },
+        )
+      }
+    }
 
     return new Response(stream, {
       headers: {
@@ -45,7 +80,10 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erro ao chamar Aurora'
+    const msg = getErrorMessage(err)
+    if (IS_DEV) {
+      console.error('[Aurora API] erro antes de devolver resposta', err)
+    }
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

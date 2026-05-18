@@ -99,6 +99,21 @@ export default function AuroraPage() {
         return
       }
 
+      const contentType = res.headers.get('content-type') ?? ''
+      if (contentType.includes('application/json')) {
+        const data = await res.json().catch(() => ({ error: 'Resposta JSON inválida da Aurora' }))
+        const resposta = typeof data.resposta === 'string' ? data.resposta : ''
+        const erro = typeof data.error === 'string' ? data.error : ''
+        const aviso = IS_DEV && typeof data.aviso === 'string' ? `\n\n[dev] ${data.aviso}` : ''
+
+        setMensagens(prev => prev.map(msg =>
+          msg.id === asstId
+            ? { ...msg, content: resposta ? `${resposta}${aviso}` : `Erro: ${erro || 'Resposta vazia da Aurora.'}`, loading: false }
+            : msg
+        ))
+        return
+      }
+
       if (!res.body) {
         setMensagens(prev => prev.map(msg =>
           msg.id === asstId ? { ...msg, content: 'Resposta vazia da Aurora.', loading: false } : msg

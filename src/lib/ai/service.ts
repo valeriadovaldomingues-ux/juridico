@@ -64,6 +64,60 @@ export function streamTexto(
 }
 
 /**
+ * Streaming com preflight.
+ * Cria a chamada de streaming antes de devolver o Response ao Next, permitindo
+ * que rotas capturem erros de autenticação/modelo/rede e retornem JSON legível.
+ */
+export async function streamTextoPreflight(
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  opts?: { maxTokens?: number; temperature?: number },
+): Promise<ReadableStream<Uint8Array>> {
+  const encoder = new TextEncoder()
+  const client  = getClient()
+  const stream  = await client.chat.completions.create({
+    model:       AI_MODEL,
+    messages,
+    max_tokens:  opts?.maxTokens  ?? 4096,
+    temperature: opts?.temperature ?? 0.7,
+    stream:      true,
+  })
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const chunk of stream) {
+          const text = chunk.choices[0]?.delta?.content ?? ''
+          if (text) controller.enqueue(encoder.encode(text))
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erro ao consumir stream de IA'
+        controller.enqueue(encoder.encode(`\n\n[Erro no streaming da Aurora: ${msg}]`))
+      } finally {
+        controller.close()
+      }
+    },
+  })
+}
+
+/**
+ * Resposta completa em texto puro.
+ * Use como fallback quando streaming não for adequado ou falhar no preflight.
+ */
+export async function completarTexto(
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  opts?: { maxTokens?: number; temperature?: number },
+): Promise<string> {
+  const client = getClient()
+  const res = await client.chat.completions.create({
+    model:       AI_MODEL,
+    messages,
+    max_tokens:  opts?.maxTokens  ?? 3072,
+    temperature: opts?.temperature ?? 0.5,
+  })
+  return res.choices[0]?.message?.content ?? ''
+}
+
+/**
  * Resposta completa em JSON.
  * Use para análises estruturadas (ex: publicações) onde precisamos parsear o resultado.
  */

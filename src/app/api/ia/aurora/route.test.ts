@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextResponse } from 'next/server'
 
-const { mockApiGuard, mockBuildMensagensAurora, mockStreamTexto } = vi.hoisted(() => ({
+const { mockApiGuard, mockBuildMensagensAurora, mockStreamTextoPreflight, mockCompletarTexto } = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
   mockBuildMensagensAurora: vi.fn(),
-  mockStreamTexto: vi.fn(),
+  mockStreamTextoPreflight: vi.fn(),
+  mockCompletarTexto: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/api-guard', () => ({
@@ -16,7 +17,8 @@ vi.mock('@/lib/ai/prompts', () => ({
 }))
 
 vi.mock('@/lib/ai/service', () => ({
-  streamTexto: mockStreamTexto,
+  streamTextoPreflight: mockStreamTextoPreflight,
+  completarTexto: mockCompletarTexto,
 }))
 
 import { POST } from './route'
@@ -43,7 +45,8 @@ beforeEach(() => {
   delete process.env.AI_API_KEY
   mockApiGuard.mockReset()
   mockBuildMensagensAurora.mockReset()
-  mockStreamTexto.mockReset()
+  mockStreamTextoPreflight.mockReset()
+  mockCompletarTexto.mockReset()
 })
 
 afterEach(() => {
@@ -55,7 +58,7 @@ describe('POST /api/ia/aurora', () => {
   it('usa apiGuard exclusivamente com role socio', async () => {
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
     mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
-    mockStreamTexto.mockReturnValue(textStream('resposta'))
+    mockStreamTextoPreflight.mockResolvedValue(textStream('resposta'))
 
     const res = await POST(request({ mensagem: 'Organize esta demanda' }) as never)
 
@@ -74,7 +77,7 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(403)
     expect(body.error).toBe('Sem permissão para esta operação')
     expect(mockBuildMensagensAurora).not.toHaveBeenCalled()
-    expect(mockStreamTexto).not.toHaveBeenCalled()
+    expect(mockStreamTextoPreflight).not.toHaveBeenCalled()
   })
 
   it('valida mensagem obrigatória antes de chamar a IA', async () => {
@@ -86,7 +89,7 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(400)
     expect(body.error).toBe('mensagem é obrigatória')
     expect(mockBuildMensagensAurora).not.toHaveBeenCalled()
-    expect(mockStreamTexto).not.toHaveBeenCalled()
+    expect(mockStreamTextoPreflight).not.toHaveBeenCalled()
   })
 
   it('retorna erro JSON legível quando não há chave de IA', async () => {
@@ -100,7 +103,7 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(503)
     expect(body.error).toContain('OPENAI_API_KEY ou AI_API_KEY')
     expect(mockBuildMensagensAurora).not.toHaveBeenCalled()
-    expect(mockStreamTexto).not.toHaveBeenCalled()
+    expect(mockStreamTextoPreflight).not.toHaveBeenCalled()
   })
 
   it('aceita AI_API_KEY como alias compatível', async () => {
@@ -108,13 +111,13 @@ describe('POST /api/ia/aurora', () => {
     process.env.AI_API_KEY = 'test-key'
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
     mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
-    mockStreamTexto.mockReturnValue(textStream('ok'))
+    mockStreamTextoPreflight.mockResolvedValue(textStream('ok'))
 
     const res = await POST(request({ mensagem: 'Teste' }) as never)
 
     expect(res.status).toBe(200)
     expect(mockBuildMensagensAurora).toHaveBeenCalled()
-    expect(mockStreamTexto).toHaveBeenCalled()
+    expect(mockStreamTextoPreflight).toHaveBeenCalled()
   })
 
   it('monta mensagens da Aurora e retorna streaming de texto', async () => {
@@ -122,7 +125,7 @@ describe('POST /api/ia/aurora', () => {
     const messages = [{ role: 'system', content: 'Aurora' }]
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
     mockBuildMensagensAurora.mockReturnValue(messages)
-    mockStreamTexto.mockReturnValue(textStream('plano de ação'))
+    mockStreamTextoPreflight.mockResolvedValue(textStream('plano de ação'))
 
     const res = await POST(request({ mensagem: 'Monte um plano', historico }) as never)
     const text = await res.text()
@@ -131,6 +134,22 @@ describe('POST /api/ia/aurora', () => {
     expect(res.headers.get('Content-Type')).toContain('text/plain')
     expect(text).toBe('plano de ação')
     expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano', historico)
-    expect(mockStreamTexto).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
+    expect(mockStreamTextoPreflight).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
+  })
+
+  it('retorna JSON de fallback quando o preflight do streaming falha', async () => {
+    const messages = [{ role: 'system', content: 'Aurora' }]
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
+    mockBuildMensagensAurora.mockReturnValue(messages)
+    mockStreamTextoPreflight.mockRejectedValue(new Error('stream indisponível'))
+    mockCompletarTexto.mockResolvedValue('estou funcionando.')
+
+    const res = await POST(request({ mensagem: 'Teste' }) as never)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.resposta).toBe('estou funcionando.')
+    expect(body.aviso).toContain('stream indisponível')
+    expect(mockCompletarTexto).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
   })
 })
