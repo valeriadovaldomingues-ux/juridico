@@ -16,6 +16,7 @@
 //                        real não retornou nenhuma publicação nova (fallback).
 
 import { createClient } from '@/lib/supabase/server'
+import { apiGuard } from '@/lib/auth/api-guard'
 import {
   detectarPrazosEAudiencias,
   detectarTipoResultado,
@@ -25,8 +26,11 @@ import {
   gerarHashDJE,
 } from '@/lib/monitoramento/tjmg-dje'
 import { analisarPublicacao } from '@/lib/monitoramento/prazo-detector'
+import type { UserRole } from '@/types'
 
 export const maxDuration = 60
+
+const ROLES_MONITORAMENTO: UserRole[] = ['advogado', 'gerente', 'socio']
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,25 +272,19 @@ export async function POST(request: Request) {
 
   const authHeader = request.headers.get('authorization') ?? ''
   const cronSecret = process.env.CRON_SECRET
-  const supabase   = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
   const isCronCall = !!(cronSecret && authHeader === `Bearer ${cronSecret}`)
 
   if (!isCronCall) {
-    if (!user) {
-      return Response.json({ erro: 'Não autorizado' }, { status: 401 })
-    }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    const rolesPermitidos = ['advogado', 'gerente', 'socio']
-    if (!profile || !rolesPermitidos.includes(profile.role)) {
-      return Response.json({ erro: 'Sem permissão para acionar o monitoramento' }, { status: 403 })
+    const auth = await apiGuard(ROLES_MONITORAMENTO)
+    if (auth instanceof Response) {
+      return Response.json(
+        { erro: auth.status === 401 ? 'Não autorizado' : 'Sem permissão para acionar o monitoramento' },
+        { status: auth.status },
+      )
     }
   }
+
+  const supabase = await createClient()
 
   // Fetch active lawyers
   const { data: advogados, error: advError } = await supabase
