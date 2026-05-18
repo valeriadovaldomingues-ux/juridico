@@ -279,9 +279,69 @@ function Skeleton() {
   )
 }
 
+// ── Área auxiliar externa ────────────────────────────────────────────────────
+
+function AreaAuxiliarAutenticadores() {
+  return (
+    <aside
+      className="h-full rounded-2xl border relative overflow-hidden flex flex-col"
+      style={{
+        borderColor: 'rgba(196,149,87,0.22)',
+        background:
+          'linear-gradient(180deg, rgba(196,149,87,0.07), rgba(255,255,255,0.025) 28%, rgba(3,12,23,0.75))',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}
+    >
+      <div
+        className="absolute inset-x-8 top-0 h-px"
+        style={{ background: `linear-gradient(to right, transparent, ${GOLD}80, transparent)` }}
+      />
+
+      <div className="px-5 pt-5 pb-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: GOLD }}>
+          Área auxiliar externa
+        </p>
+        <p className="mt-1 text-[11px] text-white/32">
+          Espelhamento do celular
+        </p>
+      </div>
+
+      <div className="flex-1 min-h-0 px-5 pb-5 flex items-center justify-center">
+        <div
+          className="w-full max-w-[360px] aspect-[9/19.5] rounded-[2rem] border flex items-center justify-center"
+          style={{
+            borderColor: 'rgba(196,149,87,0.28)',
+            background: 'rgba(0,0,0,0.22)',
+          }}
+        >
+          <div
+            className="w-[92%] h-[95%] rounded-[1.55rem] border border-dashed flex flex-col items-center justify-center text-center px-5"
+            style={{ borderColor: 'rgba(196,149,87,0.22)' }}
+          >
+            <div
+              className="w-14 h-1.5 rounded-full mb-7"
+              style={{ background: 'rgba(196,149,87,0.28)' }}
+            />
+            <p className="text-[13px] font-medium text-white/50 leading-relaxed">
+              Posicione aqui a janela externa de espelhamento.
+            </p>
+            <p className="mt-3 text-[10px] text-white/22 leading-relaxed">
+              Este painel não captura, lê, armazena ou registra códigos.
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function PainelTVDiario() {
+export default function PainelTVDiario({
+  modoAutenticadores = false,
+}: {
+  modoAutenticadores?: boolean
+}) {
   const [data,    setData]    = useState<PainelDiario | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
@@ -324,7 +384,7 @@ export default function PainelTVDiario() {
     hour: '2-digit', minute: '2-digit',
   }).format(new Date(atualizado_em))
 
-  return (
+  const painel = (
     <div className="w-full h-full flex flex-col"
          style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
@@ -332,18 +392,16 @@ export default function PainelTVDiario() {
       <header className="flex-shrink-0 flex items-center justify-between px-8 py-4"
               style={{ borderBottom: '1px solid rgba(196,149,87,0.12)' }}>
 
-        {/* Logo oficial — versão fundo escuro
-            Para trocar: salvar a logo em public/logo-pedv.svg (ou .png c/ transparência)
-            e alterar o src abaixo. Altura: 52px. Largura automática (object-contain). */}
+        {/* Logo oficial — versão completa para fundo escuro. */}
         <div className="flex items-center flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src="/logo-pedv-tv.jpeg"
             alt="Pessoa e do Val Advocacia"
             style={{
-              height:      '52px',
+              height:      '64px',
               width:       'auto',
-              maxWidth:    '200px',
+              maxWidth:    '220px',
               objectFit:   'contain',
               objectPosition: 'left center',
             }}
@@ -469,6 +527,23 @@ export default function PainelTVDiario() {
           Uso interno · Confidencial
         </span>
       </footer>
+    </div>
+  )
+
+  if (!modoAutenticadores) return painel
+
+  return (
+    <div
+      className="w-full h-full grid gap-3 p-3"
+      style={{
+        gridTemplateColumns: 'minmax(0, 74fr) minmax(280px, 26fr)',
+        fontFamily: "'Inter', -apple-system, sans-serif",
+      }}
+    >
+      <section className="min-w-0 h-full rounded-2xl overflow-hidden border border-white/[0.04] bg-[#030C17]">
+        {painel}
+      </section>
+      <AreaAuxiliarAutenticadores />
     </div>
   )
 }
