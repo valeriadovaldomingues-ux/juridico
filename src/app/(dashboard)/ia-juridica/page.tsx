@@ -5,12 +5,22 @@ import TestePublicacaoIA from './TestePublicacaoIA'
 
 const modulos = [
   {
+    href:   '/ia-juridica/aurora',
+    icon:   Sparkles,
+    cor:    { bg: 'bg-[#0B1C2D]', icon: 'text-[#C49557]', btn: 'text-[#A07840]', hover: 'hover:border-[#C49557] hover:shadow-[0_4px_20px_rgba(196,149,87,0.16)]' },
+    titulo: 'Aurora',
+    desc:   'Assistente executiva jurídica dos sócios, voltada a análise estratégica, priorização de urgências, riscos e planos de ação.',
+    tags:   ['Exclusivo sócios', 'Estratégia', 'Riscos', 'Providências'],
+    socioOnly: true,
+  },
+  {
     href:   '/ia-juridica/peca',
     icon:   FileText,
     cor:    { bg: 'bg-[#E8F2F2]', icon: 'text-[#1D5F60]', btn: 'text-[#1D5F60]', hover: 'hover:border-[#145A5B] hover:shadow-[0_4px_20px_rgba(20,90,91,0.1)]' },
     titulo: 'Gerar Peça Jurídica',
     desc:   'Selecione o processo e o tipo de documento. A IA redigirá a peça completa com fundamentos legais, qualificação das partes e pedidos estruturados.',
     tags:   ['Petição Inicial', 'Contestação', 'Recurso', 'Memoriais'],
+    socioOnly: false,
   },
   {
     href:   '/ia-juridica/publicacao',
@@ -19,6 +29,7 @@ const modulos = [
     titulo: 'Analisar Publicação',
     desc:   'Selecione uma publicação do DJe. A IA extrai o resumo, identifica prazos e sugere a próxima ação processual com avaliação de urgência.',
     tags:   ['Resumo', 'Prazo', 'Urgência', 'Ação sugerida'],
+    socioOnly: false,
   },
   {
     href:   '/ia-juridica/assistente',
@@ -27,14 +38,16 @@ const modulos = [
     titulo: 'Assistente Jurídico',
     desc:   'Faça perguntas jurídicas em linguagem natural. Vincule opcionalmente a um processo para respostas contextualizadas com os dados do caso.',
     tags:   ['Consulta livre', 'Contexto de processo', 'Doutrina', 'Jurisprudência'],
+    socioOnly: false,
   },
 ]
 
 export default async function IAJuridicaPage() {
   // Sincronizado com ALLOWED_ROUTES: advogado, gerente, socio.
-  await requireRole(['advogado', 'gerente', 'socio'])
+  const { profile } = await requireRole(['advogado', 'gerente', 'socio'])
   // Verificação feita no servidor — OPENAI_API_KEY nunca é exposta ao cliente
   const iaConfigurada = !!process.env.OPENAI_API_KEY
+  const modulosVisiveis = modulos.filter(mod => !mod.socioOnly || profile.role === 'socio')
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -55,8 +68,8 @@ export default async function IAJuridicaPage() {
       </div>
 
       {/* Cards dos módulos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {modulos.map((mod) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        {modulosVisiveis.map((mod) => {
           const Icon = mod.icon
           return (
             <Link
