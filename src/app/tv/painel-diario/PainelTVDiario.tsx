@@ -332,16 +332,22 @@ export default function PainelTVDiario() {
       <header className="flex-shrink-0 flex items-center justify-between px-8 py-4"
               style={{ borderBottom: '1px solid rgba(196,149,87,0.12)' }}>
 
-        {/* Marca */}
-        <div className="flex flex-col leading-none">
-          <span className="text-[22px] font-semibold tracking-tight text-white"
-                style={{ fontFamily: 'Georgia, serif' }}>
-            Pessoa e do Val
-          </span>
-          <span className="text-[9px] tracking-[0.25em] uppercase mt-0.5"
-                style={{ color: GOLD }}>
-            Advocacia
-          </span>
+        {/* Logo oficial — versão fundo escuro
+            Para trocar: salvar a logo em public/logo-pedv.svg (ou .png c/ transparência)
+            e alterar o src abaixo. Altura: 52px. Largura automática (object-contain). */}
+        <div className="flex items-center flex-shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Pessoa e do Val Advocacia"
+            style={{
+              height:      '52px',
+              width:       'auto',
+              maxWidth:    '200px',
+              objectFit:   'contain',
+              objectPosition: 'left center',
+            }}
+          />
         </div>
 
         {/* Centro — título e data */}
