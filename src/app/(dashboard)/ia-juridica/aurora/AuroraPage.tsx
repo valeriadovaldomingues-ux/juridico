@@ -24,6 +24,21 @@ const SUGESTOES = [
   'Liste riscos e providências',
 ]
 
+const IS_DEV = process.env.NODE_ENV === 'development'
+
+function makeMessageId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  return 'Erro desconhecido'
+}
+
 export default function AuroraPage() {
   const [mensagem, setMensagem] = useState('')
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
@@ -40,8 +55,8 @@ export default function AuroraPage() {
     const conteudo = (texto ?? mensagem).trim()
     if (!conteudo || loading) return
 
-    const msgId = crypto.randomUUID()
-    const asstId = crypto.randomUUID()
+    const msgId = makeMessageId()
+    const asstId = makeMessageId()
     const historico = mensagens
       .filter(msg => !msg.loading && msg.content.trim())
       .map(msg => ({ role: msg.role, content: msg.content }))
@@ -55,11 +70,26 @@ export default function AuroraPage() {
     setLoading(true)
 
     try {
+      if (IS_DEV) {
+        console.info('[Aurora] chamando API', {
+          endpoint: '/api/ia/aurora',
+          historico: historico.length,
+        })
+      }
+
       const res = await fetch('/api/ia/aurora', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mensagem: conteudo, historico }),
       })
+
+      if (IS_DEV) {
+        console.info('[Aurora] resposta da API', {
+          status: res.status,
+          ok: res.ok,
+          contentType: res.headers.get('content-type'),
+        })
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
@@ -92,10 +122,17 @@ export default function AuroraPage() {
       setMensagens(prev => prev.map(msg =>
         msg.id === asstId ? { ...msg, loading: false } : msg
       ))
-    } catch {
+    } catch (error) {
+      if (IS_DEV) {
+        console.error('[Aurora] erro no envio', error)
+      }
+      const detail = getErrorMessage(error)
+      const content = IS_DEV
+        ? `Erro de conexão. Detalhe técnico: ${detail}`
+        : 'Erro de conexão. Tente novamente.'
       setMensagens(prev => prev.map(msg =>
         msg.id === asstId
-          ? { ...msg, content: 'Erro de conexão. Tente novamente.', loading: false }
+          ? { ...msg, content, loading: false }
           : msg
       ))
     } finally {

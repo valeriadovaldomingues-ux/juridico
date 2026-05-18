@@ -2,7 +2,7 @@
  * Camada central de IA — todos os módulos passam por aqui.
  *
  * Configuração via variáveis de ambiente:
- *   OPENAI_API_KEY   — obrigatória
+ *   OPENAI_API_KEY   — obrigatória (ou AI_API_KEY como alias compatível)
  *   OPENAI_MODEL     — opcional, padrão "gpt-4o-mini"
  *   OPENAI_BASE_URL  — opcional, permite usar Azure OpenAI / proxies compatíveis
  */
@@ -15,10 +15,10 @@ let _client: OpenAI | null = null
 
 function getClient(): OpenAI {
   if (_client) return _client
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY
   if (!apiKey) {
     throw new Error(
-      'OPENAI_API_KEY não configurada. Adicione ao arquivo .env.local e reinicie o servidor.'
+      'OPENAI_API_KEY ou AI_API_KEY não configurada. Adicione ao arquivo .env.local e reinicie o servidor.'
     )
   }
   _client = new OpenAI({

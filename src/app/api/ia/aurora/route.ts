@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'mensagem é obrigatória' }, { status: 400 })
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY && !process.env.AI_API_KEY) {
     return NextResponse.json(
-      { error: 'OPENAI_API_KEY não configurada. Adicione ao .env.local' },
+      { error: 'OPENAI_API_KEY ou AI_API_KEY não configurada. Adicione ao .env.local' },
       { status: 503 },
     )
   }
