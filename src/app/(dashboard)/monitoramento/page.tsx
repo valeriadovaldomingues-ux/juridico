@@ -17,8 +17,8 @@ export default async function MonitoramentoRoute() {
       .select('*')
       .order('nome_completo'),
     supabase
-      .from('publicacoes_monitoradas')
-      .select('*, advogado:advogados_monitorados(id,nome_completo,oab_numero,oab_uf)')
+      .from('publicacoes')
+      .select('*, processo:processos(id,titulo,numero_processo)')
       .order('created_at', { ascending: false })
       .limit(500),
     supabase
@@ -30,7 +30,7 @@ export default async function MonitoramentoRoute() {
 
   // Show setup screen if tables don't exist yet
   if (advError || pubError) {
-    const missingTable = advError ? 'advogados_monitorados' : 'publicacoes_monitoradas'
+    const missingTable = advError ? 'advogados_monitorados' : 'publicacoes'
     return (
       <div className="max-w-2xl">
         <div className="mb-6">

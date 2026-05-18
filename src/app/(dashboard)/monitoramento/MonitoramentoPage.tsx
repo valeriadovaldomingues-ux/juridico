@@ -31,9 +31,11 @@ interface PublicacaoMonitorada {
   tribunal?: string
   data_publicacao?: string
   data_disponibilizacao?: string
+  titulo?: string
   resumo?: string
   termo_encontrado?: string
-  tipo_resultado: string
+  tipo_resultado?: string
+  tipo_publicacao?: string
   prazo_detectado: boolean
   prazo_dias?: number
   prazo_data?: string
@@ -41,11 +43,14 @@ interface PublicacaoMonitorada {
   audiencia_detectada: boolean
   audiencia_data?: string
   audiencia_descricao?: string
-  hash_publicacao: string
-  status_tratamento: 'nova' | 'lida' | 'tratada' | 'descartada'
+  hash_publicacao?: string
+  hash?: string
+  status_tratamento?: 'nova' | 'tratada' | 'descartada'
+  status?: 'nao_tratada' | 'tratada' | 'descartada'
   origem: string
   created_at: string
   advogado?: { id: string; nome_completo: string; oab_numero: string; oab_uf: string } | null
+  processo?: { id: string; titulo: string; numero_processo?: string } | null
 }
 
 interface Log {
@@ -66,7 +71,6 @@ interface Log {
 
 const STATUS_CFG = {
   nova:        { label: 'Nova',        bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  dot: 'bg-amber-400'  },
-  lida:        { label: 'Lida',        bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',   dot: 'bg-blue-400'   },
   tratada:     { label: 'Tratada',     bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200',dot: 'bg-emerald-400'},
   descartada:  { label: 'Descartada',  bg: 'bg-slate-100',  text: 'text-slate-500',   border: 'border-slate-200',  dot: 'bg-slate-300'  },
 }
@@ -103,6 +107,27 @@ function timeAgo(iso: string) {
   const h = Math.floor(min / 60)
   if (h < 24)    return `${h}h atrás`
   return `${Math.floor(h / 24)}d atrás`
+}
+
+function statusDaPublicacao(pub: PublicacaoMonitorada): 'nova' | 'tratada' | 'descartada' {
+  if (pub.status_tratamento) return pub.status_tratamento
+  if (pub.status === 'tratada') return 'tratada'
+  if (pub.status === 'descartada') return 'descartada'
+  return 'nova'
+}
+
+function statusParaTabelaPublicacoes(status: string): 'nao_tratada' | 'tratada' | 'descartada' {
+  if (status === 'tratada') return 'tratada'
+  if (status === 'descartada') return 'descartada'
+  return 'nao_tratada'
+}
+
+function tipoDaPublicacao(pub: PublicacaoMonitorada) {
+  return pub.tipo_resultado ?? pub.tipo_publicacao ?? 'publicacao'
+}
+
+function textoDaPublicacao(pub: PublicacaoMonitorada) {
+  return pub.titulo ?? pub.resumo ?? pub.numero_processo ?? ''
 }
 
 // ─── Status pill ─────────────────────────────────────────────────────────────
@@ -148,8 +173,10 @@ function DetalheModal({
   onClose: () => void
   onStatusChange: (id: string, s: string) => void
 }) {
-  const tipo    = TIPO_CFG[pub.tipo_resultado] ?? TIPO_CFG.outro
+  const tipo    = TIPO_CFG[tipoDaPublicacao(pub)] ?? TIPO_CFG.outro
   const origem  = ORIGEM_CFG[pub.origem] ?? { label: pub.origem, color: 'text-slate-500' }
+  const status  = statusDaPublicacao(pub)
+  const texto   = textoDaPublicacao(pub)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -228,11 +255,11 @@ function DetalheModal({
           </div>
 
           {/* Text */}
-          {pub.resumo && (
+          {texto && (
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-2">Texto da publicação</p>
               <div className="bg-[#F3F1EE] rounded-xl p-4 text-[12px] text-[#4a5a6a] leading-relaxed font-mono whitespace-pre-wrap max-h-44 overflow-y-auto border border-[#E2DDD8]">
-                {pub.resumo}
+                {texto}
               </div>
             </div>
           )}
@@ -244,7 +271,7 @@ function DetalheModal({
               {Object.entries(STATUS_CFG).map(([k, v]) => (
                 <button key={k} onClick={() => { onStatusChange(pub.id, k); onClose() }}
                   className={cn('flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-[12px] font-semibold transition-all',
-                    pub.status_tratamento === k
+                    status === k
                       ? `${v.bg} ${v.text} ${v.border}`
                       : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
                   )}>
@@ -301,7 +328,7 @@ export default function MonitoramentoPage({
 
   // ── Filtered ──────────────────────────────────────────────────────────────
   const filtered = pubs.filter(p => {
-    if (fStatus !== 'todos' && p.status_tratamento !== fStatus) return false
+    if (fStatus !== 'todos' && statusDaPublicacao(p) !== fStatus) return false
     if (fAdvogado && p.advogado_monitorado_id !== fAdvogado) return false
     if (fTribunal && p.tribunal !== fTribunal) return false
     if (fPrazo    && !p.prazo_detectado)        return false
@@ -312,7 +339,7 @@ export default function MonitoramentoPage({
       const q = fBusca.toLowerCase()
       const ok = p.nome_pesquisado.toLowerCase().includes(q)
         || (p.numero_processo ?? '').includes(q)
-        || (p.resumo ?? '').toLowerCase().includes(q)
+        || textoDaPublicacao(p).toLowerCase().includes(q)
         || (p.tribunal ?? '').toLowerCase().includes(q)
       if (!ok) return false
     }
@@ -323,19 +350,22 @@ export default function MonitoramentoPage({
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
-  const totalNovas   = pubs.filter(p => p.status_tratamento === 'nova').length
-  const totalPrazo   = pubs.filter(p => p.prazo_detectado && p.status_tratamento === 'nova').length
-  const totalAud     = pubs.filter(p => p.audiencia_detectada && p.status_tratamento === 'nova').length
+  const totalNovas   = pubs.filter(p => statusDaPublicacao(p) === 'nova').length
+  const totalPrazo   = pubs.filter(p => p.prazo_detectado && statusDaPublicacao(p) === 'nova').length
+  const totalAud     = pubs.filter(p => p.audiencia_detectada && statusDaPublicacao(p) === 'nova').length
 
   const tribunais    = [...new Set(pubs.map(p => p.tribunal).filter(Boolean))] as string[]
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   async function handleStatusChange(id: string, status: string) {
+    const statusPublicacoes = statusParaTabelaPublicacoes(status)
     setPubs(prev => prev.map(p =>
-      p.id === id ? { ...p, status_tratamento: status as PublicacaoMonitorada['status_tratamento'] } : p
+      p.id === id
+        ? { ...p, status: statusPublicacoes, status_tratamento: status as PublicacaoMonitorada['status_tratamento'] }
+        : p
     ))
-    if (expanded?.id === id) setExpanded(prev => prev ? { ...prev, status_tratamento: status as any } : null)
-    await supabase.from('publicacoes_monitoradas').update({ status_tratamento: status }).eq('id', id)
+    if (expanded?.id === id) setExpanded(prev => prev ? { ...prev, status: statusPublicacoes, status_tratamento: status as any } : null)
+    await supabase.from('publicacoes').update({ status: statusPublicacoes }).eq('id', id)
   }
 
   async function toggleAtivo(id: string, current: boolean) {
@@ -366,7 +396,7 @@ export default function MonitoramentoPage({
         if (data.sucesso) {
           setLastMsg({
             ok: true,
-            text: `${data.total_novas} nova(s) · ${data.total_pesquisas} pesquisas · ${(data.duracao_ms / 1000).toFixed(1)}s`,
+            text: `${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_pesquisas} pesquisas · ${(data.duracao_ms / 1000).toFixed(1)}s`,
           })
           // Reload logs
           const { data: freshLogs } = await supabase
@@ -378,8 +408,8 @@ export default function MonitoramentoPage({
           // Reload publications if new ones
           if (data.total_novas > 0) {
             const { data: freshPubs } = await supabase
-              .from('publicacoes_monitoradas')
-              .select('*, advogado:advogados_monitorados(id,nome_completo,oab_numero,oab_uf)')
+              .from('publicacoes')
+              .select('*, processo:processos(id,titulo,numero_processo)')
               .order('created_at', { ascending: false })
               .limit(500)
             if (freshPubs) setPubs(freshPubs as PublicacaoMonitorada[])
@@ -522,7 +552,6 @@ export default function MonitoramentoPage({
               <div className="flex bg-[#F0F6F6] rounded-xl p-1 gap-0.5">
                 {[
                   { v: 'nova',       l: 'Novas'      },
-                  { v: 'lida',       l: 'Lidas'      },
                   { v: 'tratada',    l: 'Tratadas'   },
                   { v: 'descartada', l: 'Descartadas'},
                   { v: 'todos',      l: 'Todas'      },
@@ -580,8 +609,10 @@ export default function MonitoramentoPage({
             ) : (
               <div className="divide-y divide-[#f5f7fa]">
                 {paginated.map(pub => {
-                  const tipoCfg  = TIPO_CFG[pub.tipo_resultado] ?? TIPO_CFG.outro
+                  const tipoCfg  = TIPO_CFG[tipoDaPublicacao(pub)] ?? TIPO_CFG.outro
                   const origemCfg = ORIGEM_CFG[pub.origem] ?? { label: pub.origem, color: 'text-slate-500' }
+                  const status = statusDaPublicacao(pub)
+                  const texto = textoDaPublicacao(pub)
 
                   return (
                     <div
@@ -589,8 +620,8 @@ export default function MonitoramentoPage({
                       onClick={() => setExpanded(pub)}
                       className={cn(
                         'grid grid-cols-[1fr_120px_130px_100px_90px_120px] gap-3 px-5 py-3.5 hover:bg-[#f9fafb] cursor-pointer transition-colors items-center',
-                        pub.status_tratamento === 'nova' && 'bg-amber-50/20',
-                        pub.status_tratamento === 'descartada' && 'opacity-50',
+                        status === 'nova' && 'bg-amber-50/20',
+                        status === 'descartada' && 'opacity-50',
                       )}
                     >
                       {/* Title + badges */}
@@ -603,7 +634,7 @@ export default function MonitoramentoPage({
                           {pub.audiencia_detectada && <Gavel size={11} className="text-rose-500 flex-shrink-0" />}
                         </div>
                         <p className="text-[13px] font-medium text-[#0f1923] truncate leading-tight">
-                          {pub.resumo?.slice(0, 80) ?? pub.numero_processo ?? '(sem texto)'}
+                          {texto.slice(0, 80) || '(sem texto)'}
                         </p>
                         {pub.numero_processo && (
                           <p className="text-[10px] font-mono text-[#9aabb8] truncate">{pub.numero_processo}</p>
@@ -634,7 +665,7 @@ export default function MonitoramentoPage({
                       {/* Status */}
                       <div onClick={e => e.stopPropagation()}>
                         <StatusPill
-                          status={pub.status_tratamento}
+                          status={status}
                           onChange={s => handleStatusChange(pub.id, s)}
                         />
                       </div>
