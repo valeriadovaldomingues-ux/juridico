@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextResponse } from 'next/server'
 
-const { mockApiGuard, mockBuildMensagensAurora, mockStreamTextoPreflight, mockCompletarTexto } = vi.hoisted(() => ({
+const {
+  mockApiGuard,
+  mockBuildMensagensAurora,
+  mockStreamTextoPreflight,
+  mockCompletarTexto,
+  mockDetectarIntencaoPublicacoes,
+  mockBuscarPublicacoesParaAurora,
+  mockMontarContextoPublicacoesParaAurora,
+} = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
   mockBuildMensagensAurora: vi.fn(),
   mockStreamTextoPreflight: vi.fn(),
   mockCompletarTexto: vi.fn(),
+  mockDetectarIntencaoPublicacoes: vi.fn(),
+  mockBuscarPublicacoesParaAurora: vi.fn(),
+  mockMontarContextoPublicacoesParaAurora: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/api-guard', () => ({
@@ -19,6 +30,12 @@ vi.mock('@/lib/ai/prompts', () => ({
 vi.mock('@/lib/ai/service', () => ({
   streamTextoPreflight: mockStreamTextoPreflight,
   completarTexto: mockCompletarTexto,
+}))
+
+vi.mock('@/lib/ai/aurora-context', () => ({
+  detectarIntencaoPublicacoes: mockDetectarIntencaoPublicacoes,
+  buscarPublicacoesParaAurora: mockBuscarPublicacoesParaAurora,
+  montarContextoPublicacoesParaAurora: mockMontarContextoPublicacoesParaAurora,
 }))
 
 import { POST } from './route'
@@ -47,6 +64,17 @@ beforeEach(() => {
   mockBuildMensagensAurora.mockReset()
   mockStreamTextoPreflight.mockReset()
   mockCompletarTexto.mockReset()
+  mockDetectarIntencaoPublicacoes.mockReset()
+  mockBuscarPublicacoesParaAurora.mockReset()
+  mockMontarContextoPublicacoesParaAurora.mockReset()
+  mockDetectarIntencaoPublicacoes.mockReturnValue({
+    temIntencao: false,
+    hoje: false,
+    pendentes: false,
+    prazo: false,
+    audiencia: false,
+    triagem: false,
+  })
 })
 
 afterEach(() => {
@@ -133,8 +161,54 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toContain('text/plain')
     expect(text).toBe('plano de ação')
-    expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano', historico)
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano', historico, undefined)
     expect(mockStreamTextoPreflight).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
+  })
+
+  it('busca contexto de publicações quando a mensagem pede publicações', async () => {
+    const intencao = {
+      temIntencao: true,
+      hoje: true,
+      pendentes: false,
+      prazo: true,
+      audiencia: false,
+      triagem: false,
+    }
+    const publicacoes = [{ id: 'pub-1', prazo_detectado: true }]
+    const contexto = 'CONTEXTO DO SISTEMA - PUBLICAÇÕES\nTotal encontrado: 1'
+    const messages = [{ role: 'system', content: 'Aurora' }]
+
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
+    mockDetectarIntencaoPublicacoes.mockReturnValue(intencao)
+    mockBuscarPublicacoesParaAurora.mockResolvedValue(publicacoes)
+    mockMontarContextoPublicacoesParaAurora.mockReturnValue(contexto)
+    mockBuildMensagensAurora.mockReturnValue(messages)
+    mockStreamTextoPreflight.mockResolvedValue(textStream('resumo executivo'))
+
+    const res = await POST(request({ mensagem: 'Quais publicações chegaram hoje com prazo detectado?' }) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockBuscarPublicacoesParaAurora).toHaveBeenCalledWith({ ...intencao, limit: 20 })
+    expect(mockMontarContextoPublicacoesParaAurora).toHaveBeenCalledWith(publicacoes)
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
+      'Quais publicações chegaram hoje com prazo detectado?',
+      [],
+      contexto,
+    )
+  })
+
+  it('não busca contexto de publicações quando a mensagem é genérica', async () => {
+    const messages = [{ role: 'system', content: 'Aurora' }]
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
+    mockBuildMensagensAurora.mockReturnValue(messages)
+    mockStreamTextoPreflight.mockResolvedValue(textStream('ok'))
+
+    const res = await POST(request({ mensagem: 'Monte um plano de ação' }) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockBuscarPublicacoesParaAurora).not.toHaveBeenCalled()
+    expect(mockMontarContextoPublicacoesParaAurora).not.toHaveBeenCalled()
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano de ação', [], undefined)
   })
 
   it('retorna JSON de fallback quando o preflight do streaming falha', async () => {

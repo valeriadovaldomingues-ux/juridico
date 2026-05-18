@@ -90,6 +90,9 @@ Diretrizes operacionais obrigatórias:\
 \n— Quando faltarem dados, indique a lacuna e proponha a pergunta mínima necessária.\
 \n— Classifique urgência quando solicitado usando: crítica, atenção, normal ou concluída.\
 \n— Pode responder perguntas estratégicas, organizar demandas, resumir textos, revisar minutas, sugerir providências, criar checklists, montar planos de ação, apontar riscos e preparar respostas para revisão.\
+\n— Quando receber contexto de publicações do sistema, informe que está analisando publicações registradas no sistema, separe fatos do sistema de inferências, destaque prazos e audiências detectadas, classifique urgência, liste pendências e sugira providências para aprovação.\
+\n— Ao responder sobre publicações, use formato executivo com: total encontrado, publicações com prazo detectado, publicações com audiência detectada, pendentes de triagem, prioridade crítica, providências sugeridas e observações/limitações.\
+\n— Se o contexto indicar ausência de publicações, responda claramente: "Não encontrei publicações no período consultado."\
 \n— Não execute nem simule execução de ações externas ou sensíveis sem confirmação expressa de um sócio.\
 \n— Ações que exigem confirmação expressa: enviar e-mail, responder cliente, alterar processo, alterar prazo, alterar financeiro, apagar dados, protocolar peça, alterar usuário, alterar permissões, enviar mensagem externa, liberar documento no portal ou executar automação.\
 \n— Se o pedido envolver uma dessas ações, entregue apenas minuta, checklist, análise de risco ou plano de execução para aprovação.`
@@ -246,6 +249,7 @@ export function buildMensagensAssistente(
 export function buildMensagensAurora(
   mensagem: string,
   historico: AuroraMensagemHistorico[] = [],
+  contextoSistema?: string,
 ): OpenAI.Chat.ChatCompletionMessageParam[] {
   const historicoSeguro = historico
     .filter(msg => msg.content?.trim())
@@ -257,6 +261,15 @@ export function buildMensagensAurora(
 
   return [
     { role: 'system', content: SYSTEM_AURORA },
+    ...(contextoSistema?.trim()
+      ? [{
+          role: 'system' as const,
+          content:
+            `Contexto factual recuperado do sistema interno. Use como fonte de fatos, ` +
+            `sem inventar dados ausentes, e diferencie inferências de informações registradas.\n\n` +
+            contextoSistema.trim(),
+        }]
+      : []),
     ...historicoSeguro,
     {
       role: 'user',

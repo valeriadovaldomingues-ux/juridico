@@ -3,6 +3,11 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
+import {
+  buscarPublicacoesParaAurora,
+  detectarIntencaoPublicacoes,
+  montarContextoPublicacoesParaAurora,
+} from '@/lib/ai/aurora-context'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 
@@ -42,7 +47,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const historico = Array.isArray(body.historico) ? body.historico : []
-    const messages  = buildMensagensAurora(mensagem, historico)
+    const intencaoPublicacoes = detectarIntencaoPublicacoes(mensagem)
+    let contextoSistema: string | undefined
+
+    if (intencaoPublicacoes.temIntencao) {
+      try {
+        const publicacoes = await buscarPublicacoesParaAurora({ ...intencaoPublicacoes, limit: 20 })
+        contextoSistema = montarContextoPublicacoesParaAurora(publicacoes)
+      } catch (contextErr) {
+        const contextMsg = getErrorMessage(contextErr)
+        if (IS_DEV) {
+          console.error('[Aurora API] falha ao buscar contexto de publicações', contextErr)
+        }
+        contextoSistema = [
+          'CONTEXTO DO SISTEMA - PUBLICAÇÕES',
+          'A Aurora tentou consultar publicações reais do sistema, mas a consulta falhou.',
+          `Erro técnico: ${contextMsg}`,
+          'Não trate ausência de dados como ausência de publicações.',
+        ].join('\n')
+      }
+    }
+
+    const messages  = buildMensagensAurora(mensagem, historico, contextoSistema)
 
     let stream: ReadableStream<Uint8Array>
     try {
