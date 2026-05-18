@@ -1,4 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as svcClient }  from '@supabase/supabase-js'
+
+let _svc: ReturnType<typeof svcClient> | null = null
+function getServiceClient() {
+  if (_svc) return _svc
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  _svc = svcClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+  return _svc
+}
 import { requireRole } from '@/lib/auth/guards'
 import TrelloIntegracaoPage from './TrelloIntegracaoPage'
 import type { TrelloIntegration } from '@/types/trello'
@@ -27,7 +38,7 @@ export default async function TrelloPage() {
         ? supabase.from('trello_member_mappings').select('*').eq('integration_id', integrationId)
         : Promise.resolve({ data: [] }),
 
-      supabase.from('profiles').select('id, nome').eq('ativo', true).order('nome'),
+      getServiceClient()?.from('profiles').select('id, nome') ?? supabase.from('profiles').select('id, nome').eq('ativo', true).order('nome'),
 
       integrationId
         ? supabase

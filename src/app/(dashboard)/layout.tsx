@@ -1,8 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layout/Sidebar'
-import Header from '@/components/layout/Header'
-import type { Profile, UserRole } from '@/types'
+import { createClient }               from '@/lib/supabase/server'
+import { createClient as svcClient }  from '@supabase/supabase-js'
+import { redirect }                   from 'next/navigation'
+import Sidebar                        from '@/components/layout/Sidebar'
+import Header                         from '@/components/layout/Header'
+import type { Profile, UserRole }     from '@/types'
+
+// Service client singleton — contorna bug JWT do @supabase/ssr v0.9.0
+let _svc: ReturnType<typeof svcClient> | null = null
+function getServiceClient() {
+  if (_svc) return _svc
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  _svc = svcClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+  return _svc
+}
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -10,23 +22,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
-  const { data: profileData } = await supabase
+  // Service role para query de profiles — evita 406 do bug JWT do @supabase/ssr
+  const client = getServiceClient() ?? supabase
+  const { data: profileData } = await client
     .from('profiles')
-    .select('id, nome, email, role, ativo, created_at')
+    .select('id, nome, email, role, ativo, created_at, cor_kanban')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   const profile = profileData as Profile | null
 
-  // Conta desativada: encerrar sessão e redirecionar
   if (profile && !profile.ativo) {
     await supabase.auth.signOut()
     redirect('/login?erro=conta-desativada')
   }
 
-  // Role padrão mais restritivo caso o profile ainda não exista
   const role = (profile?.role ?? 'estagiario') as UserRole
-
   const isDev = process.env.NODE_ENV === 'development'
 
   return (

@@ -1,4 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient }               from '@/lib/supabase/server'
+import { createClient as svcClient }  from '@supabase/supabase-js'
+
+// Service client singleton — contorna bug JWT do @supabase/ssr v0.9.0
+let _svc: ReturnType<typeof svcClient> | null = null
+function getServiceClient() {
+  if (_svc) return _svc
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  _svc = svcClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+  return _svc
+}
 import Link from 'next/link'
 import {
   Users, Scale, FolderCheck, Briefcase,
@@ -137,9 +149,11 @@ export default async function DashboardPage() {
   thirtyDaysAgo.setDate(today.getDate() - 30)
 
   // Role para exibição condicional do resumo financeiro
+  // Usa service role para contornar bug JWT do @supabase/ssr v0.9.0
   const { data: { user } } = await supabase.auth.getUser()
+  const client = getServiceClient() ?? supabase
   const { data: profileData } = user
-    ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+    ? await client.from('profiles').select('role').eq('id', user.id).maybeSingle()
     : { data: null }
   const userRole = profileData?.role ?? 'estagiario'
   const verFinanceiro = userRole === 'socio'
