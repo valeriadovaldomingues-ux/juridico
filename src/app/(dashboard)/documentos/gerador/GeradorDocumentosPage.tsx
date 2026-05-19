@@ -14,6 +14,7 @@ import {
 import {
   DADOS_DOCUMENTO_VAZIO,
   TIPOS_DOCUMENTO_GERADOR,
+  calcularCamposAusentes,
   extensaoArquivoPermitida,
   tituloTipoDocumento,
   type DadosDocumento,
@@ -79,6 +80,17 @@ export default function GeradorDocumentosPage() {
     () => TIPOS_DOCUMENTO_GERADOR.find(tipo => tipo.id === tipoSelecionado)!,
     [tipoSelecionado],
   )
+  const camposAusentesAtuais = useMemo(
+    () => dados ? calcularCamposAusentes(dados.tipoDocumento, dados) : [],
+    [dados],
+  )
+  const podeGerar = !!dados && confirmou && !!dados.nomeRevisor.trim() && camposAusentesAtuais.length === 0
+  const isContratoPartido = dados?.tipoDocumento === 'contrato_partido'
+  const isContratoAcao = dados?.tipoDocumento === 'contrato_acao_isolada'
+  const isContrato = isContratoPartido || isContratoAcao
+  const isProcuracao = dados?.tipoDocumento === 'procuracao'
+  const isHipossuficiencia = dados?.tipoDocumento === 'hipossuficiencia'
+  const isPeticao = dados?.tipoDocumento === 'peticao_comum'
 
   function selecionarTipo(tipo: TipoDocumentoGerador) {
     setTipoSelecionado(tipo)
@@ -157,7 +169,7 @@ export default function GeradorDocumentosPage() {
   }
 
   async function gerar() {
-    if (!dados || !confirmou) return
+    if (!podeGerar) return
     setGerando(true)
     setStatus(null)
     try {
@@ -199,17 +211,18 @@ export default function GeradorDocumentosPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B8864B]">Pessoa e do Val Advocacia</p>
-            <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[#1B2A4E]">Gerador inteligente de documentos</h1>
+            <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[#1B2A4E]">Gerador de Documentos</h1>
             <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[#6E7685]">
-              Extraia dados de relatos e anexos, revise as informações e gere uma minuta DOCX com papel institucional. A geração final exige conferência humana.
+              Contratos, procurações e declarações. A IA apenas extrai dados; o texto final segue os modelos oficiais e exige revisão humana.
             </p>
           </div>
           <div className="rounded-lg border border-[#D8C4AA] bg-white px-4 py-3 text-[12px] text-[#1B2A4E]">
-            <span className="font-semibold text-[#B8864B]">Regra:</span> nenhum documento é gerado sem revisão e confirmação.
+            <span className="font-semibold text-[#B8864B]">Regra:</span> nenhum documento é gerado sem revisão obrigatória.
           </div>
         </div>
       </div>
 
+      {!dados ? (
       <div className="grid gap-4 lg:grid-cols-5">
         {TIPOS_DOCUMENTO_GERADOR.map(tipo => {
           const ativo = tipo.id === tipoSelecionado
@@ -231,6 +244,24 @@ export default function GeradorDocumentosPage() {
           )
         })}
       </div>
+      ) : (
+        <div className="flex items-center justify-between rounded-lg border border-[#E2DDD8] bg-white px-4 py-3 shadow-sm">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#B8864B]">Modelo selecionado</p>
+            <p className="text-[15px] font-semibold text-[#1B2A4E]">{tipoAtual.titulo}</p>
+          </div>
+          <button
+            onClick={() => {
+              setDados(null)
+              setConfirmou(false)
+              setStatus(null)
+            }}
+            className="rounded-lg border border-[#D8C4AA] bg-white px-3 py-2 text-[12px] font-semibold text-[#1B2A4E] hover:bg-[#F7F4EF]"
+          >
+            Voltar aos modelos
+          </button>
+        </div>
+      )}
 
       {status && (
         <div className={cn(
@@ -242,6 +273,7 @@ export default function GeradorDocumentosPage() {
         </div>
       )}
 
+      {dados && (
       <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
         <div className="space-y-5">
           <section className="rounded-lg border border-[#E2DDD8] bg-white p-5 shadow-sm">
@@ -346,8 +378,11 @@ export default function GeradorDocumentosPage() {
                   <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.endereco} onChange={e => update('endereco', e.target.value)} placeholder="Endereço" />
                 </CardRevisao>
 
+                {(isContrato || isProcuracao) && (
                 <CardRevisao titulo="Empresa/Representante">
                   <input className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.representanteLegal} onChange={e => update('representanteLegal', e.target.value)} placeholder="Representante legal" />
+                  {isContratoPartido && (
+                  <>
                   <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.cnpjBoletos} onChange={e => update('cnpjBoletos', e.target.value)} placeholder="CNPJ para emissão dos boletos" />
                   <select
                     className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none"
@@ -358,10 +393,16 @@ export default function GeradorDocumentosPage() {
                     <option value="sim">Sim — parcela extra equivalente aos honorários mensais.</option>
                     <option value="nao">Não</option>
                   </select>
+                  </>
+                  )}
                 </CardRevisao>
+                )}
 
+                {(isContratoAcao || isPeticao || isHipossuficiencia) && (
                 <CardRevisao titulo="Processo">
                   <input className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.processo} onChange={e => update('processo', e.target.value)} placeholder="Número do processo" />
+                  {isPeticao && (
+                  <>
                   <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.tipoPeticao} onChange={e => update('tipoPeticao', e.target.value)} placeholder="Tipo de petição" />
                   <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.vara} onChange={e => update('vara', e.target.value)} placeholder="Vara" />
@@ -369,15 +410,25 @@ export default function GeradorDocumentosPage() {
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.uf} onChange={e => update('uf', e.target.value.toUpperCase().slice(0, 2))} placeholder="UF" />
                   </div>
                   <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.fatosResumidos} onChange={e => update('fatosResumidos', e.target.value)} placeholder="Fatos resumidos" />
+                  </>
+                  )}
                 </CardRevisao>
+                )}
 
+                {(isContratoAcao || isPeticao) && (
                 <CardRevisao titulo="Parte contrária">
                   <input className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.parteContraria} onChange={e => update('parteContraria', e.target.value)} placeholder="Parte contrária" />
                   <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.objeto} onChange={e => update('objeto', e.target.value)} placeholder="Objeto / objetivo" />
+                  {isPeticao && (
+                  <>
                   <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.direito} onChange={e => update('direito', e.target.value)} placeholder="Fundamentos jurídicos / direito" />
                   <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.pedidos} onChange={e => update('pedidos', e.target.value)} placeholder="Pedidos" />
+                  </>
+                  )}
                 </CardRevisao>
+                )}
 
+                {isContrato && (
                 <CardRevisao titulo="Honorários">
                   <input className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.honorarios} onChange={e => update('honorarios', e.target.value)} placeholder="Honorários" />
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -388,16 +439,29 @@ export default function GeradorDocumentosPage() {
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.percentualExito} onChange={e => update('percentualExito', e.target.value)} placeholder="Percentual de êxito" />
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.foro} onChange={e => update('foro', e.target.value)} placeholder="Foro" />
                   </div>
-                  <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.valorCausa} onChange={e => update('valorCausa', e.target.value)} placeholder="Valor da causa" />
                 </CardRevisao>
+                )}
 
-                <CardRevisao titulo="Áreas excluídas">
-                  <textarea className="h-24 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.areasExcluidas} onChange={e => update('areasExcluidas', e.target.value)} placeholder="Áreas excluídas" />
+                {isContratoPartido && (
+                <CardRevisao titulo="Abrangência e vigência">
+                  <select
+                    className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none"
+                    value={dados.todasAreas === true ? 'sim' : dados.todasAreas === false ? 'nao' : ''}
+                    onChange={e => update('todasAreas', e.target.value === 'sim' ? true : e.target.value === 'nao' ? false : null)}
+                  >
+                    <option value="">Abrange todas as áreas?</option>
+                    <option value="sim">Sim, todas as áreas contratadas</option>
+                    <option value="nao">Não, há áreas excluídas</option>
+                  </select>
+                  {dados.todasAreas === false && (
+                  <textarea className="mt-2 h-24 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.areasExcluidas} onChange={e => update('areasExcluidas', e.target.value)} placeholder="Áreas excluídas" />
+                  )}
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.vigenciaInicio} onChange={e => update('vigenciaInicio', e.target.value)} placeholder="Vigência início" />
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.vigenciaFim} onChange={e => update('vigenciaFim', e.target.value)} placeholder="Vigência fim" />
                   </div>
                 </CardRevisao>
+                )}
               </div>
 
               {dados.tipoDocumento === 'procuracao' && (
@@ -440,15 +504,16 @@ export default function GeradorDocumentosPage() {
                       Incluir “DA GRATUIDADE DA JUSTIÇA”
                     </label>
                   </div>
+                  <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.valorCausa} onChange={e => update('valorCausa', e.target.value)} placeholder="Valor da causa" />
                   <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.localData} onChange={e => update('localData', e.target.value)} placeholder="Local e data. Ex.: Belo Horizonte, 18 de maio de 2026." />
                 </CardRevisao>
               )}
 
               <div className="grid gap-4 xl:grid-cols-2">
                 <CardRevisao titulo="Campos ausentes">
-                  {dados.camposAusentes.length ? (
+                  {camposAusentesAtuais.length ? (
                     <ul className="list-disc space-y-1 pl-4 text-[#9A5B2F]">
-                      {dados.camposAusentes.map(item => <li key={item}>{item}</li>)}
+                      {camposAusentesAtuais.map(item => <li key={item}>{item}</li>)}
                     </ul>
                   ) : <p className="text-emerald-700">Nenhum campo obrigatório ausente detectado.</p>}
                 </CardRevisao>
@@ -462,13 +527,21 @@ export default function GeradorDocumentosPage() {
               </div>
 
               <div className="rounded-lg border border-[#D8C4AA] bg-white p-4">
-                <label className="flex items-start gap-3 text-[13px] font-medium text-[#1B2A4E]">
+                <p className="text-[13px] font-semibold text-[#1B2A4E]">Revisão obrigatória antes da geração</p>
+                <label className="mt-3 block text-[12px] font-semibold text-[#1B2A4E]">Nome de quem revisou</label>
+                <input
+                  className="mt-1 w-full rounded border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#B8864B]"
+                  value={dados.nomeRevisor}
+                  onChange={e => update('nomeRevisor', e.target.value)}
+                  placeholder="Informe o nome do responsável pela revisão"
+                />
+                <label className="mt-3 flex items-start gap-3 text-[13px] font-medium text-[#1B2A4E]">
                   <input type="checkbox" checked={confirmou} onChange={e => setConfirmou(e.target.checked)} className="mt-0.5" />
                   Confirmo que revisei os dados extraídos e autorizo a geração do documento.
                 </label>
                 <button
                   onClick={gerar}
-                  disabled={!confirmou || gerando}
+                  disabled={!podeGerar || gerando}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#B8864B] px-4 py-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#9A6F3F] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <FileText size={15} /> {gerando ? 'Gerando...' : 'Gerar e baixar DOCX'}
@@ -478,6 +551,7 @@ export default function GeradorDocumentosPage() {
           )}
         </section>
       </div>
+      )}
     </div>
   )
 }

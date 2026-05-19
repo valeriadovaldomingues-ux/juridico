@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   if (!podeGerarDocumento(confirmouRevisao, dados)) {
     return Response.json(
-      { error: 'Revise os dados extraídos e confirme a autorização antes de gerar o documento.' },
+      { error: 'Preencha os dados obrigatórios, informe o nome de quem revisou e confirme a revisão antes de gerar o documento.' },
       { status: 400 },
     )
   }

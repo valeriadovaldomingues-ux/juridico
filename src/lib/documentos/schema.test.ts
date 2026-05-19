@@ -47,11 +47,26 @@ describe('schema do gerador de documentos', () => {
     expect(dados.camposAusentes).toContain('Finalidade')
   })
 
-  it('bloqueia geração sem confirmação humana', () => {
+  it('bloqueia geração sem confirmação humana, revisor ou campos mínimos', () => {
     const dados = normalizarDadosDocumento({ tipoDocumento: 'peticao_comum' }, 'peticao_comum')
 
     expect(podeGerarDocumento(false, dados)).toBe(false)
-    expect(podeGerarDocumento(true, dados)).toBe(true)
+    expect(podeGerarDocumento(true, dados)).toBe(false)
+    expect(podeGerarDocumento(true, normalizarDadosDocumento({
+      tipoDocumento: 'peticao_comum',
+      tipoPeticao: 'Manifestação',
+      processo: '0000000-00.2026.8.13.0000',
+      nomeRazaoSocial: 'Cliente',
+      parteContraria: 'Parte contrária',
+      objeto: 'Manifestação simples',
+      fatosResumidos: 'Fatos.',
+      pedidos: 'Pedido.',
+      vara: '1ª',
+      comarca: 'Belo Horizonte',
+      uf: 'MG',
+      valorCausa: '1.000,00',
+      nomeRevisor: 'Valéria',
+    }, 'peticao_comum'))).toBe(true)
   })
 
   it('normaliza campos específicos da petição comum', () => {

@@ -42,6 +42,31 @@ describe('POST /api/documentos/gerar', () => {
     const body = await res.json()
 
     expect(res.status).toBe(400)
-    expect(body.error).toContain('Revise os dados')
+    expect(body.error).toContain('confirme a revisão')
+  })
+
+  it('bloqueia geração sem nome de quem revisou', async () => {
+    mockApiGuard.mockResolvedValue({ role: 'advogado', userId: 'uid' })
+
+    const res = await POST(request({
+      confirmouRevisao: true,
+      dados: {
+        tipoDocumento: 'contrato_partido',
+        clienteTipo: 'pj',
+        nomeRazaoSocial: 'Empresa Teste Ltda.',
+        cpfCnpj: '00.000.000/0001-00',
+        endereco: 'Rua Teste, 100',
+        honorarios: 'R$ 5.000,00',
+        vencimento: '10',
+        primeiraParcela: '10/06/2026',
+        vigenciaInicio: '01/06/2026',
+        todasAreas: true,
+        percentualExito: '10%',
+      },
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('nome de quem revisou')
   })
 })

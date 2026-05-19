@@ -11,11 +11,12 @@ import {
 const ALLOWED_ROLES = ['administrativo', 'advogado', 'gerente', 'socio'] as const
 
 function systemPrompt() {
-  return `Voce extrai dados para documentos internos do Pessoa e do Val Advocacia.
+  return `Você extrai dados para documentos internos do Pessoa e do Val Advocacia.
 Responda exclusivamente em JSON.
-Nao invente dados ausentes. Se CPF, CNPJ, processo, endereco, valor ou vencimento nao estiverem expressos, deixe o campo vazio e inclua em camposAusentes.
-Separe fatos fornecidos de inferencias. Use alertas para incertezas, documentos escaneados sem OCR, informacoes contraditorias ou campos sensiveis.
-Campos esperados: tipoDocumento, clienteTipo, nomeRazaoSocial, cpfCnpj, endereco, representanteLegal, cnpjBoletos, processo, parteContraria, objeto, honorarios, vencimento, primeiraParcela, vigenciaInicio, vigenciaFim, areasExcluidas, percentualExito, parcelaAdicionalDezembro, poderesProcuracao, finalidadeHipossuficiencia, tipoPeticao, fatosResumidos, direito, pedidos, foro, vara, comarca, uf, valorCausa, urgencia, gratuidadeJustica, localData, camposAusentes, alertas, confianca.`
+Não invente dados ausentes. Se CPF, CNPJ, processo, endereço, valor ou vencimento não estiverem expressos, deixe o campo vazio e inclua em camposAusentes.
+Separe fatos fornecidos de inferências. Use alertas para incertezas, documentos escaneados sem OCR, informações contraditórias ou campos sensíveis.
+A IA serve apenas para extrair e organizar dados. A redação jurídica final será montada por modelos oficiais.
+Campos esperados: tipoDocumento, clienteTipo, nomeRazaoSocial, cpfCnpj, endereco, representanteLegal, cnpjBoletos, processo, parteContraria, objeto, honorarios, vencimento, primeiraParcela, vigenciaInicio, vigenciaFim, todasAreas, areasExcluidas, percentualExito, parcelaAdicionalDezembro, poderesProcuracao, finalidadeHipossuficiencia, tipoPeticao, fatosResumidos, direito, pedidos, foro, vara, comarca, uf, valorCausa, urgencia, gratuidadeJustica, localData, nomeRevisor, camposAusentes, alertas, confianca. Não preencha nomeRevisor; esse campo deve ser informado manualmente na revisão.`
 }
 
 export async function POST(request: Request) {
@@ -42,8 +43,8 @@ export async function POST(request: Request) {
     tipo: file.type,
     tamanho: file.size,
     aviso: file.type === 'application/pdf'
-      ? 'PDF recebido. Nesta fase, a extracao automatica usa o relato livre; PDF selecionavel fica preparado para fase posterior.'
-      : 'Imagem recebida. OCR ainda nao esta ativo nesta fase.',
+      ? 'PDF recebido. Nesta fase, a extração automática usa o relato livre; PDF selecionável fica preparado para fase posterior.'
+      : 'Imagem recebida. OCR ainda não está ativo nesta fase.',
   }))
 
   if (!relato && anexos.length === 0) {
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
           tipoDocumento,
           relato,
           anexos,
-          orientacao: 'Extraia apenas dados expressamente informados. Nao crie CPF/CNPJ, valores, datas ou processo se nao constarem do relato.',
+          orientacao: 'Extraia apenas dados expressamente informados. Não crie CPF/CNPJ, valores, datas ou processo se não constarem do relato.',
         }),
       },
     ], { temperature: 0.1 })

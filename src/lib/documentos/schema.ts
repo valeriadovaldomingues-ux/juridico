@@ -46,9 +46,11 @@ export interface DadosDocumento {
   primeiraParcela: string
   vigenciaInicio: string
   vigenciaFim: string
+  todasAreas: boolean | null
   areasExcluidas: string
   percentualExito: string
   parcelaAdicionalDezembro: boolean | null
+  nomeRevisor: string
   poderesProcuracao: string[]
   finalidadeHipossuficiencia: string
   tipoPeticao: string
@@ -91,9 +93,11 @@ export const DADOS_DOCUMENTO_VAZIO: DadosDocumento = {
   primeiraParcela: '',
   vigenciaInicio: '',
   vigenciaFim: '',
+  todasAreas: null,
   areasExcluidas: '',
   percentualExito: '',
   parcelaAdicionalDezembro: null,
+  nomeRevisor: '',
   poderesProcuracao: [],
   finalidadeHipossuficiencia: '',
   tipoPeticao: '',
@@ -123,7 +127,6 @@ const CAMPOS_OBRIGATORIOS: Record<TipoDocumentoGerador, Array<keyof DadosDocumen
     'vencimento',
     'primeiraParcela',
     'vigenciaInicio',
-    'areasExcluidas',
     'percentualExito',
   ],
   contrato_acao_isolada: [
@@ -171,8 +174,10 @@ const LABELS_CAMPOS: Partial<Record<keyof DadosDocumento, string>> = {
   vencimento: 'Vencimento',
   primeiraParcela: 'Primeira parcela',
   vigenciaInicio: 'Início da vigência',
+  todasAreas: 'Abrangência das áreas',
   areasExcluidas: 'Áreas excluídas',
   percentualExito: 'Percentual de êxito',
+  nomeRevisor: 'Nome de quem revisou',
   parteContraria: 'Parte contrária',
   objeto: 'Objeto',
   foro: 'Foro',
@@ -224,7 +229,7 @@ function confianca(valor: unknown): number {
 
 export function calcularCamposAusentes(tipoDocumento: TipoDocumentoGerador, dados: DadosDocumento) {
   const campos = CAMPOS_OBRIGATORIOS[tipoDocumento]
-  return campos
+  const ausentes = campos
     .filter(campo => {
       const valor = dados[campo]
       if (Array.isArray(valor)) return valor.length === 0
@@ -232,6 +237,15 @@ export function calcularCamposAusentes(tipoDocumento: TipoDocumentoGerador, dado
       return !String(valor ?? '').trim()
     })
     .map(campo => LABELS_CAMPOS[campo] ?? String(campo))
+
+  if (tipoDocumento === 'contrato_partido') {
+    if (dados.todasAreas === null) ausentes.push(LABELS_CAMPOS.todasAreas!)
+    if (dados.todasAreas === false && !dados.areasExcluidas.trim()) {
+      ausentes.push(LABELS_CAMPOS.areasExcluidas!)
+    }
+  }
+
+  return ausentes
 }
 
 export function normalizarDadosDocumento(input: unknown, tipoPadrao: TipoDocumentoGerador): DadosDocumento {
@@ -255,9 +269,11 @@ export function normalizarDadosDocumento(input: unknown, tipoPadrao: TipoDocumen
     primeiraParcela: texto(obj.primeiraParcela),
     vigenciaInicio: texto(obj.vigenciaInicio),
     vigenciaFim: texto(obj.vigenciaFim),
+    todasAreas: booleanOuNull(obj.todasAreas),
     areasExcluidas: texto(obj.areasExcluidas),
     percentualExito: texto(obj.percentualExito),
     parcelaAdicionalDezembro: booleanOuNull(obj.parcelaAdicionalDezembro),
+    nomeRevisor: texto(obj.nomeRevisor),
     poderesProcuracao: lista(obj.poderesProcuracao),
     finalidadeHipossuficiencia: texto(obj.finalidadeHipossuficiencia),
     tipoPeticao: texto(obj.tipoPeticao),
@@ -284,7 +300,8 @@ export function normalizarDadosDocumento(input: unknown, tipoPadrao: TipoDocumen
 }
 
 export function podeGerarDocumento(confirmouRevisao: boolean, dados: DadosDocumento | null): boolean {
-  return confirmouRevisao && !!dados
+  if (!confirmouRevisao || !dados || !dados.nomeRevisor.trim()) return false
+  return calcularCamposAusentes(dados.tipoDocumento, dados).length === 0
 }
 
 export function tituloTipoDocumento(tipo: TipoDocumentoGerador) {
