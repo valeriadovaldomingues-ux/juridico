@@ -1,4 +1,5 @@
 import { requireRole } from '@/lib/auth/guards'
+import { listarResumoFontesMonitoramento } from '@/lib/monitoramento/fontes'
 import { createClient } from '@/lib/supabase/server'
 import MonitoramentoPage from './MonitoramentoPage'
 
@@ -6,6 +7,7 @@ export default async function MonitoramentoRoute() {
   // Sincronizado com ALLOWED_ROUTES: advogado, gerente, socio.
   await requireRole(['advogado', 'gerente', 'socio'])
   const supabase = await createClient()
+  const fontes = listarResumoFontesMonitoramento()
 
   const [
     { data: advogados,   error: advError },
@@ -62,6 +64,7 @@ export default async function MonitoramentoRoute() {
       advogados={advogados ?? []}
       publicacoes={(publicacoes as any[]) ?? []}
       logs={(logs as any[]) ?? []}
+      fontes={fontes}
     />
   )
 }

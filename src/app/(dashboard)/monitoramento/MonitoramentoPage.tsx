@@ -67,6 +67,21 @@ interface Log {
   disparado_por: string
 }
 
+interface FonteMonitoramentoResumo {
+  id: string
+  nome: string
+  tribunal: string
+  ramo: string
+  status: 'ativo' | 'preparado' | 'pendente' | 'erro' | 'requer_credencial'
+  descricao: string
+  requerCredencial?: boolean
+  ultima_execucao?: string | null
+  total_encontrado?: number | null
+  total_inserido?: number | null
+  total_ignorado?: number | null
+  erro?: string | null
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const STATUS_CFG = {
@@ -90,6 +105,14 @@ const ORIGEM_CFG: Record<string, { label: string; color: string }> = {
   datajud_processo:  { label: 'Por processo',  color: 'text-indigo-600'  },
   datajud_combinado: { label: 'Combinado',     color: 'text-violet-600'  },
   manual:            { label: 'Manual',        color: 'text-slate-500'   },
+}
+
+const FONTE_STATUS_CFG: Record<FonteMonitoramentoResumo['status'], { label: string; bg: string; text: string; border: string }> = {
+  ativo:             { label: 'Ativo',             bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  preparado:         { label: 'Preparado',         bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
+  pendente:          { label: 'Pendente',          bg: 'bg-slate-100',  text: 'text-slate-600',   border: 'border-slate-200'   },
+  erro:              { label: 'Erro',              bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200'     },
+  requer_credencial: { label: 'Requer credencial', bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
 }
 
 const PAGE_SIZE = 25
@@ -292,10 +315,12 @@ export default function MonitoramentoPage({
   advogados: initialAdvogados,
   publicacoes: initialPublicacoes,
   logs: initialLogs,
+  fontes,
 }: {
   advogados: Advogado[]
   publicacoes: PublicacaoMonitorada[]
   logs: Log[]
+  fontes: FonteMonitoramentoResumo[]
 }) {
   const supabase = createClient()
 
@@ -387,16 +412,23 @@ export default function MonitoramentoPage({
     setSaving(false)
   }
 
-  function triggerSearch() {
+  function triggerSearch(fonte?: string) {
     start(async () => {
       setLastMsg(null)
       try {
-        const res  = await fetch('/api/monitoramento/buscar', { method: 'POST' })
+        const res  = await fetch('/api/monitoramento/buscar', {
+          method: 'POST',
+          headers: fonte ? { 'content-type': 'application/json' } : undefined,
+          body: fonte ? JSON.stringify({ fonte }) : undefined,
+        })
         const data = await res.json()
         if (data.sucesso) {
+          const fontesResumo = Array.isArray(data.fontes)
+            ? ` · ${data.fontes.map((f: { fonte_nome: string; status: string }) => `${f.fonte_nome}: ${f.status}`).join(', ')}`
+            : ''
           setLastMsg({
             ok: true,
-            text: `${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_pesquisas} pesquisas · ${(data.duracao_ms / 1000).toFixed(1)}s`,
+            text: `${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_pesquisas} fonte(s) · ${(data.duracao_ms / 1000).toFixed(1)}s${fontesResumo}`,
           })
           // Reload logs
           const { data: freshLogs } = await supabase
@@ -415,7 +447,10 @@ export default function MonitoramentoPage({
             if (freshPubs) setPubs(freshPubs as PublicacaoMonitorada[])
           }
         } else {
-          setLastMsg({ ok: false, text: data.erro ?? 'Erro desconhecido' })
+          const fontesResumo = Array.isArray(data.fontes)
+            ? ` ${data.fontes.map((f: { fonte_nome: string; mensagem?: string }) => `${f.fonte_nome}: ${f.mensagem ?? 'não executada'}`).join(' · ')}`
+            : ''
+          setLastMsg({ ok: false, text: `${data.erro ?? 'Erro desconhecido'}${fontesResumo}` })
         }
       } catch {
         setLastMsg({ ok: false, text: 'Erro ao conectar com a API' })
@@ -442,7 +477,7 @@ export default function MonitoramentoPage({
             <ExternalLink size={12} /> Publicações gerais
           </Link>
           <button
-            onClick={triggerSearch}
+            onClick={() => triggerSearch()}
             disabled={searching}
             className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
           >
@@ -483,6 +518,63 @@ export default function MonitoramentoPage({
             <p className="text-[11px] text-[#9aabb8] mt-1.5 font-medium">{label}</p>
           </button>
         ))}
+      </div>
+
+      {/* ── Monitoring sources ── */}
+      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#F0F6F6] flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[14px] font-bold text-[#0f1923]">Fontes de monitoramento</h2>
+            <p className="text-[12px] text-[#9aabb8] mt-0.5">
+              Cada fonte informa o status real. Apenas fontes ativas executam captura agora.
+            </p>
+          </div>
+          <span className="text-[11px] font-medium text-[#7a8899] whitespace-nowrap">
+            {fontes.filter(f => f.status === 'ativo').length} ativa(s)
+          </span>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#F0F6F6] max-h-[520px] overflow-y-auto">
+          {fontes.map(fonte => {
+            const cfg = FONTE_STATUS_CFG[fonte.status]
+            const podeExecutar = fonte.status === 'ativo'
+
+            return (
+              <div key={fonte.id} className="p-4 min-w-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold text-[#0f1923] truncate">{fonte.nome}</p>
+                    <p className="text-[11px] text-[#9aabb8] mt-0.5">
+                      {fonte.tribunal} · {fonte.ramo}
+                    </p>
+                  </div>
+                  <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap', cfg.bg, cfg.text, cfg.border)}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7a8899] leading-relaxed mt-2 line-clamp-2">
+                  {fonte.descricao}
+                </p>
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <p className="text-[10px] text-[#9aabb8]">
+                    Última execução: {fonte.ultima_execucao ? timeAgo(fonte.ultima_execucao) : '—'}
+                  </p>
+                  <button
+                    onClick={() => triggerSearch(fonte.id)}
+                    disabled={searching || !podeExecutar}
+                    className={cn(
+                      'text-[11px] font-semibold px-3 py-1.5 rounded-xl transition-colors',
+                      podeExecutar
+                        ? 'bg-[#1D5F60] text-white hover:bg-[#27777A] disabled:opacity-60'
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed',
+                    )}
+                  >
+                    Executar
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* ── Tabs ── */}
