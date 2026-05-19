@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { inflateRawSync } from 'zlib'
 import { modeloContratoPartido } from './modelos/contrato-partido'
 import { modeloContratoAcaoIsolada } from './modelos/contrato-acao-isolada'
 import { modeloProcuracao } from './modelos/procuracao'
@@ -14,6 +17,15 @@ import {
 interface ArquivoZip {
   path: string
   data: Buffer
+}
+
+const TEMPLATE_DIR = join(process.cwd(), 'public', 'templates', 'documentos')
+
+const TEMPLATE_DOCX: Partial<Record<TipoDocumentoGerador, string>> = {
+  contrato_partido: 'contrato-honorarios-template.docx',
+  procuracao: 'procuracao-template.docx',
+  hipossuficiencia: 'hipossuficiencia-template.docx',
+  peticao_comum: 'peticao-comum-template.docx',
 }
 
 const FOLHA_PADRAO_2026 = {
@@ -109,11 +121,143 @@ function criarZip(files: ArquivoZip[]): Buffer {
   return Buffer.concat([...locals, centralBuffer, end])
 }
 
+function lerZipDocx(buffer: Buffer): ArquivoZip[] {
+  let eocd = -1
+  for (let i = buffer.length - 22; i >= 0; i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i
+      break
+    }
+  }
+  if (eocd < 0) throw new Error('DOCX inválido: diretório central não encontrado.')
+
+  const total = buffer.readUInt16LE(eocd + 10)
+  let offset = buffer.readUInt32LE(eocd + 16)
+  const files: ArquivoZip[] = []
+
+  for (let i = 0; i < total; i++) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) {
+      throw new Error('DOCX inválido: entrada central corrompida.')
+    }
+
+    const method = buffer.readUInt16LE(offset + 10)
+    const compressedSize = buffer.readUInt32LE(offset + 20)
+    const nameLength = buffer.readUInt16LE(offset + 28)
+    const extraLength = buffer.readUInt16LE(offset + 30)
+    const commentLength = buffer.readUInt16LE(offset + 32)
+    const localOffset = buffer.readUInt32LE(offset + 42)
+    const path = buffer.subarray(offset + 46, offset + 46 + nameLength).toString('utf8')
+
+    if (buffer.readUInt32LE(localOffset) !== 0x04034b50) {
+      throw new Error(`DOCX inválido: entrada local ausente para ${path}.`)
+    }
+
+    const localNameLength = buffer.readUInt16LE(localOffset + 26)
+    const localExtraLength = buffer.readUInt16LE(localOffset + 28)
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength
+    const compressed = buffer.subarray(dataStart, dataStart + compressedSize)
+    const data = method === 0
+      ? Buffer.from(compressed)
+      : method === 8
+        ? inflateRawSync(compressed)
+        : Buffer.from(compressed)
+
+    files.push({ path, data })
+    offset += 46 + nameLength + extraLength + commentLength
+  }
+
+  return files
+}
+
 function esc(text: string) {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function substituirTodos(texto: string, busca: string, valor: string) {
+  return texto.split(busca).join(valor)
+}
+
+function valorOuVazio(valor: string) {
+  return valor.trim()
+}
+
+function placeholders(dados: DadosDocumento): Record<string, string> {
+  const abrangencia = dados.todasAreas === false
+    ? valorOuVazio(dados.areasExcluidas)
+    : 'Todas as áreas contratadas, observados os limites do instrumento.'
+  const parcelaAdicional = dados.parcelaAdicionalDezembro
+    ? 'Sim — parcela extra equivalente aos honorários mensais.'
+    : ''
+
+  return {
+    TIPO_DOCUMENTO: tituloTipoDocumento(dados.tipoDocumento),
+    NOME_CLIENTE: valorOuVazio(dados.nomeRazaoSocial),
+    TIPO_CLIENTE: dados.clienteTipo === 'pj' ? 'Pessoa jurídica' : dados.clienteTipo === 'pf' ? 'Pessoa física' : '',
+    CPF_CNPJ: valorOuVazio(dados.cpfCnpj),
+    ENDERECO: valorOuVazio(dados.endereco),
+    REPRESENTANTE_LEGAL: valorOuVazio(dados.representanteLegal),
+    CNPJ_BOLETOS: valorOuVazio(dados.cnpjBoletos),
+    PROCESSO: valorOuVazio(dados.processo),
+    PARTE_CONTRARIA: valorOuVazio(dados.parteContraria),
+    OBJETO: valorOuVazio(dados.objeto),
+    HONORARIOS: valorOuVazio(dados.honorarios),
+    VENCIMENTO: valorOuVazio(dados.vencimento),
+    PRIMEIRA_PARCELA: valorOuVazio(dados.primeiraParcela),
+    VIGENCIA_INICIO: valorOuVazio(dados.vigenciaInicio),
+    VIGENCIA_FIM: valorOuVazio(dados.vigenciaFim),
+    AREAS_EXCLUIDAS: abrangencia,
+    PERCENTUAL_EXITO: valorOuVazio(dados.percentualExito),
+    PARCELA_ADICIONAL_DEZEMBRO: parcelaAdicional,
+    PODERES_PROC: valorOuVazio(dados.poderesProcuracao.join('; ')),
+    FINALIDADE_HIPOSSUFICIENCIA: valorOuVazio(dados.finalidadeHipossuficiencia),
+    TIPO_PETICAO: valorOuVazio(dados.tipoPeticao),
+    FATOS: valorOuVazio(dados.fatosResumidos),
+    DIREITO: valorOuVazio(dados.direito),
+    PEDIDOS: valorOuVazio(dados.pedidos),
+    FORO: valorOuVazio(dados.foro || 'Belo Horizonte/MG'),
+    VARA: valorOuVazio(dados.vara),
+    COMARCA: valorOuVazio(dados.comarca),
+    UF: valorOuVazio(dados.uf),
+    VALOR_CAUSA: valorOuVazio(dados.valorCausa),
+    URGENTE: dados.urgencia ? 'URGENTE' : '',
+    GRATUIDADE_JUSTICA: dados.gratuidadeJustica ? 'DA GRATUIDADE DA JUSTIÇA' : '',
+    LOCAL_DATA: valorOuVazio(dados.localData || 'Belo Horizonte, ____ de ____________________ de 2026.'),
+    NOME_REVISOR: valorOuVazio(dados.nomeRevisor),
+  }
+}
+
+function aplicarTemplateDocx(template: Buffer, dados: DadosDocumento) {
+  const mapa = placeholders(dados)
+  const files = lerZipDocx(template).map(file => {
+    if (!file.path.endsWith('.xml')) return file
+    let xml = file.data.toString('utf8')
+    for (const [key, value] of Object.entries(mapa)) {
+      xml = substituirTodos(xml, `{{${key}}}`, esc(value))
+    }
+    if (!dados.parcelaAdicionalDezembro) {
+      xml = substituirTodos(xml, 'Parcela adicional anual em dezembro: sim — parcela extra equivalente aos honorários mensais.', '')
+    }
+    if (!dados.urgencia) {
+      xml = substituirTodos(xml, 'URGENTE', '')
+    }
+    if (!dados.gratuidadeJustica) {
+      xml = substituirTodos(xml, 'DA GRATUIDADE DA JUSTIÇA', '')
+      xml = substituirTodos(xml, 'A parte requerente declara não possuir condições de arcar com custas e despesas processuais sem prejuízo de seu sustento, razão pela qual requer a concessão dos benefícios da gratuidade da justiça, nos termos da legislação aplicável.', '')
+    }
+    return { ...file, data: Buffer.from(xml) }
+  })
+  return criarZip(files)
+}
+
+function gerarPorTemplate(dados: DadosDocumento): Buffer | null {
+  const nome = TEMPLATE_DOCX[dados.tipoDocumento]
+  if (!nome) return null
+  const caminho = join(TEMPLATE_DIR, nome)
+  if (!existsSync(caminho)) return null
+  return aplicarTemplateDocx(readFileSync(caminho), dados)
 }
 
 function paragraph(text: string, opts?: {
@@ -305,6 +449,9 @@ export function gerarDocumentoDocx(input: unknown, tipoPadrao?: TipoDocumentoGer
   const raw = input && typeof input === 'object' ? input as Record<string, unknown> : {}
   const tipo = tipoDocumentoValido(String(raw.tipoDocumento ?? '')) ? String(raw.tipoDocumento) as TipoDocumentoGerador : tipoPadrao ?? 'contrato_partido'
   const dados = normalizarDadosDocumento(input, tipo)
+  const porTemplate = gerarPorTemplate(dados)
+  if (porTemplate) return porTemplate
+
   const files: ArquivoZip[] = [
     { path: '[Content_Types].xml', data: Buffer.from(contentTypesXml()) },
     { path: '_rels/.rels', data: Buffer.from(relsXml()) },

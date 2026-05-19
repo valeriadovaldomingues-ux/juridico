@@ -2,16 +2,16 @@ import type { DadosDocumento } from '../schema'
 
 export function modeloHipossuficiencia(dados: DadosDocumento): string[] {
   return [
-    'DECLARACAO DE HIPOSSUFICIENCIA',
+    'DECLARAÇÃO DE HIPOSSUFICIÊNCIA',
     `Declarante: ${dados.nomeRazaoSocial || '[informar declarante]'}`,
     `CPF: ${dados.cpfCnpj || '[informar CPF]'}`,
-    `Endereco: ${dados.endereco || '[informar endereco]'}`,
+    `Endereço: ${dados.endereco || '[informar endereço]'}`,
     `Processo: ${dados.processo || '[informar se houver]'}`,
     '',
-    'Declaracao',
-    `Para fins de ${dados.finalidadeHipossuficiencia || '[informar finalidade]'}, o declarante afirma nao possuir condicoes de arcar com custas, despesas processuais e honorarios sem prejuizo de seu sustento ou de sua familia, requerendo os beneficios cabiveis, sob as penas da lei.`,
+    'Declaração',
+    `Para fins de ${dados.finalidadeHipossuficiencia || '[informar finalidade]'}, o declarante afirma não possuir condições de arcar com custas, despesas processuais e honorários sem prejuízo de seu sustento ou de sua família, requerendo os benefícios cabíveis, sob as penas da lei.`,
     '',
-    'Observacao de revisao',
-    'Minuta gerada para revisao humana obrigatoria antes de assinatura.',
+    'Revisão obrigatória antes da geração',
+    `Documento conferido por: ${dados.nomeRevisor || '[informar responsável pela revisão]'}.`,
   ]
 }

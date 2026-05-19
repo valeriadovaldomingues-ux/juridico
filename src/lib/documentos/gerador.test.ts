@@ -1,8 +1,20 @@
+import { existsSync } from 'fs'
+import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import { gerarDocumentoDocx } from './gerador'
 import { normalizarDadosDocumento } from './schema'
 
 describe('gerador DOCX', () => {
+  it('versiona os templates DOCX oficiais do gerador', () => {
+    const base = join(process.cwd(), 'public', 'templates', 'documentos')
+
+    expect(existsSync(join(base, 'contrato-honorarios-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'procuracao-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'hipossuficiencia-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'peticao-comum-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'folha-padrao-2026.docx'))).toBe(true)
+  })
+
   it('gera contrato de partido com as cláusulas obrigatórias do modelo oficial', () => {
     const docx = gerarDocumentoDocx(normalizarDadosDocumento({
       tipoDocumento: 'contrato_partido',
@@ -32,6 +44,8 @@ describe('gerador DOCX', () => {
     expect(xml).toContain('Cláusula oitava – DO FORO')
     expect(xml).toContain('Direito tributário e demandas criminais')
     expect(xml).toContain('Parcela adicional anual em dezembro: sim')
+    expect(xml).not.toContain('{{NOME_CLIENTE}}')
+    expect(xml).not.toContain('{{HONORARIOS}}')
   })
 
   it('omite a parcela adicional anual em dezembro quando não marcada', () => {
@@ -67,6 +81,25 @@ describe('gerador DOCX', () => {
 
     expect(xml).toContain('Cristiano Pessoa Sousa')
     expect(xml).toContain('Valéria Ferreira do Val Domingues Pessoa')
+    expect(xml).toContain('O outorgante nomeia e constitui seus procuradores')
+    expect(xml).not.toContain('{{NOME_CLIENTE}}')
+  })
+
+  it('gera declaração com trecho literal do modelo oficial parametrizado', () => {
+    const docx = gerarDocumentoDocx(normalizarDadosDocumento({
+      tipoDocumento: 'hipossuficiencia',
+      nomeRazaoSocial: 'Cliente Teste',
+      cpfCnpj: '000.000.000-00',
+      endereco: 'Rua Teste, 100',
+      finalidadeHipossuficiencia: 'requerimento de gratuidade da justiça',
+      nomeRevisor: 'Valéria',
+    }, 'hipossuficiencia'), 'hipossuficiencia')
+    const xml = docx.toString('utf8')
+
+    expect(xml).toContain('DECLARAÇÃO DE HIPOSSUFICIÊNCIA')
+    expect(xml).toContain('não possuir condições de arcar com custas')
+    expect(xml).toContain('requerimento de gratuidade da justiça')
+    expect(xml).not.toContain('{{FINALIDADE_HIPOSSUFICIENCIA}}')
   })
 
   it('aplica a folha padrão 2026 na petição comum', () => {

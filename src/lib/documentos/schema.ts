@@ -222,6 +222,12 @@ function booleano(valor: unknown): boolean {
   return typeof valor === 'boolean' ? valor : false
 }
 
+function uf(valor: unknown): string {
+  const raw = texto(valor)
+  if (raw.startsWith('{{') && raw.endsWith('}}')) return raw
+  return raw.toUpperCase().slice(0, 2)
+}
+
 function confianca(valor: unknown): number {
   if (typeof valor !== 'number' || Number.isNaN(valor)) return 0
   return Math.max(0, Math.min(1, valor))
@@ -282,7 +288,7 @@ export function normalizarDadosDocumento(input: unknown, tipoPadrao: TipoDocumen
     foro: texto(obj.foro),
     vara: texto(obj.vara),
     comarca: texto(obj.comarca),
-    uf: texto(obj.uf).toUpperCase().slice(0, 2),
+    uf: uf(obj.uf),
     direito: texto(obj.direito),
     valorCausa: texto(obj.valorCausa),
     urgencia: booleano(obj.urgencia),
