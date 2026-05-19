@@ -22,14 +22,15 @@ interface ArquivoZip {
 const TEMPLATE_DIR = join(process.cwd(), 'public', 'templates', 'documentos')
 
 const TEMPLATE_DOCX: Partial<Record<TipoDocumentoGerador, string>> = {
-  contrato_partido: 'contrato-honorarios-template.docx',
+  contrato_partido: 'contrato-partido-template.docx',
+  contrato_acao_isolada: 'contrato-acao-isolada-template.docx',
   procuracao: 'procuracao-template.docx',
   hipossuficiencia: 'hipossuficiencia-template.docx',
   peticao_comum: 'peticao-comum-template.docx',
 }
 
 const FOLHA_PADRAO_2026 = {
-  referenciaVisual: '/documentos/folha-padrao-2026.jpeg',
+  referenciaVisual: '/templates/documentos/folha-padrao-2026.png',
   azul: '1B2A4E',
   cobre: 'B8864B',
   cinzaTexto: '2F3440',
@@ -180,6 +181,12 @@ function substituirTodos(texto: string, busca: string, valor: string) {
   return texto.split(busca).join(valor)
 }
 
+function removerParagrafosComTexto(xml: string, texto: string) {
+  const textoRegex = texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`<w:p\\b(?:(?!<\\/w:p>)[\\s\\S])*?${textoRegex}(?:(?!<\\/w:p>)[\\s\\S])*?<\\/w:p>`, 'g')
+  return xml.replace(regex, '')
+}
+
 function valorOuVazio(valor: string) {
   return valor.trim()
 }
@@ -222,6 +229,9 @@ function placeholders(dados: DadosDocumento): Record<string, string> {
     COMARCA: valorOuVazio(dados.comarca),
     UF: valorOuVazio(dados.uf),
     VALOR_CAUSA: valorOuVazio(dados.valorCausa),
+    PARAGRAFO_GRATUIDADE_JUSTICA: dados.gratuidadeJustica
+      ? 'O autor declara, sob as penas da lei, não possuir condições de arcar com as custas processuais e honorários advocatícios sem prejuízo próprio ou de sua família, razão pela qual requer o benefício da justiça gratuita, nos termos do art. 98 do CPC, conforme declaração anexa.'
+      : '',
     URGENTE: dados.urgencia ? 'URGENTE' : '',
     GRATUIDADE_JUSTICA: dados.gratuidadeJustica ? 'DA GRATUIDADE DA JUSTIÇA' : '',
     LOCAL_DATA: valorOuVazio(dados.localData || 'Belo Horizonte, ____ de ____________________ de 2026.'),
@@ -239,6 +249,8 @@ function aplicarTemplateDocx(template: Buffer, dados: DadosDocumento) {
     }
     if (!dados.parcelaAdicionalDezembro) {
       xml = substituirTodos(xml, 'Parcela adicional anual em dezembro: sim — parcela extra equivalente aos honorários mensais.', '')
+      xml = substituirTodos(xml, 'Em dezembro de cada ano, é devida uma parcela extra, no mesmo valor dos honorários e a serem pagos juntamente com os mesmos, a título de 13º salário, com fulcro na resolução CFC 290/70;', '')
+      xml = removerParagrafosComTexto(xml, 'Em dezembro de cada ano')
     }
     if (!dados.urgencia) {
       xml = substituirTodos(xml, 'URGENTE', '')

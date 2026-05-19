@@ -1,18 +1,94 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { inflateRawSync } from 'zlib'
 import { describe, expect, it } from 'vitest'
 import { gerarDocumentoDocx } from './gerador'
 import { normalizarDadosDocumento } from './schema'
+
+interface ArquivoZipTeste {
+  path: string
+  data: Buffer
+}
+
+function lerZipDocx(buffer: Buffer): ArquivoZipTeste[] {
+  let eocd = -1
+  for (let i = buffer.length - 22; i >= 0; i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i
+      break
+    }
+  }
+  if (eocd < 0) throw new Error('DOCX inválido nos testes.')
+
+  const total = buffer.readUInt16LE(eocd + 10)
+  let offset = buffer.readUInt32LE(eocd + 16)
+  const files: ArquivoZipTeste[] = []
+
+  for (let i = 0; i < total; i++) {
+    const method = buffer.readUInt16LE(offset + 10)
+    const compressedSize = buffer.readUInt32LE(offset + 20)
+    const nameLength = buffer.readUInt16LE(offset + 28)
+    const extraLength = buffer.readUInt16LE(offset + 30)
+    const commentLength = buffer.readUInt16LE(offset + 32)
+    const localOffset = buffer.readUInt32LE(offset + 42)
+    const path = buffer.subarray(offset + 46, offset + 46 + nameLength).toString('utf8')
+    const localNameLength = buffer.readUInt16LE(localOffset + 26)
+    const localExtraLength = buffer.readUInt16LE(localOffset + 28)
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength
+    const compressed = buffer.subarray(dataStart, dataStart + compressedSize)
+    const data = method === 8 ? inflateRawSync(compressed) : Buffer.from(compressed)
+
+    files.push({ path, data })
+    offset += 46 + nameLength + extraLength + commentLength
+  }
+
+  return files
+}
+
+function decodificarXml(texto: string) {
+  return texto
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+}
+
+function textoDocx(buffer: Buffer) {
+  const xml = lerZipDocx(buffer)
+    .filter(file => file.path.startsWith('word/') && file.path.endsWith('.xml'))
+    .map(file => file.data.toString('utf8'))
+    .join('')
+  return Array.from(xml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g))
+    .map(match => decodificarXml(match[1]))
+    .join('')
+}
+
+function xmlDocx(buffer: Buffer) {
+  return lerZipDocx(buffer)
+    .filter(file => file.path.startsWith('word/') && file.path.endsWith('.xml'))
+    .map(file => file.data.toString('utf8'))
+    .join('')
+}
+
+function caminhosDocx(buffer: Buffer) {
+  return lerZipDocx(buffer).map(file => file.path)
+}
+
+function esperarSemPlaceholders(buffer: Buffer) {
+  expect(textoDocx(buffer)).not.toMatch(/\{\{[A-Z0-9_]+\}\}/)
+}
 
 describe('gerador DOCX', () => {
   it('versiona os templates DOCX oficiais do gerador', () => {
     const base = join(process.cwd(), 'public', 'templates', 'documentos')
 
-    expect(existsSync(join(base, 'contrato-honorarios-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'contrato-partido-template.docx'))).toBe(true)
+    expect(existsSync(join(base, 'contrato-acao-isolada-template.docx'))).toBe(true)
     expect(existsSync(join(base, 'procuracao-template.docx'))).toBe(true)
     expect(existsSync(join(base, 'hipossuficiencia-template.docx'))).toBe(true)
     expect(existsSync(join(base, 'peticao-comum-template.docx'))).toBe(true)
-    expect(existsSync(join(base, 'folha-padrao-2026.docx'))).toBe(true)
+    expect(existsSync(join(base, 'folha-padrao-2026.png'))).toBe(true)
   })
 
   it('gera contrato de partido com as cláusulas obrigatórias do modelo oficial', () => {
@@ -32,20 +108,19 @@ describe('gerador DOCX', () => {
       parcelaAdicionalDezembro: true,
       nomeRevisor: 'Valéria',
     }, 'contrato_partido'), 'contrato_partido')
-    const xml = docx.toString('utf8')
+    const texto = textoDocx(docx)
 
-    expect(xml).toContain('Cláusula primeira – DO OBJETO')
-    expect(xml).toContain('Cláusula segunda – DA VIGÊNCIA')
-    expect(xml).toContain('Cláusula terceira – DO PAGAMENTO')
-    expect(xml).toContain('Cláusula quarta – DA SUCUMBÊNCIA')
-    expect(xml).toContain('Cláusula quinta – DAS CUSTAS JUDICIAIS')
-    expect(xml).toContain('Cláusula sexta – DAS DESPESAS DIVERSAS')
-    expect(xml).toContain('Cláusula sétima – DA DESISTÊNCIA')
-    expect(xml).toContain('Cláusula oitava – DO FORO')
-    expect(xml).toContain('Direito tributário e demandas criminais')
-    expect(xml).toContain('Parcela adicional anual em dezembro: sim')
-    expect(xml).not.toContain('{{NOME_CLIENTE}}')
-    expect(xml).not.toContain('{{HONORARIOS}}')
+    expect(texto).toContain('DO OBJETO')
+    expect(texto).toContain('DA VIGÊNCIA')
+    expect(texto).toContain('DO PAGAMENTO')
+    expect(texto).toContain('DA SUCUMBÊNCIA')
+    expect(texto).toContain('DAS CUSTAS JUDICIAIS')
+    expect(texto).toContain('DAS DESPESAS DIVERSAS')
+    expect(texto).toContain('DA DESISTÊNCIA')
+    expect(texto).toContain('DO FORO')
+    expect(texto).toContain('Direito tributário e demandas criminais')
+    expect(texto).toContain('Em dezembro de cada ano')
+    esperarSemPlaceholders(docx)
   })
 
   it('omite a parcela adicional anual em dezembro quando não marcada', () => {
@@ -65,7 +140,7 @@ describe('gerador DOCX', () => {
       nomeRevisor: 'Valéria',
     }, 'contrato_partido'), 'contrato_partido')
 
-    expect(docx.toString('utf8')).not.toContain('Parcela adicional anual em dezembro')
+    expect(textoDocx(docx)).not.toContain('Em dezembro de cada ano')
   })
 
   it('gera procuração com os advogados oficiais', () => {
@@ -77,12 +152,12 @@ describe('gerador DOCX', () => {
       endereco: 'Rua Teste, 100',
       nomeRevisor: 'Cristiano',
     }, 'procuracao'), 'procuracao')
-    const xml = docx.toString('utf8')
+    const texto = textoDocx(docx)
 
-    expect(xml).toContain('Cristiano Pessoa Sousa')
-    expect(xml).toContain('Valéria Ferreira do Val Domingues Pessoa')
-    expect(xml).toContain('O outorgante nomeia e constitui seus procuradores')
-    expect(xml).not.toContain('{{NOME_CLIENTE}}')
+    expect(texto).toContain('Cristiano Pessoa Sousa')
+    expect(texto).toContain('Valéria Ferreira do Val Domingues Pessoa')
+    expect(texto).toContain('nomeia e constitui seus bastantes procuradores')
+    esperarSemPlaceholders(docx)
   })
 
   it('gera declaração com trecho literal do modelo oficial parametrizado', () => {
@@ -94,12 +169,12 @@ describe('gerador DOCX', () => {
       finalidadeHipossuficiencia: 'requerimento de gratuidade da justiça',
       nomeRevisor: 'Valéria',
     }, 'hipossuficiencia'), 'hipossuficiencia')
-    const xml = docx.toString('utf8')
+    const texto = textoDocx(docx)
 
-    expect(xml).toContain('DECLARAÇÃO DE HIPOSSUFICIÊNCIA')
-    expect(xml).toContain('não possuir condições de arcar com custas')
-    expect(xml).toContain('requerimento de gratuidade da justiça')
-    expect(xml).not.toContain('{{FINALIDADE_HIPOSSUFICIENCIA}}')
+    expect(texto).toContain('DECLARAÇÃO DE  POBREZA')
+    expect(texto).toContain('não podendo, assim, pagar as custas processuais')
+    expect(texto).toContain('requerimento de gratuidade da justiça')
+    esperarSemPlaceholders(docx)
   })
 
   it('aplica a folha padrão 2026 na petição comum', () => {
@@ -123,19 +198,21 @@ describe('gerador DOCX', () => {
       localData: 'Belo Horizonte, 18 de maio de 2026.',
       nomeRevisor: 'Valéria',
     })
-    const xml = docx.toString('utf8')
+    const texto = textoDocx(docx)
+    const xml = xmlDocx(docx)
 
     expect(xml).toContain('Cormorant Garamond')
     expect(xml).toContain('Montserrat')
-    expect(xml).toContain('EXMO. SR. JUIZ DE DIREITO DA 1ª VARA CÍVEL DA COMARCA DE Belo Horizonte/MG.')
-    expect(xml).toContain('URGENTE')
-    expect(xml).toContain('DA GRATUIDADE DA JUSTIÇA')
-    expect(xml).toContain('DOS FATOS')
-    expect(xml).toContain('DO DIREITO')
-    expect(xml).toContain('DOS PEDIDOS')
-    expect(xml).toContain('Cristiano Pessoa Sousa')
-    expect(xml).toContain('Valéria F. do Val Domingues Pessoa')
-    expect(xml).toContain('header1.xml')
-    expect(xml).toContain('footer1.xml')
+    expect(texto).toContain('EXMO. SR. JUIZ DE DIREITO DA 1ª VARA CÍVEL DA COMARCA DE Belo Horizonte/MG')
+    expect(texto).toContain('URGENTE')
+    expect(texto).toContain('DA GRATUIDADE DA JUSTIÇA')
+    expect(texto).toContain('DOS FATOS')
+    expect(texto).toContain('DO DIREITO')
+    expect(texto).toContain('DOS PEDIDOS')
+    expect(texto).toContain('Cristiano Pessoa Sousa')
+    expect(texto).toContain('Valéria F. do Val Domingues Pessoa')
+    expect(caminhosDocx(docx)).toContain('word/header1.xml')
+    expect(caminhosDocx(docx)).toContain('word/footer1.xml')
+    esperarSemPlaceholders(docx)
   })
 })
