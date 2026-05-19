@@ -290,6 +290,30 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
   })
 
+  it('mantém TRT3/MG piloto sem captura ativa', async () => {
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([{
+      id: 'trt3',
+      nome: 'TRT3/MG',
+      tribunal: 'TRT3',
+      ramo: 'trabalhista',
+      status: 'pendente',
+      descricao: 'Piloto trabalhista de Minas Gerais. Fontes mapeadas: DEJT, DJEN e PJe-JT.',
+    }])
+    const supabase = supabaseComAdvogados()
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'trt3' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(false)
+    expect(body.erro).toBe('Fonte ainda não implementada.')
+    expect(body.fontes[0].fonte_nome).toBe('TRT3/MG')
+    expect(body.fontes[0].status).toBe('pendente')
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
+  })
+
   it('não executa e-SAJ e retorna aviso de implementação pendente', async () => {
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
     mockSelecionarFontesMonitoramento.mockReturnValue([{

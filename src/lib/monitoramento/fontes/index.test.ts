@@ -27,6 +27,23 @@ describe('fontes de monitoramento', () => {
     expect(trts.every(fonte => fonte.status === 'pendente')).toBe(true)
   })
 
+  it('mapeia TRT3/MG como piloto trabalhista sem captura ativa', async () => {
+    const { listarFontesMonitoramento, fontePodeExecutar } = await import('./index')
+    const { CANAIS_TRT3_MG } = await import('./trt3-mg')
+
+    const trt3 = listarFontesMonitoramento().find(fonte => fonte.id === 'trt3')
+
+    expect(trt3?.nome).toBe('TRT3/MG')
+    expect(trt3?.ramo).toBe('trabalhista')
+    expect(trt3?.status).toBe('pendente')
+    expect(trt3?.descricao).toContain('DEJT')
+    expect(trt3?.descricao).toContain('DJEN')
+    expect(trt3?.descricao).toContain('PJe-JT')
+    expect(fontePodeExecutar(trt3!)).toBe(false)
+    expect(CANAIS_TRT3_MG.map(canal => canal.id)).toEqual(['dejt', 'djen', 'pje-jt'])
+    expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
+  })
+
   it('cataloga TRFs e TJs nacionais sem fingir captura ativa', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
