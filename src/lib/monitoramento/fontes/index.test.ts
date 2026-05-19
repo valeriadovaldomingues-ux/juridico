@@ -39,6 +39,19 @@ describe('fontes de monitoramento', () => {
     expect(tjsp?.status).toBe('pendente')
   })
 
+  it('cataloga e-SAJ como fonte estadual pendente sem execução ativa', async () => {
+    const { listarFontesMonitoramento, fontePodeExecutar } = await import('./index')
+
+    const esaj = listarFontesMonitoramento().find(fonte => fonte.id === 'esaj')
+
+    expect(esaj?.nome).toBe('e-SAJ')
+    expect(esaj?.ramo).toBe('estadual')
+    expect(esaj?.status).toBe('pendente')
+    expect(esaj?.descricao).toContain('Requer implementação específica por tribunal')
+    expect(esaj?.descricao).toContain('TJSP')
+    expect(fontePodeExecutar(esaj!)).toBe(false)
+  })
+
   it('marca DataJud como requer credencial quando não há DATAJUD_API_KEY', async () => {
     vi.stubEnv('DATAJUD_API_KEY', '')
     vi.resetModules()

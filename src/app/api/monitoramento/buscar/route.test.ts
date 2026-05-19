@@ -290,6 +290,30 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
   })
 
+  it('não executa e-SAJ e retorna aviso de implementação pendente', async () => {
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([{
+      id: 'esaj',
+      nome: 'e-SAJ',
+      tribunal: 'Múltiplos TJs',
+      ramo: 'estadual',
+      status: 'pendente',
+      descricao: 'Fonte para tribunais que utilizam e-SAJ. Requer implementação específica por tribunal.',
+    }])
+    const supabase = supabaseComAdvogados()
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'esaj' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(false)
+    expect(body.erro).toBe('Fonte ainda não implementada.')
+    expect(body.fontes[0].fonte_nome).toBe('e-SAJ')
+    expect(body.fontes[0].status).toBe('pendente')
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
+  })
+
   it('retorna aviso claro para fonte sem credencial', async () => {
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
     mockSelecionarFontesMonitoramento.mockReturnValue([{
