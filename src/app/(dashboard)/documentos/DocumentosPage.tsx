@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   Plus, FileText, LayoutTemplate, Wand2, Pencil, Trash2,
   Copy, Check, Scale, Clock,
@@ -153,6 +154,15 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
           <p className="text-[13px] text-[#7a8899] mt-0.5">Modelos e geração automática de documentos jurídicos</p>
         </div>
         <div className="flex gap-2">
+          {podeCriarGerado && (
+            <Link
+              href="/documentos/gerador"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#1B2A4E] hover:bg-[#25365F] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+            >
+              <Wand2 size={14} />
+              Gerador Inteligente
+            </Link>
+          )}
           {podeCriarGerado && (
             <button
               onClick={() => setGeradorModal({ open: true })}
