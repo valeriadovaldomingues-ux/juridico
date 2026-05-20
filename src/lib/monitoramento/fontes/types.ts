@@ -17,6 +17,8 @@ export type OrigemPublicacaoCapturada =
   | 'datajud_nome'
   | 'datajud_processo'
   | 'datajud_combinado'
+  | 'trt3_dejt'
+  | 'trt3_djen'
   | 'manual'
 
 export interface PublicacaoCapturada {
@@ -51,6 +53,8 @@ export interface ResultadoMonitoramento {
 export interface ContextoFonteMonitoramento {
   nomes: string[]
   processos: string[]
+  oabs?: string[]
+  data?: string
 }
 
 export interface FonteMonitoramento {
@@ -83,4 +87,5 @@ export interface FiltroFontesMonitoramento {
   fonte?: string
   tribunal?: string
   ramo?: string
+  data?: string
 }

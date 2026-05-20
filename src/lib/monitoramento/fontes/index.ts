@@ -56,6 +56,19 @@ export function selecionarFontesMonitoramento(
   const ramo = filtro.ramo?.trim().toLowerCase()
 
   if (fonte) {
+    if (fonte === 'trt3-dejt') {
+      return fontes.filter(item => item.id === 'trt3')
+    }
+    if (fonte === 'trt3-djen') {
+      return [{
+        id: 'trt3-djen',
+        nome: 'TRT3/MG DJEN',
+        tribunal: 'TRT3',
+        ramo: 'trabalhista',
+        status: 'pendente',
+        descricao: 'DJEN mapeado para o piloto TRT3/MG, ainda pendente de endpoint público validado para captura segura.',
+      }]
+    }
     return fontes.filter(item => item.id.toLowerCase() === fonte)
   }
 

@@ -80,6 +80,31 @@ function fonteTJMG(publicacoes: any[] = []) {
   }
 }
 
+function fonteTRT3(publicacoes: any[] = []) {
+  return {
+    id: 'trt3',
+    nome: 'TRT3/MG',
+    tribunal: 'TRT3',
+    ramo: 'trabalhista',
+    status: 'ativo',
+    descricao: 'TRT3 ativo parcial pelo DEJT',
+    executar: vi.fn().mockResolvedValue({
+      fonte_id: 'trt3',
+      fonte_nome: 'TRT3/MG',
+      tribunal: 'TRT3',
+      ramo: 'trabalhista',
+      status: 'ativo',
+      encontradas: publicacoes.length,
+      inseridas: 0,
+      duplicadas: 0,
+      ignoradas: 0,
+      falhas: 0,
+      publicacoes,
+      mensagem: 'TRT3/MG ativo parcial: captura real pelo DEJT.',
+    }),
+  }
+}
+
 function pubCapturada() {
   return {
     fonte_id: 'tjmg-dje',
@@ -91,6 +116,21 @@ function pubCapturada() {
     nome_pesquisado: 'ADVOGADO TESTE',
     texto_publicacao: 'Intimação de teste para manifestação.',
     origem: 'datajud_nome',
+    termo_encontrado: 'ADVOGADO TESTE',
+  }
+}
+
+function pubTRT3() {
+  return {
+    fonte_id: 'trt3',
+    numero_processo: '0010000-00.2026.5.03.0001',
+    tribunal: 'TRT3',
+    orgao: 'Caderno Judiciário TRT3',
+    diario: 'DEJT',
+    data_publicacao: '2026-05-18',
+    nome_pesquisado: 'ADVOGADO TESTE',
+    texto_publicacao: 'Intimação trabalhista de ADVOGADO TESTE para manifestação.',
+    origem: 'trt3_dejt',
     termo_encontrado: 'ADVOGADO TESTE',
   }
 }
@@ -249,6 +289,8 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(fonte.executar).toHaveBeenCalledWith({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
+      oabs: ['MG123', '123/MG'],
+      data: undefined,
     })
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
@@ -290,27 +332,50 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
   })
 
-  it('mantém TRT3/MG piloto sem captura ativa', async () => {
+  it('executa TRT3/MG ativo parcial e grava publicações do DEJT em publicacoes', async () => {
+    const fonte = fonteTRT3([pubTRT3()])
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    const supabase = supabaseComAdvogados()
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonte])
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'trt3-dejt', data: '2026-05-18' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(true)
+    expect(body.total_novas).toBe(1)
+    expect(body.fontes[0].fonte_nome).toBe('TRT3/MG')
+    expect(body.fontes[0].status).toBe('ativo')
+    expect(fonte.executar).toHaveBeenCalledWith({
+      nomes: ['ADVOGADO TESTE'],
+      processos: ['50000000020268130000'],
+      oabs: ['MG123', '123/MG'],
+      data: '2026-05-18',
+    })
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
+  })
+
+  it('mantém TRT3 DJEN pendente sem inserir publicações', async () => {
     mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
     mockSelecionarFontesMonitoramento.mockReturnValue([{
-      id: 'trt3',
-      nome: 'TRT3/MG',
+      id: 'trt3-djen',
+      nome: 'TRT3/MG DJEN',
       tribunal: 'TRT3',
       ramo: 'trabalhista',
       status: 'pendente',
-      descricao: 'Piloto trabalhista de Minas Gerais. Fontes mapeadas: DEJT, DJEN e PJe-JT.',
+      descricao: 'DJEN pendente',
     }])
     const supabase = supabaseComAdvogados()
     mockCreateClient.mockResolvedValue(supabase)
 
-    const res = await POST(request({ fonte: 'trt3' }))
+    const res = await POST(request({ fonte: 'trt3-djen' }))
     const body = await res.json()
 
     expect(res.status).toBe(200)
     expect(body.sucesso).toBe(false)
     expect(body.erro).toBe('Fonte ainda não implementada.')
-    expect(body.fontes[0].fonte_nome).toBe('TRT3/MG')
-    expect(body.fontes[0].status).toBe('pendente')
+    expect(body.fontes[0].fonte_nome).toBe('TRT3/MG DJEN')
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(false)
   })
 

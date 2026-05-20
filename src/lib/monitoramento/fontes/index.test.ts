@@ -16,7 +16,7 @@ describe('fontes de monitoramento', () => {
     expect(typeof tjmg?.executar).toBe('function')
   })
 
-  it('cataloga TRT1 a TRT24 como pendentes', async () => {
+  it('cataloga TRT1 a TRT24 com TRT3 como piloto ativo parcial', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
     const trts = listarFontesMonitoramento().filter(fonte => fonte.ramo === 'trabalhista')
@@ -24,10 +24,10 @@ describe('fontes de monitoramento', () => {
     expect(trts).toHaveLength(24)
     expect(trts[0]?.id).toBe('trt1')
     expect(trts[23]?.id).toBe('trt24')
-    expect(trts.every(fonte => fonte.status === 'pendente')).toBe(true)
+    expect(trts.filter(fonte => fonte.id !== 'trt3').every(fonte => fonte.status === 'pendente')).toBe(true)
   })
 
-  it('mapeia TRT3/MG como piloto trabalhista sem captura ativa', async () => {
+  it('mapeia TRT3/MG como piloto trabalhista ativo parcial pelo DEJT', async () => {
     const { listarFontesMonitoramento, fontePodeExecutar } = await import('./index')
     const { CANAIS_TRT3_MG } = await import('./trt3-mg')
 
@@ -35,12 +35,14 @@ describe('fontes de monitoramento', () => {
 
     expect(trt3?.nome).toBe('TRT3/MG')
     expect(trt3?.ramo).toBe('trabalhista')
-    expect(trt3?.status).toBe('pendente')
+    expect(trt3?.status).toBe('ativo')
     expect(trt3?.descricao).toContain('DEJT')
     expect(trt3?.descricao).toContain('DJEN')
     expect(trt3?.descricao).toContain('PJe-JT')
-    expect(fontePodeExecutar(trt3!)).toBe(false)
+    expect(fontePodeExecutar(trt3!)).toBe(true)
     expect(CANAIS_TRT3_MG.map(canal => canal.id)).toEqual(['dejt', 'djen', 'pje-jt'])
+    expect(CANAIS_TRT3_MG.find(canal => canal.id === 'dejt')?.status).toBe('ativo')
+    expect(CANAIS_TRT3_MG.find(canal => canal.id === 'djen')?.status).toBe('pendente')
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
   })
 
@@ -94,6 +96,15 @@ describe('fontes de monitoramento', () => {
 
     const fontes = selecionarFontesMonitoramento()
 
-    expect(fontes.map(fonte => fonte.id)).toEqual(['tjmg-dje'])
+    expect(fontes.map(fonte => fonte.id)).toEqual(['tjmg-dje', 'trt3'])
+  })
+
+  it('seleciona TRT3 pelo alias trt3-dejt e mantém DJEN pendente', async () => {
+    const { selecionarFontesMonitoramento } = await import('./index')
+
+    expect(selecionarFontesMonitoramento({ fonte: 'trt3-dejt' }).map(fonte => fonte.id)).toEqual(['trt3'])
+    const djen = selecionarFontesMonitoramento({ fonte: 'trt3-djen' })[0]
+    expect(djen?.id).toBe('trt3-djen')
+    expect(djen?.status).toBe('pendente')
   })
 })

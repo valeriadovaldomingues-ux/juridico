@@ -91,6 +91,11 @@ async function lerFiltro(request: Request): Promise<FiltroFontesMonitoramento> {
       fonte: typeof body?.fonte === 'string' ? body.fonte : undefined,
       tribunal: typeof body?.tribunal === 'string' ? body.tribunal : undefined,
       ramo: typeof body?.ramo === 'string' ? body.ramo : undefined,
+      data: typeof body?.data === 'string'
+        ? body.data
+        : typeof body?.data_publicacao === 'string'
+          ? body.data_publicacao
+          : undefined,
     }
   } catch {
     return {}
@@ -182,6 +187,8 @@ async function executarFonte(
   fonte: FonteMonitoramento,
   nomes: string[],
   processos: string[],
+  oabs: string[],
+  data: string | undefined,
   supabase: Awaited<ReturnType<typeof createClient>>,
   processoMap: Map<string, string>,
 ): Promise<ResultadoMonitoramento> {
@@ -191,7 +198,7 @@ async function executarFonte(
 
   let resultado: ResultadoMonitoramento
   try {
-    resultado = await fonte.executar({ nomes, processos })
+    resultado = await fonte.executar({ nomes, processos, oabs, data })
   } catch (error) {
     return {
       fonte_id: fonte.id,
@@ -294,10 +301,15 @@ export async function POST(request: Request) {
   )
   const processoNums = [...processoMap.keys()]
   const nomes = (advogados as AdvogadoMonitorado[]).map(a => a.nome_completo)
+  const oabs = (advogados as AdvogadoMonitorado[])
+    .flatMap(a => [
+      `${a.oab_uf}${a.oab_numero}`,
+      `${a.oab_numero}/${a.oab_uf}`,
+    ])
 
   const resultados: ResultadoMonitoramento[] = []
   for (const fonte of fontes) {
-    const resultado = await executarFonte(fonte, nomes, processoNums, supabase, processoMap)
+    const resultado = await executarFonte(fonte, nomes, processoNums, oabs, filtro.data, supabase, processoMap)
     resultados.push(resultado)
   }
 
