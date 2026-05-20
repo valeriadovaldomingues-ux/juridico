@@ -131,6 +131,32 @@ function fonteTJDJEN(tribunal: string, publicacoes: any[] = []) {
   }
 }
 
+function fonteTRFDJEN(tribunal: string, publicacoes: any[] = []) {
+  const id = tribunal.toLowerCase()
+  return {
+    id,
+    nome: tribunal,
+    tribunal,
+    ramo: 'federal',
+    status: 'ativo',
+    descricao: `${tribunal} ativo via DJEN/CNJ`,
+    executar: vi.fn().mockResolvedValue({
+      fonte_id: id,
+      fonte_nome: tribunal,
+      tribunal,
+      ramo: 'federal',
+      status: 'ativo',
+      encontradas: publicacoes.length,
+      inseridas: 0,
+      duplicadas: 0,
+      ignoradas: 0,
+      falhas: 0,
+      publicacoes,
+      mensagem: `${tribunal} ativo via DJEN/CNJ.`,
+    }),
+  }
+}
+
 function fonteTJSP(publicacoes: any[] = []) {
   const fonte = fonteTJDJEN('TJSP', publicacoes)
   fonte.descricao = 'TJSP ativo via DJEN/CNJ'
@@ -192,6 +218,21 @@ function pubTJDJEN() {
     nome_pesquisado: 'ADVOGADO TESTE',
     texto_publicacao: 'Comunicação DJEN TJAC de ADVOGADO TESTE para manifestação.',
     origem: 'tj_djen',
+    termo_encontrado: 'ADVOGADO TESTE',
+  }
+}
+
+function pubTRFDJEN() {
+  return {
+    fonte_id: 'trf1',
+    numero_processo: '1000000-00.2026.4.01.0000',
+    tribunal: 'TRF1',
+    orgao: '9ª Vara Federal de Juizado Especial Cível da SJMT',
+    diario: 'DJEN',
+    data_publicacao: '2026-05-19',
+    nome_pesquisado: 'ADVOGADO TESTE',
+    texto_publicacao: 'Comunicação DJEN TRF1 de ADVOGADO TESTE para manifestação.',
+    origem: 'trf_djen',
     termo_encontrado: 'ADVOGADO TESTE',
   }
 }
@@ -502,6 +543,30 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.sucesso).toBe(true)
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TJAC')
+    expect(body.fontes[0].status).toBe('ativo')
+    expect(fonte.executar).toHaveBeenCalledWith({
+      nomes: ['ADVOGADO TESTE'],
+      processos: ['50000000020268130000'],
+      oabs: ['MG123', '123/MG'],
+      data: '2026-05-19',
+    })
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
+  })
+
+  it('executa TRF ativo via DJEN/CNJ e grava publicações em publicacoes', async () => {
+    const fonte = fonteTRFDJEN('TRF1', [pubTRFDJEN()])
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonte])
+    const supabase = supabaseComAdvogados()
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'trf1', data: '2026-05-19' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(true)
+    expect(body.total_novas).toBe(1)
+    expect(body.fontes[0].fonte_nome).toBe('TRF1')
     expect(body.fontes[0].status).toBe('ativo')
     expect(fonte.executar).toHaveBeenCalledWith({
       nomes: ['ADVOGADO TESTE'],

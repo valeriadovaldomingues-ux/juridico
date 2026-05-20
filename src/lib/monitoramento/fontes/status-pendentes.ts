@@ -27,6 +27,7 @@ const TJS_DJEN_ATIVOS = [
   'TJRN', 'TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJSP', 'TJTO',
 ]
 const TJS_DJEN_PENDENTES_RATE_LIMIT: string[] = []
+const TRFS_DJEN_ATIVOS = ['TRF1', 'TRF2', 'TRF3', 'TRF4', 'TRF5', 'TRF6']
 
 export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
   {
@@ -86,6 +87,19 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
     motivo: 'DataJud é adequado para metadados/movimentações processuais, não substitui publicação integral de diário.',
     proximaAcao: 'Com chave/configuração, usar como enriquecimento e vínculo de processos, não como diário principal.',
   },
+  ...TRFS_DJEN_ATIVOS.map((tribunal): DiagnosticoFontePendente => ({
+    id: tribunal.toLowerCase(),
+    tribunal,
+    ramo: 'federal',
+    fonteProvavel: 'DJEN/CNJ',
+    status: 'ativo',
+    endpoint: DJEN_ENDPOINT,
+    exigeCredencial: false,
+    validada: true,
+    capturaPublicacaoReal: true,
+    motivo: 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data com intervalo conservador.',
+    proximaAcao: 'Executar com termos monitorados reais e observar limites de requisição.',
+  })),
   ...TJS_DJEN_ATIVOS.map((tribunal): DiagnosticoFontePendente => ({
     id: tribunal.toLowerCase(),
     tribunal,
