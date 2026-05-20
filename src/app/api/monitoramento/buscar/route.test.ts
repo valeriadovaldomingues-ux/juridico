@@ -105,18 +105,19 @@ function fonteTRT3(publicacoes: any[] = [], id = 'trt3', nome = 'TRT3/MG') {
   }
 }
 
-function fonteTJSP(publicacoes: any[] = []) {
+function fonteTJDJEN(tribunal: string, publicacoes: any[] = []) {
+  const id = tribunal.toLowerCase()
   return {
-    id: 'tjsp',
-    nome: 'TJSP',
-    tribunal: 'TJSP',
+    id,
+    nome: tribunal,
+    tribunal,
     ramo: 'estadual',
     status: 'ativo',
-    descricao: 'TJSP ativo via DJEN/CNJ',
+    descricao: `${tribunal} ativo via DJEN/CNJ`,
     executar: vi.fn().mockResolvedValue({
-      fonte_id: 'tjsp',
-      fonte_nome: 'TJSP',
-      tribunal: 'TJSP',
+      fonte_id: id,
+      fonte_nome: tribunal,
+      tribunal,
       ramo: 'estadual',
       status: 'ativo',
       encontradas: publicacoes.length,
@@ -125,9 +126,29 @@ function fonteTJSP(publicacoes: any[] = []) {
       ignoradas: 0,
       falhas: 0,
       publicacoes,
-      mensagem: 'TJSP ativo via DJEN/CNJ. e-SAJ direto permanece pendente.',
+      mensagem: `${tribunal} ativo via DJEN/CNJ.`,
     }),
   }
+}
+
+function fonteTJSP(publicacoes: any[] = []) {
+  const fonte = fonteTJDJEN('TJSP', publicacoes)
+  fonte.descricao = 'TJSP ativo via DJEN/CNJ'
+  fonte.executar = vi.fn().mockResolvedValue({
+    fonte_id: 'tjsp',
+    fonte_nome: 'TJSP',
+    tribunal: 'TJSP',
+    ramo: 'estadual',
+    status: 'ativo',
+    encontradas: publicacoes.length,
+    inseridas: 0,
+    duplicadas: 0,
+    ignoradas: 0,
+    falhas: 0,
+    publicacoes,
+    mensagem: 'TJSP ativo via DJEN/CNJ. e-SAJ direto permanece pendente.',
+  })
+  return fonte
 }
 
 function pubCapturada() {
@@ -156,6 +177,21 @@ function pubTJSPDJEN() {
     nome_pesquisado: 'ADVOGADO TESTE',
     texto_publicacao: 'Comunicação DJEN TJSP de ADVOGADO TESTE para manifestação.',
     origem: 'tjsp_djen',
+    termo_encontrado: 'ADVOGADO TESTE',
+  }
+}
+
+function pubTJDJEN() {
+  return {
+    fonte_id: 'tjac',
+    numero_processo: '0700000-00.2026.8.01.0001',
+    tribunal: 'TJAC',
+    orgao: '1ª Vara Cível de Rio Branco',
+    diario: 'DJEN',
+    data_publicacao: '2026-05-19',
+    nome_pesquisado: 'ADVOGADO TESTE',
+    texto_publicacao: 'Comunicação DJEN TJAC de ADVOGADO TESTE para manifestação.',
+    origem: 'tj_djen',
     termo_encontrado: 'ADVOGADO TESTE',
   }
 }
@@ -442,6 +478,30 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.sucesso).toBe(true)
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TJSP')
+    expect(body.fontes[0].status).toBe('ativo')
+    expect(fonte.executar).toHaveBeenCalledWith({
+      nomes: ['ADVOGADO TESTE'],
+      processos: ['50000000020268130000'],
+      oabs: ['MG123', '123/MG'],
+      data: '2026-05-19',
+    })
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
+  })
+
+  it('executa TJ nacional ativo via DJEN/CNJ e grava publicações em publicacoes', async () => {
+    const fonte = fonteTJDJEN('TJAC', [pubTJDJEN()])
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonte])
+    const supabase = supabaseComAdvogados()
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'tjac', data: '2026-05-19' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(true)
+    expect(body.total_novas).toBe(1)
+    expect(body.fontes[0].fonte_nome).toBe('TJAC')
     expect(body.fontes[0].status).toBe('ativo')
     expect(fonte.executar).toHaveBeenCalledWith({
       nomes: ['ADVOGADO TESTE'],

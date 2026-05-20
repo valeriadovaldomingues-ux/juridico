@@ -1,5 +1,5 @@
 import type { FonteMonitoramento } from './types'
-import { buscarPublicacoesTJSPDJEN } from '@/lib/monitoramento/tjsp-djen'
+import { buscarPublicacoesTJDJEN } from '@/lib/monitoramento/tjs-djen'
 
 const TJS = [
   'TJAC', 'TJAL', 'TJAM', 'TJAP', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO',
@@ -7,17 +7,29 @@ const TJS = [
   'TJRN', 'TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJSP', 'TJTO',
 ]
 
-function fonteTJSP(): FonteMonitoramento {
+export const TJS_DJEN_ATIVOS = [
+  'TJAC', 'TJAL', 'TJAM', 'TJAP', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO',
+  'TJMA', 'TJMS', 'TJMT', 'TJPA', 'TJPB', 'TJPE', 'TJPI', 'TJPR', 'TJRJ',
+  'TJRN', 'TJSP',
+]
+
+export const TJS_DJEN_PENDENTES_RATE_LIMIT = ['TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJTO']
+
+function fonteTJDJEN(tribunal: string): FonteMonitoramento {
+  const isTJSP = tribunal === 'TJSP'
   return {
-    id: 'tjsp',
-    nome: 'TJSP',
-    tribunal: 'TJSP',
+    id: tribunal.toLowerCase(),
+    nome: tribunal,
+    tribunal,
     ramo: 'estadual',
     status: 'ativo',
-    descricao: 'Ativo via DJEN/CNJ: API pública de comunicações processuais validada sem credencial. e-SAJ direto permanece pendente por depender de fluxo HTML com sessão.',
+    descricao: isTJSP
+      ? 'Ativo via DJEN/CNJ: API pública de comunicações processuais validada sem credencial. e-SAJ direto permanece pendente por depender de fluxo HTML com sessão.'
+      : 'Ativo via DJEN/CNJ: API pública de comunicações processuais validada com HTTP 200 e JSON válido por siglaTribunal e data.',
     executar: async contexto => {
       try {
-        const publicacoes = await buscarPublicacoesTJSPDJEN({
+        const publicacoes = await buscarPublicacoesTJDJEN({
+          tribunal,
           nomes: contexto.nomes,
           processos: contexto.processos,
           oabs: contexto.oabs,
@@ -25,9 +37,9 @@ function fonteTJSP(): FonteMonitoramento {
         })
 
         return {
-          fonte_id: 'tjsp',
-          fonte_nome: 'TJSP',
-          tribunal: 'TJSP',
+          fonte_id: tribunal.toLowerCase(),
+          fonte_nome: tribunal,
+          tribunal,
           ramo: 'estadual',
           status: 'ativo',
           encontradas: publicacoes.length,
@@ -36,7 +48,7 @@ function fonteTJSP(): FonteMonitoramento {
           ignoradas: 0,
           falhas: 0,
           publicacoes: publicacoes.map(pub => ({
-            fonte_id: 'tjsp',
+            fonte_id: tribunal.toLowerCase(),
             numero_processo: pub.numero_processo,
             tribunal: pub.tribunal,
             orgao: pub.orgao,
@@ -47,13 +59,15 @@ function fonteTJSP(): FonteMonitoramento {
             origem: pub.origem,
             termo_encontrado: pub.termo_encontrado,
           })),
-          mensagem: 'TJSP ativo via DJEN/CNJ. e-SAJ direto permanece pendente.',
+          mensagem: isTJSP
+            ? 'TJSP ativo via DJEN/CNJ. e-SAJ direto permanece pendente.'
+            : `${tribunal} ativo via DJEN/CNJ.`,
         }
       } catch (error) {
         return {
-          fonte_id: 'tjsp',
-          fonte_nome: 'TJSP',
-          tribunal: 'TJSP',
+          fonte_id: tribunal.toLowerCase(),
+          fonte_nome: tribunal,
+          tribunal,
           ramo: 'estadual',
           status: 'erro',
           encontradas: 0,
@@ -63,7 +77,7 @@ function fonteTJSP(): FonteMonitoramento {
           falhas: 1,
           publicacoes: [],
           erro: error instanceof Error ? error.message : String(error),
-          mensagem: 'Falha na captura pública DJEN/CNJ para TJSP.',
+          mensagem: `Falha na captura pública DJEN/CNJ para ${tribunal}.`,
         }
       }
     },
@@ -71,7 +85,7 @@ function fonteTJSP(): FonteMonitoramento {
 }
 
 export const FONTES_TJS: FonteMonitoramento[] = TJS.map(tribunal => {
-  if (tribunal === 'TJSP') return fonteTJSP()
+  if (TJS_DJEN_ATIVOS.includes(tribunal)) return fonteTJDJEN(tribunal)
 
   return {
     id: tribunal.toLowerCase(),

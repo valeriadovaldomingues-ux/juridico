@@ -1,4 +1,4 @@
-import { buscarPublicacoesTRTDJEN } from './trt3-djen'
+import { buscarPublicacoesTJDJEN } from './tjs-djen'
 
 export async function buscarPublicacoesTJSPDJEN(opcoes: {
   nomes: string[]
@@ -6,7 +6,7 @@ export async function buscarPublicacoesTJSPDJEN(opcoes: {
   oabs?: string[]
   data?: string
 }) {
-  return buscarPublicacoesTRTDJEN({
+  return buscarPublicacoesTJDJEN({
     ...opcoes,
     tribunal: 'TJSP',
   })

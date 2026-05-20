@@ -21,6 +21,12 @@ export interface DiagnosticoFontePendente {
 }
 
 const DJEN_ENDPOINT = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao'
+const TJS_DJEN_ATIVOS = [
+  'TJAC', 'TJAL', 'TJAM', 'TJAP', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO',
+  'TJMA', 'TJMS', 'TJMT', 'TJPA', 'TJPB', 'TJPE', 'TJPI', 'TJPR', 'TJRJ',
+  'TJRN', 'TJSP',
+]
+const TJS_DJEN_PENDENTES_RATE_LIMIT = ['TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJTO']
 
 export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
   {
@@ -80,19 +86,36 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
     motivo: 'DataJud é adequado para metadados/movimentações processuais, não substitui publicação integral de diário.',
     proximaAcao: 'Com chave/configuração, usar como enriquecimento e vínculo de processos, não como diário principal.',
   },
-  {
-    id: 'tjsp',
-    tribunal: 'TJSP',
+  ...TJS_DJEN_ATIVOS.map((tribunal): DiagnosticoFontePendente => ({
+    id: tribunal.toLowerCase(),
+    tribunal,
     ramo: 'estadual',
     fonteProvavel: 'DJEN/CNJ',
-    status: 'ativo_parcial',
+    status: tribunal === 'TJSP' ? 'ativo_parcial' : 'ativo',
     endpoint: DJEN_ENDPOINT,
     exigeCredencial: false,
     validada: true,
     capturaPublicacaoReal: true,
-    motivo: 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para TJSP por siglaTribunal e data. e-SAJ direto permanece pendente.',
-    proximaAcao: 'Executar monitoramento TJSP por DJEN/CNJ e investigar e-SAJ apenas se houver fluxo sem sessão/captcha.',
-  },
+    motivo: tribunal === 'TJSP'
+      ? 'API pública DJEN/CNJ já havia sido validada com HTTP 200 e JSON válido para TJSP por siglaTribunal e data. e-SAJ direto permanece pendente.'
+      : 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data.',
+    proximaAcao: tribunal === 'TJSP'
+      ? 'Executar monitoramento TJSP por DJEN/CNJ e investigar e-SAJ apenas se houver fluxo sem sessão/captcha.'
+      : 'Executar com termos monitorados reais e observar limites de requisição.',
+  })),
+  ...TJS_DJEN_PENDENTES_RATE_LIMIT.map((tribunal): DiagnosticoFontePendente => ({
+    id: tribunal.toLowerCase(),
+    tribunal,
+    ramo: 'estadual',
+    fonteProvavel: 'DJEN/CNJ',
+    status: 'pendente',
+    endpoint: DJEN_ENDPOINT,
+    exigeCredencial: false,
+    validada: true,
+    capturaPublicacaoReal: false,
+    motivo: 'Validação pública retornou HTTP 429 Too Many Attempts; fonte mantida pendente para revalidação conservadora.',
+    proximaAcao: 'Revalidar posteriormente com intervalo maior antes de ativar.',
+  })),
   {
     id: 'esaj-tjsp',
     tribunal: 'TJSP',

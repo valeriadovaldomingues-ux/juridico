@@ -46,18 +46,25 @@ describe('fontes de monitoramento', () => {
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
   })
 
-  it('cataloga TRFs pendentes e TJSP ativo via DJEN/CNJ', async () => {
+  it('cataloga TRFs pendentes, TJs validados ativos via DJEN/CNJ e TJs sob rate limit pendentes', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
     const fontes = listarFontesMonitoramento()
     const trfs = fontes.filter(fonte => /^trf\d$/.test(fonte.id))
-    const tjsp = fontes.find(fonte => fonte.id === 'tjsp')
+    const tjsAtivos = [
+      'tjac', 'tjal', 'tjam', 'tjap', 'tjba', 'tjce', 'tjdft', 'tjes', 'tjgo',
+      'tjma', 'tjms', 'tjmt', 'tjpa', 'tjpb', 'tjpe', 'tjpi', 'tjpr', 'tjrj',
+      'tjrn', 'tjsp',
+    ].map(id => fontes.find(fonte => fonte.id === id))
+    const tjsPendentes = ['tjro', 'tjrr', 'tjrs', 'tjsc', 'tjse', 'tjto']
+      .map(id => fontes.find(fonte => fonte.id === id))
 
     expect(trfs).toHaveLength(6)
     expect(trfs.every(fonte => fonte.status === 'pendente')).toBe(true)
-    expect(tjsp?.status).toBe('ativo')
-    expect(tjsp?.descricao).toContain('DJEN/CNJ')
-    expect(tjsp?.descricao).toContain('e-SAJ direto permanece pendente')
+    expect(tjsAtivos.every(fonte => fonte?.status === 'ativo')).toBe(true)
+    expect(tjsAtivos.every(fonte => fonte?.descricao.includes('DJEN/CNJ'))).toBe(true)
+    expect(tjsPendentes.every(fonte => fonte?.status === 'pendente')).toBe(true)
+    expect(fontes.find(fonte => fonte.id === 'tjsp')?.descricao).toContain('e-SAJ direto permanece pendente')
   })
 
   it('cataloga e-SAJ como fonte estadual pendente sem execução ativa', async () => {
@@ -124,17 +131,45 @@ describe('fontes de monitoramento', () => {
       'trt22',
       'trt23',
       'trt24',
+      'tjac',
+      'tjal',
+      'tjam',
+      'tjap',
+      'tjba',
+      'tjce',
+      'tjdft',
+      'tjes',
+      'tjgo',
+      'tjma',
+      'tjms',
+      'tjmt',
+      'tjpa',
+      'tjpb',
+      'tjpe',
+      'tjpi',
+      'tjpr',
+      'tjrj',
+      'tjrn',
       'tjsp',
     ])
   })
 
-  it('seleciona TJSP ativo pelo DJEN/CNJ e mantém e-SAJ/TJSP direto pendente', async () => {
+  it('seleciona TJs ativos pelo DJEN/CNJ e mantém TJs rate limited e e-SAJ/TJSP direto pendentes', async () => {
     const { selecionarFontesMonitoramento, fontePodeExecutar } = await import('./index')
 
+    const tjac = selecionarFontesMonitoramento({ fonte: 'tjac' })[0]
+    const tjacPorTribunal = selecionarFontesMonitoramento({ tribunal: 'TJAC' })[0]
+    const tjro = selecionarFontesMonitoramento({ fonte: 'tjro' })[0]
     const tjsp = selecionarFontesMonitoramento({ fonte: 'tjsp' })[0]
     const porTribunal = selecionarFontesMonitoramento({ tribunal: 'TJSP' })[0]
     const esajTjsp = selecionarFontesMonitoramento({ fonte: 'esaj-tjsp' })[0]
 
+    expect(tjac?.id).toBe('tjac')
+    expect(tjac?.status).toBe('ativo')
+    expect(fontePodeExecutar(tjac!)).toBe(true)
+    expect(tjacPorTribunal?.id).toBe('tjac')
+    expect(tjro?.status).toBe('pendente')
+    expect(fontePodeExecutar(tjro!)).toBe(false)
     expect(tjsp?.id).toBe('tjsp')
     expect(tjsp?.status).toBe('ativo')
     expect(fontePodeExecutar(tjsp!)).toBe(true)
@@ -160,6 +195,8 @@ describe('fontes de monitoramento', () => {
     const datajud = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'datajud-cnj')
     const trt3 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt3')
     const trt24 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt24')
+    const tjac = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjac')
+    const tjro = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjro')
     const tjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjsp')
     const esajTjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'esaj-tjsp')
 
@@ -168,6 +205,11 @@ describe('fontes de monitoramento', () => {
     expect(trt24?.status).toBe('ativo')
     expect(trt24?.motivo).toContain('Revalidação controlada')
     expect(datajud?.capturaPublicacaoReal).toBe(false)
+    expect(tjac?.status).toBe('ativo')
+    expect(tjac?.capturaPublicacaoReal).toBe(true)
+    expect(tjro?.status).toBe('pendente')
+    expect(tjro?.motivo).toContain('HTTP 429')
+    expect(tjro?.capturaPublicacaoReal).toBe(false)
     expect(tjsp?.status).toBe('ativo_parcial')
     expect(tjsp?.capturaPublicacaoReal).toBe(true)
     expect(esajTjsp?.status).toBe('pendente')
