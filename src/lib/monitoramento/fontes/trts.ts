@@ -2,7 +2,7 @@ import type { FonteMonitoramento } from './types'
 import { FONTE_TRT3_MG } from './trt3-mg'
 import { buscarPublicacoesTRTDJEN } from '@/lib/monitoramento/trt3-djen'
 
-export const TRTS_DJEN_VALIDADOS = Array.from({ length: 20 }, (_, i) => i + 1)
+export const TRTS_DJEN_VALIDADOS = Array.from({ length: 24 }, (_, i) => i + 1)
 
 function fonteTRTDJEN(numero: number): FonteMonitoramento {
   const tribunal = `TRT${numero}`

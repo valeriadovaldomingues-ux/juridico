@@ -24,8 +24,7 @@ describe('fontes de monitoramento', () => {
     expect(trts).toHaveLength(24)
     expect(trts[0]?.id).toBe('trt1')
     expect(trts[23]?.id).toBe('trt24')
-    expect(trts.filter(fonte => Number(fonte.id.replace('trt', '')) <= 20).every(fonte => fonte.status === 'ativo')).toBe(true)
-    expect(trts.filter(fonte => Number(fonte.id.replace('trt', '')) >= 21).every(fonte => fonte.status === 'pendente')).toBe(true)
+    expect(trts.every(fonte => fonte.status === 'ativo')).toBe(true)
   })
 
   it('mapeia TRT3/MG como piloto trabalhista ativo parcial por DEJT e DJEN', async () => {
@@ -119,6 +118,10 @@ describe('fontes de monitoramento', () => {
       'trt18',
       'trt19',
       'trt20',
+      'trt21',
+      'trt22',
+      'trt23',
+      'trt24',
     ])
   })
 
@@ -137,13 +140,13 @@ describe('fontes de monitoramento', () => {
 
     const datajud = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'datajud-cnj')
     const trt3 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt3')
-    const trt21 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt21')
+    const trt24 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt24')
     const esajTjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'esaj-tjsp')
 
     expect(trt3?.status).toBe('ativo_parcial')
     expect(trt3?.capturaPublicacaoReal).toBe(true)
-    expect(trt21?.status).toBe('pendente')
-    expect(trt21?.motivo).toContain('429')
+    expect(trt24?.status).toBe('ativo')
+    expect(trt24?.motivo).toContain('Revalidação controlada')
     expect(datajud?.capturaPublicacaoReal).toBe(false)
     expect(esajTjsp?.status).toBe('pendente')
   })

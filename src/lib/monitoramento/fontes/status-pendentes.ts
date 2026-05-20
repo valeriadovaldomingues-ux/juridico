@@ -49,7 +49,7 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
     motivo: 'DEJT público e DJEN/CNJ já implementados; PJe-JT segue fora por exigir credencial/sessão em cenários de consulta processual.',
     proximaAcao: 'Avaliar paginação e limites operacionais para grandes volumes.',
   },
-  ...Array.from({ length: 20 }, (_, i): DiagnosticoFontePendente => {
+  ...Array.from({ length: 24 }, (_, i): DiagnosticoFontePendente => {
     const numero = i + 1
     return {
       id: `trt${numero}`,
@@ -61,23 +61,12 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
       exigeCredencial: false,
       validada: true,
       capturaPublicacaoReal: true,
-      motivo: 'API pública DJEN/CNJ respondeu HTTP 200 para consulta por siglaTribunal e data.',
+      motivo: numero >= 21
+        ? 'Revalidação controlada com intervalo entre requisições retornou HTTP 200 e JSON válido para consulta por siglaTribunal e data.'
+        : 'API pública DJEN/CNJ respondeu HTTP 200 para consulta por siglaTribunal e data.',
       proximaAcao: 'Executar com termos monitorados reais e observar limites de requisição.',
     }
   }).filter(item => item.id !== 'trt3'),
-  ...[21, 22, 23, 24].map((numero): DiagnosticoFontePendente => ({
-    id: `trt${numero}`,
-    tribunal: `TRT${numero}`,
-    ramo: 'trabalhista',
-    fonteProvavel: 'DJEN/CNJ',
-    status: 'pendente',
-    endpoint: DJEN_ENDPOINT,
-    exigeCredencial: false,
-    validada: false,
-    capturaPublicacaoReal: false,
-    motivo: 'Validação inicial retornou HTTP 429 Too Many Attempts. Não foi marcado como ativo sem revalidação estável.',
-    proximaAcao: 'Revalidar com janela de rate limit limpa e limites por tribunal.',
-  })),
   {
     id: 'datajud-cnj',
     tribunal: 'CNJ',
