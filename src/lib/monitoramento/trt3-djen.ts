@@ -13,8 +13,8 @@ export interface TRT3DJENPublicacao {
   data_publicacao: string
   texto_publicacao: string
   orgao: string | null
-  tribunal: 'TRT3'
-  origem: 'trt3_djen'
+  tribunal: string
+  origem: 'trt_djen' | 'trt3_djen'
   tipo_comunicacao: string | null
 }
 
@@ -79,11 +79,11 @@ function processoDigits(processo: string) {
   return processo.replace(/\D/g, '')
 }
 
-function parametrosBase(data: string) {
+function parametrosBase(data: string, tribunal: string) {
   return {
     pagina: '0',
     itensPorPagina: String(MAX_ITENS_POR_CONSULTA),
-    siglaTribunal: 'TRT3',
+    siglaTribunal: tribunal,
     dataDisponibilizacaoInicio: data,
     dataDisponibilizacaoFim: data,
   }
@@ -143,6 +143,7 @@ async function consultarDJEN(params: Record<string, string>, timeoutMs = 30_000)
 
 async function consultarPorTermos(opcoes: {
   data: string
+  tribunal: string
   nomes: string[]
   processos: string[]
   oabs: string[]
@@ -150,13 +151,13 @@ async function consultarPorTermos(opcoes: {
   const consultas: Array<{ termo: string; params: Record<string, string> }> = []
 
   for (const nome of opcoes.nomes) {
-    consultas.push({ termo: nome, params: { ...parametrosBase(opcoes.data), nomeAdvogado: nome } })
+    consultas.push({ termo: nome, params: { ...parametrosBase(opcoes.data, opcoes.tribunal), nomeAdvogado: nome } })
   }
 
   for (const processo of opcoes.processos) {
     const numeroProcesso = processoDigits(processo)
     if (numeroProcesso) {
-      consultas.push({ termo: processo, params: { ...parametrosBase(opcoes.data), numeroProcesso } })
+      consultas.push({ termo: processo, params: { ...parametrosBase(opcoes.data, opcoes.tribunal), numeroProcesso } })
     }
   }
 
@@ -165,14 +166,14 @@ async function consultarPorTermos(opcoes: {
     if (oab) {
       consultas.push({
         termo: `${oab.uf}${oab.numero}`,
-        params: { ...parametrosBase(opcoes.data), numeroOab: oab.numero, ufOab: oab.uf },
+        params: { ...parametrosBase(opcoes.data, opcoes.tribunal), numeroOab: oab.numero, ufOab: oab.uf },
       })
     }
   }
 
   consultas.push({
     termo: 'Pessoa e do Val Advocacia',
-    params: { ...parametrosBase(opcoes.data), nomeParte: 'Pessoa e do Val Advocacia' },
+    params: { ...parametrosBase(opcoes.data, opcoes.tribunal), nomeParte: 'Pessoa e do Val Advocacia' },
   })
 
   const resultados: Array<{ termo: string; item: ComunicacaoDJEN }> = []
@@ -185,7 +186,11 @@ async function consultarPorTermos(opcoes: {
   return resultados
 }
 
-export function mapearComunicacaoDJEN(item: ComunicacaoDJEN, termo: string): TRT3DJENPublicacao | null {
+export function mapearComunicacaoDJEN(
+  item: ComunicacaoDJEN,
+  termo: string,
+  tribunal = 'TRT3',
+): TRT3DJENPublicacao | null {
   const texto = limparHTML(item.texto ?? '')
   if (!texto) return null
 
@@ -198,19 +203,21 @@ export function mapearComunicacaoDJEN(item: ComunicacaoDJEN, termo: string): TRT
     data_publicacao: item.data_disponibilizacao ?? item.datadisponibilizacao ?? hojeSaoPaulo(),
     texto_publicacao: texto.slice(0, 5_000),
     orgao: item.nomeOrgao ?? null,
-    tribunal: 'TRT3',
-    origem: 'trt3_djen',
+    tribunal,
+    origem: tribunal === 'TRT3' ? 'trt3_djen' : 'trt_djen',
     tipo_comunicacao: item.tipoComunicacao ?? null,
   }
 }
 
-export async function buscarPublicacoesTRT3DJEN(opcoes: {
+export async function buscarPublicacoesTRTDJEN(opcoes: {
+  tribunal: string
   nomes: string[]
   processos?: string[]
   oabs?: string[]
   data?: string
   comunicacoes?: ComunicacaoDJEN[]
 }): Promise<TRT3DJENPublicacao[]> {
+  const tribunal = opcoes.tribunal.trim().toUpperCase()
   const data = prepararData(opcoes.data)
   const termos = termosBusca({
     nomes: opcoes.nomes,
@@ -225,6 +232,7 @@ export async function buscarPublicacoesTRT3DJEN(opcoes: {
       .map(termo => ({ termo, item })))
     : await consultarPorTermos({
       data,
+      tribunal,
       nomes: opcoes.nomes,
       processos: opcoes.processos ?? [],
       oabs: opcoes.oabs ?? [],
@@ -233,9 +241,9 @@ export async function buscarPublicacoesTRT3DJEN(opcoes: {
   const vistos = new Set<string>()
   const publicacoes: TRT3DJENPublicacao[] = []
   for (const encontrado of encontrados) {
-    if (encontrado.item.siglaTribunal && encontrado.item.siglaTribunal !== 'TRT3') continue
+    if (encontrado.item.siglaTribunal && encontrado.item.siglaTribunal !== tribunal) continue
 
-    const pub = mapearComunicacaoDJEN(encontrado.item, encontrado.termo)
+    const pub = mapearComunicacaoDJEN(encontrado.item, encontrado.termo, tribunal)
     if (!pub) continue
 
     const chave = pub.id
@@ -245,4 +253,14 @@ export async function buscarPublicacoesTRT3DJEN(opcoes: {
   }
 
   return publicacoes
+}
+
+export async function buscarPublicacoesTRT3DJEN(opcoes: {
+  nomes: string[]
+  processos?: string[]
+  oabs?: string[]
+  data?: string
+  comunicacoes?: ComunicacaoDJEN[]
+}) {
+  return buscarPublicacoesTRTDJEN({ ...opcoes, tribunal: 'TRT3' })
 }

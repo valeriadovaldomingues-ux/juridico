@@ -16,7 +16,7 @@ describe('fontes de monitoramento', () => {
     expect(typeof tjmg?.executar).toBe('function')
   })
 
-  it('cataloga TRT1 a TRT24 com TRT3 como piloto ativo parcial', async () => {
+  it('cataloga TRT1 a TRT24 com DJEN ativo nos TRTs validados', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
     const trts = listarFontesMonitoramento().filter(fonte => fonte.ramo === 'trabalhista')
@@ -24,7 +24,8 @@ describe('fontes de monitoramento', () => {
     expect(trts).toHaveLength(24)
     expect(trts[0]?.id).toBe('trt1')
     expect(trts[23]?.id).toBe('trt24')
-    expect(trts.filter(fonte => fonte.id !== 'trt3').every(fonte => fonte.status === 'pendente')).toBe(true)
+    expect(trts.filter(fonte => Number(fonte.id.replace('trt', '')) <= 20).every(fonte => fonte.status === 'ativo')).toBe(true)
+    expect(trts.filter(fonte => Number(fonte.id.replace('trt', '')) >= 21).every(fonte => fonte.status === 'pendente')).toBe(true)
   })
 
   it('mapeia TRT3/MG como piloto trabalhista ativo parcial por DEJT e DJEN', async () => {
@@ -96,7 +97,29 @@ describe('fontes de monitoramento', () => {
 
     const fontes = selecionarFontesMonitoramento()
 
-    expect(fontes.map(fonte => fonte.id)).toEqual(['tjmg-dje', 'trt3'])
+    expect(fontes.map(fonte => fonte.id)).toEqual([
+      'tjmg-dje',
+      'trt1',
+      'trt2',
+      'trt3',
+      'trt4',
+      'trt5',
+      'trt6',
+      'trt7',
+      'trt8',
+      'trt9',
+      'trt10',
+      'trt11',
+      'trt12',
+      'trt13',
+      'trt14',
+      'trt15',
+      'trt16',
+      'trt17',
+      'trt18',
+      'trt19',
+      'trt20',
+    ])
   })
 
   it('seleciona TRT3 pelo alias trt3-dejt e seleciona DJEN como fonte executável', async () => {
@@ -107,5 +130,21 @@ describe('fontes de monitoramento', () => {
     expect(djen?.id).toBe('trt3-djen')
     expect(djen?.status).toBe('ativo')
     expect(fontePodeExecutar(djen!)).toBe(true)
+  })
+
+  it('expõe matriz técnica das fontes pendentes e ativas parciais', async () => {
+    const { MATRIZ_FONTES_MONITORAMENTO } = await import('./index')
+
+    const datajud = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'datajud-cnj')
+    const trt3 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt3')
+    const trt21 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt21')
+    const esajTjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'esaj-tjsp')
+
+    expect(trt3?.status).toBe('ativo_parcial')
+    expect(trt3?.capturaPublicacaoReal).toBe(true)
+    expect(trt21?.status).toBe('pendente')
+    expect(trt21?.motivo).toContain('429')
+    expect(datajud?.capturaPublicacaoReal).toBe(false)
+    expect(esajTjsp?.status).toBe('pendente')
   })
 })

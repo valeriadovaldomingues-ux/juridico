@@ -12,6 +12,7 @@ import type {
   FonteMonitoramento,
   FonteMonitoramentoResumo,
 } from './types'
+export { MATRIZ_FONTES_MONITORAMENTO } from './status-pendentes'
 
 export type {
   ContextoFonteMonitoramento,
