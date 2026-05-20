@@ -3,6 +3,7 @@ import { FONTE_EPROC } from './eproc'
 import { FONTE_ESAJ } from './esaj'
 import { FONTE_PJE } from './pje'
 import { FONTE_TJMG_DJE } from './tjmg-dje'
+import { FONTE_TRT3_DJEN } from './trt3-mg'
 import { FONTES_TJS } from './tjs'
 import { FONTES_TRFS } from './trfs'
 import { FONTES_TRTS } from './trts'
@@ -60,14 +61,7 @@ export function selecionarFontesMonitoramento(
       return fontes.filter(item => item.id === 'trt3')
     }
     if (fonte === 'trt3-djen') {
-      return [{
-        id: 'trt3-djen',
-        nome: 'TRT3/MG DJEN',
-        tribunal: 'TRT3',
-        ramo: 'trabalhista',
-        status: 'pendente',
-        descricao: 'DJEN mapeado para o piloto TRT3/MG, ainda pendente de endpoint público validado para captura segura.',
-      }]
+      return [FONTE_TRT3_DJEN]
     }
     return fontes.filter(item => item.id.toLowerCase() === fonte)
   }

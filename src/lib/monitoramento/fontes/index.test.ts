@@ -27,7 +27,7 @@ describe('fontes de monitoramento', () => {
     expect(trts.filter(fonte => fonte.id !== 'trt3').every(fonte => fonte.status === 'pendente')).toBe(true)
   })
 
-  it('mapeia TRT3/MG como piloto trabalhista ativo parcial pelo DEJT', async () => {
+  it('mapeia TRT3/MG como piloto trabalhista ativo parcial por DEJT e DJEN', async () => {
     const { listarFontesMonitoramento, fontePodeExecutar } = await import('./index')
     const { CANAIS_TRT3_MG } = await import('./trt3-mg')
 
@@ -42,7 +42,7 @@ describe('fontes de monitoramento', () => {
     expect(fontePodeExecutar(trt3!)).toBe(true)
     expect(CANAIS_TRT3_MG.map(canal => canal.id)).toEqual(['dejt', 'djen', 'pje-jt'])
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'dejt')?.status).toBe('ativo')
-    expect(CANAIS_TRT3_MG.find(canal => canal.id === 'djen')?.status).toBe('pendente')
+    expect(CANAIS_TRT3_MG.find(canal => canal.id === 'djen')?.status).toBe('ativo')
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
   })
 
@@ -99,12 +99,13 @@ describe('fontes de monitoramento', () => {
     expect(fontes.map(fonte => fonte.id)).toEqual(['tjmg-dje', 'trt3'])
   })
 
-  it('seleciona TRT3 pelo alias trt3-dejt e mantém DJEN pendente', async () => {
-    const { selecionarFontesMonitoramento } = await import('./index')
+  it('seleciona TRT3 pelo alias trt3-dejt e seleciona DJEN como fonte executável', async () => {
+    const { selecionarFontesMonitoramento, fontePodeExecutar } = await import('./index')
 
     expect(selecionarFontesMonitoramento({ fonte: 'trt3-dejt' }).map(fonte => fonte.id)).toEqual(['trt3'])
     const djen = selecionarFontesMonitoramento({ fonte: 'trt3-djen' })[0]
     expect(djen?.id).toBe('trt3-djen')
-    expect(djen?.status).toBe('pendente')
+    expect(djen?.status).toBe('ativo')
+    expect(fontePodeExecutar(djen!)).toBe(true)
   })
 })
