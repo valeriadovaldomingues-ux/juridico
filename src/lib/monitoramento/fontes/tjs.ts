@@ -10,10 +10,10 @@ const TJS = [
 export const TJS_DJEN_ATIVOS = [
   'TJAC', 'TJAL', 'TJAM', 'TJAP', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO',
   'TJMA', 'TJMS', 'TJMT', 'TJPA', 'TJPB', 'TJPE', 'TJPI', 'TJPR', 'TJRJ',
-  'TJRN', 'TJSP',
+  'TJRN', 'TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJSP', 'TJTO',
 ]
 
-export const TJS_DJEN_PENDENTES_RATE_LIMIT = ['TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJTO']
+export const TJS_DJEN_PENDENTES_RATE_LIMIT: string[] = []
 
 function fonteTJDJEN(tribunal: string): FonteMonitoramento {
   const isTJSP = tribunal === 'TJSP'

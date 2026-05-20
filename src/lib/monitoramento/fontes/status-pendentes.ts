@@ -24,9 +24,9 @@ const DJEN_ENDPOINT = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao'
 const TJS_DJEN_ATIVOS = [
   'TJAC', 'TJAL', 'TJAM', 'TJAP', 'TJBA', 'TJCE', 'TJDFT', 'TJES', 'TJGO',
   'TJMA', 'TJMS', 'TJMT', 'TJPA', 'TJPB', 'TJPE', 'TJPI', 'TJPR', 'TJRJ',
-  'TJRN', 'TJSP',
+  'TJRN', 'TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJSP', 'TJTO',
 ]
-const TJS_DJEN_PENDENTES_RATE_LIMIT = ['TJRO', 'TJRR', 'TJRS', 'TJSC', 'TJSE', 'TJTO']
+const TJS_DJEN_PENDENTES_RATE_LIMIT: string[] = []
 
 export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
   {
@@ -98,7 +98,7 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
     capturaPublicacaoReal: true,
     motivo: tribunal === 'TJSP'
       ? 'API pública DJEN/CNJ já havia sido validada com HTTP 200 e JSON válido para TJSP por siglaTribunal e data. e-SAJ direto permanece pendente.'
-      : 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data.',
+      : 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data; TJs remanescentes foram revalidados com intervalo conservador.',
     proximaAcao: tribunal === 'TJSP'
       ? 'Executar monitoramento TJSP por DJEN/CNJ e investigar e-SAJ apenas se houver fluxo sem sessão/captcha.'
       : 'Executar com termos monitorados reais e observar limites de requisição.',
