@@ -2,6 +2,7 @@ import { fonteDataJud } from './datajud'
 import { FONTE_EPROC } from './eproc'
 import { FONTE_ESAJ } from './esaj'
 import { FONTE_PJE } from './pje'
+import { FONTES_SUPERIORES } from './superiores'
 import { FONTE_TJMG_DJE } from './tjmg-dje'
 import { FONTE_TRT3_DJEN } from './trt3-mg'
 import { FONTES_TJS } from './tjs'
@@ -34,6 +35,7 @@ export function listarFontesMonitoramento(): FonteMonitoramento[] {
     FONTE_PJE,
     ...FONTES_TRTS,
     ...FONTES_TRFS,
+    ...FONTES_SUPERIORES,
     ...FONTES_TJS,
   ]
 }

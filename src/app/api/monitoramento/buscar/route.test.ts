@@ -157,6 +157,32 @@ function fonteTRFDJEN(tribunal: string, publicacoes: any[] = []) {
   }
 }
 
+function fonteSuperiorDJEN(tribunal: string, publicacoes: any[] = []) {
+  const id = tribunal.toLowerCase()
+  return {
+    id,
+    nome: tribunal,
+    tribunal,
+    ramo: 'superior',
+    status: 'ativo',
+    descricao: `${tribunal} ativo via DJEN/CNJ`,
+    executar: vi.fn().mockResolvedValue({
+      fonte_id: id,
+      fonte_nome: tribunal,
+      tribunal,
+      ramo: 'superior',
+      status: 'ativo',
+      encontradas: publicacoes.length,
+      inseridas: 0,
+      duplicadas: 0,
+      ignoradas: 0,
+      falhas: 0,
+      publicacoes,
+      mensagem: `${tribunal} ativo via DJEN/CNJ.`,
+    }),
+  }
+}
+
 function fonteTJSP(publicacoes: any[] = []) {
   const fonte = fonteTJDJEN('TJSP', publicacoes)
   fonte.descricao = 'TJSP ativo via DJEN/CNJ'
@@ -233,6 +259,21 @@ function pubTRFDJEN() {
     nome_pesquisado: 'ADVOGADO TESTE',
     texto_publicacao: 'Comunicação DJEN TRF1 de ADVOGADO TESTE para manifestação.',
     origem: 'trf_djen',
+    termo_encontrado: 'ADVOGADO TESTE',
+  }
+}
+
+function pubSuperiorDJEN() {
+  return {
+    fonte_id: 'stj',
+    numero_processo: '1000000-00.2026.3.00.0000',
+    tribunal: 'STJ',
+    orgao: 'Coordenadoria de Processamento de Feitos',
+    diario: 'DJEN',
+    data_publicacao: '2026-05-19',
+    nome_pesquisado: 'ADVOGADO TESTE',
+    texto_publicacao: 'Comunicação DJEN STJ de ADVOGADO TESTE para manifestação.',
+    origem: 'superior_djen',
     termo_encontrado: 'ADVOGADO TESTE',
   }
 }
@@ -567,6 +608,30 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.sucesso).toBe(true)
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TRF1')
+    expect(body.fontes[0].status).toBe('ativo')
+    expect(fonte.executar).toHaveBeenCalledWith({
+      nomes: ['ADVOGADO TESTE'],
+      processos: ['50000000020268130000'],
+      oabs: ['MG123', '123/MG'],
+      data: '2026-05-19',
+    })
+    expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
+  })
+
+  it('executa tribunal superior ativo via DJEN/CNJ e grava publicações em publicacoes', async () => {
+    const fonte = fonteSuperiorDJEN('STJ', [pubSuperiorDJEN()])
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonte])
+    const supabase = supabaseComAdvogados()
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const res = await POST(request({ fonte: 'stj', data: '2026-05-19' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(true)
+    expect(body.total_novas).toBe(1)
+    expect(body.fontes[0].fonte_nome).toBe('STJ')
     expect(body.fontes[0].status).toBe('ativo')
     expect(fonte.executar).toHaveBeenCalledWith({
       nomes: ['ADVOGADO TESTE'],

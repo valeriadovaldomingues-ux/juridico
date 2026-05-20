@@ -9,7 +9,7 @@ export type StatusTecnicoFonte =
 export interface DiagnosticoFontePendente {
   id: string
   tribunal: string
-  ramo: 'estadual' | 'federal' | 'trabalhista' | 'eproc' | 'datajud'
+  ramo: 'estadual' | 'federal' | 'trabalhista' | 'eproc' | 'datajud' | 'superior'
   fonteProvavel: string
   status: StatusTecnicoFonte
   endpoint?: string
@@ -28,6 +28,7 @@ const TJS_DJEN_ATIVOS = [
 ]
 const TJS_DJEN_PENDENTES_RATE_LIMIT: string[] = []
 const TRFS_DJEN_ATIVOS = ['TRF1', 'TRF2', 'TRF3', 'TRF4', 'TRF5', 'TRF6']
+const SUPERIORES_DJEN_ATIVOS = ['STF', 'STJ', 'TST']
 
 export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
   {
@@ -98,6 +99,21 @@ export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
     validada: true,
     capturaPublicacaoReal: true,
     motivo: 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data com intervalo conservador.',
+    proximaAcao: 'Executar com termos monitorados reais e observar limites de requisição.',
+  })),
+  ...SUPERIORES_DJEN_ATIVOS.map((tribunal): DiagnosticoFontePendente => ({
+    id: tribunal.toLowerCase(),
+    tribunal,
+    ramo: 'superior',
+    fonteProvavel: 'DJEN/CNJ',
+    status: 'ativo',
+    endpoint: DJEN_ENDPOINT,
+    exigeCredencial: false,
+    validada: true,
+    capturaPublicacaoReal: true,
+    motivo: tribunal === 'STF'
+      ? 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data, sem publicações retornadas na data validada.'
+      : 'API pública DJEN/CNJ respondeu HTTP 200 e JSON válido para consulta por siglaTribunal e data com intervalo conservador.',
     proximaAcao: 'Executar com termos monitorados reais e observar limites de requisição.',
   })),
   ...TJS_DJEN_ATIVOS.map((tribunal): DiagnosticoFontePendente => ({

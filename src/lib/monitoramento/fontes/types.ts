@@ -11,12 +11,14 @@ export type RamoFonteMonitoramento =
   | 'trabalhista'
   | 'eproc'
   | 'datajud'
+  | 'superior'
 
 export type OrigemPublicacaoCapturada =
   | 'datajud_oab'
   | 'datajud_nome'
   | 'datajud_processo'
   | 'datajud_combinado'
+  | 'superior_djen'
   | 'trf_djen'
   | 'tj_djen'
   | 'tjsp_djen'

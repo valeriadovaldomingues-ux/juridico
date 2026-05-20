@@ -46,11 +46,12 @@ describe('fontes de monitoramento', () => {
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
   })
 
-  it('cataloga TRFs e TJs nacionais validados ativos via DJEN/CNJ', async () => {
+  it('cataloga TRFs, tribunais superiores e TJs nacionais validados ativos via DJEN/CNJ', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
     const fontes = listarFontesMonitoramento()
     const trfs = fontes.filter(fonte => /^trf\d$/.test(fonte.id))
+    const superiores = ['stf', 'stj', 'tst'].map(id => fontes.find(fonte => fonte.id === id))
     const tjsAtivos = [
       'tjac', 'tjal', 'tjam', 'tjap', 'tjba', 'tjce', 'tjdft', 'tjes', 'tjgo',
       'tjma', 'tjms', 'tjmt', 'tjpa', 'tjpb', 'tjpe', 'tjpi', 'tjpr', 'tjrj',
@@ -60,6 +61,9 @@ describe('fontes de monitoramento', () => {
     expect(trfs).toHaveLength(6)
     expect(trfs.every(fonte => fonte.status === 'ativo')).toBe(true)
     expect(trfs.every(fonte => fonte.descricao.includes('DJEN/CNJ'))).toBe(true)
+    expect(superiores.every(fonte => fonte?.status === 'ativo')).toBe(true)
+    expect(superiores.every(fonte => fonte?.ramo === 'superior')).toBe(true)
+    expect(superiores.every(fonte => fonte?.descricao.includes('DJEN/CNJ'))).toBe(true)
     expect(tjsAtivos.every(fonte => fonte?.status === 'ativo')).toBe(true)
     expect(tjsAtivos.every(fonte => fonte?.descricao.includes('DJEN/CNJ'))).toBe(true)
     expect(fontes.find(fonte => fonte.id === 'tjsp')?.descricao).toContain('e-SAJ direto permanece pendente')
@@ -135,6 +139,9 @@ describe('fontes de monitoramento', () => {
       'trf4',
       'trf5',
       'trf6',
+      'stf',
+      'stj',
+      'tst',
       'tjac',
       'tjal',
       'tjam',
@@ -164,11 +171,13 @@ describe('fontes de monitoramento', () => {
     ])
   })
 
-  it('seleciona TRFs e TJs ativos pelo DJEN/CNJ e mantém e-SAJ/TJSP direto pendente', async () => {
+  it('seleciona TRFs, superiores e TJs ativos pelo DJEN/CNJ e mantém e-SAJ/TJSP direto pendente', async () => {
     const { selecionarFontesMonitoramento, fontePodeExecutar } = await import('./index')
 
     const trf1 = selecionarFontesMonitoramento({ fonte: 'trf1' })[0]
     const trf1PorTribunal = selecionarFontesMonitoramento({ tribunal: 'TRF1' })[0]
+    const stj = selecionarFontesMonitoramento({ fonte: 'stj' })[0]
+    const stjPorTribunal = selecionarFontesMonitoramento({ tribunal: 'STJ' })[0]
     const tjac = selecionarFontesMonitoramento({ fonte: 'tjac' })[0]
     const tjacPorTribunal = selecionarFontesMonitoramento({ tribunal: 'TJAC' })[0]
     const tjro = selecionarFontesMonitoramento({ fonte: 'tjro' })[0]
@@ -180,6 +189,11 @@ describe('fontes de monitoramento', () => {
     expect(trf1?.status).toBe('ativo')
     expect(fontePodeExecutar(trf1!)).toBe(true)
     expect(trf1PorTribunal?.id).toBe('trf1')
+    expect(stj?.id).toBe('stj')
+    expect(stj?.status).toBe('ativo')
+    expect(stj?.ramo).toBe('superior')
+    expect(fontePodeExecutar(stj!)).toBe(true)
+    expect(stjPorTribunal?.id).toBe('stj')
     expect(tjac?.id).toBe('tjac')
     expect(tjac?.status).toBe('ativo')
     expect(fontePodeExecutar(tjac!)).toBe(true)
@@ -212,6 +226,8 @@ describe('fontes de monitoramento', () => {
     const trt3 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt3')
     const trt24 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt24')
     const trf1 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trf1')
+    const stf = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'stf')
+    const stj = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'stj')
     const tjac = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjac')
     const tjro = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjro')
     const tjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjsp')
@@ -224,6 +240,11 @@ describe('fontes de monitoramento', () => {
     expect(trf1?.status).toBe('ativo')
     expect(trf1?.capturaPublicacaoReal).toBe(true)
     expect(trf1?.motivo).toContain('HTTP 200')
+    expect(stf?.status).toBe('ativo')
+    expect(stf?.motivo).toContain('sem publicações retornadas')
+    expect(stf?.capturaPublicacaoReal).toBe(true)
+    expect(stj?.status).toBe('ativo')
+    expect(stj?.capturaPublicacaoReal).toBe(true)
     expect(datajud?.capturaPublicacaoReal).toBe(false)
     expect(tjac?.status).toBe('ativo')
     expect(tjac?.capturaPublicacaoReal).toBe(true)
