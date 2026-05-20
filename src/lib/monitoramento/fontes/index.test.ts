@@ -46,7 +46,7 @@ describe('fontes de monitoramento', () => {
     expect(CANAIS_TRT3_MG.find(canal => canal.id === 'pje-jt')?.status).toBe('requer_credencial')
   })
 
-  it('cataloga TRFs e TJs nacionais sem fingir captura ativa', async () => {
+  it('cataloga TRFs pendentes e TJSP ativo via DJEN/CNJ', async () => {
     const { listarFontesMonitoramento } = await import('./index')
 
     const fontes = listarFontesMonitoramento()
@@ -55,7 +55,9 @@ describe('fontes de monitoramento', () => {
 
     expect(trfs).toHaveLength(6)
     expect(trfs.every(fonte => fonte.status === 'pendente')).toBe(true)
-    expect(tjsp?.status).toBe('pendente')
+    expect(tjsp?.status).toBe('ativo')
+    expect(tjsp?.descricao).toContain('DJEN/CNJ')
+    expect(tjsp?.descricao).toContain('e-SAJ direto permanece pendente')
   })
 
   it('cataloga e-SAJ como fonte estadual pendente sem execução ativa', async () => {
@@ -122,7 +124,24 @@ describe('fontes de monitoramento', () => {
       'trt22',
       'trt23',
       'trt24',
+      'tjsp',
     ])
+  })
+
+  it('seleciona TJSP ativo pelo DJEN/CNJ e mantém e-SAJ/TJSP direto pendente', async () => {
+    const { selecionarFontesMonitoramento, fontePodeExecutar } = await import('./index')
+
+    const tjsp = selecionarFontesMonitoramento({ fonte: 'tjsp' })[0]
+    const porTribunal = selecionarFontesMonitoramento({ tribunal: 'TJSP' })[0]
+    const esajTjsp = selecionarFontesMonitoramento({ fonte: 'esaj-tjsp' })[0]
+
+    expect(tjsp?.id).toBe('tjsp')
+    expect(tjsp?.status).toBe('ativo')
+    expect(fontePodeExecutar(tjsp!)).toBe(true)
+    expect(porTribunal?.id).toBe('tjsp')
+    expect(esajTjsp?.status).toBe('pendente')
+    expect(esajTjsp?.descricao).toContain('estado de sessão')
+    expect(fontePodeExecutar(esajTjsp!)).toBe(false)
   })
 
   it('seleciona TRT3 pelo alias trt3-dejt e seleciona DJEN como fonte executável', async () => {
@@ -141,6 +160,7 @@ describe('fontes de monitoramento', () => {
     const datajud = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'datajud-cnj')
     const trt3 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt3')
     const trt24 = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'trt24')
+    const tjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'tjsp')
     const esajTjsp = MATRIZ_FONTES_MONITORAMENTO.find(item => item.id === 'esaj-tjsp')
 
     expect(trt3?.status).toBe('ativo_parcial')
@@ -148,6 +168,9 @@ describe('fontes de monitoramento', () => {
     expect(trt24?.status).toBe('ativo')
     expect(trt24?.motivo).toContain('Revalidação controlada')
     expect(datajud?.capturaPublicacaoReal).toBe(false)
+    expect(tjsp?.status).toBe('ativo_parcial')
+    expect(tjsp?.capturaPublicacaoReal).toBe(true)
     expect(esajTjsp?.status).toBe('pendente')
+    expect(esajTjsp?.capturaPublicacaoReal).toBe(false)
   })
 })

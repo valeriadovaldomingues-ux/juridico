@@ -17,6 +17,7 @@ export type OrigemPublicacaoCapturada =
   | 'datajud_nome'
   | 'datajud_processo'
   | 'datajud_combinado'
+  | 'tjsp_djen'
   | 'trt_djen'
   | 'trt3_dejt'
   | 'trt3_djen'

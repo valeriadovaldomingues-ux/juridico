@@ -1,7 +1,7 @@
 // ─── API Route: POST /api/monitoramento/buscar ────────────────────────────────
 //
-// Executa fontes formais de monitoramento. Nesta fase, apenas o TJMG DJe executa
-// captura real. As demais fontes ficam catalogadas com status explícito.
+// Executa fontes formais de monitoramento. Fontes sem captura pública validada
+// ficam catalogadas com status explícito e não inserem publicações.
 
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'

@@ -14,7 +14,7 @@ export interface TRT3DJENPublicacao {
   texto_publicacao: string
   orgao: string | null
   tribunal: string
-  origem: 'trt_djen' | 'trt3_djen'
+  origem: 'tjsp_djen' | 'trt_djen' | 'trt3_djen'
   tipo_comunicacao: string | null
 }
 
@@ -204,7 +204,11 @@ export function mapearComunicacaoDJEN(
     texto_publicacao: texto.slice(0, 5_000),
     orgao: item.nomeOrgao ?? null,
     tribunal,
-    origem: tribunal === 'TRT3' ? 'trt3_djen' : 'trt_djen',
+    origem: tribunal === 'TRT3'
+      ? 'trt3_djen'
+      : tribunal === 'TJSP'
+        ? 'tjsp_djen'
+        : 'trt_djen',
     tipo_comunicacao: item.tipoComunicacao ?? null,
   }
 }

@@ -64,6 +64,16 @@ export function selecionarFontesMonitoramento(
     if (fonte === 'trt3-djen') {
       return [FONTE_TRT3_DJEN]
     }
+    if (fonte === 'esaj-tjsp') {
+      return [{
+        id: 'esaj-tjsp',
+        nome: 'e-SAJ TJSP',
+        tribunal: 'TJSP',
+        ramo: 'estadual',
+        status: 'pendente',
+        descricao: 'e-SAJ/TJSP direto permanece pendente: fluxo público validado como HTML com estado de sessão; monitoramento TJSP ativo usa DJEN/CNJ.',
+      }]
+    }
     return fontes.filter(item => item.id.toLowerCase() === fonte)
   }
 
