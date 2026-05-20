@@ -1,6 +1,7 @@
 import type { DadosDocumento } from '../schema'
 
 function endereco(dados: DadosDocumento) {
+  if (dados.enderecamentoPeticao.trim()) return dados.enderecamentoPeticao.trim().toUpperCase()
   const vara = dados.vara || '___'
   const comarca = dados.comarca || '___'
   const uf = dados.uf || 'UF'

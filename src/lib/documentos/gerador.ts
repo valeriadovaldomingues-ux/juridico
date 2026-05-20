@@ -221,6 +221,10 @@ function placeholders(dados: DadosDocumento): Record<string, string> {
     PODERES_PROC: valorOuVazio(dados.poderesProcuracao.join('; ')),
     FINALIDADE_HIPOSSUFICIENCIA: valorOuVazio(dados.finalidadeHipossuficiencia),
     TIPO_PETICAO: valorOuVazio(dados.tipoPeticao),
+    MODELO_PETICAO_ID: valorOuVazio(dados.modeloPeticaoId),
+    GRUPO_PETICAO: valorOuVazio(dados.grupoPeticao),
+    ENDERECAMENTO_PETICAO: valorOuVazio(dados.enderecamentoPeticao),
+    TOPICOS_PETICAO: valorOuVazio(dados.topicosPeticao),
     FATOS: valorOuVazio(dados.fatosResumidos),
     DIREITO: valorOuVazio(dados.direito),
     PEDIDOS: valorOuVazio(dados.pedidos),
@@ -244,6 +248,20 @@ function aplicarTemplateDocx(template: Buffer, dados: DadosDocumento) {
   const files = lerZipDocx(template).map(file => {
     if (!file.path.endsWith('.xml')) return file
     let xml = file.data.toString('utf8')
+    if (dados.tipoDocumento === 'peticao_comum' && dados.enderecamentoPeticao.trim() && file.path === 'word/document.xml') {
+      xml = xml.replace(
+        /<w:p\b(?:(?!<\/w:p>)[\s\S])*?\{\{VARA\}\}(?:(?!<\/w:p>)[\s\S])*?\{\{COMARCA\}\}(?:(?!<\/w:p>)[\s\S])*?\{\{UF\}\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/,
+        paragraph(dados.enderecamentoPeticao.trim().toUpperCase(), {
+          font: FOLHA_PADRAO_2026.fonteCorpo,
+          bold: true,
+          size: 22,
+          color: FOLHA_PADRAO_2026.azul,
+          align: 'both',
+          after: 420,
+          line: 360,
+        }),
+      )
+    }
     for (const [key, value] of Object.entries(mapa)) {
       xml = substituirTodos(xml, `{{${key}}}`, esc(value))
     }

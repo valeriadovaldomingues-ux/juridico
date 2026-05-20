@@ -54,6 +54,10 @@ export interface DadosDocumento {
   poderesProcuracao: string[]
   finalidadeHipossuficiencia: string
   tipoPeticao: string
+  modeloPeticaoId: string
+  grupoPeticao: string
+  enderecamentoPeticao: string
+  topicosPeticao: string
   fatosResumidos: string
   pedidos: string
   foro: string
@@ -101,6 +105,10 @@ export const DADOS_DOCUMENTO_VAZIO: DadosDocumento = {
   poderesProcuracao: [],
   finalidadeHipossuficiencia: '',
   tipoPeticao: '',
+  modeloPeticaoId: '',
+  grupoPeticao: '',
+  enderecamentoPeticao: '',
+  topicosPeticao: '',
   fatosResumidos: '',
   pedidos: '',
   foro: '',
@@ -183,6 +191,8 @@ const LABELS_CAMPOS: Partial<Record<keyof DadosDocumento, string>> = {
   foro: 'Foro',
   finalidadeHipossuficiencia: 'Finalidade',
   tipoPeticao: 'Tipo de petição',
+  modeloPeticaoId: 'Modelo de petição',
+  enderecamentoPeticao: 'Endereçamento',
   processo: 'Processo',
   fatosResumidos: 'Fatos resumidos',
   pedidos: 'Pedidos',
@@ -283,6 +293,10 @@ export function normalizarDadosDocumento(input: unknown, tipoPadrao: TipoDocumen
     poderesProcuracao: lista(obj.poderesProcuracao),
     finalidadeHipossuficiencia: texto(obj.finalidadeHipossuficiencia),
     tipoPeticao: texto(obj.tipoPeticao),
+    modeloPeticaoId: texto(obj.modeloPeticaoId),
+    grupoPeticao: texto(obj.grupoPeticao),
+    enderecamentoPeticao: texto(obj.enderecamentoPeticao),
+    topicosPeticao: texto(obj.topicosPeticao),
     fatosResumidos: texto(obj.fatosResumidos),
     pedidos: texto(obj.pedidos),
     foro: texto(obj.foro),

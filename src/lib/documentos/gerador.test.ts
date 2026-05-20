@@ -3,6 +3,7 @@ import { join } from 'path'
 import { inflateRawSync } from 'zlib'
 import { describe, expect, it } from 'vitest'
 import { gerarDocumentoDocx } from './gerador'
+import { buscarModeloPeticao } from './modelos/peticoes/catalogo-peticoes'
 import { normalizarDadosDocumento } from './schema'
 
 interface ArquivoZipTeste {
@@ -213,6 +214,50 @@ describe('gerador DOCX', () => {
     expect(texto).toContain('Valéria F. do Val Domingues Pessoa')
     expect(caminhosDocx(docx)).toContain('word/header1.xml')
     expect(caminhosDocx(docx)).toContain('word/footer1.xml')
+    esperarSemPlaceholders(docx)
+  })
+
+  it.each([
+    ['acao-de-cobranca', 'Ação de Cobrança'],
+    ['acao-de-usucapiao-ordinaria', 'Ação de Usucapião Ordinária'],
+    ['acao-monitoria', 'Ação Monitória'],
+    ['apelacao', 'Apelação'],
+    ['reclamacao-trabalhista', 'Reclamação Trabalhista'],
+    ['divorcio-litigioso', 'Divórcio Litigioso'],
+    ['habeas-corpus', 'Habeas Corpus'],
+  ])('gera petição de teste para o modelo %s sem placeholders', (modeloId, nome) => {
+    const modelo = buscarModeloPeticao(modeloId)
+    expect(modelo?.nomeExibido).toBe(nome)
+
+    const docx = gerarDocumentoDocx(normalizarDadosDocumento({
+      tipoDocumento: 'peticao_comum',
+      modeloPeticaoId: modelo!.id,
+      grupoPeticao: modelo!.grupo,
+      tipoPeticao: modelo!.nomeAcao,
+      enderecamentoPeticao: modelo!.enderecamentoPadrao,
+      topicosPeticao: modelo!.topicosBase.join('\n'),
+      nomeRazaoSocial: 'Cliente Teste',
+      cpfCnpj: '000.000.000-00',
+      endereco: 'Rua Teste, 100',
+      processo: '5000000-00.2026.8.13.0000',
+      parteContraria: 'Parte Contrária',
+      objeto: 'Providência judicial conforme o modelo selecionado.',
+      fatosResumidos: 'Fatos narrados pelo cliente.',
+      direito: 'Fundamentos jurídicos aplicáveis.',
+      pedidos: modelo!.pedidosSugeridos.join('\n'),
+      vara: '1ª',
+      comarca: 'Belo Horizonte',
+      uf: 'MG',
+      valorCausa: '1.000,00',
+      localData: 'Belo Horizonte, 18 de maio de 2026.',
+      nomeRevisor: 'Valéria',
+    }, 'peticao_comum'), 'peticao_comum')
+    const texto = textoDocx(docx)
+
+    expect(texto).toContain(modelo!.enderecamentoPadrao.toUpperCase())
+    expect(texto).toContain(modelo!.nomeAcao)
+    expect(texto).toContain('Cristiano Pessoa Sousa')
+    expect(texto).toContain('Valéria F. do Val Domingues Pessoa')
     esperarSemPlaceholders(docx)
   })
 })

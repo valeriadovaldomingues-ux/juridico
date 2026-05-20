@@ -20,6 +20,7 @@ import {
   type DadosDocumento,
   type TipoDocumentoGerador,
 } from '@/lib/documentos/schema'
+import { buscarModeloPeticao, GRUPOS_PETICOES } from '@/lib/documentos/modelos/peticoes/catalogo-peticoes'
 import { cn } from '@/lib/utils'
 
 type SpeechRecognitionCtor = new () => {
@@ -202,6 +203,31 @@ export default function GeradorDocumentosPage() {
 
   function update<K extends keyof DadosDocumento>(key: K, value: DadosDocumento[K]) {
     setDados(prev => prev ? { ...prev, [key]: value } : prev)
+    setConfirmou(false)
+  }
+
+  function selecionarModeloPeticao(modeloId: string) {
+    const modelo = buscarModeloPeticao(modeloId)
+    setDados(prev => {
+      if (!prev) return prev
+      if (!modelo) {
+        return {
+          ...prev,
+          modeloPeticaoId: '',
+          grupoPeticao: '',
+        }
+      }
+
+      return {
+        ...prev,
+        modeloPeticaoId: modelo.id,
+        grupoPeticao: modelo.grupo,
+        tipoPeticao: modelo.nomeAcao,
+        enderecamentoPeticao: modelo.enderecamentoPadrao,
+        topicosPeticao: modelo.topicosBase.join('\n'),
+        pedidos: prev.pedidos.trim() ? prev.pedidos : modelo.pedidosSugeridos.join('\n'),
+      }
+    })
     setConfirmou(false)
   }
 
@@ -403,12 +429,32 @@ export default function GeradorDocumentosPage() {
                   <input className="w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.processo} onChange={e => update('processo', e.target.value)} placeholder="Número do processo" />
                   {isPeticao && (
                   <>
-                  <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.tipoPeticao} onChange={e => update('tipoPeticao', e.target.value)} placeholder="Tipo de petição" />
+                  <div className="mt-2">
+                    <p className="text-[12px] font-semibold text-[#1B2A4E]">Modelo de petição</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-[#7a8899]">Escolha um modelo (preenche endereçamento e nome da ação)</p>
+                  </div>
+                  <select
+                    className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none"
+                    value={dados.modeloPeticaoId}
+                    onChange={e => selecionarModeloPeticao(e.target.value)}
+                  >
+                    <option value="">— Selecione um modelo —</option>
+                    {GRUPOS_PETICOES.map(grupo => (
+                      <optgroup key={grupo.grupo} label={grupo.grupo}>
+                        {grupo.modelos.map(modelo => (
+                          <option key={modelo.id} value={modelo.id}>{modelo.nomeExibido}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <input className="mt-2 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.tipoPeticao} onChange={e => update('tipoPeticao', e.target.value)} placeholder="Nome da ação" />
+                  <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.enderecamentoPeticao} onChange={e => update('enderecamentoPeticao', e.target.value)} placeholder="Endereçamento" />
                   <div className="mt-2 grid gap-2 sm:grid-cols-3">
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.vara} onChange={e => update('vara', e.target.value)} placeholder="Vara" />
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.comarca} onChange={e => update('comarca', e.target.value)} placeholder="Comarca" />
                     <input className="rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.uf} onChange={e => update('uf', e.target.value.toUpperCase().slice(0, 2))} placeholder="UF" />
                   </div>
+                  <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.topicosPeticao} onChange={e => update('topicosPeticao', e.target.value)} placeholder="Tópicos base" />
                   <textarea className="mt-2 h-20 w-full rounded border border-[#E2DDD8] bg-white px-2 py-1.5 text-[12px] outline-none" value={dados.fatosResumidos} onChange={e => update('fatosResumidos', e.target.value)} placeholder="Fatos resumidos" />
                   </>
                   )}
