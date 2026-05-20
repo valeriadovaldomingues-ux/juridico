@@ -2,7 +2,12 @@
 //
 // Documentação: https://datajud-wiki.cnj.jus.br/api-publica/
 // Base URL: https://api-publica.datajud.cnj.jus.br/
-// Não requer chave de API (acesso público).
+// Requer DATAJUD_API_KEY no formato aceito pelo CNJ:
+// - "APIKey <segredo>" ou
+// - apenas "<segredo>", caso em que o prefixo é adicionado pelo cliente.
+//
+// Uso no sistema: enriquecimento com metadados e movimentações processuais.
+// Não é substituto integral de publicações/intimações de diário.
 //
 // REGRA PRINCIPAL: busca sempre por nome completo exato e OAB exata.
 // Nunca abreviar nomes. Nunca usar busca por nome parcial como primeira opção.
@@ -153,6 +158,12 @@ function buildProcessoQuery(numeroProcesso: string, size = 5) {
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
 
+export function montarAuthorizationDataJud(apiKey = process.env.DATAJUD_API_KEY ?? ''): string | null {
+  const key = apiKey.trim().replace(/^['"]|['"]$/g, '')
+  if (!key) return null
+  return /^APIKey\s+/i.test(key) ? key : `APIKey ${key}`
+}
+
 async function searchDataJud(
   indice: string,
   body: object,
@@ -163,9 +174,15 @@ async function searchDataJud(
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
+    const authorization = montarAuthorizationDataJud()
+    if (!authorization) return null
+
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authorization,
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     })
