@@ -735,6 +735,33 @@ describe('POST /api/monitoramento/buscar', () => {
     })
   })
 
+  it('aceita lista explícita de fontes para busca rápida', async () => {
+    const fonteA = fonteTJMG()
+    const fonteB = fonteTRT3()
+    const fonteC = fonteTRFDJEN('TRF6')
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonteA, fonteB, fonteC])
+    mockCreateClient.mockResolvedValue(supabaseComAdvogados())
+
+    const res = await POST(request({ fontes: ['tjmg-dje', 'trt3', 'trf6'] }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(mockSelecionarFontesMonitoramento).toHaveBeenCalledWith({
+      fonte: undefined,
+      fontes: ['tjmg-dje', 'trt3', 'trf6'],
+      tribunal: undefined,
+      ramo: undefined,
+      data: undefined,
+    })
+    expect(body.sucesso).toBe(true)
+    expect(body.total_pesquisas).toBe(3)
+    expect(body.resumo_execucao).toMatchObject({
+      total_fontes: 3,
+      fontes_sucesso: 3,
+    })
+  })
+
   it('detalha rate limit por fonte sem derrubar as demais', async () => {
     const fonteRateLimit = fonteErroDJEN('TJAC', 'DJEN CNJ indisponível: HTTP 429')
     const fonteOk = fonteTJDJEN('TJBA')

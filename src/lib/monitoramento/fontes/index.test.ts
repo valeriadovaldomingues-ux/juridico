@@ -171,6 +171,16 @@ describe('fontes de monitoramento', () => {
     ])
   })
 
+  it('seleciona múltiplas fontes explícitas sem duplicar resultados', async () => {
+    const { selecionarFontesMonitoramento } = await import('./index')
+
+    const fontes = selecionarFontesMonitoramento({
+      fontes: ['tjmg-dje', 'trt3', 'trf6', 'trf6', 'fonte-inexistente'],
+    })
+
+    expect(fontes.map(fonte => fonte.id)).toEqual(['tjmg-dje', 'trt3', 'trf6'])
+  })
+
   it('seleciona TRFs, superiores e TJs ativos pelo DJEN/CNJ e mantém e-SAJ/TJSP direto pendente', async () => {
     const { selecionarFontesMonitoramento, fontePodeExecutar } = await import('./index')
 

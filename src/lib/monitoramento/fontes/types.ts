@@ -91,6 +91,7 @@ export interface FonteMonitoramentoResumo {
 
 export interface FiltroFontesMonitoramento {
   fonte?: string
+  fontes?: string[]
   tribunal?: string
   ramo?: string
   data?: string

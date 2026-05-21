@@ -67,6 +67,22 @@ interface Log {
   disparado_por: string
 }
 
+interface ResumoExecucao {
+  total_fontes: number
+  fontes_sucesso: number
+  fontes_erro_temporario: number
+  fontes_rate_limit: number
+  fontes_pendentes: number
+  recomendacao?: string
+}
+
+interface LastMessage {
+  ok: boolean
+  text: string
+  resumo?: ResumoExecucao
+  modo?: 'rapido' | 'lento' | 'fonte'
+}
+
 interface FonteMonitoramentoResumo {
   id: string
   nome: string
@@ -116,6 +132,7 @@ const FONTE_STATUS_CFG: Record<FonteMonitoramentoResumo['status'], { label: stri
 }
 
 const PAGE_SIZE = 25
+const FONTES_PRINCIPAIS = ['tjmg-dje', 'trt3', 'trf6']
 
 function fmt(iso?: string) {
   if (!iso) return '—'
@@ -331,7 +348,7 @@ export default function MonitoramentoPage({
   const [logs,        setLogs]        = useState(initialLogs)
   const [expanded,    setExpanded]    = useState<PublicacaoMonitorada | null>(null)
   const [searching,   start]          = useTransition()
-  const [lastMsg,     setLastMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+  const [lastMsg,     setLastMsg]     = useState<LastMessage | null>(null)
 
   // ── Advogados management ──────────────────────────────────────────────────
   const [adding,   setAdding]  = useState(false)
@@ -412,23 +429,27 @@ export default function MonitoramentoPage({
     setSaving(false)
   }
 
-  function triggerSearch(fonte?: string) {
+  function triggerSearch(options: { fonte?: string; fontes?: string[]; modo?: 'rapido' | 'lento' | 'fonte' } = {}) {
     start(async () => {
       setLastMsg(null)
       try {
+        const payload = options.fontes?.length
+          ? { fontes: options.fontes }
+          : options.fonte
+            ? { fonte: options.fonte }
+            : undefined
         const res  = await fetch('/api/monitoramento/buscar', {
           method: 'POST',
-          headers: fonte ? { 'content-type': 'application/json' } : undefined,
-          body: fonte ? JSON.stringify({ fonte }) : undefined,
+          headers: payload ? { 'content-type': 'application/json' } : undefined,
+          body: payload ? JSON.stringify(payload) : undefined,
         })
         const data = await res.json()
         if (data.sucesso) {
-          const fontesResumo = Array.isArray(data.fontes)
-            ? ` · ${data.fontes.map((f: { fonte_nome: string; status: string }) => `${f.fonte_nome}: ${f.status}`).join(', ')}`
-            : ''
           setLastMsg({
             ok: true,
-            text: `${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_pesquisas} fonte(s) · ${(data.duracao_ms / 1000).toFixed(1)}s${fontesResumo}`,
+            text: `${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_pesquisas} fonte(s) · ${(data.duracao_ms / 1000).toFixed(1)}s`,
+            resumo: data.resumo_execucao,
+            modo: options.modo,
           })
           // Reload logs
           const { data: freshLogs } = await supabase
@@ -450,7 +471,12 @@ export default function MonitoramentoPage({
           const fontesResumo = Array.isArray(data.fontes)
             ? ` ${data.fontes.map((f: { fonte_nome: string; mensagem?: string }) => `${f.fonte_nome}: ${f.mensagem ?? 'não executada'}`).join(' · ')}`
             : ''
-          setLastMsg({ ok: false, text: `${data.erro ?? 'Erro desconhecido'}${fontesResumo}` })
+          setLastMsg({
+            ok: false,
+            text: `${data.erro ?? 'Erro desconhecido'}${fontesResumo}`,
+            resumo: data.resumo_execucao,
+            modo: options.modo,
+          })
         }
       } catch {
         setLastMsg({ ok: false, text: 'Erro ao conectar com a API' })
@@ -477,27 +503,69 @@ export default function MonitoramentoPage({
             <ExternalLink size={12} /> Publicações gerais
           </Link>
           <button
-            onClick={() => triggerSearch()}
+            onClick={() => triggerSearch({ fontes: FONTES_PRINCIPAIS, modo: 'rapido' })}
             disabled={searching}
             className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
           >
             {searching
               ? <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
-              : <><Play size={13} /> Buscar agora</>}
+              : <><Play size={13} /> Buscar fontes principais</>}
+          </button>
+          <button
+            onClick={() => triggerSearch({ modo: 'lento' })}
+            disabled={searching}
+            className="flex items-center gap-2 px-4 py-2 bg-[#0f1923] hover:bg-[#1f2d3b] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+          >
+            {searching
+              ? <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
+              : <><Clock size={13} /> Buscar tudo — modo lento</>}
           </button>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-[12px] text-amber-800 leading-relaxed">
+        <strong>Modo lento:</strong> a busca nacional completa consulta muitas fontes DJEN/CNJ e pode levar alguns minutos por causa de rate limit. Use “Buscar fontes principais” para uma verificação mais rápida.
       </div>
 
       {/* ── Last result feedback ── */}
       {lastMsg && (
         <div className={cn(
-          'flex items-center gap-2 px-4 py-3 rounded-xl text-[13px] font-medium border',
+          'rounded-xl text-[13px] font-medium border px-4 py-3',
           lastMsg.ok
             ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
             : 'bg-red-50 border-red-100 text-red-700'
         )}>
-          {lastMsg.ok ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-          {lastMsg.text}
+          <div className="flex items-center gap-2">
+            {lastMsg.ok ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+            <span>{lastMsg.text}</span>
+          </div>
+          {lastMsg.resumo && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
+              <div className="rounded-lg bg-white/70 border border-current/10 px-3 py-2">
+                <p className="font-bold">{lastMsg.resumo.total_fontes}</p>
+                <p className="opacity-75">fontes</p>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-current/10 px-3 py-2">
+                <p className="font-bold">{lastMsg.resumo.fontes_sucesso}</p>
+                <p className="opacity-75">sucesso</p>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-current/10 px-3 py-2">
+                <p className="font-bold">{lastMsg.resumo.fontes_rate_limit}</p>
+                <p className="opacity-75">rate limit</p>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-current/10 px-3 py-2">
+                <p className="font-bold">{lastMsg.resumo.fontes_erro_temporario}</p>
+                <p className="opacity-75">erros temporários</p>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-current/10 px-3 py-2">
+                <p className="font-bold">{lastMsg.resumo.fontes_pendentes}</p>
+                <p className="opacity-75">pendentes</p>
+              </div>
+            </div>
+          )}
+          {lastMsg.resumo?.recomendacao && (
+            <p className="mt-2 text-[12px]">{lastMsg.resumo.recomendacao}</p>
+          )}
         </div>
       )}
 
@@ -559,7 +627,7 @@ export default function MonitoramentoPage({
                     Última execução: {fonte.ultima_execucao ? timeAgo(fonte.ultima_execucao) : '—'}
                   </p>
                   <button
-                    onClick={() => triggerSearch(fonte.id)}
+                    onClick={() => triggerSearch({ fonte: fonte.id, modo: 'fonte' })}
                     disabled={searching || !podeExecutar}
                     className={cn(
                       'text-[11px] font-semibold px-3 py-1.5 rounded-xl transition-colors',
@@ -694,7 +762,7 @@ export default function MonitoramentoPage({
                 </p>
                 <p className="text-[12px] text-[#9aabb8] mt-1">
                   {pubs.length === 0
-                    ? 'Clique em "Buscar agora" para iniciar a captura automática'
+                    ? 'Use "Buscar fontes principais" ou "Buscar tudo — modo lento" para iniciar a captura automática'
                     : 'Tente ajustar os filtros'}
                 </p>
               </div>

@@ -95,6 +95,9 @@ async function lerFiltro(request: Request): Promise<FiltroFontesMonitoramento> {
     const body = await request.json()
     return {
       fonte: typeof body?.fonte === 'string' ? body.fonte : undefined,
+      fontes: Array.isArray(body?.fontes)
+        ? body.fontes.filter((item: unknown) => typeof item === 'string')
+        : undefined,
       tribunal: typeof body?.tribunal === 'string' ? body.tribunal : undefined,
       ramo: typeof body?.ramo === 'string' ? body.ramo : undefined,
       data: typeof body?.data === 'string'

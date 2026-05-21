@@ -56,8 +56,16 @@ export function selecionarFontesMonitoramento(
 ): FonteMonitoramento[] {
   const fontes = listarFontesMonitoramento()
   const fonte = filtro.fonte?.trim().toLowerCase()
+  const fontesFiltro = filtro.fontes?.map(item => item.trim().toLowerCase()).filter(Boolean)
   const tribunal = filtro.tribunal?.trim().toLowerCase()
   const ramo = filtro.ramo?.trim().toLowerCase()
+
+  if (fontesFiltro?.length) {
+    const selecionadas = fontesFiltro.flatMap(item => selecionarFontesMonitoramento({ fonte: item }))
+    const unique = new Map<string, FonteMonitoramento>()
+    for (const selecionada of selecionadas) unique.set(selecionada.id, selecionada)
+    return [...unique.values()]
+  }
 
   if (fonte) {
     if (fonte === 'trt3-dejt') {
