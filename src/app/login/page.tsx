@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -107,6 +108,15 @@ export default function LoginPage() {
             >
               {loading ? 'Verificando...' : 'Entrar'}
             </button>
+
+            <div className="text-center">
+              <Link
+                href="/esqueci-senha"
+                className="text-[12px] font-semibold text-[#1D5F60] hover:text-[#162030] transition-colors"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
           </form>
         </div>
 

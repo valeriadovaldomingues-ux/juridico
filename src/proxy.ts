@@ -108,7 +108,9 @@ export async function proxy(request: NextRequest) {
     isAuthPage       ||
     isPortalLogin    ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/reset-password')
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/esqueci-senha') ||
+    pathname.startsWith('/redefinir-senha')
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))

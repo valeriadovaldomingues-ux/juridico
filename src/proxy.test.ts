@@ -201,6 +201,18 @@ describe('sem sessão', () => {
     const res = await proxy(req('/reset-password'))
     expectPassThru(res)
   })
+
+  it('/esqueci-senha → passa através (rota pública)', async () => {
+    noSession()
+    const res = await proxy(req('/esqueci-senha'))
+    expectPassThru(res)
+  })
+
+  it('/redefinir-senha → passa através (rota pública)', async () => {
+    noSession()
+    const res = await proxy(req('/redefinir-senha'))
+    expectPassThru(res)
+  })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -604,6 +616,16 @@ describe('rotas públicas (qualquer estado de sessão)', () => {
   it('/reset-password/token sem sessão → passa através', async () => {
     noSession()
     expectPassThru(await proxy(req('/reset-password/token')))
+  })
+
+  it('/esqueci-senha sem sessão → passa através', async () => {
+    noSession()
+    expectPassThru(await proxy(req('/esqueci-senha')))
+  })
+
+  it('/redefinir-senha sem sessão → passa através', async () => {
+    noSession()
+    expectPassThru(await proxy(req('/redefinir-senha')))
   })
 })
 
