@@ -7,11 +7,23 @@ type ResetPasswordAuth = {
   resetPasswordForEmail: (
     email: string,
     options: { redirectTo: string }
-  ) => Promise<{ error?: unknown }>
+  ) => Promise<{ data?: unknown; error?: AuthErrorLike | null }>
 }
 
 type UpdatePasswordAuth = {
   updateUser: (attributes: { password: string }) => Promise<{ error?: { message?: string } | null }>
+}
+
+export type AuthErrorLike = {
+  name?: string
+  status?: number
+  message?: string
+}
+
+export type SanitizedAuthError = {
+  name: string
+  status?: number
+  message: string
 }
 
 function normalizeBaseUrl(url: string): string {
@@ -50,18 +62,47 @@ export function getPasswordResetRedirectTo(currentOrigin?: string): string {
   return `${baseUrl}/redefinir-senha`
 }
 
+export function sanitizeAuthError(error: unknown): SanitizedAuthError {
+  if (error && typeof error === 'object') {
+    const candidate = error as AuthErrorLike
+    return {
+      name: candidate.name ?? 'AuthError',
+      status: candidate.status,
+      message: candidate.message ?? 'Erro de autenticação sem mensagem.',
+    }
+  }
+
+  return {
+    name: 'AuthError',
+    message: 'Erro de autenticação desconhecido.',
+  }
+}
+
 export async function requestPasswordResetEmail(
   auth: ResetPasswordAuth,
   email: string,
   currentOrigin?: string
-): Promise<{ message: string; failed: boolean }> {
+): Promise<{ message: string; failed: boolean; error?: SanitizedAuthError }> {
   try {
-    await auth.resetPasswordForEmail(email.trim(), {
+    const { error } = await auth.resetPasswordForEmail(email.trim(), {
       redirectTo: getPasswordResetRedirectTo(currentOrigin),
     })
+
+    if (error) {
+      return {
+        message: PASSWORD_RESET_GENERIC_MESSAGE,
+        failed: true,
+        error: sanitizeAuthError(error),
+      }
+    }
+
     return { message: PASSWORD_RESET_GENERIC_MESSAGE, failed: false }
-  } catch {
-    return { message: PASSWORD_RESET_GENERIC_MESSAGE, failed: true }
+  } catch (error) {
+    return {
+      message: PASSWORD_RESET_GENERIC_MESSAGE,
+      failed: true,
+      error: sanitizeAuthError(error),
+    }
   }
 }
 

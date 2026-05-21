@@ -28,7 +28,9 @@ export default function EsqueciSenhaPage() {
     )
 
     if (result.failed && process.env.NODE_ENV === 'development') {
-      console.warn('[auth] Falha ao solicitar redefinição de senha. Mensagem genérica exibida ao usuário.')
+      console.warn('[auth] Falha ao solicitar redefinição de senha. Mensagem genérica exibida ao usuário.', {
+        error: result.error,
+      })
     }
 
     setMessage(PASSWORD_RESET_GENERIC_MESSAGE)

@@ -61,6 +61,27 @@ describe('password-reset', () => {
     expect(result.failed).toBe(true)
   })
 
+  it('trata error retornado por resetPasswordForEmail sem expor erro ao usuário', async () => {
+    const resetPasswordForEmail = vi.fn().mockResolvedValue({
+      data: null,
+      error: { name: 'AuthApiError', status: 400, message: 'Redirect URL not allowed' },
+    })
+
+    const result = await requestPasswordResetEmail(
+      { resetPasswordForEmail },
+      'socio@pessoaedoval.com.br',
+      'http://192.168.1.210:3000'
+    )
+
+    expect(result.message).toBe(PASSWORD_RESET_GENERIC_MESSAGE)
+    expect(result.failed).toBe(true)
+    expect(result.error).toEqual({
+      name: 'AuthApiError',
+      status: 400,
+      message: 'Redirect URL not allowed',
+    })
+  })
+
   it('valida senhas diferentes antes de chamar updateUser', async () => {
     const updateUser = vi.fn()
 

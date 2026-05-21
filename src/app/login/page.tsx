@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ROLE_REDIRECT } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import Logo from '@/components/ui/Logo'
+import { sanitizeAuthError } from '@/lib/auth/password-reset'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,7 +24,17 @@ export default function LoginPage() {
     setLoading(true)
     const supabase = createClient()
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError('E-mail ou senha incorretos.'); setLoading(false); return }
+    if (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[auth] Falha no login por senha.', {
+          error: sanitizeAuthError(error),
+          origin: window.location.origin,
+        })
+      }
+      setError('E-mail ou senha incorretos.')
+      setLoading(false)
+      return
+    }
 
     // Busca o perfil para redirecionar conforme o papel
     let redirect = '/dashboard'
