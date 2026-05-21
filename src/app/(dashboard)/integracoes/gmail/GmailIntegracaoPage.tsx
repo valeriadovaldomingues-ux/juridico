@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import { CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Trash2, Unlink } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Unlink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SafeConnection {
@@ -21,6 +21,17 @@ interface PreviewMessage {
   date: string | null
   snippet: string
   labelIds: string[]
+  categoria:
+    | 'propaganda_newsletter'
+    | 'spam_provavel'
+    | 'possivelmente_importante'
+    | 'juridico_processual'
+    | 'cliente_contato_humano'
+    | 'financeiro_banco_pagamento'
+    | 'nao_classificado'
+  confianca: 'baixa' | 'media' | 'alta'
+  preSelecionado: boolean
+  alertaAnexo: boolean
   sugestao: 'revisar' | 'manter' | 'candidata_publicacao' | 'candidata_limpeza'
   motivos: string[]
 }
@@ -41,11 +52,26 @@ const SUGESTAO_LABEL: Record<PreviewMessage['sugestao'], string> = {
   candidata_limpeza: 'Candidata à limpeza',
 }
 
+const CATEGORIA_LABEL: Record<PreviewMessage['categoria'], string> = {
+  propaganda_newsletter: 'Provável propaganda/newsletter',
+  spam_provavel: 'Spam provável',
+  possivelmente_importante: 'E-mail possivelmente importante',
+  juridico_processual: 'Jurídico/processual',
+  cliente_contato_humano: 'Cliente/contato humano',
+  financeiro_banco_pagamento: 'Financeiro/banco/pagamento',
+  nao_classificado: 'Não classificado',
+}
+
+type PreviewFilter = 'limpeza' | 'todos' | 'importantes' | 'juridicos'
+
 export default function GmailIntegracaoPage() {
   const [connection, setConnection] = useState<SafeConnection | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const [error, setError] = useState('')
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('limpeza')
+  const [hideImportant, setHideImportant] = useState(false)
   const [pending, startTransition] = useTransition()
   const [form, setForm] = useState({
     remetente: '',
@@ -63,6 +89,18 @@ export default function GmailIntegracaoPage() {
     if (!connection) return 'Gmail não conectado'
     return `Conectado como ${connection.google_email}`
   }, [connection, statusLoading])
+
+  const mensagensFiltradas = useMemo(() => {
+    const mensagens = preview?.mensagens ?? []
+    return mensagens.filter(message => {
+      const importante = ['possivelmente_importante', 'cliente_contato_humano', 'financeiro_banco_pagamento'].includes(message.categoria)
+      if (hideImportant && importante) return false
+      if (previewFilter === 'limpeza') return ['propaganda_newsletter', 'spam_provavel'].includes(message.categoria)
+      if (previewFilter === 'importantes') return importante
+      if (previewFilter === 'juridicos') return message.categoria === 'juridico_processual'
+      return true
+    })
+  }, [hideImportant, preview?.mensagens, previewFilter])
 
   async function carregarStatus() {
     setStatusLoading(true)
@@ -112,10 +150,18 @@ export default function GmailIntegracaoPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`)
         setPreview(data)
+        setSelectedIds((data.mensagens as PreviewMessage[])
+          .filter(message => message.preSelecionado)
+          .map(message => message.id))
+        setPreviewFilter('limpeza')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao buscar prévia no Gmail')
       }
     })
+  }
+
+  function toggleSelecionado(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id])
   }
 
   return (
@@ -181,7 +227,7 @@ export default function GmailIntegracaoPage() {
         <div className="border-b border-[#F0F6F6] px-5 py-4">
           <h2 className="text-[14px] font-bold text-[#0f1923]">Busca de candidatos à limpeza</h2>
           <p className="mt-0.5 text-[12px] text-[#7a8899]">
-            Retorna remetente, assunto, data, snippet, labels e motivo sugerido. Limite máximo: 20 mensagens.
+            Retorna remetente, assunto, data, snippet, labels, categoria, confiança e motivo sugerido. Limite máximo: 20 mensagens.
           </p>
         </div>
 
@@ -239,31 +285,94 @@ export default function GmailIntegracaoPage() {
               Query: <span className="font-mono">{preview.query}</span> · estimativa: {preview.totalEstimado}
             </p>
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F0F6F6] px-5 py-3">
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['limpeza', 'Mostrar apenas propaganda/spam provável'],
+                ['todos', 'Mostrar todos'],
+                ['importantes', 'Mostrar possíveis importantes'],
+                ['juridicos', 'Mostrar jurídicos/processuais'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setPreviewFilter(value)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors',
+                    previewFilter === value
+                      ? 'border-[#1D5F60] bg-[#F0F6F6] text-[#0F3D3E]'
+                      : 'border-[#E2DDD8] text-[#7a8899] hover:bg-[#F8F7F5]',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-[#7a8899]">
+              <input
+                type="checkbox"
+                checked={hideImportant}
+                onChange={event => setHideImportant(event.target.checked)}
+              />
+              Ocultar e-mails possivelmente importantes
+            </label>
+          </div>
           <div className="divide-y divide-[#F0F6F6]">
-            {preview.mensagens.length === 0 ? (
+            {mensagensFiltradas.length === 0 ? (
               <div className="px-5 py-10 text-center text-[13px] text-[#7a8899]">
                 Nenhuma mensagem encontrada para os filtros informados.
               </div>
-            ) : preview.mensagens.map(message => (
+            ) : mensagensFiltradas.map(message => (
               <article key={message.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold text-[#0f1923]">{message.subject}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-[#7a8899]">{message.from}</p>
+                  <div className="flex min-w-0 gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(message.id)}
+                      onChange={() => toggleSelecionado(message.id)}
+                      className="mt-1"
+                      aria-label={`Selecionar ${message.subject}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-bold text-[#0f1923]">{message.subject}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-[#7a8899]">{message.from}</p>
+                    </div>
                   </div>
-                  <span className="rounded-full bg-[#F3F1EE] px-2.5 py-1 text-[11px] font-semibold text-[#4a5a6a]">
-                    {SUGESTAO_LABEL[message.sugestao]}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="rounded-full bg-[#F3F1EE] px-2.5 py-1 text-[11px] font-semibold text-[#4a5a6a]">
+                      {CATEGORIA_LABEL[message.categoria]}
+                    </span>
+                    <span className={cn(
+                      'rounded-full px-2.5 py-1 text-[10px] font-semibold',
+                      message.confianca === 'alta' && 'bg-emerald-50 text-emerald-700',
+                      message.confianca === 'media' && 'bg-amber-50 text-amber-700',
+                      message.confianca === 'baixa' && 'bg-slate-100 text-slate-600',
+                    )}>
+                      Confiança {message.confianca}
+                    </span>
+                  </div>
                 </div>
                 <p className="mt-2 text-[12px] leading-relaxed text-[#4a5a6a]">{message.snippet || '(sem snippet)'}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#9aabb8]">
                   <span>{message.date ?? 'sem data'}</span>
+                  <span className="rounded-full bg-[#F3F1EE] px-2 py-0.5 text-[#4a5a6a]">
+                    {SUGESTAO_LABEL[message.sugestao]}
+                  </span>
+                  {message.preSelecionado && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                      pré-selecionado por alta confiança
+                    </span>
+                  )}
+                  {message.alertaAnexo && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-red-700">
+                      <AlertTriangle size={10} /> revisar com cuidado: possui anexo
+                    </span>
+                  )}
                   {message.labelIds.map(label => (
                     <span key={label} className="rounded-full bg-[#F8F7F5] px-2 py-0.5">{label}</span>
                   ))}
                   {message.motivos.map(motivo => (
                     <span key={motivo} className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
-                      <Trash2 size={10} /> {motivo}
+                      <AlertTriangle size={10} /> {motivo}
                     </span>
                   ))}
                 </div>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildGmailCleanupQuery, previewGmailCleanup } from './gmail'
+import { buildGmailCleanupQuery, classifyMessage, previewGmailCleanup } from './gmail'
 
 describe('gmail cleanup preview', () => {
   afterEach(() => {
@@ -61,8 +61,106 @@ describe('gmail cleanup preview', () => {
       id: 'msg-1',
       from: 'tribunal@example.jus.br',
       subject: 'Intimação eletrônica',
+      categoria: 'juridico_processual',
+      preSelecionado: false,
       sugestao: 'candidata_publicacao',
     })
     expect(fetchMock.mock.calls.map(call => String(call[0])).some(url => /trash|modify|send|labels/i.test(url))).toBe(false)
+  })
+
+  it('não classifica intimação como limpeza', () => {
+    const result = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Intimação para ciência no processo.',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'Subject', value: 'Intimação eletrônica' }] },
+    })
+
+    expect(result.categoria).toBe('juridico_processual')
+    expect(result.preSelecionado).toBe(false)
+    expect(result.sugestao).not.toBe('candidata_limpeza')
+  })
+
+  it('não classifica processo como limpeza', () => {
+    const result = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Atualização do processo 0000000-00.2026.8.13.0000.',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'Subject', value: 'Andamento processual' }] },
+    })
+
+    expect(result.categoria).toBe('juridico_processual')
+    expect(result.preSelecionado).toBe(false)
+  })
+
+  it('não classifica boleto como limpeza', () => {
+    const result = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Boleto disponível para pagamento.',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'Subject', value: 'Boleto bancário' }] },
+    })
+
+    expect(result.categoria).toBe('financeiro_banco_pagamento')
+    expect(result.preSelecionado).toBe(false)
+    expect(result.sugestao).toBe('revisar')
+  })
+
+  it('marca email com anexo para revisão com cuidado', () => {
+    const result = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Newsletter com oferta.',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'Subject', value: 'Newsletter de ofertas' }] },
+    }, { hasAttachmentQuery: true })
+
+    expect(result.alertaAnexo).toBe(true)
+    expect(result.preSelecionado).toBe(false)
+    expect(result.motivos.join(' ')).toContain('anexo')
+  })
+
+  it('classifica unsubscribe/promoção/noreply como propaganda provável com confiança alta', () => {
+    const result = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Promoção com desconto. Clique para unsubscribe.',
+      labelIds: ['INBOX'],
+      payload: {
+        headers: [
+          { name: 'From', value: 'No Reply <no-reply@marketing.example.com>' },
+          { name: 'Subject', value: 'Newsletter promocional' },
+        ],
+      },
+    })
+
+    expect(result.categoria).toBe('propaganda_newsletter')
+    expect(result.confianca).toBe('alta')
+    expect(result.preSelecionado).toBe(true)
+  })
+
+  it('pré-seleciona apenas propaganda ou spam com confiança alta', () => {
+    const propaganda = classifyMessage({
+      id: 'msg-1',
+      threadId: 'thr-1',
+      snippet: 'Newsletter com oferta e link para descadastrar.',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'From', value: 'noreply@example.com' }] },
+    })
+    const humano = classifyMessage({
+      id: 'msg-2',
+      threadId: 'thr-2',
+      snippet: 'Olá, podemos conversar amanhã?',
+      labelIds: ['INBOX'],
+      payload: { headers: [{ name: 'From', value: 'Maria Silva <maria@gmail.com>' }] },
+    })
+
+    expect(propaganda.preSelecionado).toBe(true)
+    expect(propaganda.confianca).toBe('alta')
+    expect(humano.preSelecionado).toBe(false)
+    expect(humano.categoria).toBe('possivelmente_importante')
   })
 })
