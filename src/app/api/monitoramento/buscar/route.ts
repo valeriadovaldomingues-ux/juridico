@@ -19,9 +19,14 @@ import {
   type PublicacaoCapturada,
   type ResultadoMonitoramento,
 } from '@/lib/monitoramento/fontes'
+import {
+  executarFontesComFila,
+  resumirExecucaoFontes,
+  type ErroFonteDetalhado,
+} from '@/lib/monitoramento/executor-fontes'
 import type { UserRole } from '@/types'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 const ROLES_MONITORAMENTO: UserRole[] = ['advogado', 'gerente', 'socio']
 
@@ -51,6 +56,7 @@ interface LogFonte {
   falhas: number
   erro?: string
   mensagem?: string
+  erro_detalhado?: ErroFonteDetalhado
 }
 
 function gerarHashGenerico(pub: PublicacaoCapturada): string {
@@ -233,7 +239,7 @@ async function executarFonte(
   return resultado
 }
 
-function logFonte(resultado: ResultadoMonitoramento): LogFonte {
+function logFonte(resultado: ResultadoMonitoramento, erro_detalhado?: ErroFonteDetalhado): LogFonte {
   return {
     fonte_id: resultado.fonte_id,
     fonte_nome: resultado.fonte_nome,
@@ -247,6 +253,7 @@ function logFonte(resultado: ResultadoMonitoramento): LogFonte {
     falhas: resultado.falhas,
     erro: resultado.erro,
     mensagem: resultado.mensagem,
+    erro_detalhado,
   }
 }
 
@@ -307,11 +314,12 @@ export async function POST(request: Request) {
       `${a.oab_numero}/${a.oab_uf}`,
     ])
 
-  const resultados: ResultadoMonitoramento[] = []
-  for (const fonte of fontes) {
-    const resultado = await executarFonte(fonte, nomes, processoNums, oabs, filtro.data, supabase, processoMap)
-    resultados.push(resultado)
-  }
+  const resultadosFila = await executarFontesComFila({
+    fontes,
+    executarFonte: fonte => executarFonte(fonte, nomes, processoNums, oabs, filtro.data, supabase, processoMap),
+  })
+  const resultados = resultadosFila.map(item => item.resultado)
+  const resumoExecucao = resumirExecucaoFontes(resultadosFila)
 
   const totalEncontradas = resultados.reduce((acc, item) => acc + item.encontradas, 0)
   const totalNovas = resultados.reduce((acc, item) => acc + item.inseridas, 0)
@@ -319,7 +327,7 @@ export async function POST(request: Request) {
   const totalFalhas = resultados.reduce((acc, item) => acc + item.falhas, 0)
   const totalIgnoradas = resultados.reduce((acc, item) => acc + item.ignoradas, 0)
   const duracao = Date.now() - inicio
-  const fontesLog = resultados.map(logFonte)
+  const fontesLog = resultadosFila.map(item => logFonte(item.resultado, item.erro_detalhado))
   const todasPendentes = resultados.every(item => item.status !== 'ativo')
 
   await supabase.from('monitoramento_logs').insert({
@@ -334,6 +342,7 @@ export async function POST(request: Request) {
       fontes: fontesLog,
       total_falhas: totalFalhas,
       total_ignoradas: totalIgnoradas,
+      resumo_execucao: resumoExecucao,
       filtro,
       nota: fontesLog.map(item =>
         `${item.fonte_nome}: ${item.status}, ${item.encontradas} encontrada(s), ${item.inseridas} inserida(s), ${item.duplicadas} duplicada(s), ${item.falhas} falha(s)`,
@@ -348,6 +357,7 @@ export async function POST(request: Request) {
         ? 'Fonte requer credencial antes de executar.'
         : 'Fonte ainda não implementada.',
       fontes: fontesLog,
+      resumo_execucao: resumoExecucao,
       duracao_ms: duracao,
     })
   }
@@ -363,6 +373,7 @@ export async function POST(request: Request) {
     total_falhas: totalFalhas,
     total_ignoradas: totalIgnoradas,
     fontes: fontesLog,
+    resumo_execucao: resumoExecucao,
     duracao_ms: duracao,
   })
 }

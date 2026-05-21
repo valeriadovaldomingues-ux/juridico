@@ -6,11 +6,13 @@ const {
   mockCreateClient,
   mockSelecionarFontesMonitoramento,
   mockFontePodeExecutar,
+  mockSleepExecutor,
 } = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
   mockCreateClient: vi.fn(),
   mockSelecionarFontesMonitoramento: vi.fn(),
   mockFontePodeExecutar: vi.fn(),
+  mockSleepExecutor: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/api-guard', () => ({
@@ -25,6 +27,15 @@ vi.mock('@/lib/monitoramento/fontes', () => ({
   selecionarFontesMonitoramento: mockSelecionarFontesMonitoramento,
   fontePodeExecutar: mockFontePodeExecutar,
 }))
+
+vi.mock('@/lib/monitoramento/executor-fontes', async importOriginal => {
+  const original = await importOriginal<typeof import('@/lib/monitoramento/executor-fontes')>()
+  return {
+    ...original,
+    executarFontesComFila: (options: Parameters<typeof original.executarFontesComFila>[0]) =>
+      original.executarFontesComFila({ ...options, sleep: mockSleepExecutor }),
+  }
+})
 
 vi.mock('@/lib/monitoramento/tjmg-dje', () => ({
   gerarHashDJE: vi.fn(() => 'hash-dje'),
@@ -179,6 +190,33 @@ function fonteSuperiorDJEN(tribunal: string, publicacoes: any[] = []) {
       falhas: 0,
       publicacoes,
       mensagem: `${tribunal} ativo via DJEN/CNJ.`,
+    }),
+  }
+}
+
+function fonteErroDJEN(tribunal: string, erro: string) {
+  const id = tribunal.toLowerCase()
+  return {
+    id,
+    nome: tribunal,
+    tribunal,
+    ramo: 'estadual',
+    status: 'ativo',
+    descricao: `${tribunal} ativo via DJEN/CNJ`,
+    executar: vi.fn().mockResolvedValue({
+      fonte_id: id,
+      fonte_nome: tribunal,
+      tribunal,
+      ramo: 'estadual',
+      status: 'erro',
+      encontradas: 0,
+      inseridas: 0,
+      duplicadas: 0,
+      ignoradas: 0,
+      falhas: 1,
+      publicacoes: [],
+      erro,
+      mensagem: `Falha na captura pública DJEN/CNJ para ${tribunal}.`,
     }),
   }
 }
@@ -392,6 +430,8 @@ beforeEach(() => {
   mockCreateClient.mockReset()
   mockSelecionarFontesMonitoramento.mockReset()
   mockFontePodeExecutar.mockReset()
+  mockSleepExecutor.mockReset()
+  mockSleepExecutor.mockResolvedValue(undefined)
   mockFontePodeExecutar.mockImplementation((fonte: any) => fonte.status === 'ativo' && typeof fonte.executar === 'function')
   mockSelecionarFontesMonitoramento.mockReturnValue([fonteTJMG()])
 })
@@ -640,6 +680,87 @@ describe('POST /api/monitoramento/buscar', () => {
       data: '2026-05-19',
     })
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
+  })
+
+  it('executa múltiplas fontes DJEN/CNJ em fila, com delay entre fontes', async () => {
+    const ordem: string[] = []
+    const fonteA = fonteTJDJEN('TJAC')
+    const fonteB = fonteTJDJEN('TJBA')
+    fonteA.executar.mockImplementation(async () => {
+      ordem.push('tjac')
+      return {
+        fonte_id: 'tjac',
+        fonte_nome: 'TJAC',
+        tribunal: 'TJAC',
+        ramo: 'estadual',
+        status: 'ativo',
+        encontradas: 0,
+        inseridas: 0,
+        duplicadas: 0,
+        ignoradas: 0,
+        falhas: 0,
+        publicacoes: [],
+      }
+    })
+    fonteB.executar.mockImplementation(async () => {
+      ordem.push('tjba')
+      return {
+        fonte_id: 'tjba',
+        fonte_nome: 'TJBA',
+        tribunal: 'TJBA',
+        ramo: 'estadual',
+        status: 'ativo',
+        encontradas: 0,
+        inseridas: 0,
+        duplicadas: 0,
+        ignoradas: 0,
+        falhas: 0,
+        publicacoes: [],
+      }
+    })
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonteA, fonteB])
+    mockCreateClient.mockResolvedValue(supabaseComAdvogados())
+
+    const res = await POST(request())
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(ordem).toEqual(['tjac', 'tjba'])
+    expect(mockSleepExecutor).toHaveBeenCalledTimes(1)
+    expect(body.resumo_execucao).toMatchObject({
+      total_fontes: 2,
+      fontes_sucesso: 2,
+      fontes_rate_limit: 0,
+    })
+  })
+
+  it('detalha rate limit por fonte sem derrubar as demais', async () => {
+    const fonteRateLimit = fonteErroDJEN('TJAC', 'DJEN CNJ indisponível: HTTP 429')
+    const fonteOk = fonteTJDJEN('TJBA')
+    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-socio' })
+    mockSelecionarFontesMonitoramento.mockReturnValue([fonteRateLimit, fonteOk])
+    mockCreateClient.mockResolvedValue(supabaseComAdvogados())
+
+    const res = await POST(request())
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sucesso).toBe(true)
+    expect(body.total_falhas).toBe(1)
+    expect(body.resumo_execucao).toMatchObject({
+      total_fontes: 2,
+      fontes_sucesso: 1,
+      fontes_erro_temporario: 1,
+      fontes_rate_limit: 1,
+      recomendacao: 'Algumas fontes retornaram rate limit. Tente novamente em alguns minutos.',
+    })
+    expect(body.fontes[0].erro_detalhado).toMatchObject({
+      tipo: 'rate_limit',
+      status_http: 429,
+      temporario: true,
+    })
+    expect(body.fontes[1].fonte_nome).toBe('TJBA')
   })
 
   it('não executa e-SAJ e retorna aviso de implementação pendente', async () => {
