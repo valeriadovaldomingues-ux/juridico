@@ -35,9 +35,32 @@ export interface GmailPreviewMessage {
   motivos: string[]
 }
 
+export type GmailCleanupAction =
+  | 'trash'
+  | 'archive'
+  | 'spam'
+  | 'mark_read'
+  | 'label_triaged'
+
+export interface GmailCleanupApplyResult {
+  action: GmailCleanupAction
+  totalSelecionado: number
+  totalAplicado: number
+  falhas: Array<{ id: string; erro: string }>
+}
+
 interface GmailListResponse {
   messages?: Array<{ id: string; threadId: string }>
   resultSizeEstimate?: number
+}
+
+interface GmailLabelListResponse {
+  labels?: Array<{ id: string; name: string; type?: string }>
+}
+
+interface GmailLabelCreateResponse {
+  id: string
+  name: string
 }
 
 interface GmailGetResponse {
@@ -81,9 +104,18 @@ export function buildGmailCleanupQuery(input: GmailCleanupPreviewInput): string 
   return parts.join(' ').trim() || 'newer_than:30d'
 }
 
-async function gmailFetch<T>(accessToken: string, endpoint: string): Promise<T> {
+async function gmailFetch<T>(
+  accessToken: string,
+  endpoint: string,
+  init: RequestInit = {},
+): Promise<T> {
   const res = await fetch(`https://gmail.googleapis.com/gmail/v1${endpoint}`, {
-    headers: { authorization: `Bearer ${accessToken}` },
+    ...init,
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...init.headers,
+    },
   })
   const bodyText = await res.text()
   const body = bodyText ? JSON.parse(bodyText) : {}
@@ -91,6 +123,106 @@ async function gmailFetch<T>(accessToken: string, endpoint: string): Promise<T> 
     throw new Error(`Gmail HTTP ${res.status}: ${body.error?.message ?? res.statusText}`)
   }
   return body as T
+}
+
+export async function fetchGmailMessageMetadata(
+  accessToken: string,
+  messageId: string,
+): Promise<GmailPreviewMessage> {
+  const params = new URLSearchParams({
+    format: 'metadata',
+    metadataHeaders: 'From',
+  })
+  params.append('metadataHeaders', 'Subject')
+  params.append('metadataHeaders', 'Date')
+  const message = await gmailFetch<GmailGetResponse>(accessToken, `/users/me/messages/${encodeURIComponent(messageId)}?${params}`)
+  const classificacao = classifyMessage(message)
+
+  return {
+    id: message.id,
+    threadId: message.threadId,
+    from: header(message.payload?.headers, 'From'),
+    subject: header(message.payload?.headers, 'Subject') || '(sem assunto)',
+    date: header(message.payload?.headers, 'Date') || null,
+    snippet: (message.snippet ?? '').slice(0, 300),
+    labelIds: message.labelIds ?? [],
+    ...classificacao,
+  }
+}
+
+function dedupeIds(ids: string[]): string[] {
+  return [...new Set(ids.map(id => id.trim()).filter(Boolean))].slice(0, 20)
+}
+
+async function getOrCreateTriagedLabelId(accessToken: string): Promise<string> {
+  const list = await gmailFetch<GmailLabelListResponse>(accessToken, '/users/me/labels')
+  const existing = list.labels?.find(label => label.name === 'Triado pela Aurora')
+  if (existing?.id) return existing.id
+
+  const created = await gmailFetch<GmailLabelCreateResponse>(accessToken, '/users/me/labels', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Triado pela Aurora',
+      labelListVisibility: 'labelShow',
+      messageListVisibility: 'show',
+    }),
+  })
+  return created.id
+}
+
+async function modifyMessage(
+  accessToken: string,
+  messageId: string,
+  body: { addLabelIds?: string[]; removeLabelIds?: string[] },
+): Promise<void> {
+  await gmailFetch(accessToken, `/users/me/messages/${encodeURIComponent(messageId)}/modify`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function applyGmailCleanupAction(
+  accessToken: string,
+  action: GmailCleanupAction,
+  messageIds: string[],
+): Promise<GmailCleanupApplyResult> {
+  const ids = dedupeIds(messageIds)
+  const falhas: GmailCleanupApplyResult['falhas'] = []
+  let totalAplicado = 0
+  const triagedLabelId = action === 'label_triaged'
+    ? await getOrCreateTriagedLabelId(accessToken)
+    : null
+
+  for (const id of ids) {
+    try {
+      if (action === 'trash') {
+        await gmailFetch(accessToken, `/users/me/messages/${encodeURIComponent(id)}/trash`, {
+          method: 'POST',
+        })
+      } else if (action === 'archive') {
+        await modifyMessage(accessToken, id, { removeLabelIds: ['INBOX'] })
+      } else if (action === 'spam') {
+        await modifyMessage(accessToken, id, { addLabelIds: ['SPAM'] })
+      } else if (action === 'mark_read') {
+        await modifyMessage(accessToken, id, { removeLabelIds: ['UNREAD'] })
+      } else {
+        await modifyMessage(accessToken, id, { addLabelIds: [triagedLabelId!] })
+      }
+      totalAplicado += 1
+    } catch (error) {
+      falhas.push({
+        id,
+        erro: error instanceof Error ? error.message : 'Erro ao aplicar ação no Gmail',
+      })
+    }
+  }
+
+  return {
+    action,
+    totalSelecionado: ids.length,
+    totalAplicado,
+    falhas,
+  }
 }
 
 function header(headers: Array<{ name: string; value: string }> | undefined, name: string): string {

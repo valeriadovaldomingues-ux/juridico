@@ -2,7 +2,8 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes }
 
 export const GOOGLE_PROVIDER = 'google'
 export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
-export const GOOGLE_OAUTH_SCOPES = [GMAIL_READONLY_SCOPE] as const
+export const GMAIL_MODIFY_SCOPE = 'https://www.googleapis.com/auth/gmail.modify'
+export const GOOGLE_OAUTH_SCOPES = [GMAIL_READONLY_SCOPE, GMAIL_MODIFY_SCOPE] as const
 
 export interface GoogleTokenResponse {
   access_token: string

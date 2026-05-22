@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Unlink } from 'lucide-react'
+import { AlertTriangle, Archive, CheckCircle2, ExternalLink, Inbox, Loader2, MailCheck, Search, ShieldCheck, Tag, Trash2, Unlink } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const GMAIL_MODIFY_SCOPE = 'https://www.googleapis.com/auth/gmail.modify'
 
 interface SafeConnection {
   id: string
@@ -43,6 +45,17 @@ interface PreviewResponse {
   aviso: string
 }
 
+type CleanupAction = 'trash' | 'archive' | 'spam' | 'mark_read' | 'label_triaged'
+type ApplyResult = {
+  sucesso: boolean
+  action: CleanupAction
+  actionLabel: string
+  totalSelecionado: number
+  totalAplicado: number
+  falhas: Array<{ idHash: string; erro: string }>
+  aviso: string
+}
+
 const inputCls = 'w-full rounded-xl border border-[#E2DDD8] bg-[#F8F7F5] px-3 py-2 text-[13px] text-[#0f1923] outline-none transition-colors focus:border-[#1D5F60] focus:bg-white'
 
 const SUGESTAO_LABEL: Record<PreviewMessage['sugestao'], string> = {
@@ -64,6 +77,16 @@ const CATEGORIA_LABEL: Record<PreviewMessage['categoria'], string> = {
 
 type PreviewFilter = 'limpeza' | 'todos' | 'importantes' | 'juridicos'
 
+const ACTIONS: Array<{ value: CleanupAction; label: string; description: string; icon: typeof Trash2 }> = [
+  { value: 'trash', label: 'Mover para lixeira', description: 'Usa a lixeira do Gmail, sem exclusão definitiva.', icon: Trash2 },
+  { value: 'archive', label: 'Arquivar', description: 'Remove o label INBOX dos e-mails selecionados.', icon: Archive },
+  { value: 'spam', label: 'Marcar como spam', description: 'Aplica o label SPAM no Gmail.', icon: Inbox },
+  { value: 'mark_read', label: 'Marcar como lido', description: 'Remove o label UNREAD.', icon: MailCheck },
+  { value: 'label_triaged', label: 'Aplicar label “Triado pela Aurora”', description: 'Cria/aplica o label de triagem assistida.', icon: Tag },
+]
+
+const RISKY_CATEGORIES = ['juridico_processual', 'financeiro_banco_pagamento', 'cliente_contato_humano'] as const
+
 export default function GmailIntegracaoPage() {
   const [connection, setConnection] = useState<SafeConnection | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
@@ -72,6 +95,12 @@ export default function GmailIntegracaoPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('limpeza')
   const [hideImportant, setHideImportant] = useState(false)
+  const [action, setAction] = useState<CleanupAction>('trash')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmRisky, setConfirmRisky] = useState(false)
+  const [confirmAttachments, setConfirmAttachments] = useState(false)
+  const [applyLoading, setApplyLoading] = useState(false)
+  const [applyResult, setApplyResult] = useState<ApplyResult | null>(null)
   const [pending, startTransition] = useTransition()
   const [form, setForm] = useState({
     remetente: '',
@@ -84,11 +113,22 @@ export default function GmailIntegracaoPage() {
   })
 
   const conectado = !!connection
+  const temEscopoModify = connection?.scopes.includes(GMAIL_MODIFY_SCOPE) === true
+  const precisaReconectar = conectado && !temEscopoModify
   const statusText = useMemo(() => {
     if (statusLoading) return 'Verificando conexão...'
     if (!connection) return 'Gmail não conectado'
     return `Conectado como ${connection.google_email}`
   }, [connection, statusLoading])
+
+  const selectedMessages = useMemo(() => {
+    const byId = new Map((preview?.mensagens ?? []).map(message => [message.id, message]))
+    return selectedIds.flatMap(id => byId.get(id) ? [byId.get(id)!] : [])
+  }, [preview?.mensagens, selectedIds])
+
+  const selectedHasAttachment = selectedMessages.some(message => message.alertaAnexo)
+  const selectedHasRiskyCategory = selectedMessages.some(message => RISKY_CATEGORIES.includes(message.categoria as typeof RISKY_CATEGORIES[number]))
+  const selectedAction = ACTIONS.find(item => item.value === action) ?? ACTIONS[0]
 
   const mensagensFiltradas = useMemo(() => {
     const mensagens = preview?.mensagens ?? []
@@ -150,6 +190,7 @@ export default function GmailIntegracaoPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`)
         setPreview(data)
+        setApplyResult(null)
         setSelectedIds((data.mensagens as PreviewMessage[])
           .filter(message => message.preSelecionado)
           .map(message => message.id))
@@ -164,13 +205,48 @@ export default function GmailIntegracaoPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id])
   }
 
+  function abrirConfirmacao(novaAcao: CleanupAction) {
+    setAction(novaAcao)
+    setConfirmRisky(false)
+    setConfirmAttachments(false)
+    setConfirmOpen(true)
+  }
+
+  async function aplicarAcao() {
+    setApplyLoading(true)
+    setError('')
+    setApplyResult(null)
+    try {
+      const res = await fetch('/api/integracoes/google/gmail/cleanup-apply', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          messageIds: selectedIds,
+          selectedMessages,
+          confirmRisky,
+          confirmAttachments,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `Erro ${res.status}`)
+      setApplyResult(data)
+      setSelectedIds([])
+      setConfirmOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao aplicar ação assistida no Gmail')
+    } finally {
+      setApplyLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[24px] font-bold tracking-tight text-[#0f1923]">Integração Gmail</h1>
           <p className="mt-1 text-[13px] text-[#7a8899]">
-            Pré-análise de limpeza para sócios, com OAuth Google e escopo somente leitura.
+            Pré-análise e limpeza assistida para sócios, com OAuth Google e aprovação humana.
           </p>
         </div>
         <div className={cn(
@@ -191,16 +267,21 @@ export default function GmailIntegracaoPage() {
       <section className="rounded-lg border border-[#E2DDD8] bg-white shadow-sm">
         <div className="border-b border-[#F0F6F6] px-5 py-4">
           <h2 className="text-[14px] font-bold text-[#0f1923]">Conexão OAuth</h2>
-          <p className="mt-0.5 text-[12px] text-[#7a8899]">
-            O sistema usa `gmail.readonly`. Tokens ficam criptografados e nunca são enviados ao navegador.
+            <p className="mt-0.5 text-[12px] text-[#7a8899]">
+            O sistema usa `gmail.readonly` para prévia e `gmail.modify` para ações confirmadas. Tokens ficam criptografados e nunca são enviados ao navegador.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-5">
           <div>
             <p className="text-[13px] font-semibold text-[#0f1923]">{statusText}</p>
             <p className="mt-1 text-[12px] text-[#7a8899]">
-              Nenhum e-mail será apagado, arquivado, movido, marcado como spam ou enviado nesta fase.
+              Ações no Gmail só serão aplicadas em mensagens selecionadas e confirmadas. Nenhum e-mail será excluído definitivamente.
             </p>
+            {precisaReconectar && (
+              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+                Reconecte o Gmail para autorizar ações assistidas. A conexão atual permite apenas leitura.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {!conectado && (
@@ -212,12 +293,22 @@ export default function GmailIntegracaoPage() {
               </a>
             )}
             {conectado && (
-              <button
-                onClick={desconectar}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-[13px] font-semibold text-red-700 transition-colors hover:bg-red-100"
-              >
-                <Unlink size={13} /> Desconectar
-              </button>
+              <>
+                {precisaReconectar && (
+                  <a
+                    href="/api/integracoes/google/oauth/start"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#1D5F60] px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#27777A]"
+                  >
+                    <ExternalLink size={13} /> Reconectar Gmail
+                  </a>
+                )}
+                <button
+                  onClick={desconectar}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-[13px] font-semibold text-red-700 transition-colors hover:bg-red-100"
+                >
+                  <Unlink size={13} /> Desconectar
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -379,10 +470,111 @@ export default function GmailIntegracaoPage() {
               </article>
             ))}
           </div>
-          <div className="border-t border-[#F0F6F6] px-5 py-3 text-[12px] text-[#7a8899]">
-            {preview.aviso}
+          <div className="space-y-4 border-t border-[#F0F6F6] px-5 py-4">
+            <div className="text-[12px] text-[#7a8899]">
+              {preview.aviso}
+            </div>
+
+            <div className="rounded-xl border border-[#E2DDD8] bg-[#F8F7F5] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-[13px] font-bold text-[#0f1923]">Ações assistidas</h3>
+                  <p className="mt-1 text-[12px] text-[#7a8899]">
+                    {selectedIds.length} e-mail(s) selecionado(s). Nenhuma ação é aplicada sem confirmação.
+                  </p>
+                  {precisaReconectar && (
+                    <p className="mt-2 text-[12px] font-semibold text-amber-700">
+                      Reconecte o Gmail com `gmail.modify` para habilitar ações.
+                    </p>
+                  )}
+                  {(selectedHasAttachment || selectedHasRiskyCategory) && (
+                    <p className="mt-2 text-[12px] font-semibold text-red-700">
+                      A seleção contém e-mail sensível ou com anexo. Será exigida confirmação extra.
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {ACTIONS.map(item => {
+                    const Icon = item.icon
+                    return (
+                      <button
+                        key={item.value}
+                        onClick={() => abrirConfirmacao(item.value)}
+                        disabled={selectedIds.length === 0 || !temEscopoModify || applyLoading}
+                        title={item.description}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#D9D2CA] bg-white px-3 py-2 text-[12px] font-semibold text-[#0f1923] transition-colors hover:border-[#B8864B] hover:text-[#8A6238] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Icon size={13} /> {item.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {applyResult && (
+                <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800">
+                  {applyResult.totalAplicado} de {applyResult.totalSelecionado} e-mail(s) processado(s). {applyResult.aviso}
+                </div>
+              )}
+            </div>
           </div>
         </section>
+      )}
+
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-[#F0F6F6] px-5 py-4">
+              <h2 className="text-[16px] font-bold text-[#0f1923]">Confirmar ação</h2>
+              <p className="mt-1 text-[13px] text-[#7a8899]">
+                Você está prestes a aplicar “{selectedAction.label}” em {selectedIds.length} e-mail(s) selecionado(s).
+              </p>
+            </div>
+            <div className="space-y-3 px-5 py-4 text-[13px] text-[#4a5a6a]">
+              <p>{selectedAction.description}</p>
+              <p className="font-semibold text-[#0f1923]">
+                Esta operação não exclui e-mails definitivamente e não envia, responde ou encaminha mensagens.
+              </p>
+              {selectedHasAttachment && (
+                <label className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-red-800">
+                  <input
+                    type="checkbox"
+                    checked={confirmAttachments}
+                    onChange={event => setConfirmAttachments(event.target.checked)}
+                    className="mt-0.5"
+                  />
+                  Confirmo que revisei e-mails com anexo antes de aplicar a ação.
+                </label>
+              )}
+              {selectedHasRiskyCategory && (
+                <label className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-amber-800">
+                  <input
+                    type="checkbox"
+                    checked={confirmRisky}
+                    onChange={event => setConfirmRisky(event.target.checked)}
+                    className="mt-0.5"
+                  />
+                  Confirmo que revisei e-mails jurídicos, financeiros ou de contato humano selecionados.
+                </label>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[#F0F6F6] px-5 py-4">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="rounded-xl border border-[#D9D2CA] px-4 py-2 text-[13px] font-semibold text-[#4a5a6a] hover:bg-[#F8F7F5]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={aplicarAcao}
+                disabled={applyLoading || (selectedHasAttachment && !confirmAttachments) || (selectedHasRiskyCategory && !confirmRisky)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0f1923] px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#1f2d3b] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {applyLoading && <Loader2 size={13} className="animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

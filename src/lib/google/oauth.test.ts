@@ -28,18 +28,20 @@ describe('google oauth helpers', () => {
     expect(decryptToken(encrypted)).toBe('refresh-token-sensivel')
   })
 
-  it('monta URL OAuth com gmail.readonly e access_type offline', async () => {
+  it('monta URL OAuth com gmail.readonly, gmail.modify e access_type offline', async () => {
     vi.stubEnv('GOOGLE_CLIENT_ID', 'client-id.apps.googleusercontent.com')
     vi.stubEnv('GOOGLE_OAUTH_STATE_SECRET', 'state-secret')
     vi.stubEnv('APP_ENCRYPTION_KEY', 'encryption-secret')
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://sistema.test')
-    const { buildGoogleOAuthUrl, GMAIL_READONLY_SCOPE } = await import('./oauth')
+    const { buildGoogleOAuthUrl, GMAIL_MODIFY_SCOPE, GMAIL_READONLY_SCOPE } = await import('./oauth')
 
     const url = new URL(buildGoogleOAuthUrl('uid-socio'))
+    const scopes = url.searchParams.get('scope')?.split(/\s+/) ?? []
 
     expect(url.origin).toBe('https://accounts.google.com')
     expect(url.searchParams.get('client_id')).toBe('client-id.apps.googleusercontent.com')
-    expect(url.searchParams.get('scope')).toBe(GMAIL_READONLY_SCOPE)
+    expect(scopes).toContain(GMAIL_READONLY_SCOPE)
+    expect(scopes).toContain(GMAIL_MODIFY_SCOPE)
     expect(url.searchParams.get('access_type')).toBe('offline')
     expect(url.searchParams.get('redirect_uri')).toBe('https://sistema.test/api/integracoes/google/oauth/callback')
   })

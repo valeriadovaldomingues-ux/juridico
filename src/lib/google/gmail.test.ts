@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildGmailCleanupQuery, classifyMessage, previewGmailCleanup } from './gmail'
+import { applyGmailCleanupAction, buildGmailCleanupQuery, classifyMessage, previewGmailCleanup } from './gmail'
 
 describe('gmail cleanup preview', () => {
   afterEach(() => {
@@ -162,5 +162,63 @@ describe('gmail cleanup preview', () => {
     expect(propaganda.confianca).toBe('alta')
     expect(humano.preSelecionado).toBe(false)
     expect(humano.categoria).toBe('possivelmente_importante')
+  })
+
+  it('move para lixeira usando users.messages.trash e nunca chama delete', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    const result = await applyGmailCleanupAction('access-token', 'trash', ['msg-1'])
+
+    expect(result.totalAplicado).toBe(1)
+    const urls = fetchMock.mock.calls.map(call => String(call[0]))
+    expect(urls[0]).toContain('/users/me/messages/msg-1/trash')
+    expect(urls.some(url => url.includes('/delete'))).toBe(false)
+  })
+
+  it('arquiva removendo o label INBOX', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    await applyGmailCleanupAction('access-token', 'archive', ['msg-1'])
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/users/me/messages/msg-1/modify')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ removeLabelIds: ['INBOX'] })
+  })
+
+  it('marca como lido removendo o label UNREAD', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    await applyGmailCleanupAction('access-token', 'mark_read', ['msg-1'])
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ removeLabelIds: ['UNREAD'] })
+  })
+
+  it('marca como spam aplicando o label SPAM', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    await applyGmailCleanupAction('access-token', 'spam', ['msg-1'])
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ addLabelIds: ['SPAM'] })
+  })
+
+  it('cria/aplica label Triado pela Aurora quando necessário', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url.endsWith('/users/me/labels') && method === 'GET') {
+        return new Response(JSON.stringify({ labels: [] }), { status: 200 })
+      }
+      if (url.endsWith('/users/me/labels') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'Label_123', name: 'Triado pela Aurora' }), { status: 200 })
+      }
+      return new Response('{}', { status: 200 })
+    })
+
+    await applyGmailCleanupAction('access-token', 'label_triaged', ['msg-1'])
+
+    const urls = fetchMock.mock.calls.map(call => String(call[0]))
+    expect(urls[0]).toContain('/users/me/labels')
+    expect(urls[1]).toContain('/users/me/labels')
+    expect(urls[2]).toContain('/users/me/messages/msg-1/modify')
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ addLabelIds: ['Label_123'] })
   })
 })
