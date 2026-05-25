@@ -9,29 +9,11 @@ export const metadata: Metadata = {
 
 const H2 = '[font-family:var(--font-serif)] text-[#0D2235] font-bold text-2xl sm:text-3xl mt-12 mb-5 leading-tight'
 const P  = 'text-[#4B5563] text-lg leading-relaxed mb-5'
-const BOX = 'bg-white border border-[#E2DDD8] rounded-xl p-7 my-6 shadow-[0_2px_16px_rgba(17,24,39,0.04)]'
-const NAVY = 'bg-[#0D2235] rounded-xl p-7 my-8'
 
-function CheckItem({ children, alerta }: { children: React.ReactNode; alerta?: boolean }) {
+function Callout({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-4 py-3 border-b border-[#F3F1EE] last:border-0">
-      <div className={`mt-0.5 shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${alerta ? 'border-[#ea580c]' : 'border-[#E2DDD8]'}`}>
-        {alerta && (
-          <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3">
-            <path d="M2 5h6M5 2v6" stroke="#ea580c" strokeWidth={1.5} strokeLinecap="round" />
-          </svg>
-        )}
-      </div>
-      <span className={`text-base leading-relaxed ${alerta ? 'text-[#9a3412]' : 'text-[#4B5563]'}`}>{children}</span>
-    </li>
-  )
-}
-
-function Section({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <div className={BOX}>
-      <p className="font-semibold text-[#111827] mb-1 text-base">{titulo}</p>
-      <ul className="mt-3">{children}</ul>
+    <div className="border-l-4 border-[#B8784A] pl-6 my-6">
+      <p className="text-[#4B5563] text-lg leading-relaxed italic">{children}</p>
     </div>
   )
 }
@@ -41,103 +23,97 @@ export default function Page() {
     <ArticleLayout
       categoria="Ferramenta"
       titulo="Checklist NR-1: sua empresa está preparada?"
-      subtitulo="Verifique em minutos o grau de conformidade da sua empresa com as novas exigências da NR-1 sobre riscos psicossociais. Use este checklist como ponto de partida para identificar lacunas e priorizar ações."
+      subtitulo="A pergunta não é se sua empresa terá que olhar para os riscos psicossociais. A pergunta é se ela fará isso agora, com estratégia, ou depois, com pressa e advogado correndo atrás do prejuízo."
       dataPublicacao="Maio de 2026"
     >
       <p className={P}>
-        A adequação à NR-1 atualizada envolve mais do que a elaboração de um documento. Ela exige que a empresa efetivamente identifique, avalie e controle os fatores de risco psicossocial presentes no seu ambiente de trabalho — e que tenha evidência documentada disso.
+        A atualização da NR-1 exige que as empresas incluam os fatores de risco psicossociais no gerenciamento de riscos ocupacionais. Isso significa que o PGR deve contemplar não apenas os riscos tradicionais, mas também fatores relacionados à organização do trabalho, à gestão, às relações interpessoais e ao ambiente psicossocial.
       </p>
       <p className={P}>
-        Este checklist está organizado por área e cobre os principais requisitos da norma. Use os itens marcados com ⊕ como pontos de atenção prioritária para sua empresa.
-      </p>
-
-      <h2 className={H2}>1. Programa de Gerenciamento de Riscos (PGR)</h2>
-
-      <Section titulo="Documentação e atualização">
-        <CheckItem>A empresa possui PGR formalmente elaborado e atualizado.</CheckItem>
-        <CheckItem>O PGR inclui inventário de riscos que contempla fatores psicossociais.</CheckItem>
-        <CheckItem alerta>Os riscos psicossociais estão identificados com medidas de controle definidas.</CheckItem>
-        <CheckItem alerta>O PGR foi revisado após a entrada em vigor da atualização da NR-1.</CheckItem>
-        <CheckItem>Existe responsável interno designado para o acompanhamento do PGR.</CheckItem>
-      </Section>
-
-      <h2 className={H2}>2. Mapeamento de riscos psicossociais</h2>
-
-      <Section titulo="Identificação e avaliação">
-        <CheckItem>Foram avaliados os fatores de carga e organização do trabalho.</CheckItem>
-        <CheckItem alerta>Existe registro formal da avaliação de riscos ligados à liderança e relações interpessoais.</CheckItem>
-        <CheckItem>O equilíbrio entre vida pessoal e profissional foi considerado na avaliação.</CheckItem>
-        <CheckItem alerta>Há mecanismo para que funcionários reportem percepções de risco psicossocial.</CheckItem>
-        <CheckItem>A avaliação foi realizada com metodologia estruturada (não apenas por percepção subjetiva dos gestores).</CheckItem>
-      </Section>
-
-      <h2 className={H2}>3. Prevenção ao assédio moral e sexual</h2>
-
-      <Section titulo="Políticas e processos">
-        <CheckItem alerta>A empresa possui política formal e escrita de prevenção ao assédio moral e sexual.</CheckItem>
-        <CheckItem alerta>A política foi comunicada formalmente a todos os funcionários.</CheckItem>
-        <CheckItem alerta>Existe canal de denúncia acessível, com garantia de anonimato.</CheckItem>
-        <CheckItem>O canal de denúncia é efetivamente conhecido pelos funcionários (não apenas formalmente existente).</CheckItem>
-        <CheckItem>Há processo formal de apuração de denúncias com prazos e responsáveis definidos.</CheckItem>
-        <CheckItem alerta>As lideranças receberam treinamento sobre prevenção e identificação de assédio.</CheckItem>
-      </Section>
-
-      <h2 className={H2}>4. Liderança e clima organizacional</h2>
-
-      <Section titulo="Gestão de pessoas">
-        <CheckItem>Os gestores recebem capacitação sobre saúde mental e gestão de pessoas.</CheckItem>
-        <CheckItem>Existe avaliação periódica de clima organizacional.</CheckItem>
-        <CheckItem alerta>Os resultados das avaliações de clima geram planos de ação documentados.</CheckItem>
-        <CheckItem>Há processo de feedback estruturado entre gestores e equipes.</CheckItem>
-        <CheckItem>Decisões relevantes são comunicadas de forma transparente e com antecedência.</CheckItem>
-      </Section>
-
-      <h2 className={H2}>5. Carga de trabalho e jornada</h2>
-
-      <Section titulo="Controle e monitoramento">
-        <CheckItem>A empresa possui controle efetivo de jornada para todos os funcionários.</CheckItem>
-        <CheckItem alerta>Horas extras são monitoradas e há limites estabelecidos por política interna.</CheckItem>
-        <CheckItem>As metas são revisadas periodicamente quanto à sua razoabilidade.</CheckItem>
-        <CheckItem>Existe processo para que funcionários reportem sobrecarga sem medo de represálias.</CheckItem>
-        <CheckItem alerta>O banco de horas, quando utilizado, está devidamente documentado e compensado.</CheckItem>
-      </Section>
-
-      <h2 className={H2}>Como interpretar os resultados</h2>
-
-      <div className={NAVY}>
-        <div className="space-y-4">
-          {[
-            { cor: '#16a34a', fundo: 'rgba(22,163,74,0.15)', label: 'Todos os itens marcados', desc: 'Boa aderência formal. O próximo passo é verificar se as práticas são efetivas na prática e se a documentação está consolidada.' },
-            { cor: '#ca8a04', fundo: 'rgba(202,138,4,0.15)', label: '1 a 3 itens ⊕ não atendidos', desc: 'Risco moderado. Lacunas pontuais que podem ser corrigidas com ações direcionadas. Priorize os itens marcados com ⊕.' },
-            { cor: '#ea580c', fundo: 'rgba(234,88,12,0.15)', label: '4 ou mais itens ⊕ não atendidos', desc: 'Risco alto. A empresa está exposta a autuações e processos trabalhistas. Recomenda-se diagnóstico jurídico imediato.' },
-          ].map(item => (
-            <div key={item.label} className="flex items-start gap-4 rounded-lg p-4" style={{ background: item.fundo }}>
-              <div className="w-3 h-3 rounded-full shrink-0 mt-1" style={{ background: item.cor }} />
-              <div>
-                <p className="font-semibold text-white text-sm mb-1">{item.label}</p>
-                <p className="text-white/65 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <h2 className={H2}>O que fazer com os resultados</h2>
-      <p className={P}>
-        Este checklist é uma ferramenta de diagnóstico inicial — ele indica onde estão as lacunas, mas não substitui uma análise jurídica individualizada. Para transformar os resultados em um plano de ação juridicamente sólido, é necessário avaliar o contexto específico da empresa, o setor de atuação e a exposição histórica a riscos.
+        Segundo o Ministério do Trabalho e Emprego, o Manual de Interpretação e Aplicação do Capítulo 1.5 da NR-1 foi lançado para orientar empregadores, trabalhadores e profissionais de segurança e saúde na implementação do Gerenciamento de Riscos Ocupacionais, incluindo os riscos psicossociais.
       </p>
       <p className={P}>
-        O diagnóstico interativo disponível nesta plataforma vai além do checklist: ele avalia 8 fatores de risco com base nas respostas dos responsáveis pela empresa e gera um relatório com score por fator e recomendações prioritárias.
+        Mas a pergunta prática é: sua empresa já está preparada?
+      </p>
+      <p className={P}>
+        Abaixo, veja um checklist inicial para avaliar o grau de conformidade da empresa.
       </p>
 
-      <div className="border-l-4 border-[#B8784A] pl-6 my-8">
-        <p className="text-[#4B5563] text-lg leading-relaxed italic">
-          &ldquo;Um checklist aponta o que falta. O diagnóstico mostra o grau de risco e o que priorizar. A assessoria jurídica garante que as ações adotadas tenham validade como evidência de compliance.&rdquo;
-        </p>
-        <p className="text-[#B8784A] text-sm font-semibold mt-3 tracking-wide">
-          Pessoa e do Val Advocacia
-        </p>
-      </div>
+      <h2 className={H2}>1. O PGR da empresa foi revisado?</h2>
+      <p className={P}>
+        O primeiro ponto é verificar se o Programa de Gerenciamento de Riscos está atualizado e se contempla os fatores de risco psicossociais.
+      </p>
+      <p className={P}>
+        Se o PGR ainda trata apenas de riscos físicos, químicos, biológicos, ergonômicos e de acidentes, ele provavelmente precisa ser revisto.
+      </p>
+      <p className={P}>
+        A empresa deve identificar fatores como excesso de carga de trabalho, pressão por metas, conflitos internos, falhas de comunicação, assédio, violência no trabalho, baixa autonomia, insegurança, jornadas desorganizadas e ausência de suporte adequado.
+      </p>
+
+      <h2 className={H2}>2. A empresa possui inventário de riscos psicossociais?</h2>
+      <p className={P}>
+        A identificação dos riscos precisa ser documentada. Não basta saber informalmente que &ldquo;o setor comercial é mais estressante&rdquo; ou que &ldquo;aquele gerente é difícil&rdquo;.
+      </p>
+      <p className={P}>
+        O inventário deve apontar quais riscos existem, onde estão, quem está exposto e qual o nível de gravidade. Também deve indicar medidas de prevenção e controle.
+      </p>
+      <Callout>Sem documento, no processo, vira conversa. E conversa, sem prova, costuma apanhar da realidade.</Callout>
+
+      <h2 className={H2}>3. Existem medidas preventivas claras?</h2>
+      <p className={P}>
+        Depois de identificar os riscos, a empresa precisa agir.
+      </p>
+      <p className={P}>
+        As medidas podem incluir reorganização de processos, revisão de metas, treinamento de lideranças, melhoria dos canais de comunicação, criação de política contra assédio, canal de denúncia, protocolo de apuração interna e acompanhamento de afastamentos relacionados à saúde mental.
+      </p>
+      <p className={P}>
+        O importante é que essas ações sejam reais, aplicáveis e registradas.
+      </p>
+
+      <h2 className={H2}>4. Os gestores foram treinados?</h2>
+      <p className={P}>
+        Grande parte dos riscos psicossociais nasce na liderança despreparada.
+      </p>
+      <p className={P}>
+        Gestores precisam saber cobrar sem humilhar, corrigir sem perseguir, dar feedback sem expor, organizar demandas sem sobrecarregar e lidar com conflitos sem transformar o setor em ringue.
+      </p>
+      <Callout>Treinamento de liderança não é luxo. É blindagem trabalhista.</Callout>
+
+      <h2 className={H2}>5. A empresa possui canal de denúncia e protocolo de apuração?</h2>
+      <Callout>Canal de denúncia sem apuração séria é enfeite institucional.</Callout>
+      <p className={P}>
+        A empresa precisa ter um meio seguro para que empregados relatem situações de assédio, abuso, discriminação, violência psicológica ou outras condutas inadequadas. Mas também precisa ter um procedimento claro para apurar, registrar e solucionar essas queixas.
+      </p>
+      <p className={P}>
+        O pior cenário é a empresa receber uma denúncia e não fazer nada. A omissão costuma falar alto — e fala contra a empresa.
+      </p>
+
+      <h2 className={H2}>6. Há acompanhamento dos afastamentos e sinais de adoecimento?</h2>
+      <p className={P}>
+        Afastamentos recorrentes, aumento de atestados, rotatividade elevada, conflitos frequentes e queda de produtividade podem indicar problemas no ambiente de trabalho.
+      </p>
+      <p className={P}>
+        Esses dados devem ser observados com cuidado, sempre respeitando a privacidade do trabalhador, mas sem ignorar sinais evidentes de risco organizacional.
+      </p>
+
+      <h2 className={H2}>7. O jurídico participa da prevenção?</h2>
+      <p className={P}>
+        A adequação à NR-1 não deve ficar restrita ao RH ou à segurança do trabalho.
+      </p>
+      <p className={P}>
+        O jurídico tem papel essencial na análise de risco, na construção de políticas internas, na orientação de gestores, na documentação das medidas preventivas e na redução de passivos trabalhistas.
+      </p>
+      <p className={P}>
+        Prevenção boa é aquela que começa antes da notificação, da denúncia ou da inicial trabalhista.
+      </p>
+
+      <h2 className={H2}>Conclusão</h2>
+      <p className={P}>
+        A nova NR-1 exige uma mudança de postura. Empresas que tratam saúde mental apenas como tema abstrato ficarão expostas. Empresas que estruturam prevenção, documentação e gestão sairão mais protegidas.
+      </p>
+      <p className={P}>
+        A pergunta não é se sua empresa terá que olhar para os riscos psicossociais. A pergunta é se ela fará isso agora, com estratégia, ou depois, com pressa e advogado correndo atrás do prejuízo.
+      </p>
     </ArticleLayout>
   )
 }
