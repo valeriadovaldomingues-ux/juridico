@@ -1,5 +1,13 @@
 import type { Metadata } from 'next'
+import { Cormorant_Garamond } from 'next/font/google'
 import ContactForm from './ContactForm'
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  display: 'swap',
+  variable: '--font-serif',
+})
 
 export const metadata: Metadata = {
   title: 'NR-1 sem Risco — Pessoa e do Val Advocacia',
@@ -155,15 +163,26 @@ function Tag({ label }: { label: string }) {
 
 export default function NR1SemRiscoPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className={`${cormorant.variable} min-h-screen bg-[#F3F1EE] text-[#111827]`}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[#0A0A0A] border-b border-white/5">
+      <header className="sticky top-0 z-50 bg-[#162030] border-b border-[#C49557]/20 shadow-[0_8px_30px_rgba(17,24,39,0.12)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-[#C49557] font-serif text-xl font-bold tracking-wide">P&V</span>
-            <span className="hidden sm:block text-white/20 text-xs">|</span>
-            <span className="hidden sm:block text-white/60 text-sm">Pessoa e do Val Advocacia</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Pessoa e do Val Advocacia"
+              className="h-9 w-9 rounded-lg border border-[#C49557]/25 bg-[#C49557]/10 object-contain p-1"
+            />
+            <div className="hidden sm:block leading-none">
+              <p className="[font-family:var(--font-serif)] text-white text-[19px] font-semibold tracking-tight">
+                Pessoa e do Val
+              </p>
+              <p className="text-[#C49557] text-[9px] mt-0.5 tracking-[0.2em] uppercase">
+                Advocacia
+              </p>
+            </div>
           </div>
           <nav className="flex items-center gap-8">
             <a href="#o-que-mudou" className="hidden md:block text-white/50 hover:text-[#C49557] text-sm transition-colors">
@@ -179,21 +198,22 @@ export default function NR1SemRiscoPage() {
               href={WA}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#C49557] hover:bg-[#A07840] text-black text-sm font-semibold px-5 py-2.5 rounded transition-colors"
+              className="bg-[#C49557] hover:bg-[#A07840] text-[#111827] text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
             >
               WhatsApp
             </a>
           </nav>
         </div>
+        <div className="h-px bg-gradient-to-r from-transparent via-[#C49557]/40 to-transparent" />
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="bg-[#0A0A0A] pt-24 pb-36 px-6">
+      <section className="bg-[#162030] pt-24 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <span className="inline-block border border-[#C49557]/30 text-[#C49557] text-[11px] font-semibold tracking-widest uppercase px-5 py-2 rounded-full mb-8">
             NR-1 sem Risco por Pessoa e do Val Advocacia
           </span>
-          <h1 className="text-white font-serif font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6">
+          <h1 className="[font-family:var(--font-serif)] text-white font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6">
             NR-1 e riscos psicossociais:{' '}
             <span className="text-[#C49557]">sua empresa está preparada?</span>
           </h1>
@@ -205,13 +225,13 @@ export default function NR1SemRiscoPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="#contato"
-              className="bg-[#C49557] hover:bg-[#A07840] text-black font-semibold px-10 py-4 rounded text-base transition-colors"
+              className="bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
               Solicitar diagnóstico
             </a>
             <a
               href="#contato"
-              className="border border-white/15 hover:border-[#C49557]/60 text-white/70 hover:text-[#C49557] font-semibold px-10 py-4 rounded text-base transition-colors"
+              className="border border-white/15 hover:border-[#C49557]/60 text-white/70 hover:text-[#C49557] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
               Solicitar checklist gratuito
             </a>
@@ -220,25 +240,25 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── O que mudou na NR-1 ────────────────────────────────────────────── */}
-      <section id="o-que-mudou" className="py-24 px-6 bg-white">
+      <section id="o-que-mudou" className="py-24 px-6 bg-[#F3F1EE]">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl">
             <Tag label="Legislação" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900 mt-3 mb-6">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-[#111827] mt-3 mb-6">
               O que mudou na NR-1
             </h2>
-            <p className="text-gray-500 text-lg leading-relaxed mb-5">
+            <p className="text-[#4B5563] text-lg leading-relaxed mb-5">
               A Norma Regulamentadora nº 1 foi atualizada para incluir expressamente o gerenciamento
               de riscos psicossociais no Programa de Gerenciamento de Riscos (PGR). Toda empresa com
               empregados regidos pela CLT está obrigada a identificar, avaliar e controlar esses
               fatores.
             </p>
-            <p className="text-gray-500 text-lg leading-relaxed mb-5">
+            <p className="text-[#4B5563] text-lg leading-relaxed mb-5">
               Os riscos psicossociais são fatores organizacionais que podem causar danos à saúde
               física e mental dos trabalhadores: assédio, sobrecarga, conflitos, pressão por metas e
               liderança inadequada são exemplos que a norma agora exige mapear formalmente.
             </p>
-            <p className="text-gray-500 text-lg leading-relaxed">
+            <p className="text-[#4B5563] text-lg leading-relaxed">
               Empresas que não cumprirem ficam expostas a autuações da fiscalização do trabalho,
               ações coletivas do Ministério Público do Trabalho e indenizações por adoecimento
               ocupacional.
@@ -250,10 +270,10 @@ export default function NR1SemRiscoPage() {
               { label: 'Ações trabalhistas', detalhe: 'Indenizações por danos morais e materiais' },
               { label: 'Afastamentos e improdutividade', detalhe: 'Custo elevado com saúde ocupacional' },
             ].map(item => (
-              <div key={item.label} className="border border-gray-100 rounded-lg p-7">
+              <div key={item.label} className="bg-white border border-[#E2DDD8] rounded-xl p-7 shadow-[0_2px_16px_rgba(17,24,39,0.04)]">
                 <Divider />
-                <p className="font-semibold text-gray-900 mb-1.5">{item.label}</p>
-                <p className="text-gray-400 text-sm leading-relaxed">{item.detalhe}</p>
+                <p className="font-semibold text-[#111827] mb-1.5">{item.label}</p>
+                <p className="text-[#9CA3AF] text-sm leading-relaxed">{item.detalhe}</p>
               </div>
             ))}
           </div>
@@ -261,14 +281,14 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Riscos Psicossociais ────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-[#F8F7F5]">
+      <section className="py-24 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
             <Tag label="Riscos Psicossociais" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900 mt-3 mb-4">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-[#111827] mt-3 mb-4">
               Os riscos que sua empresa precisa conhecer
             </h2>
-            <p className="text-gray-500 text-lg leading-relaxed">
+            <p className="text-[#4B5563] text-lg leading-relaxed">
               A NR-1 exige que esses fatores sejam formalmente mapeados e gerenciados no PGR.
             </p>
           </div>
@@ -276,11 +296,11 @@ export default function NR1SemRiscoPage() {
             {RISCOS.map(r => (
               <div
                 key={r.titulo}
-                className="bg-white border border-gray-100 rounded-lg p-6 hover:border-[#C49557]/30 transition-colors"
+                className="bg-white border border-[#E2DDD8] rounded-xl p-6 hover:border-[#C49557]/40 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
               >
                 <div className="w-5 h-px bg-[#C49557] mb-4" />
-                <h3 className="font-semibold text-gray-900 mb-2 text-sm">{r.titulo}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{r.descricao}</p>
+                <h3 className="font-semibold text-[#111827] mb-2 text-sm">{r.titulo}</h3>
+                <p className="text-[#6B7280] text-sm leading-relaxed">{r.descricao}</p>
               </div>
             ))}
           </div>
@@ -288,32 +308,32 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Diagnóstico ────────────────────────────────────────────────────── */}
-      <section id="diagnostico" className="py-24 px-6 bg-white">
+      <section id="diagnostico" className="py-24 px-6 bg-[#F3F1EE]">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <Tag label="Nosso Produto" />
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900 mt-3 mb-6">
+              <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-[#111827] mt-3 mb-6">
                 Diagnóstico Jurídico-Preventivo NR-1
               </h2>
-              <p className="text-gray-500 text-lg leading-relaxed mb-5">
+              <p className="text-[#4B5563] text-lg leading-relaxed mb-5">
                 Uma solução completa desenvolvida por especialistas em direito do trabalho para
                 identificar vulnerabilidades, construir compliance NR-1 e proteger sua empresa de
                 passivos trabalhistas.
               </p>
-              <p className="text-gray-500 text-lg leading-relaxed mb-8">
+              <p className="text-[#4B5563] text-lg leading-relaxed mb-8">
                 Mais do que um relatório: entregamos um plano de ação concreto, com etapas
                 priorizadas, treinamento para lideranças e suporte jurídico especializado ao longo
                 do processo.
               </p>
               <a
                 href="#contato"
-                className="inline-block bg-[#0A0A0A] hover:bg-[#1a1a1a] text-white font-semibold px-8 py-4 rounded text-base transition-colors"
+                className="inline-block bg-[#162030] hover:bg-[#1D5F60] text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors"
               >
                 Solicitar diagnóstico
               </a>
             </div>
-            <div className="bg-[#0A0A0A] rounded-xl p-8">
+            <div className="bg-[#162030] rounded-2xl p-8 shadow-[0_18px_60px_rgba(17,24,39,0.18)]">
               <Tag label="Por que agir agora" />
               <ul className="mt-5 space-y-4">
                 {[
@@ -335,11 +355,11 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Etapas ─────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-[#0A0A0A]">
+      <section className="py-24 px-6 bg-[#162030]">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
             <Tag label="Como Funciona" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-white mt-3 mb-4">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-white mt-3 mb-4">
               Etapas do serviço
             </h2>
             <p className="text-white/50 text-lg leading-relaxed">
@@ -350,7 +370,7 @@ export default function NR1SemRiscoPage() {
             {ETAPAS.map(e => (
               <div
                 key={e.num}
-                className="border border-white/10 rounded-lg p-7 hover:border-[#C49557]/30 transition-colors"
+                className="border border-white/10 rounded-xl p-7 hover:border-[#C49557]/30 transition-colors"
               >
                 <span className="font-mono text-[#C49557] text-sm font-bold">{e.num}</span>
                 <h3 className="text-white font-semibold mt-4 mb-2">{e.titulo}</h3>
@@ -366,7 +386,7 @@ export default function NR1SemRiscoPage() {
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mx-auto text-center mb-14">
             <Tag label="Planos" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900 mt-3 mb-4">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-[#111827] mt-3 mb-4">
               Escolha o plano ideal para sua empresa
             </h2>
             <p className="text-gray-400 text-lg">
@@ -379,8 +399,8 @@ export default function NR1SemRiscoPage() {
                 key={p.nome}
                 className={`rounded-xl p-8 flex flex-col ${
                   p.destaque
-                    ? 'bg-[#0A0A0A] ring-1 ring-[#C49557]/60'
-                    : 'border border-gray-100'
+                    ? 'bg-[#162030] ring-1 ring-[#C49557]/60 shadow-[0_18px_60px_rgba(17,24,39,0.14)]'
+                    : 'border border-[#E2DDD8] shadow-[0_2px_16px_rgba(17,24,39,0.035)]'
                 }`}
               >
                 {p.destaque && (
@@ -389,7 +409,7 @@ export default function NR1SemRiscoPage() {
                   </span>
                 )}
                 <h3
-                  className={`text-2xl font-serif font-bold mb-1 ${
+                  className={`[font-family:var(--font-serif)] text-2xl font-bold mb-1 ${
                     p.destaque ? 'text-white' : 'text-gray-900'
                   }`}
                 >
@@ -422,7 +442,7 @@ export default function NR1SemRiscoPage() {
                   href="#contato"
                   className={`text-center text-sm font-semibold px-6 py-3.5 rounded transition-colors ${
                     p.destaque
-                      ? 'bg-[#C49557] hover:bg-[#A07840] text-black'
+                      ? 'bg-[#C49557] hover:bg-[#A07840] text-[#111827]'
                       : 'border border-gray-200 hover:border-[#C49557]/50 text-gray-700 hover:text-[#C49557]'
                   }`}
                 >
@@ -435,11 +455,11 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Blog ───────────────────────────────────────────────────────────── */}
-      <section id="blog" className="py-24 px-6 bg-[#F8F7F5]">
+      <section id="blog" className="py-24 px-6 bg-[#F3F1EE]">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
             <Tag label="Conteúdo" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900 mt-3 mb-4">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-[#111827] mt-3 mb-4">
               Artigos e recursos
             </h2>
             <p className="text-gray-400 text-lg">
@@ -450,10 +470,10 @@ export default function NR1SemRiscoPage() {
             {ARTIGOS.map(a => (
               <article
                 key={a.titulo}
-                className="bg-white border border-gray-100 rounded-xl p-8 flex flex-col hover:border-[#C49557]/30 transition-colors"
+                className="bg-white border border-[#E2DDD8] rounded-xl p-8 flex flex-col hover:border-[#C49557]/30 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
               >
                 <Tag label={a.tag} />
-                <h3 className="text-gray-900 font-serif font-bold text-lg leading-snug mt-4 mb-4">
+                <h3 className="[font-family:var(--font-serif)] text-[#111827] font-bold text-lg leading-snug mt-4 mb-4">
                   {a.titulo}
                 </h3>
                 <p className="text-gray-400 text-sm leading-relaxed flex-1">{a.resumo}</p>
@@ -470,11 +490,11 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Formulário de Contato ───────────────────────────────────────────── */}
-      <section id="contato" className="py-24 px-6 bg-[#0A0A0A]">
+      <section id="contato" className="py-24 px-6 bg-[#162030]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <Tag label="Contato" />
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-white mt-3 mb-4">
+            <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-white mt-3 mb-4">
               Solicite seu diagnóstico
             </h2>
             <p className="text-white/50 text-lg leading-relaxed">
@@ -486,11 +506,16 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="bg-[#060606] border-t border-white/5 py-16 px-6">
+      <footer className="bg-[#111827] border-t border-[#C49557]/15 py-16 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
             <div>
-              <div className="text-[#C49557] font-serif text-2xl font-bold mb-2">P&V</div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="Pessoa e do Val Advocacia"
+                className="h-11 w-11 rounded-xl border border-[#C49557]/25 bg-[#C49557]/10 object-contain p-1.5 mb-3"
+              />
               <p className="text-white/35 text-sm leading-relaxed">
                 Pessoa e do Val Advocacia
               </p>

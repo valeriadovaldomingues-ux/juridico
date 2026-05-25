@@ -11,7 +11,7 @@ const FAIXAS = [
   'Até 10', '11 a 50', '51 a 100', '101 a 500', 'Acima de 500',
 ]
 
-const INPUT = 'w-full bg-white/5 border border-white/10 focus:border-[#C49557] focus:outline-none text-white placeholder-white/30 rounded px-4 py-3 text-sm transition-colors'
+const INPUT = 'w-full bg-white/6 border border-white/10 focus:border-[#C49557] focus:ring-2 focus:ring-[#C49557]/10 focus:outline-none text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm transition-colors'
 const LABEL = 'block text-white/50 text-xs font-semibold tracking-widest uppercase mb-2'
 
 export default function ContactForm() {
@@ -38,7 +38,7 @@ export default function ContactForm() {
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <h3 className="text-white text-2xl font-serif font-bold mb-3">Solicitação recebida</h3>
+        <h3 className="text-white text-2xl font-semibold mb-3">Solicitação recebida</h3>
         <p className="text-white/50 text-base max-w-sm mx-auto leading-relaxed">
           Solicitação registrada nesta tela. Para atendimento imediato, fale pelo WhatsApp.
         </p>
@@ -108,7 +108,7 @@ export default function ContactForm() {
       </div>
       <button
         type="submit"
-        className="w-full bg-[#C49557] hover:bg-[#A07840] text-black font-semibold py-4 rounded text-base transition-colors"
+        className="w-full bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold py-4 rounded-xl text-base transition-colors"
       >
         Solicitar diagnóstico gratuito
       </button>
