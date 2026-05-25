@@ -191,6 +191,19 @@ function valorOuVazio(valor: string) {
   return valor.trim()
 }
 
+function enderecamentoPeticao(dados: DadosDocumento) {
+  if (dados.enderecamentoPeticao.trim()) {
+    return dados.enderecamentoPeticao.trim().toUpperCase()
+  }
+
+  const vara = dados.vara.trim() || '___'
+  const foro = dados.foro.trim() || 'CÍVEL'
+  const comarca = dados.comarca.trim() || '___'
+  const uf = dados.uf.trim() || 'UF'
+
+  return `EXMO. SR. JUIZ DE DIREITO DA ${vara} VARA ${foro} DA COMARCA DE ${comarca}/${uf}`
+}
+
 function placeholders(dados: DadosDocumento): Record<string, string> {
   const abrangencia = dados.todasAreas === false
     ? valorOuVazio(dados.areasExcluidas)
@@ -207,6 +220,7 @@ function placeholders(dados: DadosDocumento): Record<string, string> {
     ENDERECO: valorOuVazio(dados.endereco),
     REPRESENTANTE_LEGAL: valorOuVazio(dados.representanteLegal),
     CNPJ_BOLETOS: valorOuVazio(dados.cnpjBoletos),
+    DOCUMENTO_IDENTIDADE: '',
     PROCESSO: valorOuVazio(dados.processo),
     PARTE_CONTRARIA: valorOuVazio(dados.parteContraria),
     OBJETO: valorOuVazio(dados.objeto),
@@ -223,7 +237,7 @@ function placeholders(dados: DadosDocumento): Record<string, string> {
     TIPO_PETICAO: valorOuVazio(dados.tipoPeticao),
     MODELO_PETICAO_ID: valorOuVazio(dados.modeloPeticaoId),
     GRUPO_PETICAO: valorOuVazio(dados.grupoPeticao),
-    ENDERECAMENTO_PETICAO: valorOuVazio(dados.enderecamentoPeticao),
+    ENDERECAMENTO_PETICAO: enderecamentoPeticao(dados),
     TOPICOS_PETICAO: valorOuVazio(dados.topicosPeticao),
     FATOS: valorOuVazio(dados.fatosResumidos),
     DIREITO: valorOuVazio(dados.direito),
