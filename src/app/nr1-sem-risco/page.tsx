@@ -91,39 +91,31 @@ const ETAPAS = [
 
 const PLANOS = [
   {
-    nome: 'Essencial',
-    ideal: 'Ideal para empresas com até 50 empregados',
-    destaque: false,
+    nome: 'Completo',
+    ideal: 'Indicado para empresas que desejam estruturar a adequação à NR-1 com segurança jurídica.',
+    destaque: true,
     itens: [
       'Questionário diagnóstico online',
       'Mapeamento dos riscos psicossociais',
-      'Relatório preventivo simplificado',
-      'Plano de ação básico',
-    ],
-  },
-  {
-    nome: 'Completo',
-    ideal: 'Ideal para empresas de 50 a 500 empregados',
-    destaque: true,
-    itens: [
-      'Tudo do plano Essencial',
       'Análise documental e jurídica',
       'Relatório preventivo detalhado',
       'Plano de ação completo e priorizado',
       'Treinamento para líderes e RH',
-      'Consultoria pós-diagnóstico (30 dias)',
+      'Consultoria pós-diagnóstico por 30 dias',
     ],
   },
   {
     nome: 'Preventivo Mensal',
-    ideal: 'Ideal para empresas acima de 500 empregados',
+    ideal: 'Indicado para empresas que querem acompanhamento contínuo, atualização preventiva e suporte jurídico recorrente.',
     destaque: false,
     itens: [
       'Tudo do plano Completo',
-      'Monitoramento mensal de riscos',
+      'Monitoramento periódico de riscos psicossociais',
       'Atualizações normativas contínuas',
-      'Suporte jurídico prioritário',
-      'Relatórios periódicos de conformidade',
+      'Suporte jurídico preventivo',
+      'Reuniões estratégicas com RH, liderança ou diretoria',
+      'Relatórios periódicos de acompanhamento',
+      'Apoio na revisão de políticas internas e medidas preventivas',
     ],
   },
 ]
@@ -432,7 +424,7 @@ export default function NR1SemRiscoPage() {
               Soluções adaptadas ao porte e à complexidade de cada organização.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {PLANOS.map(p => (
               <div
                 key={p.nome}
@@ -454,7 +446,7 @@ export default function NR1SemRiscoPage() {
                 >
                   {p.nome}
                 </h3>
-                <p className={`text-sm mb-7 ${p.destaque ? 'text-white/40' : 'text-gray-400'}`}>
+                <p className={`text-sm mb-7 leading-relaxed ${p.destaque ? 'text-white/40' : 'text-gray-400'}`}>
                   {p.ideal}
                 </p>
                 <ul className="space-y-3 flex-1 mb-8">
@@ -478,7 +470,9 @@ export default function NR1SemRiscoPage() {
                   ))}
                 </ul>
                 <a
-                  href="#contato"
+                  href="https://wa.me/5531971766583?text=Olá,%20gostaria%20de%20solicitar%20uma%20proposta%20para%20o%20Diagnóstico%20NR-1"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`text-center text-sm font-semibold px-6 py-3.5 rounded transition-colors ${
                     p.destaque
                       ? 'bg-[#C49557] hover:bg-[#A07840] text-[#111827]'
