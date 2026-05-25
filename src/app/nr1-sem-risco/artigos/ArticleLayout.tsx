@@ -15,10 +15,11 @@ interface Props {
   titulo: string
   subtitulo: string
   dataPublicacao: string
+  autor?: string
   children: React.ReactNode
 }
 
-export default function ArticleLayout({ categoria, titulo, subtitulo, dataPublicacao, children }: Props) {
+export default function ArticleLayout({ categoria, titulo, subtitulo, dataPublicacao, autor, children }: Props) {
   return (
     <div className={`${cormorant.variable} min-h-screen bg-[#F3F1EE] text-[#111827]`}>
 
@@ -74,7 +75,12 @@ export default function ArticleLayout({ categoria, titulo, subtitulo, dataPublic
           <h1 className="[font-family:var(--font-serif)] text-white font-bold text-3xl sm:text-4xl md:text-5xl leading-tight mb-6">
             {titulo}
           </h1>
-          <p className="text-white/55 text-lg leading-relaxed mb-8 max-w-2xl">{subtitulo}</p>
+          <p className="text-white/55 text-lg leading-relaxed mb-5 max-w-2xl">{subtitulo}</p>
+          {autor && (
+            <p className="text-white/40 text-sm mb-8">
+              Por <span className="text-[#B8784A] font-semibold">{autor}</span>
+            </p>
+          )}
           <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-block border border-[#B8784A]/30 text-[#B8784A] text-[11px] font-semibold tracking-widest uppercase px-4 py-1.5 rounded-full">
               {categoria}

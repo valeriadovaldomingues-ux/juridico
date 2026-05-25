@@ -21,6 +21,7 @@ export default function Page() {
       titulo="Burnout, assédio e passivo trabalhista"
       subtitulo="Os fatores de risco psicossociais passaram a integrar expressamente o GRO e o PGR. Entenda o que mudou, o que sua empresa precisa fazer e quais os riscos do descumprimento."
       dataPublicacao="Maio de 2026"
+      autor="Valéria do Val"
     >
       <p className={P}>
         A atualização da NR-1 trouxe uma mudança relevante para as empresas brasileiras: os fatores de risco psicossociais passaram a integrar expressamente o Gerenciamento de Riscos Ocupacionais, o chamado GRO, e devem ser considerados no PGR — Programa de Gerenciamento de Riscos.

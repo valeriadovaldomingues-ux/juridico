@@ -25,6 +25,7 @@ export default function Page() {
       titulo="Checklist NR-1: sua empresa está preparada?"
       subtitulo="A pergunta não é se sua empresa terá que olhar para os riscos psicossociais. A pergunta é se ela fará isso agora, com estratégia, ou depois, com pressa e advogado correndo atrás do prejuízo."
       dataPublicacao="Maio de 2026"
+      autor="Valéria do Val"
     >
       <p className={P}>
         A atualização da NR-1 exige que as empresas incluam os fatores de risco psicossociais no gerenciamento de riscos ocupacionais. Isso significa que o PGR deve contemplar não apenas os riscos tradicionais, mas também fatores relacionados à organização do trabalho, à gestão, às relações interpessoais e ao ambiente psicossocial.

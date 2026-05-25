@@ -21,6 +21,7 @@ export default function Page() {
       titulo="O que muda na NR-1 com os riscos psicossociais?"
       subtitulo="Os fatores de risco psicossociais passaram a integrar expressamente o Gerenciamento de Riscos Ocupacionais. Entenda o que mudou e o que sua empresa precisa fazer."
       dataPublicacao="Maio de 2026"
+      autor="Valéria do Val"
     >
       <p className={P}>
         A atualização da NR-1 trouxe uma mudança relevante para as empresas brasileiras: os fatores de risco psicossociais passaram a integrar expressamente o Gerenciamento de Riscos Ocupacionais, o chamado GRO, e devem ser considerados no PGR — Programa de Gerenciamento de Riscos.
