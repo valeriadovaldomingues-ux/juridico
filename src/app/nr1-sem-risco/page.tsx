@@ -239,6 +239,45 @@ export default function NR1SemRiscoPage() {
         </div>
       </section>
 
+      {/* ── Aula gratuita ─────────────────────────────────────────────────── */}
+      <section id="aula" className="py-24 px-6 bg-[#162030]">
+        <div className="max-w-6xl mx-auto">
+          <Tag label="Aula gratuita NR-1" />
+          <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-white mt-3 mb-4">
+            Aula gratuita: o que sua empresa precisa entender sobre a nova NR-1
+          </h2>
+          <p className="text-white/50 text-lg leading-relaxed max-w-2xl mb-10">
+            Em 26 minutos, veja os principais pontos sobre riscos psicossociais, prevenção
+            trabalhista e primeiros passos para adequação.
+          </p>
+          <div className="relative w-full aspect-video rounded-xl overflow-hidden mb-10 bg-black/20">
+            <iframe
+              src="https://www.youtube.com/embed/jLIdgBTlkWU"
+              title="Aula gratuita: o que sua empresa precisa entender sobre a nova NR-1"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full border-0"
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <a
+              href="/nr1-sem-risco/diagnostico"
+              className="inline-block bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
+            >
+              Fazer diagnóstico NR-1
+            </a>
+            <a
+              href="https://wa.me/5531971766583?text=Olá,%20assisti%20à%20aula%20sobre%20NR-1%20e%20gostaria%20de%20orientação"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block border border-white/15 hover:border-[#C49557]/60 text-white/70 hover:text-[#C49557] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
+            >
+              Falar com o Pessoa e do Val
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ── O que mudou na NR-1 ────────────────────────────────────────────── */}
       <section id="o-que-mudou" className="py-24 px-6 bg-[#F3F1EE]">
         <div className="max-w-6xl mx-auto">
