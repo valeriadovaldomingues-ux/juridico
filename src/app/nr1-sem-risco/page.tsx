@@ -216,16 +216,18 @@ export default function NR1SemRiscoPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="#contato"
+              href="/nr1-sem-risco/diagnostico"
               className="bg-[#B8784A] hover:bg-[#9E6438] text-[#111827] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
-              Solicitar diagnóstico
+              Fazer diagnóstico gratuito agora
             </a>
             <a
-              href="#contato"
+              href={WA}
+              target="_blank"
+              rel="noopener noreferrer"
               className="border border-white/15 hover:border-[#B8784A]/60 text-white/70 hover:text-[#B8784A] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
-              Solicitar checklist gratuito
+              Falar com um especialista
             </a>
           </div>
         </div>
@@ -359,10 +361,10 @@ export default function NR1SemRiscoPage() {
                 do processo.
               </p>
               <a
-                href="#contato"
+                href="/nr1-sem-risco/diagnostico"
                 className="inline-block bg-[#0D2235] hover:bg-[#162840] text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors"
               >
-                Solicitar diagnóstico
+                Fazer diagnóstico gratuito agora
               </a>
             </div>
             <div className="bg-[#0D2235] rounded-2xl p-8 shadow-[0_18px_60px_rgba(17,24,39,0.18)]">
