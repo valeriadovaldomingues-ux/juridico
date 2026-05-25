@@ -350,7 +350,7 @@ export default function DiagnosticoNR1() {
           letter-spacing: 1.2px; text-transform: uppercase;
           padding: 5px 14px; border-radius: 99px; margin-bottom: 20px;
         }
-        .diag-card-titulo { font-size: 22px; font-weight: 800; color: var(--azul); margin-bottom: 8px; line-height: 1.3; }
+        .diag-card-titulo { font-size: 22px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); color: var(--azul); margin-bottom: 8px; line-height: 1.3; }
         .diag-card-subtitulo { font-size: 14px; color: #666; margin-bottom: 32px; line-height: 1.6; }
         .diag-questao { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--cinza2); }
         .diag-questao:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
@@ -379,7 +379,7 @@ export default function DiagnosticoNR1() {
         }
         .diag-escala-btn.selecionado .diag-escala-lbl { color: rgba(255,255,255,0.8); }
         .diag-botoes { display: flex; justify-content: space-between; align-items: center; margin-top: 36px; gap: 12px; }
-        .diag-btn { padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; transition: all 0.18s; font-family: inherit; }
+        .diag-btn { padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 600; border: none; cursor: pointer; transition: all 0.18s; font-family: inherit; }
         .diag-btn-primario { background: var(--azul); color: #fff; flex: 1; max-width: 260px; }
         .diag-btn-primario:hover { background: var(--azul-medio); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,32,48,0.3); }
         .diag-btn-secundario { background: transparent; color: var(--azul); border: 2px solid var(--cinza2) !important; }
@@ -393,11 +393,11 @@ export default function DiagnosticoNR1() {
           display: flex; align-items: center; justify-content: center;
           font-size: 32px; margin: 0 auto 24px;
         }
-        .diag-intro-titulo { font-size: 28px; font-weight: 900; color: var(--azul); margin-bottom: 12px; line-height: 1.2; }
+        .diag-intro-titulo { font-size: 28px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); color: var(--azul); margin-bottom: 12px; line-height: 1.2; }
         .diag-intro-desc { font-size: 15px; color: #555; max-width: 520px; margin: 0 auto 32px; line-height: 1.7; }
         .diag-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 32px; }
         .diag-chip { background: var(--cinza); border: 1px solid var(--cinza2); border-radius: 99px; padding: 6px 16px; font-size: 13px; font-weight: 500; color: var(--azul); }
-        .diag-campo-label { display: block; font-size: 13px; font-weight: 600; color: var(--azul); margin-bottom: 6px; }
+        .diag-campo-label { display: block; font-size: 11px; font-weight: 600; color: var(--azul); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em; }
         .diag-campo-input {
           width: 100%; padding: 12px 16px; border: 2px solid var(--cinza2);
           border-radius: 10px; font-size: 15px; font-family: inherit; color: var(--texto);
@@ -417,15 +417,15 @@ export default function DiagnosticoNR1() {
           background: linear-gradient(135deg, var(--azul) 0%, var(--azul-medio) 100%);
           border-radius: 16px; padding: 32px; color: #fff; text-align: center; margin-bottom: 28px;
         }
-        .diag-resultado-header h2 { font-size: 24px; font-weight: 900; margin-bottom: 6px; color: #fff; }
+        .diag-resultado-header h2 { font-size: 24px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); margin-bottom: 6px; color: #fff; }
         .diag-resultado-header p { font-size: 14px; color: rgba(255,255,255,0.75); margin: 0; }
-        .diag-resultado-empresa { font-size: 18px; font-weight: 700; color: var(--ouro-claro); margin-bottom: 4px; }
+        .diag-resultado-empresa { font-size: 18px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); color: var(--ouro-claro); margin-bottom: 4px; }
         .diag-score-geral { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 20px 0 0; }
-        .diag-score-numero { font-size: 56px; font-weight: 900; line-height: 1; }
+        .diag-score-numero { font-size: 56px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); line-height: 1; }
         .diag-score-info { text-align: left; }
         .diag-score-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
-        .diag-score-nivel { font-size: 20px; font-weight: 800; }
-        .diag-mapa-titulo { font-size: 16px; font-weight: 800; color: var(--azul); margin-bottom: 16px; }
+        .diag-score-nivel { font-size: 20px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); }
+        .diag-mapa-titulo { font-size: 16px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); color: var(--azul); margin-bottom: 16px; }
         .diag-fator-row {
           display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
           padding: 14px 18px; border-radius: 12px; background: var(--cinza); transition: transform 0.15s;
@@ -448,7 +448,7 @@ export default function DiagnosticoNR1() {
         .diag-legenda { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0 28px; }
         .diag-leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
         .diag-leg-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .diag-recom-titulo { font-size: 16px; font-weight: 800; color: var(--azul); margin: 28px 0 16px; }
+        .diag-recom-titulo { font-size: 16px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); color: var(--azul); margin: 28px 0 16px; }
         .diag-recom-card { border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; border-left: 4px solid; }
         .diag-recom-critico  { border-color: var(--vermelho); background: var(--vermelho-bg); }
         .diag-recom-alto     { border-color: var(--laranja);  background: var(--laranja-bg);  }
@@ -461,7 +461,7 @@ export default function DiagnosticoNR1() {
           background: linear-gradient(135deg, var(--azul) 0%, var(--azul-medio) 100%);
           border-radius: 16px; padding: 28px 32px; text-align: center; margin-top: 28px; color: #fff;
         }
-        .diag-cta-box h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; color: #fff; }
+        .diag-cta-box h3 { font-size: 18px; font-weight: 700; font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif); margin-bottom: 8px; color: #fff; }
         .diag-cta-box p { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 20px; line-height: 1.6; }
         .diag-cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
         .diag-rodape { text-align: center; margin-top: 40px; font-size: 12px; color: #aaa; }
