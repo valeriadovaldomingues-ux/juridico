@@ -1,6 +1,7 @@
 import { createClient }      from '@/lib/supabase/server'
 import Link                   from 'next/link'
 import { Scale, CalendarDays, FileText, MessageSquare, ArrowRight, Clock } from 'lucide-react'
+import Logo from '@/components/ui/Logo'
 import PortalStatCard          from './_components/PortalStatCard'
 import TimelineItem            from './_components/TimelineItem'
 import ProcessStatusBadge      from './_components/ProcessStatusBadge'
@@ -141,20 +142,21 @@ export default async function PortalDashboard() {
   const processosAtivos = (processos ?? []).filter(p => p.status === 'ativo')
 
   return (
-    <div className="space-y-8">
+    <div className="portal-page space-y-8">
 
       {/* ── Saudação ──────────────────────────────────────────────────────── */}
-      <div className="bg-[#0C1B2A] px-6 sm:px-8 py-8 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C49557]/50 to-transparent" />
+      <div className="bg-gradient-to-br from-[var(--color-sidebar-deep)] via-[var(--color-sidebar)] to-[var(--color-petrol)] rounded-2xl px-6 sm:px-8 py-8 relative overflow-hidden shadow-[0_18px_54px_rgba(8,23,36,0.18)]">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--color-copper)]/60 to-transparent" />
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full border border-white/8 pointer-events-none" />
 
-        <div className="flex items-end justify-between flex-wrap gap-4">
+        <div className="relative flex items-end justify-between flex-wrap gap-4">
           <div>
-            <p className="text-[#C49557] text-[10px] tracking-[0.2em] uppercase mb-2">
+            <p className="text-[var(--color-copper)] text-[10px] tracking-[0.2em] uppercase mb-2">
               Portal do Cliente
             </p>
             <h1
               className="text-white text-[32px] sm:text-[38px] leading-none tracking-tight"
-              style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+              style={{ fontFamily: 'var(--font-brand)', fontWeight: 600 }}
             >
               {primeiroNome}
             </h1>
@@ -165,12 +167,12 @@ export default async function PortalDashboard() {
               }
             </p>
           </div>
-          <span className="text-white/10 text-[11px] tracking-[0.15em] uppercase self-start mt-2">
-            P&amp;V · MMV
-          </span>
+          <div className="self-start mt-1 opacity-90">
+            <Logo variant="compact" tone="light" />
+          </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[#C49557]/30 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[var(--color-copper)]/30 via-transparent to-transparent" />
       </div>
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
@@ -188,18 +190,18 @@ export default async function PortalDashboard() {
         <div className="lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase">Próximas atividades</p>
-            <Link href="/portal/agenda" className="text-[10px] text-[#C49557] hover:text-[#A8803D] tracking-wide transition-colors">
+            <Link href="/portal/agenda" className="text-[10px] text-[var(--color-gold-muted)] hover:text-[var(--color-copper-hover)] tracking-wide transition-colors">
               Ver agenda →
             </Link>
           </div>
 
           {tlItems.length === 0 ? (
-            <div className="bg-white border border-[#E8E3D8] px-6 py-10 text-center">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-6 py-10 text-center shadow-sm">
               <div className="w-px h-5 bg-[#E8E3D8] mx-auto mb-4" />
               <p className="text-[12px] text-[#9CA3AF]">Nenhuma atividade próxima.</p>
             </div>
           ) : (
-            <div className="bg-white border border-[#E8E3D8] px-5 py-5">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-5 py-5 shadow-sm">
               {tlItems.map((item, i) => (
                 <TimelineItem
                   key={item.id}
@@ -214,7 +216,7 @@ export default async function PortalDashboard() {
               <div className="mt-2 pt-3 border-t border-[#F0EBE4]">
                 <Link
                   href="/portal/agenda"
-                  className="flex items-center gap-1.5 text-[10px] text-[#C49557] hover:text-[#A8803D] tracking-[0.08em] uppercase transition-colors"
+                  className="flex items-center gap-1.5 text-[10px] text-[var(--color-gold-muted)] hover:text-[var(--color-copper-hover)] tracking-[0.08em] uppercase transition-colors"
                 >
                   Ver agenda completa <ArrowRight size={10} />
                 </Link>
@@ -228,26 +230,26 @@ export default async function PortalDashboard() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase">Meus processos</p>
             {nProcessos > 3 && (
-              <Link href="/portal/processos" className="text-[10px] text-[#C49557] hover:text-[#A8803D] tracking-wide transition-colors">
+              <Link href="/portal/processos" className="text-[10px] text-[var(--color-gold-muted)] hover:text-[var(--color-copper-hover)] tracking-wide transition-colors">
                 Ver todos →
               </Link>
             )}
           </div>
 
           {processosAtivos.length === 0 ? (
-            <div className="bg-white border border-[#E8E3D8] px-5 py-8 text-center">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-5 py-8 text-center shadow-sm">
               <Scale size={20} className="mx-auto text-[#E8E3D8] mb-3" strokeWidth={1} />
               <p className="text-[12px] text-[#9CA3AF]">Nenhum processo ativo.</p>
             </div>
           ) : (
-            <div className="bg-white border border-[#E8E3D8] divide-y divide-[#F5F2EE]">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl divide-y divide-[#F5F2EE] shadow-sm overflow-hidden">
               {processosAtivos.slice(0, 4).map(p => (
                 <Link
                   key={p.id}
                   href={`/portal/processos/${p.id}`}
-                  className="relative flex items-start gap-3 px-4 py-3.5 hover:bg-[#FDFAF7] transition-colors duration-200 group overflow-hidden"
+                  className="relative flex items-start gap-3 px-4 py-3.5 hover:bg-[var(--color-surface-warm)] transition-colors duration-200 group overflow-hidden"
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#C49557] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-200" />
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--color-copper)] scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-200" />
                   <div className="flex-1 min-w-0 pt-0.5">
                     <p className="text-[12px] font-medium text-[#1C1C2E] truncate leading-snug">{p.titulo}</p>
                     {p.numero_processo && (
@@ -258,7 +260,7 @@ export default async function PortalDashboard() {
                 </Link>
               ))}
               {nProcessos > 4 && (
-                <Link href="/portal/processos" className="flex items-center justify-center gap-1 px-4 py-2.5 text-[10px] text-[#C49557] hover:bg-[#FDFAF7] tracking-[0.08em] uppercase transition-colors">
+                <Link href="/portal/processos" className="flex items-center justify-center gap-1 px-4 py-2.5 text-[10px] text-[var(--color-gold-muted)] hover:bg-[var(--color-surface-warm)] tracking-[0.08em] uppercase transition-colors">
                   Ver todos ({nProcessos}) <ArrowRight size={10} />
                 </Link>
               )}
@@ -275,19 +277,19 @@ export default async function PortalDashboard() {
             <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase">
               Documentos disponíveis
             </p>
-            <Link href="/portal/documentos" className="text-[10px] text-[#C49557] hover:text-[#A8803D] tracking-wide transition-colors">
+            <Link href="/portal/documentos" className="text-[10px] text-[var(--color-gold-muted)] hover:text-[var(--color-copper-hover)] tracking-wide transition-colors">
               Ver todos →
             </Link>
           </div>
-          <div className="bg-white border border-[#E8E3D8] px-5 py-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-5 py-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <FileText size={15} className="text-[#C49557]" strokeWidth={1.5} />
+              <FileText size={15} className="text-[var(--color-copper)]" strokeWidth={1.5} />
               <p className="text-[13px] text-[#1C1C2E]">
                 {nDocs} arquivo{nDocs !== 1 ? 's' : ''} disponíve{nDocs !== 1 ? 'is' : 'l'} para download.
               </p>
               <Link
                 href="/portal/documentos"
-                className="ml-auto flex items-center gap-1.5 text-[10px] text-white bg-[#C49557] hover:bg-[#A8803D] px-3 py-1.5 tracking-[0.1em] uppercase transition-colors duration-200"
+                className="ml-auto flex items-center gap-1.5 text-[10px] text-white bg-[var(--color-copper)] hover:bg-[var(--color-copper-hover)] px-3 py-1.5 rounded-lg tracking-[0.1em] uppercase transition-colors duration-200"
               >
                 <FileText size={10} /> Acessar
               </Link>
@@ -305,28 +307,28 @@ export default async function PortalDashboard() {
 function DashboardVazio({ primeiroNome }: { primeiroNome: string }) {
   return (
     <div className="space-y-8">
-      <div className="bg-[#0C1B2A] px-6 sm:px-8 py-8 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C49557]/50 to-transparent" />
-        <p className="text-[#C49557] text-[10px] tracking-[0.2em] uppercase mb-2">Portal do Cliente</p>
+      <div className="bg-gradient-to-br from-[var(--color-sidebar-deep)] via-[var(--color-sidebar)] to-[var(--color-petrol)] rounded-2xl px-6 sm:px-8 py-8 relative overflow-hidden shadow-[0_18px_54px_rgba(8,23,36,0.18)]">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--color-copper)]/60 to-transparent" />
+        <p className="text-[var(--color-copper)] text-[10px] tracking-[0.2em] uppercase mb-2">Portal do Cliente</p>
         <h1
           className="text-white text-[32px] leading-none tracking-tight"
-          style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}
+          style={{ fontFamily: 'var(--font-brand)', fontWeight: 600 }}
         >
           {primeiroNome}
         </h1>
         <p className="text-white/40 text-[13px] mt-2">
           Bem-vindo. Seu acesso está sendo configurado pelo escritório.
         </p>
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[#C49557]/30 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-[var(--color-copper)]/30 via-transparent to-transparent" />
       </div>
-      <div className="bg-white border border-[#E8E3D8] px-8 py-12 text-center">
-        <div className="w-px h-6 bg-gradient-to-b from-transparent to-[#E8E3D8] mx-auto mb-5" />
-        <Scale size={20} className="mx-auto text-[#C5C0B8] mb-4" strokeWidth={1} />
-        <p className="text-[13px] text-[#6B7280] font-medium mb-1">Vínculo em configuração</p>
-        <p className="text-[11px] text-[#9CA3AF] leading-relaxed max-w-[240px] mx-auto">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl px-8 py-12 text-center shadow-sm">
+        <div className="w-px h-6 bg-gradient-to-b from-transparent to-[var(--color-border)] mx-auto mb-5" />
+        <Scale size={20} className="mx-auto text-[var(--color-border-strong)] mb-4" strokeWidth={1} />
+        <p className="text-[13px] text-[var(--color-ink-2)] font-medium mb-1">Vínculo em configuração</p>
+        <p className="text-[11px] text-[var(--color-ink-3)] leading-relaxed max-w-[240px] mx-auto">
           Em breve você poderá acompanhar seus processos e documentos aqui.
         </p>
-        <div className="w-8 h-px bg-[#C49557]/20 mx-auto mt-6" />
+        <div className="w-8 h-px bg-[var(--color-copper)]/20 mx-auto mt-6" />
       </div>
     </div>
   )

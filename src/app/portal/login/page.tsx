@@ -1,15 +1,8 @@
 'use client'
 
 import { useState }  from 'react'
-import { Cormorant_Garamond } from 'next/font/google'
 import { Mail, Loader2, CheckCircle2, ArrowRight } from 'lucide-react'
-
-const cormorant = Cormorant_Garamond({
-  subsets:  ['latin'],
-  weight:   ['300', '400', '600', '700'],
-  style:    ['normal', 'italic'],
-  display:  'swap',
-})
+import Logo from '@/components/ui/Logo'
 
 type Estado = 'form' | 'enviando' | 'enviado' | 'erro'
 
@@ -43,41 +36,29 @@ export default function PortalLoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-6"
-      style={{ background: 'linear-gradient(160deg, #0C1B2A 0%, #0A1520 60%, #07101A 100%)' }}
+      className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      style={{ background: 'linear-gradient(160deg, var(--color-sidebar) 0%, var(--color-sidebar-deep) 65%, #06111B 100%)' }}
     >
-      {/* Linha decorativa superior */}
-      <div className="w-16 h-px bg-[#C49557] mb-10 opacity-60" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-copper)]/60 to-transparent" />
+      <div className="absolute -right-28 -top-28 h-80 w-80 rounded-full border border-[var(--color-copper)]/10 pointer-events-none" />
+      <div className="absolute -left-28 bottom-10 h-72 w-72 rounded-full border border-white/5 pointer-events-none" />
 
-      {/* Marca */}
       <div className="text-center mb-10">
-        <h1
-          className="text-white text-[36px] leading-none tracking-tight mb-2"
-          style={{ fontFamily: cormorant.style.fontFamily, fontWeight: 600 }}
-        >
-          Pessoa e do Val
-        </h1>
-        <p className="text-[#C49557] text-[9px] tracking-[0.3em] uppercase">
-          Advocacia
-        </p>
+        <Logo variant="login" tone="light" />
       </div>
 
-      {/* Card do formulário */}
-      <div className="w-full max-w-[380px]">
+      <div className="w-full max-w-[410px] relative">
         <div
-          className="border border-white/8 p-8"
-          style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(10px)' }}
+          className="border border-white/10 p-7 sm:p-8 rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,0.22)]"
+          style={{ background: 'rgba(252,250,247,0.06)', backdropFilter: 'blur(14px)' }}
         >
           {estado === 'enviado' ? (
 
             /* ── Confirmação ─────────────────────────────────────────────── */
             <div className="text-center space-y-4 py-4">
-              <CheckCircle2 size={36} className="mx-auto text-[#C49557]" strokeWidth={1.5} />
+              <CheckCircle2 size={36} className="mx-auto text-[var(--color-copper)]" strokeWidth={1.5} />
               <div>
-                <h2
-                  className="text-white text-[20px] mb-2"
-                  style={{ fontFamily: cormorant.style.fontFamily, fontWeight: 600 }}
-                >
+                <h2 className="font-brand text-white text-[28px] leading-none mb-3 font-semibold">
                   Link enviado
                 </h2>
                 <p className="text-white/50 text-[13px] leading-relaxed">
@@ -91,7 +72,7 @@ export default function PortalLoginPage() {
               </p>
               <button
                 onClick={() => { setEstado('form'); setEmail('') }}
-                className="text-[11px] text-[#C49557]/70 hover:text-[#C49557] tracking-wider uppercase transition-colors"
+                className="text-[11px] text-[var(--color-copper)]/80 hover:text-[var(--color-copper)] tracking-wider uppercase transition-colors"
               >
                 Usar outro e-mail
               </button>
@@ -102,10 +83,10 @@ export default function PortalLoginPage() {
             /* ── Formulário ──────────────────────────────────────────────── */
             <>
               <div className="mb-7">
-                <h2
-                  className="text-white text-[22px] leading-snug mb-1"
-                  style={{ fontFamily: cormorant.style.fontFamily, fontWeight: 400 }}
-                >
+                <p className="text-[10px] text-[var(--color-copper)] mb-2 tracking-[0.22em] uppercase">
+                  Portal reservado
+                </p>
+                <h2 className="font-brand text-white text-[30px] leading-none mb-2 font-semibold">
                   Área do cliente
                 </h2>
                 <p className="text-white/40 text-[12px] tracking-wide">
@@ -116,7 +97,7 @@ export default function PortalLoginPage() {
               <form onSubmit={handleSubmit} className="space-y-5">
 
                 <div>
-                  <label className="block text-[9px] text-[#C49557] mb-2 tracking-[0.2em] uppercase">
+                  <label className="block text-[9px] text-[var(--color-copper)] mb-2 tracking-[0.2em] uppercase">
                     E-mail
                   </label>
                   <div className="relative">
@@ -128,13 +109,13 @@ export default function PortalLoginPage() {
                       placeholder="seu@email.com.br"
                       required
                       autoFocus
-                      className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 text-white text-[13px] outline-none placeholder:text-white/20 focus:border-[#C49557]/60 transition-colors"
+                      className="w-full pl-9 pr-4 py-3 bg-white/6 border border-white/10 rounded-xl text-white text-[13px] outline-none placeholder:text-white/20 focus:border-[var(--color-copper)]/70 focus:ring-2 focus:ring-[var(--color-copper)]/15 transition-colors"
                     />
                   </div>
                 </div>
 
                 {estado === 'erro' && (
-                  <p className="text-[12px] text-[#e74c3c]/80 bg-[#e74c3c]/8 border border-[#e74c3c]/20 px-3 py-2">
+                  <p className="text-[12px] text-[#FFD5CC]/90 bg-[#e74c3c]/10 border border-[#e74c3c]/20 px-3 py-2 rounded-xl">
                     {erro}
                   </p>
                 )}
@@ -142,7 +123,7 @@ export default function PortalLoginPage() {
                 <button
                   type="submit"
                   disabled={estado === 'enviando' || !email.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#C49557] hover:bg-[#A8803D] text-white text-[11px] tracking-[0.15em] uppercase font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[var(--color-copper)] hover:bg-[var(--color-copper-hover)] text-white text-[11px] tracking-[0.15em] uppercase font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {estado === 'enviando' ? (
                     <Loader2 size={13} className="animate-spin" />
@@ -168,9 +149,9 @@ export default function PortalLoginPage() {
 
       {/* Linha decorativa inferior + assinatura */}
       <div className="mt-10 flex flex-col items-center gap-3">
-        <div className="w-16 h-px bg-[#C49557] opacity-30" />
+        <div className="w-16 h-px bg-[var(--color-copper)] opacity-30" />
         <p className="text-[9px] text-white/20 tracking-[0.2em] uppercase">
-          P&amp;V · Belo Horizonte · Desde 2002
+          P&amp;V · Pessoa e do Val Advocacia Empresarial
         </p>
       </div>
     </div>

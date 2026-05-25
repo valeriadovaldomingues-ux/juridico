@@ -131,7 +131,7 @@ function formatPrazoDate(dateStr: string, todayStr: string): { label: string; cl
 
 // ─── Shared card class ───────────────────────────────────────────────────────
 
-const card = 'bg-white rounded-lg border border-[#E2DDD8] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden'
+const card = 'bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden'
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -248,34 +248,40 @@ export default async function DashboardPage() {
     ? Math.round((processosComMovimentacao / (totalProcessosAtivos ?? 1)) * 100) : 0
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="internal-page space-y-6 max-w-7xl">
 
       {/* ── Header ───────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--color-petrol-light)] to-transparent pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-4 flex-col sm:flex-row">
         <div>
-          <h1 className="text-[24px] font-bold text-[#0f1923] tracking-tight leading-tight">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">
+            Painel executivo
+          </p>
+          <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">
             Área de Trabalho
           </h1>
-          <p className="text-[13px] text-[#9aabb8] mt-0.5 capitalize">
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-2 capitalize">
             {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
         <Link
           href="/agenda"
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
+          className="flex items-center gap-2 px-5 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] active:scale-[0.97] text-white text-[13px] font-semibold rounded-xl transition-all duration-150 shadow-sm"
         >
           <Plus size={14} strokeWidth={2.5} />
           Nova Tarefa
         </Link>
+        </div>
       </div>
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
 
         {/* Featured: Processos Ativos */}
         <Link
           href="/processos"
-          className="group relative bg-gradient-to-br from-[#162030] via-[#1D5F60] to-[#27777A] rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-200 overflow-hidden"
+          className="group relative bg-gradient-to-br from-[var(--color-sidebar-deep)] via-[var(--color-sidebar)] to-[var(--color-petrol)] rounded-xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all duration-200 overflow-hidden"
         >
           {/* Decorative */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.06] pointer-events-none" />
@@ -287,7 +293,7 @@ export default async function DashboardPage() {
               </div>
               <ArrowUpRight size={15} className="text-white/30 group-hover:text-white/60 transition-colors" />
             </div>
-            <p className="text-[48px] font-black text-white leading-none tracking-tight">
+            <p className="text-[48px] font-semibold text-white leading-none tracking-tight">
               {totalProcessosAtivos ?? 0}
             </p>
             <p className="text-[11px] text-white/50 mt-2.5 font-medium tracking-widest uppercase">
@@ -299,22 +305,22 @@ export default async function DashboardPage() {
         {/* Total de Processos */}
         <Link
           href="/processos"
-          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
+          className="group bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[var(--color-copper)]/40 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
-            <div className="w-10 h-10 rounded-xl bg-[#E8F2F2] flex items-center justify-center">
-              <Scale size={18} className="text-[#1D5F60]" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-petrol-light)] flex items-center justify-center">
+              <Scale size={18} className="text-[var(--color-petrol)]" />
             </div>
             <ArrowUpRight size={14} className="text-[#D8E2E2] group-hover:text-[#9aabb8] transition-colors" />
           </div>
-          <p className="text-[38px] font-bold text-[#0f1923] leading-none tracking-tight">{totalProcessos}</p>
-          <p className="text-[12px] text-[#9aabb8] mt-2 font-medium">Total de Processos</p>
+          <p className="text-[38px] font-semibold text-[var(--color-ink)] leading-none tracking-tight">{totalProcessos}</p>
+          <p className="text-[12px] text-[var(--color-ink-3)] mt-2 font-medium">Total de Processos</p>
         </Link>
 
         {/* Encerrados */}
         <Link
           href="/processos"
-          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
+          className="group bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[var(--color-copper)]/40 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
             <div className="w-10 h-10 rounded-xl bg-[#e6f4ea] flex items-center justify-center">
@@ -322,29 +328,29 @@ export default async function DashboardPage() {
             </div>
             <ArrowUpRight size={14} className="text-[#D8E2E2] group-hover:text-[#9aabb8] transition-colors" />
           </div>
-          <p className="text-[38px] font-bold text-[#0f1923] leading-none tracking-tight">{totalProcessosEncerrados ?? 0}</p>
-          <p className="text-[12px] text-[#9aabb8] mt-2 font-medium">Processos Encerrados</p>
+          <p className="text-[38px] font-semibold text-[var(--color-ink)] leading-none tracking-tight">{totalProcessosEncerrados ?? 0}</p>
+          <p className="text-[12px] text-[var(--color-ink-3)] mt-2 font-medium">Processos Encerrados</p>
         </Link>
 
         {/* Clientes */}
         <Link
           href="/clientes"
-          className="group bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#1D5F60]/30 transition-all duration-200"
+          className="group bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[var(--color-copper)]/40 transition-all duration-200"
         >
           <div className="flex items-start justify-between mb-5">
-            <div className="w-10 h-10 rounded-xl bg-[#fef3e2] flex items-center justify-center">
-              <Users size={18} className="text-[#b8903a]" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-gold-light)] flex items-center justify-center">
+              <Users size={18} className="text-[var(--color-gold-muted)]" />
             </div>
             <ArrowUpRight size={14} className="text-[#D8E2E2] group-hover:text-[#9aabb8] transition-colors" />
           </div>
-          <p className="text-[38px] font-bold text-[#0f1923] leading-none tracking-tight">{totalClientes ?? 0}</p>
-          <p className="text-[12px] text-[#9aabb8] mt-2 font-medium">Total de Clientes</p>
+          <p className="text-[38px] font-semibold text-[var(--color-ink)] leading-none tracking-tight">{totalClientes ?? 0}</p>
+          <p className="text-[12px] text-[var(--color-ink-3)] mt-2 font-medium">Total de Clientes</p>
         </Link>
       </div>
 
       {/* ── Resumo Financeiro (gerente / sócio) ──────────────────────────────── */}
       {verFinanceiro && (
-        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#F0F4F4]">
             <div className="flex items-center gap-2.5">
               <DollarSign size={14} className="text-[#9aabb8]" />
@@ -354,7 +360,7 @@ export default async function DashboardPage() {
               Ver detalhes →
             </Link>
           </div>
-          <div className="grid grid-cols-3 divide-x divide-[#F0F4F4]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#F0F4F4]">
             <div className="px-6 py-4">
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-6 h-6 rounded-md bg-[#e6f4ee] flex items-center justify-center">
@@ -388,7 +394,7 @@ export default async function DashboardPage() {
 
       {/* ── Bloco Comercial (comercial / sócio) ──────────────────────────────── */}
       {verComercial && (
-        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
+        <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#F0F4F4]">
             <div className="flex items-center gap-2.5">
               <Handshake size={14} className="text-[#9aabb8]" />
@@ -405,7 +411,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 divide-x divide-[#F0F4F4]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#F0F4F4]">
 
             {/* Funil por etapa */}
             <div className="px-6 py-5 space-y-3.5">
@@ -479,12 +485,12 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Row 2: Atividades + Próximos Prazos ──────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
         <AtividadesBlock atividades={todasAtividades ?? []} />
 
         {/* Próximos Prazos */}
-        <div className={`col-span-2 ${card}`}>
+        <div className={`xl:col-span-2 ${card}`}>
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0F4F4]">
             <div className="flex items-center gap-2.5">
               <Clock size={14} className="text-[#9aabb8]" />
@@ -537,7 +543,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Row 3: Por Área + Por Status + Movimentações ─────────────────────── */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Por Área */}
         <div className={card}>
@@ -649,7 +655,7 @@ export default async function DashboardPage() {
       {userRole === 'socio' && <ProdutividadeColaboradores />}
 
       {/* ── Row 4: Últimos registros ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Últimos Processos */}
         <div className={card}>
