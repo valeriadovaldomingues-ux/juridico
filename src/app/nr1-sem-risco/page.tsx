@@ -93,7 +93,7 @@ const PLANOS = [
   {
     nome: 'Completo',
     ideal: 'Indicado para empresas que desejam estruturar a adequação à NR-1 com segurança jurídica.',
-    destaque: true,
+    destaque: false,
     itens: [
       'Questionário diagnóstico online',
       'Mapeamento dos riscos psicossociais',
@@ -107,7 +107,7 @@ const PLANOS = [
   {
     nome: 'Preventivo Mensal',
     ideal: 'Indicado para empresas que querem acompanhamento contínuo, atualização preventiva e suporte jurídico recorrente.',
-    destaque: false,
+    destaque: true,
     itens: [
       'Tudo do plano Completo',
       'Monitoramento periódico de riscos psicossociais',
