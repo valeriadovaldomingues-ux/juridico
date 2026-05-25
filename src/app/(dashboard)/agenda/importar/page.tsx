@@ -7,5 +7,9 @@ export default async function ImportarAgendaServerPage() {
   // Apenas perfis que podem criar eventos na agenda
   await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
 
-  return <ImportarAgendaPage />
+  return (
+    <div className="internal-page">
+      <ImportarAgendaPage />
+    </div>
+  )
 }

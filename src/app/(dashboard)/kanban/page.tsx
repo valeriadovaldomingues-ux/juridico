@@ -21,42 +21,45 @@ export default function KanbanPage() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-zinc-50 p-6">
+    <main className="internal-page min-h-screen">
       <div className="mx-auto max-w-[1600px]">
 
         {/* Cabeçalho da página */}
-        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">
-              Gestão de tarefas
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold text-zinc-900">
-              Kanban Jurídico
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-zinc-600">
-              Visualização profissional das tarefas do escritório, com quadro
-              pessoal por status e quadro geral por responsável.
-            </p>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)] mb-8">
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--color-petrol-light)] to-transparent pointer-events-none" />
+          <div className="relative flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">
+                Gestão de tarefas
+              </p>
+              <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">
+                Kanban Jurídico
+              </h1>
+              <p className="mt-2 max-w-3xl text-[13px] text-[var(--color-ink-3)]">
+                Visualização profissional das tarefas do escritório, com quadro
+                pessoal por status e quadro geral por responsável.
+              </p>
+            </div>
 
-          {/* Botão fixo de importação */}
-          <div className="shrink-0 pt-2">
-            <button
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#e5e7eb] text-[#374151] text-[13px] font-semibold rounded-xl hover:bg-[#f9fafb] transition-colors shadow-sm"
-              title="Importar tarefas a partir de CSV exportado do Trello"
-            >
-              <Upload size={14} className="text-[#1D5F60]" />
-              Importar CSV do Trello
-            </button>
+            {/* Botão fixo de importação */}
+            <div className="shrink-0 pt-2">
+              <button
+                onClick={() => setShowImport(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-sidebar)] border border-[var(--color-sidebar)] text-white text-[13px] font-semibold rounded-xl hover:bg-[var(--color-petrol)] transition-colors shadow-sm"
+                title="Importar tarefas a partir de CSV exportado do Trello"
+              >
+                <Upload size={14} className="text-[var(--color-gold-light)]" />
+                Importar CSV do Trello
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Quadro pessoal */}
         <section className="mb-10">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-zinc-900">Meu quadro</h2>
-            <p className="text-sm text-zinc-500">
+          <div className="mb-4 border-l-2 border-[var(--color-copper)] pl-4">
+            <h2 className="font-brand text-[25px] font-semibold text-[var(--color-ink)]">Meu quadro</h2>
+            <p className="text-[13px] text-[var(--color-ink-3)]">
               Tarefas do usuário logado agrupadas por status.
             </p>
           </div>
@@ -65,11 +68,11 @@ export default function KanbanPage() {
 
         {/* Quadro geral */}
         <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-zinc-900">
+          <div className="mb-4 border-l-2 border-[var(--color-copper)] pl-4">
+            <h2 className="font-brand text-[25px] font-semibold text-[var(--color-ink)]">
               Quadro geral do escritório
             </h2>
-            <p className="text-sm text-zinc-500">
+            <p className="text-[13px] text-[var(--color-ink-3)]">
               Tarefas agrupadas por responsável.
             </p>
           </div>
