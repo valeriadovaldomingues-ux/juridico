@@ -210,7 +210,7 @@ export default function NR1SemRiscoPage() {
             <span className="text-[#C49557]">sua empresa está preparada?</span>
           </h1>
           <p className="text-white/55 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-12">
-            A nova NR-1 exige o gerenciamento de riscos psicossociais. Empresas sem conformidade
+            A nova NR-1 exige o gerenciamento de riscos psicossociais. Empresas em desconformidade com a NR-1
             enfrentam multas, ações do MPT e passivos trabalhistas crescentes. Nós ajudamos sua
             empresa a se proteger.
           </p>
