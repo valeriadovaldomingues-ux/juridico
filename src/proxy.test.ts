@@ -208,6 +208,12 @@ describe('sem sessão', () => {
     expectPassThru(res)
   })
 
+  it('/nr1-sem-risco → passa através sem sessão (landing page pública)', async () => {
+    noSession()
+    const res = await proxy(req('/nr1-sem-risco'))
+    expectPassThru(res)
+  })
+
   it('/redefinir-senha → passa através (rota pública)', async () => {
     noSession()
     const res = await proxy(req('/redefinir-senha'))
@@ -486,6 +492,18 @@ describe('role insuficiente para rota restrita', () => {
     asUser('gerente')
     const res = await proxy(req('/integracoes/trello'))
     expectPassThru(res)
+  })
+
+  it('socio em /integracoes/gmail → passa através', async () => {
+    asUser('socio')
+    const res = await proxy(req('/integracoes/gmail'))
+    expectPassThru(res)
+  })
+
+  it('gerente em /integracoes/gmail → redirect /dashboard (regra específica antes de /integracoes)', async () => {
+    asUser('gerente')
+    const res = await proxy(req('/integracoes/gmail'))
+    expectRedirect(res, '/dashboard')
   })
 
   // ── Regressão: sincronização proxy ↔ page guards ─────────────────────────────
@@ -1039,6 +1057,7 @@ describe('socio — acesso irrestrito a todas as rotas internas (proxy)', () => 
     '/ia-juridica/assistente',
     '/integracoes',
     '/integracoes/trello',
+    '/integracoes/gmail',
     '/configuracoes',
     '/configuracoes/usuarios',
   ]

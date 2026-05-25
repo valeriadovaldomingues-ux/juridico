@@ -43,6 +43,7 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
   { prefix: '/financeiro',             roles: ['socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
+  { prefix: '/integracoes/gmail',       roles: ['socio'] },
   { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
   { prefix: '/relatorios',             roles: ['gerente', 'socio'] },
   { prefix: '/comercial',              roles: ['comercial', 'administrativo', 'socio'] },
@@ -110,7 +111,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/esqueci-senha') ||
-    pathname.startsWith('/redefinir-senha')
+    pathname.startsWith('/redefinir-senha') ||
+    pathname.startsWith('/nr1-sem-risco')
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))

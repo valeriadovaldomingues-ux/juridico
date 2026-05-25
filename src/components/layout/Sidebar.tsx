@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
+  Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -54,6 +55,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     label: 'Integrações',
     items: [
       { href: '/integracoes/trello', label: 'Trello', icon: ArrowLeftRight },
+      { href: '/integracoes/gmail',  label: 'Gmail',  icon: Mail },
     ],
   },
   {

@@ -270,6 +270,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/monitoramento',
     '/ia-juridica',
     '/integracoes/trello',
+    '/integracoes/gmail',
     '/configuracoes/usuarios',
     '/configuracoes',
   ],
@@ -292,6 +293,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
 
   // ── Automação e integrações ───────────────────────────────────────────────────
   { prefix: '/automacoes',            roles: ['gerente', 'socio'] },
+  { prefix: '/integracoes/gmail',      roles: ['socio'] },
   { prefix: '/integracoes',           roles: ['gerente', 'socio'] },
 
   // ── Relatórios (gerente e sócio — advogado removido) ─────────────────────────
