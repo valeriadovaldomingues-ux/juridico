@@ -244,9 +244,10 @@ export default function NR1SemRiscoPage() {
           </p>
           <div className="relative w-full aspect-video rounded-xl overflow-hidden mb-10 bg-black/20">
             <iframe
-              src="https://www.youtube.com/embed/jLIdgBTlkWU"
-              title="Aula gratuita: o que sua empresa precisa entender sobre a nova NR-1"
+              src="https://www.youtube.com/embed/jLIdgBTlkWU?rel=0&modestbranding=1"
+              title="Aula gratuita NR-1"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               className="absolute inset-0 w-full h-full border-0"
             />

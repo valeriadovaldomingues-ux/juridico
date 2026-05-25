@@ -54,6 +54,9 @@ const cspDirectives = [
   // Bloqueia plugins NPAPI/ActiveX (Flash, Java, etc.).
   "object-src 'none'",
 
+  // Permite incorporar vídeos do YouTube na página /nr1-sem-risco.
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+
   // Previne base tag hijacking (redirecionar recursos relativos).
   "base-uri 'self'",
 
