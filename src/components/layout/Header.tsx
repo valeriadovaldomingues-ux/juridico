@@ -62,17 +62,17 @@ export default function Header({ profile }: { profile: Profile | null }) {
   const roleColor = profile?.role ? ROLE_COLORS[profile.role] : null
 
   return (
-    <header className="h-[50px] bg-white border-b border-[#E2DDD8] flex items-center justify-between px-5 flex-shrink-0">
+    <header className="h-[52px] bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center justify-between px-5 flex-shrink-0 shadow-[0_1px_0_rgba(20,32,51,0.02)]">
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5">
         {crumbs.map((crumb, i) => (
           <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight size={12} className="text-[#CBC5BC]" />}
+            {i > 0 && <ChevronRight size={12} className="text-[var(--color-border-mid)]" />}
             <span className={
               i === crumbs.length - 1
-                ? 'text-[13px] font-semibold text-[#111827]'
-                : 'text-[13px] text-[#9CA3AF]'
+                ? 'font-brand text-[18px] font-semibold text-[var(--color-ink)] leading-none'
+                : 'text-[13px] text-[var(--color-ink-3)]'
             }>
               {crumb}
             </span>
@@ -92,25 +92,25 @@ export default function Header({ profile }: { profile: Profile | null }) {
             )}
             <div className="flex items-center gap-2">
               {/* Avatar */}
-              <div className="w-6 h-6 rounded-full bg-[#1D5F60] flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-[var(--color-sidebar)] ring-1 ring-[var(--color-copper)]/25 flex items-center justify-center flex-shrink-0">
                 <span className="text-[10px] font-bold text-white leading-none select-none">
                   {getInitials(profile.nome)}
                 </span>
               </div>
-              <span className="hidden md:block text-[12px] font-medium text-[#4B5563] max-w-[140px] truncate">
+              <span className="hidden md:block text-[12px] font-medium text-[var(--color-ink-2)] max-w-[140px] truncate">
                 {profile.nome}
               </span>
             </div>
           </div>
         )}
 
-        <div className="w-px h-4 bg-[#E2DDD8]" />
+        <div className="w-px h-4 bg-[var(--color-border)]" />
 
         <NotificationBell />
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-[#9CA3AF] hover:text-[#111827] hover:bg-[#F3F1EE] transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-warm)] transition-all"
           title="Sair"
         >
           <LogOut size={13} />

@@ -13,14 +13,14 @@ interface Props {
 
 /**
  * Card base do sistema interno.
- * Fundo branco, borda quente, sombra suave — denso e funcional.
+ * Superfície quente, borda institucional e sombra discreta.
  */
 export default function InternalCard({ children, className, accent, flush, padding }: Props) {
   return (
     <div
       className={cn(
-        'bg-white border border-[#E2DDD8] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden',
-        accent && 'border-t-2 border-t-[#1D5F60]',
+        'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-[0_8px_24px_rgba(20,32,51,0.045)] overflow-hidden',
+        accent && 'border-t-2 border-t-[var(--color-copper)]',
         !flush && (padding ?? 'p-5'),
         className,
       )}

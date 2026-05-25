@@ -14,16 +14,16 @@ interface Props {
 
 const VARIANTS = {
   default: {
-    icon:  'text-[#9CA3AF] bg-[#F3F1EE] border-[#E2DDD8]',
-    value: 'text-[#111827]',
+    icon:  'text-[var(--color-ink-3)] bg-[var(--color-surface-warm)] border-[var(--color-border)]',
+    value: 'text-[var(--color-ink)]',
   },
   teal: {
-    icon:  'text-[#1D5F60] bg-[#E8F2F2] border-[#BCE4E4]',
-    value: 'text-[#1D5F60]',
+    icon:  'text-[var(--color-petrol)] bg-[var(--color-petrol-light)] border-[#CBD9DF]',
+    value: 'text-[var(--color-petrol)]',
   },
   gold: {
-    icon:  'text-[#C49557] bg-[#FBF5EC] border-[#EDD9B8]',
-    value: 'text-[#C49557]',
+    icon:  'text-[var(--color-copper)] bg-[var(--color-gold-light)] border-[#E7CBA8]',
+    value: 'text-[var(--color-copper)]',
   },
   alert: {
     icon:  'text-rose-600 bg-rose-50 border-rose-100',
@@ -43,7 +43,7 @@ export default function InternalStatCard({
   const content = (
     <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-[#9CA3AF] uppercase tracking-[0.06em] font-medium mb-1">
+        <p className="text-[11px] text-[var(--color-ink-3)] uppercase tracking-[0.08em] font-medium mb-1">
           {label}
         </p>
         <p className={cn('text-[22px] font-semibold leading-none tabular-nums', v.value)}>
@@ -54,7 +54,7 @@ export default function InternalStatCard({
             'text-[11px] mt-1.5',
             trend === 'up'   ? 'text-emerald-600' :
             trend === 'down' ? 'text-rose-600'    :
-            'text-[#9CA3AF]'
+            'text-[var(--color-ink-3)]'
           )}>
             {trendText}
           </p>
@@ -70,7 +70,7 @@ export default function InternalStatCard({
     return (
       <Link
         href={href}
-        className="block bg-white border border-[#E2DDD8] rounded-lg p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#1D5F60]/30 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-150"
+        className="block bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 shadow-[0_8px_24px_rgba(20,32,51,0.045)] hover:border-[var(--color-copper)]/35 hover:shadow-[0_12px_30px_rgba(20,32,51,0.07)] transition-all duration-150"
       >
         {content}
       </Link>
@@ -78,7 +78,7 @@ export default function InternalStatCard({
   }
 
   return (
-    <div className="bg-white border border-[#E2DDD8] rounded-lg p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 shadow-[0_8px_24px_rgba(20,32,51,0.045)]">
       {content}
     </div>
   )

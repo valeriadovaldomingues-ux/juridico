@@ -13,13 +13,13 @@ interface Props {
  */
 export default function PageHeader({ titulo, subtitulo, children, className }: Props) {
   return (
-    <div className={cn('flex items-center justify-between gap-4 flex-wrap mb-5', className)}>
+    <div className={cn('flex items-center justify-between gap-4 flex-wrap mb-6', className)}>
       <div>
-        <h1 className="text-[18px] font-semibold text-[#111827] tracking-tight leading-none">
+        <h1 className="font-brand text-[30px] font-semibold text-[var(--color-ink)] leading-none">
           {titulo}
         </h1>
         {subtitulo && (
-          <p className="text-[12px] text-[#9CA3AF] mt-1">{subtitulo}</p>
+          <p className="text-[12px] text-[var(--color-ink-3)] mt-1.5">{subtitulo}</p>
         )}
       </div>
       {children && (

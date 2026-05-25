@@ -87,7 +87,7 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
   }
 
   return (
-    <aside className="w-[216px] flex-shrink-0 flex flex-col bg-[#162030] select-none">
+    <aside className="w-[216px] flex-shrink-0 flex flex-col bg-[var(--color-sidebar)] select-none shadow-[8px_0_30px_rgba(8,23,36,0.08)]">
 
       {/* Logo */}
       <div className="px-4 pt-5 pb-4">
@@ -95,13 +95,13 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
       </div>
 
       {/* Divider dourado sutil */}
-      <div className="mx-4 h-px bg-gradient-to-r from-[#C49557]/25 via-[#C49557]/8 to-transparent" />
+      <div className="mx-4 h-px bg-gradient-to-r from-[var(--color-copper)]/35 via-[var(--color-copper)]/10 to-transparent" />
 
       {/* Navegação */}
       <nav className="flex-1 px-2.5 py-4 overflow-y-auto space-y-5">
         {visibleGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/20">
+            <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/25">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -115,24 +115,24 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
                     className={cn(
                       'group relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150',
                       active
-                        ? 'bg-white/[0.09] text-white'
-                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.05]'
+                        ? 'bg-white/[0.10] text-white shadow-[inset_0_0_0_1px_rgba(184,120,74,0.10)]'
+                        : 'text-white/46 hover:text-white/85 hover:bg-white/[0.055]'
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 inset-y-[6px] w-[2.5px] rounded-r-full bg-[#C49557]" />
+                      <span className="absolute left-0 inset-y-[6px] w-[2.5px] rounded-r-full bg-[var(--color-copper)]" />
                     )}
                     <Icon
                       size={14}
                       strokeWidth={active ? 1.75 : 1.5}
                       className={cn(
                         'flex-shrink-0 transition-colors duration-150',
-                        active ? 'text-[#C49557]' : 'text-white/30 group-hover:text-white/60'
+                        active ? 'text-[var(--color-copper)]' : 'text-white/32 group-hover:text-white/62'
                       )}
                     />
                     <span className="flex-1 truncate">{item.label}</span>
                     {active && (
-                      <span className="w-1 h-1 rounded-full bg-[#C49557]/60 flex-shrink-0" />
+                      <span className="w-1 h-1 rounded-full bg-[var(--color-copper)]/70 flex-shrink-0" />
                     )}
                   </Link>
                 )
@@ -145,8 +145,8 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
       {/* Rodapé */}
       <div className="mx-4 h-px bg-white/[0.06]" />
       <div className="px-5 py-3.5">
-        <p className="text-[9px] text-white/15 tracking-[0.08em] uppercase">
-          P&V · Sistema Jurídico
+        <p className="text-[9px] text-white/18 tracking-[0.12em] uppercase">
+          P&V · Advocacia Empresarial
         </p>
       </div>
     </aside>

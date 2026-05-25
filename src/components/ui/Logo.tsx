@@ -1,35 +1,68 @@
 'use client'
 
 /**
- * Componente de logo do sistema.
- * Lê de /public/logo.png — para trocar a logo, basta substituir esse arquivo.
+ * Componente de logo do sistema Pessoa e do Val.
  *
  * Variantes:
  *   - "sidebar"  → logo + nome do sistema (uso na barra lateral)
  *   - "login"    → logo centralizada + nome (uso na tela de login)
  *   - "icon"     → só o ícone/logo, sem texto (uso compacto)
+ *   - "complete" → assinatura completa horizontal/vertical conforme asset oficial
+ *   - "compact"  → assinatura compacta
  */
 
-type LogoVariant = 'sidebar' | 'login' | 'icon'
+type LogoVariant = 'sidebar' | 'login' | 'icon' | 'complete' | 'compact'
+type LogoTone = 'dark' | 'light'
 
-function LogoImg({ size, padding = '' }: { size: number; padding?: string }) {
+const LOGO_SRC = '/logo-pedv-tv.jpeg'
+
+function LogoImg({
+  className,
+  height,
+  width,
+}: {
+  className?: string
+  height: number
+  width: number
+}) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/logo.png"
-      alt="Logo PEDV"
-      width={size}
-      height={size}
-      className={`w-full h-full object-contain${padding ? ` ${padding}` : ''}`}
+      src={LOGO_SRC}
+      alt="Pessoa e do Val Advocacia Empresarial"
+      width={width}
+      height={height}
+      className={className}
     />
   )
 }
 
-export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant }) {
+export default function Logo({
+  variant = 'sidebar',
+  tone = 'dark',
+}: {
+  variant?: LogoVariant
+  tone?: LogoTone
+}) {
+  const textPrimary = tone === 'light' ? 'text-white' : 'text-[var(--color-ink)]'
+  const textAccent = tone === 'light' ? 'text-[var(--color-copper)]' : 'text-[var(--color-gold-muted)]'
+
   if (variant === 'icon') {
     return (
-      <div className="w-9 h-9 rounded-xl bg-[#b8903a] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-        <LogoImg size={36} />
+      <div className="w-9 h-9 rounded-xl border border-[var(--color-copper)]/30 bg-[var(--color-sidebar-deep)] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+        <LogoImg height={36} width={36} className="h-full w-full object-cover" />
+      </div>
+    )
+  }
+
+  if (variant === 'complete' || variant === 'compact') {
+    return (
+      <div className="inline-flex items-center gap-3">
+        <LogoImg
+          height={variant === 'complete' ? 64 : 44}
+          width={variant === 'complete' ? 180 : 120}
+          className={variant === 'complete' ? 'h-14 w-auto object-contain' : 'h-10 w-auto object-contain'}
+        />
       </div>
     )
   }
@@ -37,13 +70,12 @@ export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant })
   if (variant === 'sidebar') {
     return (
       <div className="flex items-center gap-2.5">
-        {/* Ícone — borda sutil no dark sidebar */}
-        <div className="w-8 h-8 rounded-lg bg-[#C49557]/15 border border-[#C49557]/25 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <LogoImg size={32} padding="p-0.5" />
+        <div className="w-9 h-9 rounded-lg border border-[var(--color-copper)]/25 bg-[var(--color-copper)]/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <LogoImg height={36} width={36} className="h-full w-full object-cover" />
         </div>
         <div>
-          <p className="text-white font-semibold text-[13px] leading-none tracking-tight">Pessoa e do Val</p>
-          <p className="text-[#C49557]/50 text-[9px] mt-0.5 tracking-[0.1em] uppercase">Advocacia</p>
+          <p className="font-brand text-white font-semibold text-[17px] leading-none">Pessoa e do Val</p>
+          <p className="text-[var(--color-copper)]/70 text-[8px] mt-0.5 tracking-[0.16em] uppercase">Advocacia Empresarial</p>
         </div>
       </div>
     )
@@ -52,12 +84,12 @@ export default function Logo({ variant = 'sidebar' }: { variant?: LogoVariant })
   // variant === 'login'
   return (
     <div className="inline-flex flex-col items-center gap-3">
-      <div className="w-16 h-16 rounded-2xl bg-[#162030] flex items-center justify-center shadow-lg overflow-hidden border border-[#E2DDD8]">
-        <LogoImg size={64} padding="p-1.5" />
+      <div className="h-20 w-20 rounded-2xl bg-[var(--color-sidebar)] flex items-center justify-center shadow-lg overflow-hidden border border-[var(--color-border)]">
+        <LogoImg height={80} width={80} className="h-full w-full object-cover" />
       </div>
       <div className="text-center">
-        <h1 className="text-[16px] font-semibold text-[#111827] tracking-tight">Pessoa e do Val</h1>
-        <p className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-[0.08em] uppercase">Sistema Jurídico</p>
+        <h1 className={`font-brand text-[22px] font-semibold leading-none ${textPrimary}`}>Pessoa e do Val</h1>
+        <p className={`text-[10px] mt-1 tracking-[0.16em] uppercase ${textAccent}`}>Advocacia Empresarial</p>
       </div>
     </div>
   )

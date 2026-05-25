@@ -1,44 +1,55 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* ── Sistema interno — paleta operacional enterprise ────────────────────── */
+  /* ── Pessoa e do Val Advocacia Empresarial — fundação visual ───────────── */
 
-  /* Sidebar dark slate — mais sofisticado que teal genérico */
-  --color-sidebar:       #162030;
-  --color-sidebar-alt:   #1E2D3D;
+  /* Azul petróleo/marinho profundo — institucional, sem preto puro */
+  --color-sidebar:       #0D2235;
+  --color-sidebar-alt:   #102B42;
+  --color-sidebar-deep:  #081724;
+  --color-petrol:        #12324A;
+  --color-petrol-mid:    #1A405C;
+  --color-petrol-light:  #E8EEF1;
 
-  /* Fundo — neutro quente (não frio azulado) */
+  /* Fundo e superfícies — neutros quentes */
   --color-bg:            #F3F1EE;
-  --color-surface:       #ffffff;
+  --color-surface:       #FCFAF7;
+  --color-surface-2:     #FFFFFF;
+  --color-surface-warm:  #F8F4EE;
 
-  /* Bordas — quentes, não frias */
+  /* Bordas — quentes, compatíveis com papel/timbrado */
   --color-border:        #E2DDD8;
-  --color-border-mid:    #CBC5BC;
+  --color-border-mid:    #CFC7BC;
+  --color-border-strong: #BBAF9F;
 
-  /* Texto */
-  --color-ink:           #111827;
-  --color-ink-2:         #4B5563;
-  --color-ink-3:         #9CA3AF;
+  /* Texto — evitar preto puro */
+  --color-ink:           #142033;
+  --color-ink-2:         #465365;
+  --color-ink-3:         #7E8896;
+  --color-ink-muted:     #A5A098;
 
-  /* Acento operacional (teal refinado, menos saturado) */
-  --color-teal:          #1D5F60;
-  --color-teal-hover:    #27777A;
-  --color-teal-light:    #E8F2F2;
+  /* Acentos institucionais — cobre/dourado da marca */
+  --color-copper:        #B8784A;
+  --color-copper-hover:  #9E6438;
+  --color-copper-soft:   #F4E7D8;
+  --color-gold:          #C4945B;
+  --color-gold-muted:    #9E7342;
+  --color-gold-light:    #FBF3E8;
 
-  /* Acento de marca (harmonizado com P&V gold do portal) */
-  --color-gold:          #C49557;
-  --color-gold-muted:    #A07840;
-  --color-gold-light:    #FBF5EC;
+  /* Compatibilidade com componentes existentes */
+  --color-teal:          #12324A;
+  --color-teal-hover:    #1A405C;
+  --color-teal-light:    #E8EEF1;
 
   /* Legado — mantidos para compatibilidade com componentes existentes */
-  --color-navy:          #1D5F60;
-  --color-navy-mid:      #27777A;
-  --color-navy-light:    #348B8C;
-  --color-gold-legacy:   #b8903a;
-  --color-gold-light-legacy: #d4a94e;
-  --color-border-2:      #E8F2F2;
-  --color-ink-2-legacy:  #3d4a5c;
-  --color-ink-3-legacy:  #7a8899;
+  --color-navy:          #0D2235;
+  --color-navy-mid:      #12324A;
+  --color-navy-light:    #1A405C;
+  --color-gold-legacy:   #B8784A;
+  --color-gold-light-legacy: #C4945B;
+  --color-border-2:      #E8EEF1;
+  --color-ink-2-legacy:  #465365;
+  --color-ink-3-legacy:  #7E8896;
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────── */
@@ -46,23 +57,29 @@
 html { -webkit-font-smoothing: antialiased; }
 
 body {
-  background: #F3F1EE;
-  color: #111827;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
-  letter-spacing: -0.01em;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans), Montserrat, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
 }
 
 * { box-sizing: border-box; }
 
+h1, h2, h3,
+.font-brand {
+  font-family: var(--font-brand), 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: 0;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #CBC5BC; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+::-webkit-scrollbar-thumb { background: var(--color-border-mid); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-3); }
 
 /* ── Focus ring ──────────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #27777A;
+  outline: 2px solid color-mix(in srgb, var(--color-copper) 72%, white);
   outline-offset: 2px;
   border-radius: 5px;
 }
@@ -94,10 +111,10 @@ a, button { transition: all 0.15s ease; }
 
 .portal-scroll::-webkit-scrollbar { width: 3px; }
 .portal-scroll::-webkit-scrollbar-thumb { background: #E8E3D8; border-radius: 2px; }
-.portal-scroll::-webkit-scrollbar-thumb:hover { background: #C49557; }
+.portal-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-copper); }
 
 .portal-focus:focus-visible {
-  outline: 1.5px solid rgba(196, 149, 87, 0.5);
+  outline: 1.5px solid color-mix(in srgb, var(--color-copper) 52%, transparent);
   outline-offset: 2px;
   border-radius: 1px;
 }
