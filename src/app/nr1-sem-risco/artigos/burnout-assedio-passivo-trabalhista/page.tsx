@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 }
 
 const H2 = '[font-family:var(--font-serif)] text-[#0D2235] font-bold text-2xl sm:text-3xl mt-12 mb-5 leading-tight'
-const H3 = '[font-family:var(--font-serif)] text-[#0D2235] font-semibold text-xl mt-8 mb-3 leading-tight'
 const P  = 'text-[#4B5563] text-lg leading-relaxed mb-5'
-const BOX = 'bg-white border border-[#E2DDD8] rounded-xl p-7 my-8 shadow-[0_2px_16px_rgba(17,24,39,0.04)]'
-const NAVY = 'bg-[#0D2235] rounded-xl p-7 my-8'
 
 function Dot() {
   return <div className="w-1.5 h-1.5 rounded-full bg-[#B8784A] mt-2.5 shrink-0" />
@@ -22,106 +19,63 @@ export default function Page() {
     <ArticleLayout
       categoria="Gestão de Risco"
       titulo="Burnout, assédio e passivo trabalhista"
-      subtitulo="O custo de ignorar os riscos psicossociais vai muito além das indenizações. Entenda como burnout e assédio se convertem em passivo trabalhista e como a NR-1 atualizada mudou o cenário jurídico para as empresas."
+      subtitulo="Os fatores de risco psicossociais passaram a integrar expressamente o GRO e o PGR. Entenda o que mudou, o que sua empresa precisa fazer e quais os riscos do descumprimento."
       dataPublicacao="Maio de 2026"
     >
       <p className={P}>
-        Durante décadas, o debate sobre saúde mental no trabalho foi tratado pelas empresas como uma questão de recursos humanos — importante, mas distante do departamento jurídico. A atualização da NR-1 encerrou essa separação. Burnout, assédio moral e conflitos organizacionais são hoje fatores de risco com obrigação legal de gerenciamento, e a omissão da empresa diante desses fatores passou a ser argumento direto em processos trabalhistas.
-      </p>
-
-      <h2 className={H2}>Burnout: quando a sobrecarga vira ação trabalhista</h2>
-      <p className={P}>
-        O burnout — síndrome de esgotamento profissional reconhecida pela OMS como fenômeno ocupacional — é hoje uma das principais causas de afastamento por doenças relacionadas ao trabalho no Brasil. Quando o trabalhador consegue demonstrar nexo causal entre o adoecimento e as condições de trabalho, a empresa pode ser responsabilizada por danos materiais (tratamento, lucros cessantes) e morais.
+        A atualização da NR-1 trouxe uma mudança relevante para as empresas brasileiras: os fatores de risco psicossociais passaram a integrar expressamente o Gerenciamento de Riscos Ocupacionais, o chamado GRO, e devem ser considerados no PGR — Programa de Gerenciamento de Riscos.
       </p>
       <p className={P}>
-        Com a nova NR-1, a equação muda: se a empresa tinha a obrigação legal de identificar e controlar a sobrecarga de trabalho — e não o fez — essa omissão deixa de ser um mero descuido de gestão e passa a ser descumprimento de norma regulamentadora. Na prática, isso facilita a caracterização de culpa em processos de indenização.
-      </p>
-
-      <div className={BOX}>
-        <p className="font-semibold text-[#111827] mb-4">Situações que configuram risco de responsabilização:</p>
-        <ul className="space-y-3">
-          {[
-            'Funcionários com histórico documentado de horas extras excessivas',
-            'Metas comprovadamente inatingíveis pela maioria da equipe',
-            'Ausência de controle de jornada ou banco de horas sem compensação adequada',
-            'Afastamentos por ansiedade ou depressão sem investigação do nexo com o trabalho',
-            'PGR desatualizado ou sem menção a riscos psicossociais',
-          ].map(item => (
-            <li key={item} className="flex items-start gap-3">
-              <Dot />
-              <span className="text-[#4B5563]">{item}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <h2 className={H2}>Assédio moral e sexual: responsabilidade que recai sobre a empresa</h2>
-      <p className={P}>
-        O assédio moral é uma das condutas mais litigadas no direito do trabalho brasileiro. A empresa pode ser responsabilizada tanto quando o assédio é praticado por um gestor (responsabilidade direta) quanto quando tolera condutas abusivas entre pares sem tomar providências (responsabilidade por omissão).
-      </p>
-
-      <h3 className={H3}>O que a NR-1 exige sobre prevenção ao assédio</h3>
-      <p className={P}>
-        A norma atualizada exige que a empresa não apenas proíba o assédio em teoria, mas que adote medidas concretas e documentadas de prevenção: política escrita, canal de denúncias acessível e conhecido pelos funcionários, processo formal de apuração e treinamento das lideranças. A ausência de qualquer um desses elementos é evidência de falta de diligência preventiva.
+        Na prática, isso significa que a empresa não pode mais olhar apenas para riscos físicos, químicos, biológicos, ergonômicos ou de acidentes. Agora, fatores como sobrecarga de trabalho, metas abusivas, assédio moral, conflitos internos, falhas de liderança, pressão excessiva, jornadas desorganizadas e ambiente emocionalmente adoecedor também precisam ser identificados, avaliados e tratados.
       </p>
       <p className={P}>
-        Em um processo trabalhista, a empresa que possui política formalizada, treinamentos registrados e canal de denúncia operacional está em posição jurídica radicalmente diferente daquela que não tem nada disso — ainda que o episódio de assédio tenha ocorrido de forma isolada.
-      </p>
-
-      <div className={NAVY}>
-        <p className="text-[#B8784A] text-[11px] font-semibold tracking-widest uppercase mb-3">Ponto de atenção jurídico</p>
-        <p className="text-white/75 leading-relaxed">
-          A ausência de política de prevenção ao assédio pode ser interpretada pelos Tribunais do Trabalho como evidência de que a empresa criou ou tolerou um ambiente propício ao assédio. Isso pode elevar o valor das indenizações e, em alguns casos, configurar dano moral coletivo.
-        </p>
-      </div>
-
-      <h2 className={H2}>O custo real do passivo trabalhista</h2>
-      <p className={P}>
-        É comum que empresas enxerguem a adequação à NR-1 como um custo. A perspectiva muda quando se considera o passivo potencial do descumprimento.
+        A mudança foi consolidada pela Portaria MTE nº 1.419/2024, que deu nova redação à NR-1 e incluiu os fatores de risco psicossociais relacionados ao trabalho no âmbito do gerenciamento de riscos ocupacionais. A própria página oficial da NR-1 informa que essa redação entra em vigor em 26 de maio de 2026.
       </p>
       <p className={P}>
-        Uma única ação por dano moral decorrente de assédio ou adoecimento ocupacional pode resultar em condenações que variam de 10 a 50 salários da vítima — fora os honorários advocatícios, custas processuais e eventual repercussão reputacional. Ações coletivas movidas pelo Ministério Público do Trabalho, por sua vez, podem gerar obrigações de fazer (implementar políticas, realizar treinamentos) sob pena de multas diárias.
+        O Ministério do Trabalho e Emprego também publicou materiais orientativos sobre o Capítulo 1.5 da NR-1, especialmente no contexto do GRO/PGR, reforçando que a gestão dos fatores psicossociais deve ser tratada como parte da prevenção em segurança e saúde no trabalho.
+      </p>
+      <p className={P}>
+        O ponto central é simples: saúde mental no trabalho deixou de ser apenas tema de palestra motivacional. Agora é matéria de gestão, prevenção, documentação e responsabilidade empresarial.
+      </p>
+      <p className={P}>
+        Empresas que não se adequarem poderão enfrentar riscos trabalhistas, previdenciários, administrativos e reputacionais. E, como sempre acontece, o problema não costuma aparecer no dia em que nasce. Ele aparece quando já virou afastamento, denúncia, reclamação trabalhista ou fiscalização.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-8">
+      <h2 className={H2}>O que a empresa precisa fazer?</h2>
+      <p className={P}>
+        A empresa deve revisar seu PGR, identificar os fatores de risco psicossociais existentes no ambiente de trabalho, avaliar sua gravidade, registrar as medidas preventivas e acompanhar a efetividade dessas ações.
+      </p>
+      <p className={P}>Isso envolve olhar para a rotina real da empresa:</p>
+      <ul className="space-y-3 mb-8">
         {[
-          {
-            label: 'Custo de prevenção',
-            desc: 'Diagnóstico, política formalizada, treinamentos e assessoria jurídica preventiva.',
-          },
-          {
-            label: 'Custo do passivo',
-            desc: 'Indenizações, honorários, multas, afastamentos, improdutividade e dano reputacional.',
-          },
+          'como as metas são cobradas;',
+          'como os gestores tratam as equipes;',
+          'como os conflitos são conduzidos;',
+          'se há excesso de jornada;',
+          'se existe canal seguro de denúncia;',
+          'se os empregados sabem a quem recorrer;',
+          'se há documentação mínima das ações preventivas.',
         ].map(item => (
-          <div key={item.label} className={BOX + ' my-0'}>
-            <div className="w-5 h-px bg-[#B8784A] mb-4" />
-            <p className="font-semibold text-[#111827] mb-2">{item.label}</p>
-            <p className="text-[#9CA3AF] text-sm leading-relaxed">{item.desc}</p>
-          </div>
+          <li key={item} className="flex items-start gap-3">
+            <Dot />
+            <span className="text-[#4B5563] text-lg leading-relaxed">{item}</span>
+          </li>
         ))}
-      </div>
-
+      </ul>
       <p className={P}>
-        Estudos do setor de saúde ocupacional indicam que o custo de prevenção representa, em média, 10% do custo de uma condenação trabalhista em caso de adoecimento relacionado ao trabalho. Empresas que adotam uma postura preventiva estruturada não apenas reduzem o risco de litígios — elas também criam documentação que, em caso de processo, demonstra diligência.
-      </p>
-
-      <h2 className={H2}>O que fazer agora</h2>
-      <p className={P}>
-        O primeiro passo é entender onde sua empresa está. Isso significa mapear os fatores de risco psicossocial presentes — sobrecarga, qualidade da liderança, prevenção ao assédio, reconhecimento, equilíbrio vida-trabalho — e avaliar o nível de exposição em cada um deles.
+        Não basta &ldquo;ter um RH&rdquo;. Não basta &ldquo;ter uma clínica de medicina do trabalho&rdquo;. Não basta dizer que &ldquo;nunca deu problema&rdquo;. No Direito do Trabalho, essa frase costuma aparecer tarde demais — e quase sempre no polo passivo.
       </p>
       <p className={P}>
-        Com esse diagnóstico em mãos, é possível priorizar as ações que reduzem mais risco jurídico com menos esforço. A formalização das medidas adotadas — por escrito, com data e responsáveis — é o que transforma uma boa prática de gestão em evidência de compliance.
+        A adequação à nova NR-1 deve ser feita de forma técnica, documentada e integrada entre jurídico, RH, SST e gestão empresarial. Quando bem conduzida, ela reduz riscos, melhora o ambiente de trabalho e protege a empresa contra passivos futuros.
       </p>
 
-      <div className="border-l-4 border-[#B8784A] pl-6 my-8">
-        <p className="text-[#4B5563] text-lg leading-relaxed italic">
-          &ldquo;Empresas que documentam sua jornada de adequação à NR-1 estão construindo sua defesa antes mesmo de precisar dela.&rdquo;
-        </p>
-        <p className="text-[#B8784A] text-sm font-semibold mt-3 tracking-wide">
-          Pessoa e do Val Advocacia
-        </p>
-      </div>
+      <h2 className={H2}>Conclusão</h2>
+      <p className={P}>
+        A nova abordagem da NR-1 exige que as empresas tratem os riscos psicossociais com seriedade. Não se trata de burocracia vazia, mas de prevenção concreta.
+      </p>
+      <p className={P}>
+        Empresas organizadas sairão na frente. Empresas que improvisarem podem descobrir, tarde demais, que saúde mental também gera passivo trabalhista.
+      </p>
     </ArticleLayout>
   )
 }
