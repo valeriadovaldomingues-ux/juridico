@@ -126,18 +126,21 @@ const ARTIGOS = [
     titulo: 'O que muda na NR-1 com os riscos psicossociais?',
     resumo:
       'A atualização da NR-1 tornou obrigatório o gerenciamento de riscos psicossociais. Entenda o que mudou e o que sua empresa precisa fazer para estar em conformidade.',
+    href: '/nr1-sem-risco/artigos/o-que-muda-na-nr1',
   },
   {
     tag: 'Gestão de Risco',
     titulo: 'Burnout, assédio e passivo trabalhista',
     resumo:
       'O custo de ignorar os riscos psicossociais vai além das indenizações. Veja como o passivo trabalhista pode comprometer a sustentabilidade do negócio.',
+    href: '/nr1-sem-risco/artigos/burnout-assedio-passivo-trabalhista',
   },
   {
     tag: 'Ferramenta',
     titulo: 'Checklist NR-1: sua empresa está preparada?',
     resumo:
       'Verifique em minutos o grau de conformidade da sua empresa com as novas exigências da NR-1 sobre riscos psicossociais.',
+    href: '/nr1-sem-risco/artigos/checklist-nr1',
   },
 ]
 
@@ -504,9 +507,10 @@ export default function NR1SemRiscoPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {ARTIGOS.map(a => (
-              <article
+              <a
                 key={a.titulo}
-                className="bg-white border border-[#E2DDD8] rounded-xl p-8 flex flex-col hover:border-[#B8784A]/30 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
+                href={a.href}
+                className="bg-white border border-[#E2DDD8] rounded-xl p-8 flex flex-col hover:border-[#B8784A]/30 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)] group"
               >
                 <Tag label={a.tag} />
                 <h3 className="[font-family:var(--font-serif)] text-[#111827] font-bold text-lg leading-snug mt-4 mb-4">
@@ -514,12 +518,12 @@ export default function NR1SemRiscoPage() {
                 </h3>
                 <p className="text-gray-400 text-sm leading-relaxed flex-1">{a.resumo}</p>
                 <div className="mt-7 pt-6 border-t border-gray-50 flex items-center gap-2">
-                  <span className="text-[#B8784A] text-sm font-semibold">Ler artigo</span>
+                  <span className="text-[#B8784A] text-sm font-semibold group-hover:underline">Ler artigo</span>
                   <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
                     <path d="M3 8h10M9 4l4 4-4 4" stroke="#B8784A" strokeWidth={1.5} strokeLinecap="round" />
                   </svg>
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         </div>
