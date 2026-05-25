@@ -11,7 +11,7 @@ const FAIXAS = [
   'Até 10', '11 a 50', '51 a 100', '101 a 500', 'Acima de 500',
 ]
 
-const INPUT = 'w-full bg-white/6 border border-white/10 focus:border-[#C49557] focus:ring-2 focus:ring-[#C49557]/10 focus:outline-none text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm transition-colors'
+const INPUT = 'w-full bg-white/6 border border-white/10 focus:border-[#B8784A] focus:ring-2 focus:ring-[#B8784A]/10 focus:outline-none text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm transition-colors'
 const LABEL = 'block text-white/50 text-xs font-semibold tracking-widest uppercase mb-2'
 
 export default function ContactForm() {
@@ -33,8 +33,8 @@ export default function ContactForm() {
   if (enviado) {
     return (
       <div className="text-center py-16">
-        <div className="w-14 h-14 rounded-full bg-[#C49557]/10 border border-[#C49557]/30 flex items-center justify-center mx-auto mb-6">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#C49557" strokeWidth={2} className="w-7 h-7">
+        <div className="w-14 h-14 rounded-full bg-[#B8784A]/10 border border-[#B8784A]/30 flex items-center justify-center mx-auto mb-6">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B8784A" strokeWidth={2} className="w-7 h-7">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
@@ -108,7 +108,7 @@ export default function ContactForm() {
       </div>
       <button
         type="submit"
-        className="w-full bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold py-4 rounded-xl text-base transition-colors"
+        className="w-full bg-[#B8784A] hover:bg-[#9E6438] text-[#111827] font-semibold py-4 rounded-xl text-base transition-colors"
       >
         Solicitar diagnóstico gratuito
       </button>

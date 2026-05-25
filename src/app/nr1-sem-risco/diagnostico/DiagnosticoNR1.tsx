@@ -221,7 +221,7 @@ function buildResultHtml(empresa: string, respostas: Record<string, number>): st
   html += `
   <div style="margin-top:24px;padding:16px 20px;background:#f8f9fa;border-radius:12px;border:1px solid #e8eaed;">
     <p style="font-size:12px;color:#666;line-height:1.7;margin:0">
-      <strong style="color:#162030">⚖️ Importante:</strong> Este diagnóstico é indicativo e não substitui análise jurídica individualizada. Os resultados devem ser usados como ponto de partida para a gestão dos riscos psicossociais da sua empresa, com acompanhamento de profissional habilitado.
+      <strong style="color:#0D2235">⚖️ Importante:</strong> Este diagnóstico é indicativo e não substitui análise jurídica individualizada. Os resultados devem ser usados como ponto de partida para a gestão dos riscos psicossociais da sua empresa, com acompanhamento de profissional habilitado.
     </p>
   </div>`
 
@@ -290,10 +290,10 @@ export default function DiagnosticoNR1() {
     <div className="diag-root">
       <style>{`
         .diag-root {
-          --azul: #162030;
-          --azul-medio: #1e2f45;
-          --ouro: #C49557;
-          --ouro-claro: #D4A96A;
+          --azul: #0D2235;
+          --azul-medio: #152C45;
+          --ouro: #B8784A;
+          --ouro-claro: #C8987A;
           --texto: #2B2F31;
           --cinza: #f5f6f8;
           --cinza2: #e8eaed;
@@ -322,9 +322,7 @@ export default function DiagnosticoNR1() {
           z-index: 100;
           box-shadow: 0 2px 12px rgba(0,0,0,0.3);
         }
-        .diag-topo-logo { display: flex; flex-direction: column; line-height: 1.2; }
-        .diag-topo-logo span:first-child { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
-        .diag-topo-logo span:last-child { font-size: 11px; font-weight: 400; color: var(--ouro-claro); letter-spacing: 1px; text-transform: uppercase; }
+        .diag-topo-logo-img { height: 40px; width: 40px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
         .diag-topo-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.2); margin: 0 4px; }
         .diag-topo-titulo { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.75); }
         .diag-wrapper { max-width: 780px; margin: 0 auto; padding: 40px 20px 80px; }
@@ -387,7 +385,7 @@ export default function DiagnosticoNR1() {
         .diag-btn-secundario { background: transparent; color: var(--azul); border: 2px solid var(--cinza2) !important; }
         .diag-btn-secundario:hover { border-color: var(--azul) !important; background: #f0f4fb; }
         .diag-btn-ouro { background: var(--ouro); color: #fff; flex: 1; max-width: 300px; }
-        .diag-btn-ouro:hover { background: #A07840; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(196,149,87,0.4); }
+        .diag-btn-ouro:hover { background: #9E6438; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(184,120,74,0.4); }
         .diag-alerta { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #9a3412; margin-top: 16px; }
         .diag-intro-hero { text-align: center; padding: 8px 0 32px; }
         .diag-intro-icon {
@@ -488,12 +486,10 @@ export default function DiagnosticoNR1() {
 
       {/* Topo */}
       <div className="diag-topo">
-        <div className="diag-topo-logo">
-          <span>Bússola da NR-1</span>
-          <span>Pessoa e do Val Advocacia</span>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-pedv-tv.jpeg" alt="Pessoa e do Val" className="diag-topo-logo-img" />
         <div className="diag-topo-divider" />
-        <div className="diag-topo-titulo">Diagnóstico de Riscos Psicossociais</div>
+        <div className="diag-topo-titulo">Diagnóstico de Riscos Psicossociais — NR-1</div>
       </div>
 
       <div className="diag-wrapper">

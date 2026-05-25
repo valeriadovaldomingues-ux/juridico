@@ -142,12 +142,12 @@ const ARTIGOS = [
 ]
 
 function Divider() {
-  return <div className="w-8 h-px bg-[#C49557] mb-5" />
+  return <div className="w-8 h-px bg-[#B8784A] mb-5" />
 }
 
 function Tag({ label }: { label: string }) {
   return (
-    <span className="inline-block text-[#C49557] text-[11px] font-semibold tracking-widest uppercase">
+    <span className="inline-block text-[#B8784A] text-[11px] font-semibold tracking-widest uppercase">
       {label}
     </span>
   )
@@ -158,56 +158,56 @@ export default function NR1SemRiscoPage() {
     <div className={`${cormorant.variable} min-h-screen bg-[#F3F1EE] text-[#111827]`}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[#162030] border-b border-[#C49557]/20 shadow-[0_8px_30px_rgba(17,24,39,0.12)]">
+      <header className="sticky top-0 z-50 bg-[#0D2235] border-b border-[#B8784A]/20 shadow-[0_8px_30px_rgba(17,24,39,0.12)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo.png"
+              src="/logo-pedv-tv.jpeg"
               alt="Pessoa e do Val Advocacia"
-              className="h-9 w-9 rounded-lg border border-[#C49557]/25 bg-[#C49557]/10 object-contain p-1"
+              className="h-11 w-11 rounded object-cover"
             />
             <div className="hidden sm:block leading-none">
               <p className="[font-family:var(--font-serif)] text-white text-[19px] font-semibold tracking-tight">
                 Pessoa e do Val
               </p>
-              <p className="text-[#C49557] text-[9px] mt-0.5 tracking-[0.2em] uppercase">
+              <p className="text-[#B8784A] text-[9px] mt-0.5 tracking-[0.2em] uppercase">
                 Advocacia
               </p>
             </div>
           </div>
           <nav className="flex items-center gap-8">
-            <a href="#o-que-mudou" className="hidden md:block text-white/50 hover:text-[#C49557] text-sm transition-colors">
+            <a href="#o-que-mudou" className="hidden md:block text-white/50 hover:text-[#B8784A] text-sm transition-colors">
               A NR-1
             </a>
-            <a href="#diagnostico" className="hidden md:block text-white/50 hover:text-[#C49557] text-sm transition-colors">
+            <a href="#diagnostico" className="hidden md:block text-white/50 hover:text-[#B8784A] text-sm transition-colors">
               Diagnóstico
             </a>
-            <a href="#planos" className="hidden md:block text-white/50 hover:text-[#C49557] text-sm transition-colors">
+            <a href="#planos" className="hidden md:block text-white/50 hover:text-[#B8784A] text-sm transition-colors">
               Planos
             </a>
             <a
               href={WA}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#C49557] hover:bg-[#A07840] text-[#111827] text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+              className="bg-[#B8784A] hover:bg-[#9E6438] text-[#111827] text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
             >
               WhatsApp
             </a>
           </nav>
         </div>
-        <div className="h-px bg-gradient-to-r from-transparent via-[#C49557]/40 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#B8784A]/40 to-transparent" />
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="bg-[#162030] pt-24 pb-32 px-6">
+      <section className="bg-[#0D2235] pt-24 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="inline-block border border-[#C49557]/30 text-[#C49557] text-[11px] font-semibold tracking-widest uppercase px-5 py-2 rounded-full mb-8">
+          <span className="inline-block border border-[#B8784A]/30 text-[#B8784A] text-[11px] font-semibold tracking-widest uppercase px-5 py-2 rounded-full mb-8">
             NR-1 sem Risco por Pessoa e do Val Advocacia
           </span>
           <h1 className="[font-family:var(--font-serif)] text-white font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6">
             NR-1 e riscos psicossociais:{' '}
-            <span className="text-[#C49557]">sua empresa está preparada?</span>
+            <span className="text-[#B8784A]">sua empresa está preparada?</span>
           </h1>
           <p className="text-white/55 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-12">
             A nova NR-1 exige o gerenciamento de riscos psicossociais. Empresas em desconformidade com a NR-1
@@ -217,13 +217,13 @@ export default function NR1SemRiscoPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="#contato"
-              className="bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
+              className="bg-[#B8784A] hover:bg-[#9E6438] text-[#111827] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
               Solicitar diagnóstico
             </a>
             <a
               href="#contato"
-              className="border border-white/15 hover:border-[#C49557]/60 text-white/70 hover:text-[#C49557] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
+              className="border border-white/15 hover:border-[#B8784A]/60 text-white/70 hover:text-[#B8784A] font-semibold px-10 py-4 rounded-xl text-base transition-colors"
             >
               Solicitar checklist gratuito
             </a>
@@ -232,7 +232,7 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Aula gratuita ─────────────────────────────────────────────────── */}
-      <section id="aula" className="py-24 px-6 bg-[#162030]">
+      <section id="aula" className="py-24 px-6 bg-[#0D2235]">
         <div className="max-w-6xl mx-auto">
           <Tag label="Aula gratuita NR-1" />
           <h2 className="[font-family:var(--font-serif)] text-3xl sm:text-4xl font-bold text-white mt-3 mb-4">
@@ -255,7 +255,7 @@ export default function NR1SemRiscoPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <a
               href="/nr1-sem-risco/diagnostico"
-              className="inline-block bg-[#C49557] hover:bg-[#A07840] text-[#111827] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
+              className="inline-block bg-[#B8784A] hover:bg-[#9E6438] text-[#111827] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
             >
               Fazer diagnóstico NR-1
             </a>
@@ -263,7 +263,7 @@ export default function NR1SemRiscoPage() {
               href="https://wa.me/5531971766583?text=Olá,%20assisti%20à%20aula%20sobre%20NR-1%20e%20gostaria%20de%20orientação"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block border border-white/15 hover:border-[#C49557]/60 text-white/70 hover:text-[#C49557] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
+              className="inline-block border border-white/15 hover:border-[#B8784A]/60 text-white/70 hover:text-[#B8784A] font-semibold px-8 py-4 rounded-xl text-sm transition-colors text-center"
             >
               Falar com o Pessoa e do Val
             </a>
@@ -328,9 +328,9 @@ export default function NR1SemRiscoPage() {
             {RISCOS.map(r => (
               <div
                 key={r.titulo}
-                className="bg-white border border-[#E2DDD8] rounded-xl p-6 hover:border-[#C49557]/40 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
+                className="bg-white border border-[#E2DDD8] rounded-xl p-6 hover:border-[#B8784A]/40 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
               >
-                <div className="w-5 h-px bg-[#C49557] mb-4" />
+                <div className="w-5 h-px bg-[#B8784A] mb-4" />
                 <h3 className="font-semibold text-[#111827] mb-2 text-sm">{r.titulo}</h3>
                 <p className="text-[#6B7280] text-sm leading-relaxed">{r.descricao}</p>
               </div>
@@ -360,12 +360,12 @@ export default function NR1SemRiscoPage() {
               </p>
               <a
                 href="#contato"
-                className="inline-block bg-[#162030] hover:bg-[#1D5F60] text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors"
+                className="inline-block bg-[#0D2235] hover:bg-[#162840] text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors"
               >
                 Solicitar diagnóstico
               </a>
             </div>
-            <div className="bg-[#162030] rounded-2xl p-8 shadow-[0_18px_60px_rgba(17,24,39,0.18)]">
+            <div className="bg-[#0D2235] rounded-2xl p-8 shadow-[0_18px_60px_rgba(17,24,39,0.18)]">
               <Tag label="Por que agir agora" />
               <ul className="mt-5 space-y-4">
                 {[
@@ -376,7 +376,7 @@ export default function NR1SemRiscoPage() {
                   'Conformidade NR-1 começa a ser critério ESG para investidores',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#C49557] mt-2 shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#B8784A] mt-2 shrink-0" />
                     <p className="text-white/65 text-sm leading-relaxed">{item}</p>
                   </li>
                 ))}
@@ -387,7 +387,7 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Etapas ─────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-[#162030]">
+      <section className="py-24 px-6 bg-[#0D2235]">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
             <Tag label="Como Funciona" />
@@ -402,9 +402,9 @@ export default function NR1SemRiscoPage() {
             {ETAPAS.map(e => (
               <div
                 key={e.num}
-                className="border border-white/10 rounded-xl p-7 hover:border-[#C49557]/30 transition-colors"
+                className="border border-white/10 rounded-xl p-7 hover:border-[#B8784A]/30 transition-colors"
               >
-                <span className="font-mono text-[#C49557] text-sm font-bold">{e.num}</span>
+                <span className="font-mono text-[#B8784A] text-sm font-bold">{e.num}</span>
                 <h3 className="text-white font-semibold mt-4 mb-2">{e.titulo}</h3>
                 <p className="text-white/45 text-sm leading-relaxed">{e.desc}</p>
               </div>
@@ -431,12 +431,12 @@ export default function NR1SemRiscoPage() {
                 key={p.nome}
                 className={`rounded-xl p-8 flex flex-col ${
                   p.destaque
-                    ? 'bg-[#162030] ring-1 ring-[#C49557]/60 shadow-[0_18px_60px_rgba(17,24,39,0.14)]'
+                    ? 'bg-[#0D2235] ring-1 ring-[#B8784A]/60 shadow-[0_18px_60px_rgba(17,24,39,0.14)]'
                     : 'border border-[#E2DDD8] shadow-[0_2px_16px_rgba(17,24,39,0.035)]'
                 }`}
               >
                 {p.destaque && (
-                  <span className="text-[#C49557] text-[11px] font-semibold tracking-widest uppercase mb-4">
+                  <span className="text-[#B8784A] text-[11px] font-semibold tracking-widest uppercase mb-4">
                     Mais escolhido
                   </span>
                 )}
@@ -458,7 +458,7 @@ export default function NR1SemRiscoPage() {
                         fill="none"
                         className="w-4 h-4 mt-0.5 shrink-0"
                       >
-                        <polyline points="3 8 6.5 11.5 13 5" stroke="#C49557" strokeWidth={1.5} />
+                        <polyline points="3 8 6.5 11.5 13 5" stroke="#B8784A" strokeWidth={1.5} />
                       </svg>
                       <span
                         className={`text-sm leading-relaxed ${
@@ -476,8 +476,8 @@ export default function NR1SemRiscoPage() {
                   rel="noopener noreferrer"
                   className={`text-center text-sm font-semibold px-6 py-3.5 rounded transition-colors ${
                     p.destaque
-                      ? 'bg-[#C49557] hover:bg-[#A07840] text-[#111827]'
-                      : 'border border-gray-200 hover:border-[#C49557]/50 text-gray-700 hover:text-[#C49557]'
+                      ? 'bg-[#B8784A] hover:bg-[#9E6438] text-[#111827]'
+                      : 'border border-gray-200 hover:border-[#B8784A]/50 text-gray-700 hover:text-[#B8784A]'
                   }`}
                 >
                   Solicitar proposta
@@ -504,7 +504,7 @@ export default function NR1SemRiscoPage() {
             {ARTIGOS.map(a => (
               <article
                 key={a.titulo}
-                className="bg-white border border-[#E2DDD8] rounded-xl p-8 flex flex-col hover:border-[#C49557]/30 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
+                className="bg-white border border-[#E2DDD8] rounded-xl p-8 flex flex-col hover:border-[#B8784A]/30 transition-colors shadow-[0_2px_16px_rgba(17,24,39,0.035)]"
               >
                 <Tag label={a.tag} />
                 <h3 className="[font-family:var(--font-serif)] text-[#111827] font-bold text-lg leading-snug mt-4 mb-4">
@@ -512,9 +512,9 @@ export default function NR1SemRiscoPage() {
                 </h3>
                 <p className="text-gray-400 text-sm leading-relaxed flex-1">{a.resumo}</p>
                 <div className="mt-7 pt-6 border-t border-gray-50 flex items-center gap-2">
-                  <span className="text-[#C49557] text-sm font-semibold">Ler artigo</span>
+                  <span className="text-[#B8784A] text-sm font-semibold">Ler artigo</span>
                   <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="#C49557" strokeWidth={1.5} strokeLinecap="round" />
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="#B8784A" strokeWidth={1.5} strokeLinecap="round" />
                   </svg>
                 </div>
               </article>
@@ -524,7 +524,7 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Formulário de Contato ───────────────────────────────────────────── */}
-      <section id="contato" className="py-24 px-6 bg-[#162030]">
+      <section id="contato" className="py-24 px-6 bg-[#0D2235]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <Tag label="Contato" />
@@ -540,15 +540,15 @@ export default function NR1SemRiscoPage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="bg-[#111827] border-t border-[#C49557]/15 py-16 px-6">
+      <footer className="bg-[#081520] border-t border-[#B8784A]/15 py-16 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo.png"
+                src="/logo-pedv-tv.jpeg"
                 alt="Pessoa e do Val Advocacia"
-                className="h-11 w-11 rounded-xl border border-[#C49557]/25 bg-[#C49557]/10 object-contain p-1.5 mb-3"
+                className="h-14 w-14 rounded object-cover mb-3"
               />
               <p className="text-white/35 text-sm leading-relaxed">
                 Pessoa e do Val Advocacia
