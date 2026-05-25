@@ -27,12 +27,14 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
   ])
 
   return (
-    <ProcessoDetail
-      processo={processo}
-      partes={partes ?? []}
-      prazos={prazos ?? []}
-      clientes={clientes ?? []}
-      agendaItems={agendaItems ?? []}
-    />
+    <div className="internal-page max-w-7xl">
+      <ProcessoDetail
+        processo={processo}
+        partes={partes ?? []}
+        prazos={prazos ?? []}
+        clientes={clientes ?? []}
+        agendaItems={agendaItems ?? []}
+      />
+    </div>
   )
 }

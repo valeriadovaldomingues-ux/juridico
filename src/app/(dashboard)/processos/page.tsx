@@ -20,24 +20,34 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
   const { data: processos } = await query
 
   return (
-    <div className="space-y-5 max-w-6xl">
-      <div className="flex items-center justify-between">
+    <div className="internal-page space-y-6 max-w-7xl">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--color-petrol-light)] to-transparent pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-4 flex-col sm:flex-row">
         <div>
-          <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight">Processos</h1>
-          <p className="text-[13px] text-[#7a8899] mt-0.5 flex items-center gap-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">
+            Gestão processual
+          </p>
+          <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">
+            Processos
+          </h1>
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-2 flex items-center gap-1.5">
             <Scale size={12} />
             {processos?.length ?? 0} registro{(processos?.length ?? 0) !== 1 ? 's' : ''}
           </p>
         </div>
         <Link
           href="/processos/novo"
-          className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-xl transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
         >
           <Plus size={15} />
           Novo Processo
         </Link>
+        </div>
       </div>
-      <ProcessosTable processos={processos ?? []} />
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
+        <ProcessosTable processos={processos ?? []} />
+      </div>
     </div>
   )
 }
