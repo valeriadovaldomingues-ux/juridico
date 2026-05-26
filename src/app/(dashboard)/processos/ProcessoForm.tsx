@@ -19,6 +19,12 @@ const areaOptions = [
   { value: 'outro', label: 'Outro' },
 ]
 
+const sectionClass = 'bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-[0_12px_36px_rgba(13,34,53,0.05)]'
+const sectionTitleClass = 'font-brand text-[24px] font-semibold text-[var(--color-ink)] mb-5'
+const labelClass = 'block text-xs font-semibold text-[var(--color-ink-2)] mb-1.5 uppercase tracking-[0.08em]'
+const inputClass = 'w-full px-3 py-2.5 text-sm border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 bg-white text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] transition-all'
+const panelClass = 'p-4 bg-[var(--color-surface-warm)] rounded-xl border border-[var(--color-border)]'
+
 /**
  * Estado da parte contrária exibida no formulário.
  * `id` está presente quando estamos editando uma parte já cadastrada,
@@ -165,46 +171,46 @@ export default function ProcessoForm({
     <form onSubmit={handleSubmit} className="space-y-5">
 
       {/* ── Identificação ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
-        <h2 className="text-sm font-semibold text-[#1a1d23] mb-5">Identificação</h2>
+      <div className={sectionClass}>
+        <h2 className={sectionTitleClass}>Identificação</h2>
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Título *</label>
+            <label className={labelClass}>Título *</label>
             <input
               required
               value={form.titulo}
               onChange={(e) => handleChange('titulo', e.target.value)}
               placeholder="Ex: João Silva x Empresa ABC"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Número do Processo</label>
+            <label className={labelClass}>Número do Processo</label>
             <input
               value={form.numero_processo}
               onChange={(e) => handleChange('numero_processo', e.target.value)}
               placeholder="0000000-00.0000.0.00.0000"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 font-mono"
+              className={`${inputClass} font-mono`}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Área do Direito *</label>
+            <label className={labelClass}>Área do Direito *</label>
             <select
               value={form.area_direito}
               onChange={(e) => handleChange('area_direito', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
+              className={inputClass}
             >
               {areaOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Status *</label>
+            <label className={labelClass}>Status *</label>
             <select
               value={form.status}
               onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
+              className={inputClass}
             >
               <option value="ativo">Ativo</option>
               <option value="suspenso">Suspenso</option>
@@ -214,22 +220,22 @@ export default function ProcessoForm({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Fase</label>
+            <label className={labelClass}>Fase</label>
             <input
               value={form.fase}
               onChange={(e) => handleChange('fase', e.target.value)}
               placeholder="Ex: Instrução, Recursal..."
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
         </div>
       </div>
 
       {/* ── Partes do Processo ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
+      <div className={sectionClass}>
         <div className="mb-5">
-          <h2 className="text-sm font-semibold text-[#1a1d23]">Partes do Processo</h2>
-          <p className="text-xs text-[#9ca3af] mt-0.5">
+          <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)]">Partes do Processo</h2>
+          <p className="text-xs text-[var(--color-ink-3)] mt-0.5">
             {isEditing
               ? 'Edite a parte contrária principal abaixo. Para gerenciar múltiplas partes, use a seção de Partes na tela de detalhes.'
               : 'Adicione a parte contrária principal. Após cadastrar, você poderá incluir múltiplas partes na tela de detalhes.'}
@@ -238,14 +244,14 @@ export default function ProcessoForm({
 
         <div className="space-y-4">
           {/* Cliente principal */}
-          <div className="p-4 bg-[#f9fafb] rounded-xl border border-[#e5e7eb]">
-            <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-2">
+          <div className={panelClass}>
+            <p className="text-[11px] font-semibold text-[var(--color-copper)] uppercase tracking-[0.12em] mb-2">
               Cliente Principal
             </p>
             <select
               value={form.cliente_id}
               onChange={(e) => handleChange('cliente_id', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
+              className={inputClass}
             >
               <option value="">Selecionar cliente...</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -253,26 +259,26 @@ export default function ProcessoForm({
           </div>
 
           {/* Parte contrária principal */}
-          <div className="p-4 bg-[#f9fafb] rounded-xl border border-[#e5e7eb]">
-            <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">
+          <div className={panelClass}>
+            <p className="text-[11px] font-semibold text-[var(--color-copper)] uppercase tracking-[0.12em] mb-3">
               Parte Contrária Principal
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-[#374151] mb-1.5">Nome</label>
+                <label className={labelClass}>Nome</label>
                 <input
                   value={parteForm.nome}
                   onChange={(e) => setParteForm(prev => ({ ...prev, nome: e.target.value }))}
                   placeholder="Nome completo da parte contrária"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-white"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#374151] mb-1.5">Tipo</label>
+                <label className={labelClass}>Tipo</label>
                 <select
                   value={parteForm.tipo_parte}
                   onChange={(e) => setParteForm(prev => ({ ...prev, tipo_parte: e.target.value as TipoParte }))}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] bg-white"
+                  className={inputClass}
                 >
                   <option value="reu">Réu</option>
                   <option value="autor">Autor</option>
@@ -281,12 +287,12 @@ export default function ProcessoForm({
                 </select>
               </div>
               <div className="col-span-3">
-                <label className="block text-xs font-medium text-[#374151] mb-1.5">CPF / CNPJ (opcional)</label>
+                <label className={labelClass}>CPF / CNPJ (opcional)</label>
                 <input
                   value={parteForm.documento}
                   onChange={(e) => setParteForm(prev => ({ ...prev, documento: e.target.value }))}
                   placeholder="Opcional"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 font-mono bg-white"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
             </div>
@@ -295,58 +301,58 @@ export default function ProcessoForm({
       </div>
 
       {/* ── Localização e Valores ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
-        <h2 className="text-sm font-semibold text-[#1a1d23] mb-5">Localização e Valores</h2>
+      <div className={sectionClass}>
+        <h2 className={sectionTitleClass}>Localização e Valores</h2>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Tribunal</label>
+            <label className={labelClass}>Tribunal</label>
             <input
               value={form.tribunal}
               onChange={(e) => handleChange('tribunal', e.target.value)}
               placeholder="Ex: TJSP, TRT-2..."
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Vara</label>
+            <label className={labelClass}>Vara</label>
             <input
               value={form.vara}
               onChange={(e) => handleChange('vara', e.target.value)}
               placeholder="Ex: 3ª Vara Cível"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Distribuição</label>
+            <label className={labelClass}>Distribuição</label>
             <input
               type="date"
               value={form.data_distribuicao}
               onChange={(e) => handleChange('data_distribuicao', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#374151] mb-1.5">Valor da Causa (R$)</label>
+            <label className={labelClass}>Valor da Causa (R$)</label>
             <input
               type="number"
               step="0.01"
               value={form.valor_causa}
               onChange={(e) => handleChange('valor_causa', e.target.value)}
               placeholder="0,00"
-              className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10"
+              className={inputClass}
             />
           </div>
         </div>
       </div>
 
       {/* ── Observações ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
-        <label className="block text-xs font-medium text-[#374151] mb-1.5">Observações</label>
+      <div className={sectionClass}>
+        <label className={labelClass}>Observações</label>
         <textarea
           value={form.observacoes}
           onChange={(e) => handleChange('observacoes', e.target.value)}
           rows={3}
-          className="w-full px-3 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 resize-none"
+          className={`${inputClass} resize-none`}
         />
       </div>
 
@@ -358,14 +364,14 @@ export default function ProcessoForm({
         <button
           type="button"
           onClick={() => onSuccess ? onSuccess() : router.push('/processos')}
-          className="px-5 py-2.5 text-sm font-medium text-[#6b7280] hover:text-[#1a1d23] transition-colors"
+          className="px-5 py-2.5 text-sm font-medium text-[var(--color-ink-3)] hover:text-[var(--color-ink)] transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2.5 bg-[#145A5B] hover:bg-[#1B6E70] text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
+          className="px-6 py-2.5 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 shadow-sm"
         >
           {loading ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Cadastrar Processo'}
         </button>

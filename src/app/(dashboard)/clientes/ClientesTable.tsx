@@ -18,11 +18,11 @@ const TIPO_LABELS: Record<TipoContato, string> = {
 }
 
 const TIPO_COLORS: Record<TipoContato, string> = {
-  cliente:         'bg-[#e6f4ee] text-[#1a7a45]',
-  parte_contraria: 'bg-[#fef3c7] text-[#92400e]',
-  parceiro:        'bg-[#ede9fe] text-[#5b21b6]',
-  fornecedor:      'bg-[#e0f2fe] text-[#075985]',
-  comercial:       'bg-[#fce7f3] text-[#9d174d]',
+  cliente:         'bg-[var(--color-petrol-light)] text-[var(--color-petrol)] border border-[#CBD9DF]',
+  parte_contraria: 'bg-[var(--color-gold-light)] text-[var(--color-gold-muted)] border border-[#E7CBA8]',
+  parceiro:        'bg-[var(--color-surface-warm)] text-[var(--color-ink-2)] border border-[var(--color-border)]',
+  fornecedor:      'bg-white text-[var(--color-ink-2)] border border-[var(--color-border)]',
+  comercial:       'bg-[var(--color-copper-soft)] text-[var(--color-copper)] border border-[#E7CBA8]',
 }
 
 function diasSemContato(ultimoContato: string | null): number | null {
@@ -79,17 +79,17 @@ export default function ClientesTable({
   const hasFilters = nome || cpf || cidade || tipo || responsavel
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
 
       {/* Barra de filtros */}
-      <div className="px-5 py-4 border-b border-[#E2DDD8]">
+      <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]/45">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
               showFilters || hasFilters
-                ? 'bg-[#1D5F60] text-white'
-                : 'text-[#7a8899] hover:bg-[#f5f7fa]'
+                ? 'bg-[var(--color-sidebar)] text-white shadow-sm'
+                : 'text-[var(--color-ink-2)] hover:bg-white border border-transparent hover:border-[var(--color-border)]'
             }`}
           >
             <SlidersHorizontal size={13} />
@@ -108,13 +108,13 @@ export default function ClientesTable({
               onChange={(e) => setNome(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="Buscar por nome..."
-              className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-full pl-8 pr-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
             />
           </div>
 
           <button
             onClick={applyFilters}
-            className="px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
           >
             Buscar
           </button>
@@ -122,7 +122,7 @@ export default function ClientesTable({
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 text-[13px] text-[#7a8899] hover:text-[#0f1923] rounded-lg hover:bg-[#f5f7fa] transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 text-[13px] text-[var(--color-ink-3)] hover:text-[var(--color-ink)] rounded-xl hover:bg-white transition-all"
             >
               <X size={13} /> Limpar
             </button>
@@ -134,7 +134,7 @@ export default function ClientesTable({
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#0f1923]"
+              className="px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 text-[var(--color-ink)]"
             >
               <option value="">Todos os tipos</option>
               {(Object.entries(TIPO_LABELS) as [TipoContato, string][]).map(([k, v]) => (
@@ -145,7 +145,7 @@ export default function ClientesTable({
             <select
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#0f1923]"
+              className="px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 text-[var(--color-ink)]"
             >
               <option value="">Todos os responsáveis</option>
               {profiles.map((p) => (
@@ -158,7 +158,7 @@ export default function ClientesTable({
               onChange={(e) => setCpf(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="CPF / CNPJ"
-              className="w-40 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-40 px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
             />
 
             <input
@@ -166,7 +166,7 @@ export default function ClientesTable({
               onChange={(e) => setCidade(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="Cidade"
-              className="w-32 px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+              className="w-32 px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
             />
           </div>
         )}
@@ -174,13 +174,14 @@ export default function ClientesTable({
 
       {/* Tabela */}
       {clientes.length === 0 ? (
-        <div className="py-20 text-center">
-          <p className="text-[13px] text-[#7a8899]">Nenhum contato encontrado</p>
+        <div className="py-20 text-center bg-[var(--color-surface)]">
+          <p className="font-brand text-[24px] text-[var(--color-ink)]">Nenhum contato encontrado</p>
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-1">Ajuste os filtros ou cadastre um novo contato.</p>
         </div>
       ) : (
         <table className="w-full">
           <thead>
-            <tr className="bg-[#f9fafb] border-b border-[#E2DDD8]">
+            <tr className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]">
               <Th first>Nome</Th>
               <Th>Tipo</Th>
               <Th>Contato</Th>
@@ -197,19 +198,19 @@ export default function ClientesTable({
               return (
                 <tr
                   key={cliente.id}
-                  className="border-b border-[#f5f7fa] last:border-0 hover:bg-[#f9fafb] transition-colors"
+                  className="border-b border-[var(--color-border)]/65 last:border-0 hover:bg-[var(--color-petrol-light)]/35 transition-colors"
                 >
                   {/* Nome */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#E8F2F2] flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-[var(--color-petrol-light)] border border-[#CBD9DF] flex items-center justify-center flex-shrink-0">
                         {cliente.tipo_pessoa === 'juridica'
-                          ? <Building2 size={13} className="text-[#1D5F60]" />
-                          : <User size={13} className="text-[#1D5F60]" />
+                          ? <Building2 size={13} className="text-[var(--color-petrol)]" />
+                          : <User size={13} className="text-[var(--color-petrol)]" />
                         }
                       </div>
                       <div>
-                        <p className="text-[13px] font-medium text-[#0f1923] leading-tight">{cliente.nome}</p>
+                        <p className="text-[13px] font-semibold text-[var(--color-ink)] leading-tight">{cliente.nome}</p>
                         {cliente.empresa && (
                           <p className="text-[11px] text-[#a8b3c4] mt-0.5">{cliente.empresa}</p>
                         )}
@@ -232,7 +233,7 @@ export default function ClientesTable({
                           href={`tel:${cliente.celular ?? cliente.telefone}`}
                           title={cliente.celular ?? cliente.telefone ?? ''}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-ink-3)] hover:text-[var(--color-petrol)] hover:bg-[var(--color-petrol-light)] transition-all"
                         >
                           <Phone size={13} />
                         </a>
@@ -244,7 +245,7 @@ export default function ClientesTable({
                           rel="noopener noreferrer"
                           title={`WhatsApp: ${cliente.celular}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#25d366] hover:bg-[#e8fef2] transition-all"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-ink-3)] hover:text-[#1a7a45] hover:bg-[#e6f4ee] transition-all"
                         >
                           <MessageCircle size={13} />
                         </a>
@@ -254,7 +255,7 @@ export default function ClientesTable({
                           href={`mailto:${cliente.email}`}
                           title={cliente.email}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a8b3c4] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-ink-3)] hover:text-[var(--color-petrol)] hover:bg-[var(--color-petrol-light)] transition-all"
                         >
                           <Mail size={13} />
                         </a>
@@ -297,7 +298,7 @@ export default function ClientesTable({
                   <td className="px-4 py-3">
                     <Link
                       href={`/clientes/${cliente.id}`}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-ink-3)] hover:text-[var(--color-petrol)] hover:bg-[var(--color-petrol-light)] transition-all"
                     >
                       <ChevronRight size={14} />
                     </Link>
@@ -314,7 +315,7 @@ export default function ClientesTable({
 
 function Th({ children, first, last }: { children?: React.ReactNode; first?: boolean; last?: boolean }) {
   return (
-    <th className={`text-left text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-3 ${first ? 'px-5' : 'px-4'} ${last ? 'w-10' : ''}`}>
+    <th className={`text-left text-[11px] font-semibold text-[var(--color-ink-3)] uppercase tracking-[0.11em] py-3 ${first ? 'px-5' : 'px-4'} ${last ? 'w-10' : ''}`}>
       {children}
     </th>
   )

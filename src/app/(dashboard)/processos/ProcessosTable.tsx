@@ -14,7 +14,7 @@ function ParteContrariaCell({ partes }: { partes?: ParteItem[] }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   if (!partes || partes.length === 0) {
-    return <span className="text-[#d1d5db] select-none">—</span>
+    return <span className="text-[var(--color-ink-3)] select-none">—</span>
   }
 
   const [first, ...rest] = partes
@@ -33,12 +33,12 @@ function ParteContrariaCell({ partes }: { partes?: ParteItem[] }) {
       onMouseEnter={show}
       onMouseLeave={hide}
     >
-      <span className="text-[13px] text-[#3d4a5c] max-w-[150px] truncate leading-tight">
+      <span className="text-[13px] text-[var(--color-ink-2)] max-w-[150px] truncate leading-tight">
         {first.pessoa_nome}
       </span>
 
       {rest.length > 0 && (
-        <span className="shrink-0 text-[10px] font-semibold text-[#7a8899] bg-[#f3f4f6] px-1.5 py-0.5 rounded-full ring-1 ring-[#e5e7eb]">
+        <span className="shrink-0 text-[10px] font-semibold text-[var(--color-copper)] bg-[var(--color-gold-light)] px-1.5 py-0.5 rounded-full ring-1 ring-[#E7CBA8]">
           +{rest.length}
         </span>
       )}
@@ -47,19 +47,19 @@ function ParteContrariaCell({ partes }: { partes?: ParteItem[] }) {
         <div
           onMouseEnter={show}
           onMouseLeave={hide}
-          className="absolute left-0 top-full mt-2 z-50 bg-white rounded-xl border border-[#e5e7eb] shadow-[0_4px_20px_rgba(0,0,0,0.1)] p-3 min-w-[200px] space-y-2"
+          className="absolute left-0 top-full mt-2 z-50 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] shadow-[0_14px_34px_rgba(13,34,53,0.14)] p-3 min-w-[200px] space-y-2"
         >
-          <p className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-2.5">
+          <p className="text-[10px] font-semibold text-[var(--color-ink-3)] uppercase tracking-[0.12em] mb-2.5">
             Partes contrárias
           </p>
           {partes.map((p) => (
             <div key={p.id} className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-[#f3f4f6] flex items-center justify-center shrink-0">
-                <span className="text-[9px] font-bold text-[#9ca3af]">
+              <div className="w-5 h-5 rounded-full bg-[var(--color-petrol-light)] border border-[#CBD9DF] flex items-center justify-center shrink-0">
+                <span className="text-[9px] font-bold text-[var(--color-petrol)]">
                   {p.pessoa_nome.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <span className="text-[12px] text-[#374151] leading-tight">{p.pessoa_nome}</span>
+              <span className="text-[12px] text-[var(--color-ink-2)] leading-tight">{p.pessoa_nome}</span>
             </div>
           ))}
         </div>
@@ -90,9 +90,9 @@ const statusOptions = [
 ]
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  ativo:     { label: 'Ativo',     bg: 'bg-[#e6f4ee]', text: 'text-[#1a7a45]', dot: 'bg-[#2ecc71]' },
-  suspenso:  { label: 'Suspenso',  bg: 'bg-[#fef8ec]', text: 'text-[#8a6000]', dot: 'bg-[#f39c12]' },
-  arquivado: { label: 'Arquivado', bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]' },
+  ativo:     { label: 'Ativo',     bg: 'bg-[var(--color-petrol-light)]', text: 'text-[var(--color-petrol)]', dot: 'bg-[var(--color-petrol)]' },
+  suspenso:  { label: 'Suspenso',  bg: 'bg-[var(--color-gold-light)]', text: 'text-[var(--color-gold-muted)]', dot: 'bg-[var(--color-gold)]' },
+  arquivado: { label: 'Arquivado', bg: 'bg-[var(--color-surface-warm)]', text: 'text-[var(--color-ink-3)]', dot: 'bg-[var(--color-border-strong)]' },
   encerrado: { label: 'Encerrado', bg: 'bg-[#fde8e8]', text: 'text-[#a93226]', dot: 'bg-[#e74c3c]' },
 }
 
@@ -129,11 +129,11 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
   const hasFilters = titulo || numero || area || status
 
   return (
-    <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
 
       {/* Filtros */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E2DDD8] flex-wrap">
-        <SlidersHorizontal size={14} className="text-[#7a8899] flex-shrink-0" />
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]/45 flex-wrap">
+        <SlidersHorizontal size={14} className="text-[var(--color-copper)] flex-shrink-0" />
 
         <div className="relative flex-1 min-w-[220px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a8b3c4]" />
@@ -142,7 +142,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
             onChange={(e) => setTitulo(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
             placeholder="Buscar por título..."
-            className="w-full pl-8 pr-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+            className="w-full pl-8 pr-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
           />
         </div>
 
@@ -151,13 +151,13 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
           onChange={(e) => setNumero(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
           placeholder="Nº processo"
-          className="w-44 px-3 py-2 text-[13px] font-mono bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] placeholder:text-[#a8b3c4] text-[#0f1923] transition-all"
+          className="w-44 px-3 py-2 text-[13px] font-mono bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
         />
 
         <select
           value={area}
           onChange={(e) => setArea(e.target.value)}
-          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#3d4a5c] transition-all"
+          className="px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 text-[var(--color-ink-2)] transition-all"
         >
           {areaOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -165,14 +165,14 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="px-3 py-2 text-[13px] bg-[#f5f7fa] border border-transparent rounded-lg outline-none focus:bg-white focus:border-[#E2DDD8] text-[#3d4a5c] transition-all"
+          className="px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 text-[var(--color-ink-2)] transition-all"
         >
           {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
         <button
           onClick={applyFilters}
-          className="px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
         >
           Filtrar
         </button>
@@ -180,7 +180,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1.5 px-3 py-2 text-[13px] text-[#7a8899] hover:text-[#0f1923] rounded-lg hover:bg-[#f5f7fa] transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-[13px] text-[var(--color-ink-3)] hover:text-[var(--color-ink)] rounded-xl hover:bg-white transition-all"
           >
             <X size={13} /> Limpar
           </button>
@@ -189,13 +189,14 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
 
       {/* Tabela */}
       {processos.length === 0 ? (
-        <div className="py-20 text-center">
-          <p className="text-[13px] text-[#7a8899]">Nenhum processo encontrado</p>
+        <div className="py-20 text-center bg-[var(--color-surface)]">
+          <p className="font-brand text-[24px] text-[var(--color-ink)]">Nenhum processo encontrado</p>
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-1">Ajuste os filtros ou cadastre um novo processo.</p>
         </div>
       ) : (
         <table className="w-full">
           <thead>
-            <tr className="bg-[#f9fafb] border-b border-[#E2DDD8]">
+            <tr className="bg-[var(--color-surface-warm)] border-b border-[var(--color-border)]">
               <Th first>Processo</Th>
               <Th>Cliente</Th>
               <Th>Parte Contrária</Th>
@@ -209,9 +210,9 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
             {processos.map((processo) => {
               const sc = statusConfig[processo.status]
               return (
-                <tr key={processo.id} className="border-b border-[#f5f7fa] last:border-0 hover:bg-[#f9fafb] transition-colors">
+                <tr key={processo.id} className="border-b border-[var(--color-border)]/65 last:border-0 hover:bg-[var(--color-petrol-light)]/35 transition-colors">
                   <td className="px-5 py-3.5">
-                    <p className="text-[13px] font-medium text-[#0f1923] leading-tight">{processo.titulo}</p>
+                    <p className="text-[13px] font-semibold text-[var(--color-ink)] leading-tight">{processo.titulo}</p>
                     {processo.numero_processo && (
                       <p className="text-[11px] text-[#a8b3c4] mt-0.5 font-mono">{processo.numero_processo}</p>
                     )}
@@ -223,7 +224,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
                     <ParteContrariaCell partes={processo.partes_processo} />
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="text-[11px] font-medium text-[#3d4a5c] bg-[#F3F1EE] px-2.5 py-1 rounded-full">
+                    <span className="text-[11px] font-medium text-[var(--color-ink-2)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] px-2.5 py-1 rounded-full">
                       {areaLabels[processo.area_direito] ?? processo.area_direito}
                     </span>
                   </td>
@@ -243,7 +244,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
                   <td className="px-4 py-3.5">
                     <Link
                       href={`/processos/${processo.id}`}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#c5cdd8] hover:text-[#0f1923] hover:bg-[#E8F2F2] transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-ink-3)] hover:text-[var(--color-petrol)] hover:bg-[var(--color-petrol-light)] transition-all"
                     >
                       <ChevronRight size={14} />
                     </Link>
@@ -260,7 +261,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
 
 function Th({ children, first, last }: { children?: React.ReactNode; first?: boolean; last?: boolean }) {
   return (
-    <th className={`text-left text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-3 ${first ? 'px-5' : 'px-4'} ${last ? 'w-10' : ''}`}>
+    <th className={`text-left text-[11px] font-semibold text-[var(--color-ink-3)] uppercase tracking-[0.11em] py-3 ${first ? 'px-5' : 'px-4'} ${last ? 'w-10' : ''}`}>
       {children}
     </th>
   )

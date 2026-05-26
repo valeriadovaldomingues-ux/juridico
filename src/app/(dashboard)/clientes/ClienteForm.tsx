@@ -44,13 +44,13 @@ function fieldState(field: keyof FormFields, errors: Errors, touched: Touched, v
 
 function inputClass(state: 'idle' | 'error' | 'success', extra = '') {
   const base = `w-full px-3 py-2.5 text-[13px] rounded-xl border outline-none transition-all
-    text-[#0f1923] placeholder:text-[#a8b3c4] bg-[#fafbfc] ${extra}`
+    text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] bg-white ${extra}`
   if (state === 'error')   return `${base} border-[#e74c3c] focus:border-[#e74c3c] focus:ring-2 focus:ring-[#e74c3c]/10`
   if (state === 'success') return `${base} border-[#2ecc71] focus:border-[#27ae60] focus:ring-2 focus:ring-[#2ecc71]/10`
-  return `${base} border-[#E2DDD8] focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10`
+  return `${base} border-[var(--color-border)] focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10`
 }
 
-const labelClass = 'block text-[11px] font-semibold text-[#3d4a5c] mb-1.5 uppercase tracking-wide'
+const labelClass = 'block text-[11px] font-semibold text-[var(--color-ink-2)] mb-1.5 uppercase tracking-[0.08em]'
 
 // ─── FieldWrapper (fora do componente pai para evitar remontagem a cada render) ──
 
@@ -328,8 +328,8 @@ export default function ClienteForm({
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
       {/* ── Dados Principais ── */}
-      <div className="bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <h2 className="text-[13px] font-semibold text-[#0f1923] mb-5">Dados Principais</h2>
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+        <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)] mb-5">Dados Principais</h2>
         <div className="grid grid-cols-3 gap-4">
 
           {/* Tipo de pessoa */}
@@ -424,8 +424,8 @@ export default function ClienteForm({
       </div>
 
       {/* ── Endereço ── */}
-      <div className="bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <h2 className="text-[13px] font-semibold text-[#0f1923] mb-5">Endereço</h2>
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+        <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)] mb-5">Endereço</h2>
         <div className="grid grid-cols-4 gap-4">
 
           {/* CEP com busca automática */}
@@ -528,8 +528,8 @@ export default function ClienteForm({
       </div>
 
       {/* ── Outras Informações ── */}
-      <div className="bg-white rounded-lg border border-[#E2DDD8] p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <h2 className="text-[13px] font-semibold text-[#0f1923] mb-5">Outras Informações</h2>
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+        <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)] mb-5">Outras Informações</h2>
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
             <label className={labelClass}>Observações</label>
@@ -546,9 +546,9 @@ export default function ClienteForm({
                 type="checkbox"
                 checked={form.ativo}
                 onChange={e => set('ativo', e.target.checked)}
-                className="w-4 h-4 rounded accent-[#0F3D3E]"
+                className="w-4 h-4 rounded accent-[var(--color-copper)]"
               />
-              <span className="text-[13px] font-medium text-[#3d4a5c]">Cliente ativo</span>
+              <span className="text-[13px] font-medium text-[var(--color-ink-2)]">Cliente ativo</span>
             </label>
           </div>
         </div>
@@ -567,14 +567,14 @@ export default function ClienteForm({
         <button
           type="button"
           onClick={() => onSuccess ? onSuccess() : router.push('/clientes')}
-          className="px-5 py-2.5 text-[13px] font-medium text-[#7a8899] hover:text-[#0f1923] transition-colors"
+          className="px-5 py-2.5 text-[13px] font-medium text-[var(--color-ink-3)] hover:text-[var(--color-ink)] transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center gap-2 px-6 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          className="flex items-center gap-2 px-6 py-2.5 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
         >
           {loading && <Loader2 size={14} className="animate-spin" />}
           {loading ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Cadastrar Cliente'}
