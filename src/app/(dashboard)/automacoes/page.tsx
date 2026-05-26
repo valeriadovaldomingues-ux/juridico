@@ -18,9 +18,11 @@ export default async function AutomacoesServerPage() {
   ])
 
   return (
-    <AutomacoesPage
-      initialAutomations={automations ?? []}
-      initialTemplates={templates ?? []}
-    />
+    <div className="internal-page">
+      <AutomacoesPage
+        initialAutomations={automations ?? []}
+        initialTemplates={templates ?? []}
+      />
+    </div>
   )
 }

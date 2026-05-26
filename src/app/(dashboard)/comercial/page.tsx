@@ -47,11 +47,13 @@ export default async function Page() {
   ])
 
   return (
-    <ComercialPage
-      initialLeads={leads ?? []}
-      profiles={profiles ?? []}
-      currentUserId={profile.id}
-      reunioesPendentes={reunioesPendentes?.length ?? 0}
-    />
+    <div className="internal-page">
+      <ComercialPage
+        initialLeads={leads ?? []}
+        profiles={profiles ?? []}
+        currentUserId={profile.id}
+        reunioesPendentes={reunioesPendentes?.length ?? 0}
+      />
+    </div>
   )
 }

@@ -57,14 +57,16 @@ export default async function RelatoriosRoute() {
   ])
 
   return (
-    <RelatoriosPage
-      processos={(processos  ?? []) as any}
-      agendaItems={(agendaItems ?? []) as any}
-      publicacoes={(publicacoes ?? []) as any}
-      kanbanTasks={(kanbanTasks ?? []) as any}
-      profiles={(profiles ?? []) as any}
-      lancamentos={verFinanceiro ? ((finResult as any)?.data ?? null) : null}
-      role={profile.role}
-    />
+    <div className="internal-page">
+      <RelatoriosPage
+        processos={(processos  ?? []) as any}
+        agendaItems={(agendaItems ?? []) as any}
+        publicacoes={(publicacoes ?? []) as any}
+        kanbanTasks={(kanbanTasks ?? []) as any}
+        profiles={(profiles ?? []) as any}
+        lancamentos={verFinanceiro ? ((finResult as any)?.data ?? null) : null}
+        role={profile.role}
+      />
+    </div>
   )
 }

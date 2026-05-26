@@ -31,11 +31,13 @@ export default async function FinanceiroRoute() {
   ])
 
   return (
-    <FinanceiroPage
-      lancamentos={(lancamentos ?? []) as any}
-      clientes={(clientes ?? []) as any}
-      processos={(processos ?? []) as any}
-      role={profile.role}
-    />
+    <div className="internal-page">
+      <FinanceiroPage
+        lancamentos={(lancamentos ?? []) as any}
+        clientes={(clientes ?? []) as any}
+        processos={(processos ?? []) as any}
+        role={profile.role}
+      />
+    </div>
   )
 }
