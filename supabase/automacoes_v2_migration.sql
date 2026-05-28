@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.automations (
 );
 
 ALTER TABLE public.automations ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.automations TO authenticated;
 DROP POLICY IF EXISTS "automations_admin" ON public.automations;
 CREATE POLICY "automations_admin"
   ON public.automations FOR ALL TO authenticated
@@ -60,10 +61,18 @@ CREATE TABLE IF NOT EXISTS public.message_templates (
 );
 
 ALTER TABLE public.message_templates ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.message_templates TO authenticated;
 DROP POLICY IF EXISTS "message_templates_auth" ON public.message_templates;
 CREATE POLICY "message_templates_auth"
   ON public.message_templates FOR ALL TO authenticated
-  USING (true) WITH CHECK (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ));
 
 -- ── 5. Índice extra em notifications ──────────────────────────────────────────
 
