@@ -109,6 +109,18 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.explicitValid).toBe(false)
   })
 
+  it('menção a Atena sem registry cai na Aurora Principal como inválida', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: '@Atena analisar isso',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('principal')
+    expect(resultado.reason).toBe('explicit_invalid')
+    expect(resultado.explicitValid).toBe(false)
+  })
+
   it('roteia processos, prazos, publicações e andamentos para Olavo', () => {
     const resultado = classificarMensagemAurora({
       mensagem: 'Confira processo, prazo e publicações de hoje',
