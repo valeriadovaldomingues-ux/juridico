@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.kanban_tasks (
 );
 
 ALTER TABLE public.kanban_tasks ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.kanban_tasks TO authenticated;
 
 CREATE POLICY "Authenticated full access"
   ON public.kanban_tasks FOR ALL

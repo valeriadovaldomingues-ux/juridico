@@ -46,11 +46,11 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group relative bg-white rounded-xl border border-l-4 select-none',
+        'group relative bg-[var(--color-surface)] rounded-xl border border-l-4 select-none',
         'transition-shadow duration-150',
         isDragging
-          ? 'opacity-40 shadow-xl border-[#e5e7eb]'
-          : 'shadow-sm hover:shadow-md border-[#e5e7eb]',
+          ? 'opacity-40 shadow-xl border-[var(--color-border)]'
+          : 'shadow-[0_8px_24px_rgba(13,34,53,0.055)] hover:shadow-[0_14px_34px_rgba(13,34,53,0.09)] border-[var(--color-border)]',
         // SLA sobrescreve borda se tiver status ativo
         sla.borderCls
           ? sla.borderCls
@@ -67,7 +67,7 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
         {...listeners}
         className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
       >
-        <GripVertical size={13} className="text-[#c5cdd8]" />
+        <GripVertical size={13} className="text-[var(--color-ink-3)]" />
       </div>
 
       <div className="pl-5 pr-3 py-3 space-y-2">
@@ -96,7 +96,7 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
         </div>
 
         {/* Título */}
-        <p className="text-[13px] font-semibold text-[#0f1923] leading-snug line-clamp-2">
+        <p className="text-[13px] font-semibold text-[var(--color-ink)] leading-snug line-clamp-2">
           {task.titulo}
         </p>
 
@@ -104,15 +104,15 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
         {(task.numero_processo || task.partes_resumidas || task.processo) && (
           <div className="space-y-0.5">
             {(task.numero_processo || task.processo?.numero_processo) && (
-              <p className="text-[10px] font-mono text-[#7a8899] truncate">
+              <p className="text-[10px] font-mono text-[var(--color-ink-3)] truncate">
                 {task.numero_processo ?? task.processo?.numero_processo}
               </p>
             )}
             {task.partes_resumidas && (
-              <p className="text-[11px] text-[#4a5a6a] truncate">{task.partes_resumidas}</p>
+              <p className="text-[11px] text-[var(--color-ink-2)] truncate">{task.partes_resumidas}</p>
             )}
             {!task.partes_resumidas && task.processo?.titulo && (
-              <p className="text-[11px] text-[#4a5a6a] truncate">{task.processo.titulo}</p>
+              <p className="text-[11px] text-[var(--color-ink-2)] truncate">{task.processo.titulo}</p>
             )}
           </div>
         )}
@@ -131,7 +131,7 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
             'flex items-center gap-1.5 text-[10px] font-medium rounded-lg px-2 py-1',
             vencido   ? 'bg-red-50 text-red-600'       :
             venceHoje ? 'bg-orange-50 text-orange-600' :
-                        'bg-[#f9fafb] text-[#6b7280]',
+                        'bg-[var(--color-surface-warm)] text-[var(--color-ink-2)]',
           )}>
             {vencido ? <AlertTriangle size={10} /> : <Calendar size={10} />}
             {vencido ? 'Vencido · ' : venceHoje ? 'Hoje · ' : ''}
@@ -156,16 +156,16 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
             >
               {task.responsavel.nome.slice(0, 2).toUpperCase()}
             </div>
-            <span className="text-[10px] text-[#7a8899] truncate">{task.responsavel.nome}</span>
+            <span className="text-[10px] text-[var(--color-ink-2)] truncate">{task.responsavel.nome}</span>
           </div>
         )}
 
         {/* Ações */}
-        <div className="flex items-center justify-between pt-1 border-t border-[#f3f4f6]">
+        <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border)]">
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onEdit(task)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-[var(--color-petrol-light)] text-[var(--color-ink-3)] hover:text-[var(--color-petrol)] transition-colors"
             >
               <Pencil size={11} />
             </button>
@@ -186,7 +186,7 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
             </button>
           </div>
           {task.area_juridica && (
-            <span className="text-[9px] text-[#9ca3af] truncate max-w-[80px]">{task.area_juridica}</span>
+            <span className="text-[9px] text-[var(--color-ink-3)] truncate max-w-[80px]">{task.area_juridica}</span>
           )}
         </div>
       </div>

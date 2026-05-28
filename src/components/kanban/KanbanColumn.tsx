@@ -9,10 +9,10 @@ import { sortBySLA } from '@/lib/kanban-sla'
 import KanbanCard from './KanbanCard'
 
 const COL_STYLE: Record<KanbanStatus, { header: string; dot: string; empty: string }> = {
-  a_fazer:       { header: 'text-[#4a5a6a]',  dot: 'bg-slate-400',  empty: 'border-slate-200' },
-  fazendo:       { header: 'text-blue-700',   dot: 'bg-blue-500',   empty: 'border-blue-200'  },
-  com_pendencia: { header: 'text-orange-700', dot: 'bg-orange-500', empty: 'border-orange-200'},
-  concluido:     { header: 'text-emerald-700',dot: 'bg-emerald-500',empty: 'border-emerald-200'},
+  a_fazer:       { header: 'text-[var(--color-ink-2)]',       dot: 'bg-[var(--color-border-strong)]', empty: 'border-[var(--color-border)]' },
+  fazendo:       { header: 'text-[var(--color-petrol)]',      dot: 'bg-[var(--color-petrol)]',        empty: 'border-[#CBD9DF]' },
+  com_pendencia: { header: 'text-[var(--color-gold-muted)]',  dot: 'bg-[var(--color-gold)]',          empty: 'border-[#E7CBA8]'},
+  concluido:     { header: 'text-emerald-700',                dot: 'bg-emerald-500',                  empty: 'border-emerald-200'},
 }
 
 interface Props {
@@ -57,7 +57,7 @@ export default function KanbanColumn({ userId = 'geral', status, tasks, userColo
               {warningCount} atenção
             </span>
           )}
-          <span className="text-[10px] font-semibold text-[#9ca3af] bg-[#f3f4f6] px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-semibold text-[var(--color-ink-2)] bg-[var(--color-surface-warm)] border border-[var(--color-border)] px-1.5 py-0.5 rounded-full">
             {tasks.length}
           </span>
         </div>
@@ -68,7 +68,7 @@ export default function KanbanColumn({ userId = 'geral', status, tasks, userColo
         ref={setNodeRef}
         className={cn(
           'flex-1 rounded-xl p-2 space-y-2 min-h-[120px] transition-colors duration-150',
-          isOver ? 'bg-[#f0f9f9] ring-2 ring-[#145A5B]/20' : 'bg-[#f9fafb]',
+          isOver ? 'bg-[var(--color-petrol-light)] ring-2 ring-[var(--color-copper)]/25' : 'bg-[var(--color-surface-warm)]/65',
         )}
       >
         <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -87,9 +87,9 @@ export default function KanbanColumn({ userId = 'geral', status, tasks, userColo
         {tasks.length === 0 && (
           <div className={cn(
             'h-16 rounded-lg border-2 border-dashed flex items-center justify-center',
-            isOver ? 'border-[#145A5B]/40 bg-[#e8f0f0]' : style.empty,
+            isOver ? 'border-[var(--color-copper)]/50 bg-[var(--color-petrol-light)]' : style.empty,
           )}>
-            <span className="text-[11px] text-[#c5cdd8]">Solte aqui</span>
+            <span className="text-[11px] text-[var(--color-ink-3)]">Solte aqui</span>
           </div>
         )}
       </div>

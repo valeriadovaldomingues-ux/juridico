@@ -28,6 +28,7 @@ create index if not exists kanban_import_logs_created_idx
   on public.kanban_import_logs(created_at desc);
 
 alter table public.kanban_import_logs enable row level security;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.kanban_import_logs TO authenticated;
 
 -- Apenas gerente e sócio podem ler os logs
 create policy "gerente_socio_can_read_import_logs"

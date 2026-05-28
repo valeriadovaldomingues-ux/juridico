@@ -206,7 +206,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-[#9ca3af] text-[13px]">
+      <div className="flex items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-[var(--color-ink-3)] text-[13px] shadow-[0_12px_36px_rgba(13,34,53,0.04)]">
         Carregando…
       </div>
     )
@@ -225,7 +225,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   if (view === 'personal') {
     if (!currentUser) {
       return (
-        <div className="py-8 text-center text-[13px] text-[#9ca3af]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] py-8 text-center text-[13px] text-[var(--color-ink-3)]">
           Usuário não autenticado.
         </div>
       )
@@ -270,7 +270,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
         onDragEnd={handleOfficeDragEnd}
       >
         {officeCols.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-[#9ca3af]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center text-[13px] text-[var(--color-ink-3)]">
             Nenhum colaborador ativo encontrado.
           </div>
         ) : (
@@ -283,14 +283,14 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 <div key={profile.id} className="flex flex-col gap-3 min-w-0">
                   <div className="flex items-center gap-2.5">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-[0_8px_18px_rgba(13,34,53,0.14)]"
                       style={{ background: userColor }}
                     >
                       {profile.nome.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-[13px] font-bold text-[#0f1923]">{profile.nome}</p>
-                      <p className="text-[11px] text-[#9ca3af]">
+                      <p className="text-[13px] font-bold text-[var(--color-ink)]">{profile.nome}</p>
+                      <p className="text-[11px] text-[var(--color-ink-3)]">
                         {col.tasks.length} tarefa{col.tasks.length !== 1 ? 's' : ''}
                       </p>
                     </div>
@@ -323,12 +323,12 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
               return (
                 <div className="flex flex-col gap-3 min-w-0">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 bg-[#9ca3af]">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 bg-[var(--color-ink-3)] shadow-[0_8px_18px_rgba(13,34,53,0.14)]">
                       ?
                     </div>
                     <div>
-                      <p className="text-[13px] font-bold text-[#0f1923]">Sem responsável</p>
-                      <p className="text-[11px] text-[#9ca3af]">
+                      <p className="text-[13px] font-bold text-[var(--color-ink)]">Sem responsável</p>
+                      <p className="text-[11px] text-[var(--color-ink-3)]">
                         {unassigned.length} tarefa{unassigned.length !== 1 ? 's' : ''}
                       </p>
                     </div>

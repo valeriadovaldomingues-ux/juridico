@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS public.kanban_historico (
 );
 
 ALTER TABLE public.kanban_historico ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.kanban_historico TO authenticated;
 
 DROP POLICY IF EXISTS "kanban_historico_authenticated" ON public.kanban_historico;
 CREATE POLICY "kanban_historico_authenticated"
