@@ -34,16 +34,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Parâmetros inicio e fim são obrigatórios' }, { status: 400 })
   }
 
-  // Validação básica: devem ser ISO datetime válidos
-  if (isNaN(Date.parse(inicio)) || isNaN(Date.parse(fim))) {
+  const inicioDate = new Date(inicio)
+  const fimDate    = new Date(fim)
+
+  // Validação básica: devem ser datetimes válidos e normalizáveis para ISO/timestamptz.
+  if (isNaN(inicioDate.getTime()) || isNaN(fimDate.getTime())) {
     return NextResponse.json({ error: 'Datas inválidas' }, { status: 400 })
   }
 
   const supabase = await createClient()
 
   const { data, error } = await supabase.rpc('get_produtividade_colaboradores', {
-    p_inicio: inicio,
-    p_fim:    fim,
+    p_inicio: inicioDate.toISOString(),
+    p_fim:    fimDate.toISOString(),
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

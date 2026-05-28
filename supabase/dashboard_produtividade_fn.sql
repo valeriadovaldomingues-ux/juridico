@@ -4,9 +4,11 @@
 -- Execute no Supabase Dashboard → SQL Editor → New Query
 -- =============================================
 
-CREATE OR REPLACE FUNCTION get_produtividade_colaboradores(
-  p_inicio timestamptz,
-  p_fim    timestamptz
+DROP FUNCTION IF EXISTS public.get_produtividade_colaboradores(date, date);
+
+CREATE OR REPLACE FUNCTION public.get_produtividade_colaboradores(
+  p_inicio timestamp with time zone,
+  p_fim    timestamp with time zone
 )
 RETURNS TABLE (
   profile_id  uuid,
@@ -52,8 +54,8 @@ AS $$
       WHERE kt.data IS NULL
     )                                                             AS sem_prazo
 
-  FROM profiles p
-  INNER JOIN kanban_tasks kt
+  FROM public.profiles p
+  INNER JOIN public.kanban_tasks kt
     ON  kt.responsavel_id = p.id
     AND kt.status         = 'concluido'
     AND kt.concluido_em  IS NOT NULL
@@ -67,5 +69,5 @@ AS $$
 $$;
 
 -- Permissão para o role authenticated (usado via service key ou anon key autenticado)
-GRANT EXECUTE ON FUNCTION get_produtividade_colaboradores(timestamptz, timestamptz)
+GRANT EXECUTE ON FUNCTION public.get_produtividade_colaboradores(timestamp with time zone, timestamp with time zone)
   TO authenticated;

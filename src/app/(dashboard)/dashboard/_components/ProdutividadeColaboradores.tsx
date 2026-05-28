@@ -16,27 +16,27 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
 }
 
-function endOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+function startOfNextDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0)
 }
 
 function periodoToDates(p: Periodo, customInicio: string, customFim: string): { inicio: Date; fim: Date } {
   const hoje = new Date()
   switch (p) {
     case 'hoje':
-      return { inicio: startOfDay(hoje), fim: endOfDay(hoje) }
+      return { inicio: startOfDay(hoje), fim: startOfNextDay(hoje) }
     case 'semana': {
       const s = new Date(hoje)
       s.setDate(hoje.getDate() - 6)
-      return { inicio: startOfDay(s), fim: endOfDay(hoje) }
+      return { inicio: startOfDay(s), fim: startOfNextDay(hoje) }
     }
     case 'mes': {
       const s = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-      return { inicio: startOfDay(s), fim: endOfDay(hoje) }
+      return { inicio: startOfDay(s), fim: startOfNextDay(hoje) }
     }
     case 'personalizado': {
       const i = customInicio ? new Date(customInicio + 'T00:00:00') : startOfDay(new Date())
-      const f = customFim    ? new Date(customFim    + 'T23:59:59') : endOfDay(new Date())
+      const f = customFim    ? startOfNextDay(new Date(customFim + 'T00:00:00')) : startOfNextDay(new Date())
       return { inicio: i, fim: f }
     }
   }
