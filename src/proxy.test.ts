@@ -1190,14 +1190,22 @@ describe('nova matriz — /ia-juridica (advogado+gerente+socio)', () => {
   })
 })
 
-describe('nova matriz — /ia-juridica/aurora (socio exclusivo)', () => {
+describe('nova matriz — Aurora (socio exclusivo)', () => {
   it('socio acessa /ia-juridica/aurora', async () => {
     asUser('socio')
     expectPassThru(await proxy(req('/ia-juridica/aurora')))
   })
+  it('socio acessa /aurora-mobile', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/aurora-mobile')))
+  })
   it('gerente em /ia-juridica/aurora → /dashboard', async () => {
     asUser('gerente')
     expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
+  })
+  it('gerente em /aurora-mobile → /dashboard', async () => {
+    asUser('gerente')
+    expectRedirect(await proxy(req('/aurora-mobile')), '/dashboard')
   })
   it('advogado em /ia-juridica/aurora → /dashboard', async () => {
     asUser('advogado')

@@ -40,6 +40,7 @@ function getServiceClient(): ReturnType<typeof createClient> | null {
 // Deve espelhar RESTRICTED_ROUTES em src/lib/permissions.ts.
 // Inlined por compatibilidade com Edge Runtime. Paths mais específicos primeiro.
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
+  { prefix: '/aurora-mobile',           roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
   { prefix: '/financeiro',             roles: ['socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },

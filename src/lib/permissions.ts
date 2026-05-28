@@ -286,6 +286,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
 // Paths mais específicos DEVEM vir antes dos genéricos (ex: /ia-juridica/aurora antes de /ia-juridica).
 export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
+  { prefix: '/aurora-mobile',          roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',    roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
