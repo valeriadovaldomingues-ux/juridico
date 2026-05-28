@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.portal_access_logs (
 
 -- RLS
 ALTER TABLE public.portal_access_logs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.portal_access_logs TO authenticated;
 
 -- Staff (gerente/sócio) vê todos os logs para auditoria
 DROP POLICY IF EXISTS "portal_logs_staff" ON public.portal_access_logs;

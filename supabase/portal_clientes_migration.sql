@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.portal_clientes (
 
 -- RLS
 ALTER TABLE public.portal_clientes ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.portal_clientes TO authenticated;
 
 -- Staff interno vê todos os vínculos
 DROP POLICY IF EXISTS "portal_clientes_staff" ON public.portal_clientes;

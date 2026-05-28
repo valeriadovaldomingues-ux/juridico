@@ -39,10 +39,19 @@ CREATE TABLE IF NOT EXISTS public.trello_integrations (
 );
 
 ALTER TABLE public.trello_integrations ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.trello_integrations TO authenticated;
 DROP POLICY IF EXISTS "trello_integrations_admin" ON public.trello_integrations;
 CREATE POLICY "trello_integrations_admin"
   ON public.trello_integrations FOR ALL
-  TO authenticated USING (true) WITH CHECK (true);
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ));
 
 -- ── 3. Mapeamento de listas ───────────────────────────────────────────────────
 
@@ -56,10 +65,19 @@ CREATE TABLE IF NOT EXISTS public.trello_list_mappings (
 );
 
 ALTER TABLE public.trello_list_mappings ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.trello_list_mappings TO authenticated;
 DROP POLICY IF EXISTS "trello_list_mappings_auth" ON public.trello_list_mappings;
 CREATE POLICY "trello_list_mappings_auth"
   ON public.trello_list_mappings FOR ALL
-  TO authenticated USING (true) WITH CHECK (true);
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ));
 
 -- ── 4. Mapeamento de membros ──────────────────────────────────────────────────
 
@@ -74,10 +92,19 @@ CREATE TABLE IF NOT EXISTS public.trello_member_mappings (
 );
 
 ALTER TABLE public.trello_member_mappings ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.trello_member_mappings TO authenticated;
 DROP POLICY IF EXISTS "trello_member_mappings_auth" ON public.trello_member_mappings;
 CREATE POLICY "trello_member_mappings_auth"
   ON public.trello_member_mappings FOR ALL
-  TO authenticated USING (true) WITH CHECK (true);
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ));
 
 -- ── 5. Log de sincronizações ──────────────────────────────────────────────────
 
@@ -95,10 +122,19 @@ CREATE TABLE IF NOT EXISTS public.trello_sync_logs (
 );
 
 ALTER TABLE public.trello_sync_logs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.trello_sync_logs TO authenticated;
 DROP POLICY IF EXISTS "trello_sync_logs_auth" ON public.trello_sync_logs;
 CREATE POLICY "trello_sync_logs_auth"
   ON public.trello_sync_logs FOR ALL
-  TO authenticated USING (true) WITH CHECK (true);
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('gerente','socio')
+  ));
 
 -- ── 6. Índices ────────────────────────────────────────────────────────────────
 

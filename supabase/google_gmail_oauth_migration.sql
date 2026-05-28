@@ -24,6 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_google_connections_user_provider_status
   ON public.google_connections(user_id, provider, status);
 
 ALTER TABLE public.google_connections ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.google_connections TO authenticated;
 
 DROP POLICY IF EXISTS "google_connections_select_own_socio" ON public.google_connections;
 DROP POLICY IF EXISTS "google_connections_insert_own_socio" ON public.google_connections;
@@ -79,6 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_google_gmail_query_logs_user_created
   ON public.google_gmail_query_logs(user_id, created_at DESC);
 
 ALTER TABLE public.google_gmail_query_logs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.google_gmail_query_logs TO authenticated;
 
 DROP POLICY IF EXISTS "google_gmail_query_logs_select_own_socio" ON public.google_gmail_query_logs;
 DROP POLICY IF EXISTS "google_gmail_query_logs_insert_own_socio" ON public.google_gmail_query_logs;

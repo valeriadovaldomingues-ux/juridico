@@ -55,6 +55,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- ── 4. Row Level Security ────────────────────────────────────
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.profiles TO authenticated;
 
 -- Remove políticas antigas
 DROP POLICY IF EXISTS "Authenticated full access" ON profiles;

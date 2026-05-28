@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.portal_mensagens (
 
 -- RLS
 ALTER TABLE public.portal_mensagens ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.portal_mensagens TO authenticated;
 
 -- Staff interno vê todas as mensagens dos seus clientes
 DROP POLICY IF EXISTS "portal_mensagens_staff" ON public.portal_mensagens;

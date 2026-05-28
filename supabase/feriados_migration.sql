@@ -21,6 +21,7 @@ create index if not exists feriados_data_idx on feriados (data);
 
 -- RLS: somente leitura para usuários autenticados
 alter table feriados enable row level security;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.feriados TO authenticated;
 
 create policy "feriados_select" on feriados
   for select to authenticated using (true);
