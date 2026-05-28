@@ -1,9 +1,9 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  AgendaItem, TIPO_CFG, PRIO_CFG, DIAS_SEMANA_LONG, MESES,
+  AgendaItem, TIPO_CFG, DIAS_SEMANA_LONG, MESES,
   formatDateBR, getAlertState, toLocalISODate,
 } from '../agenda-types'
 import { AlertBadge, TipoBadge } from './ItemRow'
@@ -18,6 +18,9 @@ interface Props {
   onGoToday: () => void
   onEdit: (item: AgendaItem) => void
   onToggleDone: (item: AgendaItem) => void
+  onDelete: (item: AgendaItem) => void
+  canDelete: boolean
+  deletingId: string | null
   onNew: (date: string) => void
 }
 
@@ -30,7 +33,7 @@ function parseDateLabel(iso: string): string {
 
 export default function DayView({
   items, date, today, in3Days,
-  onPrev, onNext, onGoToday, onEdit, onToggleDone, onNew,
+  onPrev, onNext, onGoToday, onEdit, onToggleDone, onDelete, canDelete, deletingId, onNew,
 }: Props) {
   const dayItems = items
     .filter(i => i.data_inicio === date)
@@ -88,8 +91,20 @@ export default function DayView({
               <div className="px-5 py-3 border-b border-[#F0F6F6]">
                 <p className="text-[11px] font-semibold text-[#9aabb8] uppercase tracking-wide">Dia todo / Sem horário</p>
               </div>
-              <div className="divide-y divide-[#f5f7fa]">
-                {untimed.map(item => <DayItemCard key={item.id} item={item} today={today} in3={in3Days} onEdit={onEdit} onToggleDone={onToggleDone} />)}
+            <div className="divide-y divide-[#f5f7fa]">
+                {untimed.map(item => (
+                  <DayItemCard
+                    key={item.id}
+                    item={item}
+                    today={today}
+                    in3={in3Days}
+                    onEdit={onEdit}
+                    onToggleDone={onToggleDone}
+                    onDelete={onDelete}
+                    canDelete={canDelete}
+                    isDeleting={deletingId === item.id}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -100,8 +115,20 @@ export default function DayView({
               <div className="px-5 py-3 border-b border-[#F0F6F6]">
                 <p className="text-[11px] font-semibold text-[#9aabb8] uppercase tracking-wide">Agendados</p>
               </div>
-              <div className="divide-y divide-[#f5f7fa]">
-                {timed.map(item => <DayItemCard key={item.id} item={item} today={today} in3={in3Days} onEdit={onEdit} onToggleDone={onToggleDone} />)}
+            <div className="divide-y divide-[#f5f7fa]">
+                {timed.map(item => (
+                  <DayItemCard
+                    key={item.id}
+                    item={item}
+                    today={today}
+                    in3={in3Days}
+                    onEdit={onEdit}
+                    onToggleDone={onToggleDone}
+                    onDelete={onDelete}
+                    canDelete={canDelete}
+                    isDeleting={deletingId === item.id}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -120,14 +147,16 @@ export default function DayView({
 }
 
 function DayItemCard({
-  item, today, in3, onEdit, onToggleDone,
+  item, today, in3, onEdit, onToggleDone, onDelete, canDelete, isDeleting = false,
 }: {
   item: AgendaItem; today: string; in3: string
   onEdit: (i: AgendaItem) => void
   onToggleDone: (i: AgendaItem) => void
+  onDelete: (i: AgendaItem) => void
+  canDelete: boolean
+  isDeleting?: boolean
 }) {
   const alert = getAlertState(item, today, in3)
-  const prio  = PRIO_CFG[item.prioridade]
   const done  = item.status === 'concluido'
   const cfg   = TIPO_CFG[item.tipo]
 
@@ -176,16 +205,30 @@ function DayItemCard({
         )}
       </div>
 
-      {/* Toggle done */}
-      <button
-        onClick={e => { e.stopPropagation(); onToggleDone(item) }}
-        className={cn(
-          'flex-shrink-0 self-center w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center',
-          done ? 'bg-emerald-500 border-emerald-500' : 'border-[#c8d8d8] hover:border-emerald-400'
+      <div className="flex flex-shrink-0 items-center gap-1.5 self-center">
+        {canDelete && (
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(item) }}
+            disabled={isDeleting}
+            title="Excluir evento"
+            aria-label={`Excluir evento ${item.titulo}`}
+            className="w-7 h-7 rounded-lg border border-[var(--color-border)] bg-white text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+          </button>
         )}
-      >
-        {done && <span className="text-white text-[10px]">✓</span>}
-      </button>
+
+        {/* Toggle done */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleDone(item) }}
+          className={cn(
+            'flex-shrink-0 self-center w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center',
+            done ? 'bg-emerald-500 border-emerald-500' : 'border-[#c8d8d8] hover:border-emerald-400'
+          )}
+        >
+          {done && <span className="text-white text-[10px]">✓</span>}
+        </button>
+      </div>
     </div>
   )
 }

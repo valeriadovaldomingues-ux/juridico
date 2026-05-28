@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AgendaItem, TIPO_CFG, MESES, DIAS_SEMANA_SHORT,
@@ -19,13 +19,16 @@ interface Props {
   onGoToday: () => void
   onDayClick: (date: string) => void
   onItemClick: (item: AgendaItem) => void
+  onDelete: (item: AgendaItem) => void
+  canDelete: boolean
+  deletingId: string | null
   onDragToDay: (itemId: string, date: string) => void
 }
 
 export default function MonthView({
   items, year, month, today, in3Days,
   onPrevMonth, onNextMonth, onGoToday,
-  onDayClick, onItemClick, onDragToDay,
+  onDayClick, onItemClick, onDelete, canDelete, deletingId, onDragToDay,
 }: Props) {
   const cells = buildMonthCells(year, month)
   const [dragOver, setDragOver] = useState<string | null>(null)
@@ -132,7 +135,7 @@ export default function MonthView({
                         onClick={e => { e.stopPropagation(); onItemClick(item) }}
                         title={item.titulo}
                         className={cn(
-                          'text-[10px] font-medium px-1.5 py-0.5 rounded truncate cursor-grab active:cursor-grabbing select-none border-l-2',
+                          'relative text-[10px] font-medium px-1.5 py-0.5 pr-5 rounded truncate cursor-grab active:cursor-grabbing select-none border-l-2',
                           cfg.chip, cfg.border,
                           done && 'opacity-40 line-through',
                           alert === 'overdue' && !done && 'ring-1 ring-red-300',
@@ -143,6 +146,17 @@ export default function MonthView({
                           <span className="opacity-60 mr-1">{item.hora_inicio.slice(0,5)}</span>
                         )}
                         {item.titulo}
+                        {canDelete && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onDelete(item) }}
+                            disabled={deletingId === item.id}
+                            title="Excluir evento"
+                            aria-label={`Excluir evento ${item.titulo}`}
+                            className="absolute right-0.5 top-0.5 w-4 h-4 rounded-md border border-[var(--color-border)] bg-white text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={8} />
+                          </button>
+                        )}
                       </div>
                     )
                   })}

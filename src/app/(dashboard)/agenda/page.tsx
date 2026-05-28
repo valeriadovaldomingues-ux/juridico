@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getSessionProfile } from '@/lib/auth/guards'
 import AgendaPage from './AgendaPage'
 
 const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.agenda_items (
@@ -36,6 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_agenda_cliente ON public.agenda_items(cliente_id)
 
 export default async function AgendaRoute() {
   const supabase = await createClient()
+  const session = await getSessionProfile()
+  const canDelete = session ? ['administrativo', 'advogado', 'gerente', 'socio'].includes(session.profile.role) : false
 
   const [
     { data: items, error: itemsError },
@@ -92,6 +95,7 @@ export default async function AgendaRoute() {
         initialItems={items ?? []}
         processos={processos ?? []}
         clientes={clientes ?? []}
+        canDelete={canDelete}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X, Copy } from 'lucide-react'
+import { X, Copy, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AgendaForm, AgendaItem, Processo, Cliente,
@@ -17,13 +17,14 @@ interface Props {
   onSave: () => void
   onDelete?: () => void
   onDuplicate?: () => void
+  canDelete: boolean
   onClose: () => void
   saving: boolean
 }
 
 export default function AgendaModal({
   form, setForm, isEdit, processos, clientes,
-  onSave, onDelete, onDuplicate, onClose, saving,
+  onSave, onDelete, onDuplicate, canDelete, onClose, saving,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
 
@@ -40,22 +41,22 @@ export default function AgendaModal({
   const hasPrazo = form.tipo === 'prazo'  || form.tipo === 'audiencia'
 
   const inputCls = [
-    'w-full rounded-xl border border-[#E2DDD8] bg-[#F3F1EE]',
-    'px-3.5 py-2.5 text-[13px] text-[#0f1923] placeholder:text-[#9aabb8]',
-    'focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors',
+    'w-full rounded-xl border border-[var(--color-border)] bg-white',
+    'px-3.5 py-2.5 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)]',
+    'focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors',
   ].join(' ')
-  const labelCls = 'block text-[11px] font-semibold text-[#7a8899] mb-1.5 uppercase tracking-wide'
+  const labelCls = 'block text-[11px] font-semibold text-[var(--color-ink-2)] mb-1.5 uppercase tracking-[0.08em]'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="relative bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#F0F6F6]">
-          <h2 className="text-[15px] font-bold text-[#0f1923]">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]/55">
+          <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)]">
             {isEdit ? 'Editar item' : 'Novo item'}
           </h2>
           <div className="flex items-center gap-1">
@@ -99,7 +100,7 @@ export default function AgendaModal({
                     'flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 text-[11px] font-semibold transition-all',
                     form.tipo === k
                       ? `${v.bg} ${v.text} ${v.border} border-opacity-100`
-                      : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
+                      : 'border-[var(--color-border)] text-[var(--color-ink-3)] hover:border-[var(--color-copper)]/50'
                   )}
                 >
                   <span className={cn('w-2.5 h-2.5 rounded-full', v.dot)} />
@@ -121,7 +122,7 @@ export default function AgendaModal({
                     'flex-1 py-2 rounded-xl border-2 text-[12px] font-semibold transition-all',
                     form.prioridade === k
                       ? `${v.bg} ${v.text} border-current`
-                      : 'border-[#E2DDD8] text-[#9aabb8] hover:border-[#c8d8d8]'
+                      : 'border-[var(--color-border)] text-[var(--color-ink-3)] hover:border-[var(--color-copper)]/50'
                   )}
                 >
                   {v.label}
@@ -218,24 +219,24 @@ export default function AgendaModal({
 
         {/* Footer */}
         <div className="px-6 pb-6 flex items-center gap-3">
-          {isEdit && onDelete && (
+          {isEdit && canDelete && onDelete && (
             <button
               onClick={onDelete}
-              className="text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors mr-auto"
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors mr-auto"
             >
-              Excluir
+              <Trash2 size={13} /> Excluir
             </button>
           )}
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#E2DDD8] text-[13px] font-medium text-[#4a5a6a] hover:bg-[#F3F1EE] transition-colors"
+            className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] text-[13px] font-medium text-[var(--color-ink-2)] hover:bg-[var(--color-surface-warm)] transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={onSave}
             disabled={!form.titulo.trim() || !form.data_inicio || saving}
-            className="flex-1 py-2.5 rounded-xl bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 rounded-xl bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
           >
             {saving ? 'Salvando…' : isEdit ? 'Salvar' : 'Criar'}
           </button>

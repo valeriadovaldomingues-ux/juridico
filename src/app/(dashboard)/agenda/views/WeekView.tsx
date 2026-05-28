@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AgendaItem, TIPO_CFG, MESES, DIAS_SEMANA_SHORT,
@@ -18,6 +18,9 @@ interface Props {
   onGoToday: () => void
   onEdit: (item: AgendaItem) => void
   onToggleDone: (item: AgendaItem) => void
+  onDelete: (item: AgendaItem) => void
+  canDelete: boolean
+  deletingId: string | null
   onNew: (date: string) => void
   onDragToDay: (itemId: string, date: string) => void
 }
@@ -33,15 +36,13 @@ function weekDays(start: Date): Date[] {
 export default function WeekView({
   items, weekStart, today, in3Days,
   onPrevWeek, onNextWeek, onGoToday,
-  onEdit, onToggleDone, onNew, onDragToDay,
+  onEdit, onToggleDone, onDelete, canDelete, deletingId, onNew, onDragToDay,
 }: Props) {
   const [dragging,  setDragging]  = useState<string | null>(null)
   const [dragOver,  setDragOver]  = useState<string | null>(null)
 
   const days = weekDays(weekStart)
-  const startISO = toLocalISODate(weekStart)
   const endDate  = days[6]
-  const endISO   = toLocalISODate(endDate)
 
   // Build map date→items, sorted by hora_inicio
   const byDay: Record<string, AgendaItem[]> = {}
@@ -156,7 +157,7 @@ export default function WeekView({
                         onDragEnd={() => setDragging(null)}
                         onClick={e => { e.stopPropagation(); onEdit(item) }}
                         className={cn(
-                          'text-[10px] font-medium px-1.5 py-1 rounded-lg truncate cursor-grab active:cursor-grabbing select-none',
+                          'relative text-[10px] font-medium px-1.5 py-1 pr-6 rounded-lg truncate cursor-grab active:cursor-grabbing select-none',
                           'border-l-2',
                           cfg.chip,
                           cfg.border,
@@ -169,6 +170,17 @@ export default function WeekView({
                           <span className="opacity-60 mr-1">{item.hora_inicio.slice(0,5)}</span>
                         )}
                         {item.titulo}
+                        {canDelete && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onDelete(item) }}
+                            disabled={deletingId === item.id}
+                            title="Excluir evento"
+                            aria-label={`Excluir evento ${item.titulo}`}
+                            className="absolute right-0.5 top-0.5 w-4 h-4 rounded-md border border-[var(--color-border)] bg-white text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={8} />
+                          </button>
+                        )}
                       </div>
                     )
                   })}
