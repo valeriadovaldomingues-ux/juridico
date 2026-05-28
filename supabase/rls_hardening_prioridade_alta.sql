@@ -108,7 +108,6 @@ DROP POLICY IF EXISTS "documentos_select_staff" ON public.documentos;
 DROP POLICY IF EXISTS "documentos_insert_staff" ON public.documentos;
 DROP POLICY IF EXISTS "documentos_update_staff" ON public.documentos;
 DROP POLICY IF EXISTS "documentos_delete_staff" ON public.documentos;
-DROP POLICY IF EXISTS "documentos_select_cliente_liberado" ON public.documentos;
 
 CREATE POLICY "documentos_select_staff"
   ON public.documentos
@@ -135,22 +134,6 @@ CREATE POLICY "documentos_delete_staff"
   TO authenticated
   USING (public.current_user_role() IN ('administrativo', 'advogado', 'gerente', 'socio'));
 
-CREATE POLICY "documentos_select_cliente_liberado"
-  ON public.documentos
-  FOR SELECT
-  TO authenticated
-  USING (
-    public.current_user_role() = 'cliente'
-    AND liberado_cliente = true
-    AND EXISTS (
-      SELECT 1
-      FROM public.portal_clientes pc
-      WHERE pc.auth_user_id = auth.uid()
-        AND pc.cliente_id = documentos.cliente_id
-        AND pc.ativo = true
-    )
-  );
-
 -- ============================================================
 -- doc_gerados
 -- ============================================================
@@ -162,7 +145,6 @@ DROP POLICY IF EXISTS "doc_gerados_select_staff" ON public.doc_gerados;
 DROP POLICY IF EXISTS "doc_gerados_insert_staff" ON public.doc_gerados;
 DROP POLICY IF EXISTS "doc_gerados_update_staff" ON public.doc_gerados;
 DROP POLICY IF EXISTS "doc_gerados_delete_staff" ON public.doc_gerados;
-DROP POLICY IF EXISTS "doc_gerados_select_cliente_liberado" ON public.doc_gerados;
 
 CREATE POLICY "doc_gerados_select_staff"
   ON public.doc_gerados
@@ -188,24 +170,6 @@ CREATE POLICY "doc_gerados_delete_staff"
   FOR DELETE
   TO authenticated
   USING (public.current_user_role() IN ('administrativo', 'advogado', 'gerente', 'socio'));
-
-CREATE POLICY "doc_gerados_select_cliente_liberado"
-  ON public.doc_gerados
-  FOR SELECT
-  TO authenticated
-  USING (
-    public.current_user_role() = 'cliente'
-    AND liberado_cliente = true
-    AND EXISTS (
-      SELECT 1
-      FROM public.processos p
-      INNER JOIN public.portal_clientes pc ON pc.cliente_id = p.cliente_id
-      WHERE p.id = doc_gerados.processo_id
-        AND p.visivel_cliente = true
-        AND pc.auth_user_id = auth.uid()
-        AND pc.ativo = true
-    )
-  );
 
 -- ============================================================
 -- ia_analises_publicacoes
