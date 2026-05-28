@@ -5,6 +5,11 @@ import { cn } from '@/lib/utils'
 import {
   AgendaItem, TIPO_CFG, PRIO_CFG, getAlertState, formatDateBR,
 } from '../agenda-types'
+import {
+  buildAgendaTimeEntrySummary,
+  formatCurrencyBRL,
+  formatDurationMinutes,
+} from '@/lib/agenda-time-entries'
 
 export function TipoBadge({ tipo }: { tipo: AgendaItem['tipo'] }) {
   const cfg = TIPO_CFG[tipo]
@@ -50,6 +55,7 @@ export default function ItemRow({
   const alert = getAlertState(item, today, in3)
   const prio  = PRIO_CFG[item.prioridade]
   const done  = item.status === 'concluido'
+  const timeSummary = buildAgendaTimeEntrySummary(item.time_entries ?? [])
 
   return (
     <div
@@ -93,6 +99,27 @@ export default function ItemRow({
             <span className="text-[11px] text-[var(--color-ink-3)]">{item.responsavel}</span>
           )}
         </div>
+
+        {timeSummary.entryCount > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-medium">
+            <span className="rounded-full bg-[var(--color-surface-warm)] px-2 py-0.5 text-[var(--color-ink-2)]">
+              {formatDurationMinutes(timeSummary.totalMinutes)}
+            </span>
+            <span className={cn(
+              'rounded-full px-2 py-0.5',
+              timeSummary.billableMinutes > 0
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-slate-100 text-slate-500',
+            )}>
+              {timeSummary.billableMinutes > 0 ? 'Cobrável' : 'Não cobrável'}
+            </span>
+            {timeSummary.estimatedValue !== null && (
+              <span className="rounded-full bg-[var(--color-petrol-light)] px-2 py-0.5 text-[var(--color-petrol)]">
+                {formatCurrencyBRL(timeSummary.estimatedValue)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-1.5 self-center">

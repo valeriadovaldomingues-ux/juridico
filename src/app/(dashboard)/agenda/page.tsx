@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSessionProfile } from '@/lib/auth/guards'
 import AgendaPage from './AgendaPage'
+import type { UserRole } from '@/types'
 
 const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.agenda_items (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -38,7 +39,11 @@ CREATE INDEX IF NOT EXISTS idx_agenda_cliente ON public.agenda_items(cliente_id)
 export default async function AgendaRoute() {
   const supabase = await createClient()
   const session = await getSessionProfile()
+  const role = session?.profile.role ?? null
+  const userId = session?.userId ?? ''
   const canDelete = session ? ['administrativo', 'advogado', 'gerente', 'socio'].includes(session.profile.role) : false
+  const canManageTimeEntries = session ? ['administrativo', 'advogado', 'gerente', 'socio'].includes(session.profile.role) : false
+  const canViewTimeReports = session ? ['gerente', 'socio'].includes(session.profile.role) : false
 
   const [
     { data: items, error: itemsError },
@@ -47,7 +52,17 @@ export default async function AgendaRoute() {
   ] = await Promise.all([
     supabase
       .from('agenda_items')
-      .select('*, processo:processos(titulo), cliente:clientes(nome)')
+      .select(`
+        *,
+        processo:processos(titulo),
+        cliente:clientes(nome),
+        time_entries:agenda_time_entries(
+          *,
+          cliente:clientes(id, nome),
+          processo:processos(id, titulo, numero_processo),
+          criado_por_profile:profiles!criado_por(id, nome)
+        )
+      `)
       .order('data_inicio', { ascending: true }),
     supabase.from('processos').select('id, titulo').order('titulo'),
     supabase.from('clientes').select('id, nome').order('nome'),
@@ -95,7 +110,11 @@ export default async function AgendaRoute() {
         initialItems={items ?? []}
         processos={processos ?? []}
         clientes={clientes ?? []}
+        currentUserId={userId}
+        currentUserRole={(role ?? 'cliente') as UserRole}
         canDelete={canDelete}
+        canManageTimeEntries={canManageTimeEntries}
+        canViewTimeReports={canViewTimeReports}
       />
     </div>
   )

@@ -86,6 +86,52 @@ export interface ContactInteraction {
   usuario?: Profile
 }
 
+// ─── Timesheet / Horas trabalhadas ───────────────────────────────────────────
+
+export type AgendaTimeEntryBillingStatus = 'pendente' | 'faturado' | 'nao_faturavel'
+
+export interface AgendaTimeEntry {
+  id: string
+  agenda_item_id: string
+  cliente_id: string | null
+  processo_id: string | null
+  inicio_em: string
+  fim_em: string | null
+  duracao_calculada_minutos: number | null
+  duracao_manual_minutos: number | null
+  usa_duracao_manual: boolean
+  descricao_atividade: string
+  cobravel: boolean
+  valor_hora: number | null
+  valor_total: number | null
+  observacoes: string | null
+  status_cobranca: AgendaTimeEntryBillingStatus
+  financeiro_lancamento_id: string | null
+  criado_por: string
+  created_at: string
+  updated_at: string
+  agenda_item?: {
+    id: string
+    titulo: string
+    data_inicio: string
+    cliente_id: string | null
+    processo_id: string | null
+  } | null
+  cliente?: {
+    id: string
+    nome: string
+  } | null
+  processo?: {
+    id: string
+    titulo: string
+    numero_processo: string | null
+  } | null
+  criado_por_profile?: {
+    id: string
+    nome: string
+  } | null
+}
+
 // ─── Processos ────────────────────────────────────────────────────────────────
 
 export type AreaDireito =

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, List, CalendarDays, AlarmClock, Search, Filter, FileUp } from 'lucide-react'
+import { Plus, List, CalendarDays, AlarmClock, Search, Filter, FileUp, Clock3, DollarSign, BadgeInfo } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AgendaItem, AgendaForm, Processo, Cliente, ViewMode,
@@ -14,6 +14,13 @@ import ListView  from './views/ListView'
 import DayView   from './views/DayView'
 import WeekView  from './views/WeekView'
 import MonthView from './views/MonthView'
+import type { AgendaTimeEntry, UserRole } from '@/types'
+import {
+  type AgendaTimeEntryDraft,
+  buildAgendaTimeEntrySummary,
+  formatCurrencyBRL,
+  formatDurationMinutes,
+} from '@/lib/agenda-time-entries'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -21,17 +28,32 @@ interface Props {
   initialItems: AgendaItem[]
   processos: Processo[]
   clientes: Cliente[]
+  currentUserId: string
+  currentUserRole: UserRole
   canDelete: boolean
+  canManageTimeEntries: boolean
+  canViewTimeReports: boolean
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function AgendaPage({ initialItems, processos, clientes, canDelete }: Props) {
+export default function AgendaPage({
+  initialItems,
+  processos,
+  clientes,
+  currentUserId,
+  currentUserRole,
+  canDelete,
+  canManageTimeEntries,
+  canViewTimeReports,
+}: Props) {
   const supabase = createClient()
 
   const [items, setItems] = useState<AgendaItem[]>(initialItems)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [timeEntrySaving, setTimeEntrySaving] = useState(false)
+  const [timeEntryDeletingId, setTimeEntryDeletingId] = useState<string | null>(null)
 
   // ── View & nav ─────────────────────────────────────────────────────────────
   const now    = new Date()
@@ -96,11 +118,18 @@ export default function AgendaPage({ initialItems, processos, clientes, canDelet
     return true
   })
 
+  const timeSummary = useMemo(() => {
+    if (!canViewTimeReports) return null
+    return buildAgendaTimeEntrySummary(filtered.flatMap(item => item.time_entries ?? []))
+  }, [canViewTimeReports, filtered])
+
   // ─── Alert count ───────────────────────────────────────────────────────────
   const alertCount = items.filter(i => {
     if (i.status !== 'pendente') return false
     return (i.prazo_final ?? i.data_inicio) <= in3Days
   }).length
+
+  const currentAgendaItem = editId ? items.find(item => item.id === editId) ?? null : null
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
@@ -212,6 +241,74 @@ export default function AgendaPage({ initialItems, processos, clientes, canDelet
       setFeedback({ type: 'error', message: err?.message ?? 'Erro ao excluir item' })
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  function patchAgendaItemTimeEntries(itemId: string, updater: (entries: AgendaTimeEntry[]) => AgendaTimeEntry[]) {
+    setItems(prev => prev.map(item => {
+      if (item.id !== itemId) return item
+      return {
+        ...item,
+        time_entries: updater(item.time_entries ?? []),
+      }
+    }))
+  }
+
+  async function handleUpsertTimeEntry(entryId: string | null, draft: AgendaTimeEntryDraft) {
+    if (!draft.agenda_item_id) {
+      setFeedback({ type: 'error', message: 'Evento não informado para lançar horas.' })
+      return null
+    }
+
+    const url = entryId ? `/api/agenda-time-entries/${entryId}` : '/api/agenda-time-entries'
+    const method = entryId ? 'PUT' : 'POST'
+
+    setTimeEntrySaving(true)
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error ?? 'Erro ao salvar lançamento de horas')
+
+      const saved = body as AgendaTimeEntry
+      patchAgendaItemTimeEntries(draft.agenda_item_id, entries => {
+        if (entryId) return entries.map(entry => entry.id === entryId ? saved : entry)
+        return [saved, ...entries]
+      })
+      setFeedback({
+        type: 'success',
+        message: entryId ? 'Lançamento atualizado com sucesso.' : 'Lançamento criado com sucesso.',
+      })
+      return saved
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message ?? 'Erro ao salvar lançamento de horas' })
+      return null
+    } finally {
+      setTimeEntrySaving(false)
+    }
+  }
+
+  async function handleDeleteTimeEntry(entryId: string) {
+    setTimeEntryDeletingId(entryId)
+    try {
+      const res = await fetch(`/api/agenda-time-entries/${entryId}`, { method: 'DELETE' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok && res.status !== 204) throw new Error(body.error ?? 'Erro ao excluir lançamento de horas')
+
+      setItems(prev => prev.map(item => ({
+        ...item,
+        time_entries: (item.time_entries ?? []).filter(entry => entry.id !== entryId),
+      })))
+      setFeedback({ type: 'success', message: 'Lançamento de horas excluído com sucesso.' })
+      return true
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message ?? 'Erro ao excluir lançamento de horas' })
+      return false
+    } finally {
+      setTimeEntryDeletingId(null)
     }
   }
 
@@ -366,6 +463,49 @@ export default function AgendaPage({ initialItems, processos, clientes, canDelet
           )}
         >
           {feedback.message}
+        </div>
+      )}
+
+      {canViewTimeReports && timeSummary && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-3)]">
+              <Clock3 size={12} className="text-[var(--color-copper)]" />
+              Horas filtradas
+            </div>
+            <p className="mt-2 text-[26px] font-black leading-none text-[var(--color-ink)]">
+              {formatDurationMinutes(timeSummary.totalMinutes)}
+            </p>
+            <p className="mt-1 text-[12px] text-[var(--color-ink-3)]">
+              {timeSummary.entryCount} lançamento(s) na visão atual
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-3)]">
+              <BadgeInfo size={12} className="text-[var(--color-copper)]" />
+              Horas cobráveis
+            </div>
+            <p className="mt-2 text-[26px] font-black leading-none text-[var(--color-ink)]">
+              {formatDurationMinutes(timeSummary.billableMinutes)}
+            </p>
+            <p className="mt-1 text-[12px] text-[var(--color-ink-3)]">
+              {timeSummary.nonBillableMinutes > 0
+                ? `${formatDurationMinutes(timeSummary.nonBillableMinutes)} não cobráveis`
+                : 'Sem tempo não cobrável na visão'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-3)]">
+              <DollarSign size={12} className="text-[var(--color-copper)]" />
+              Valor estimado
+            </div>
+            <p className="mt-2 text-[26px] font-black leading-none text-[var(--color-ink)]">
+              {formatCurrencyBRL(timeSummary.estimatedValue)}
+            </p>
+            <p className="mt-1 text-[12px] text-[var(--color-ink-3)]">
+              Baseado nas entradas cobráveis desta filtragem
+            </p>
+          </div>
         </div>
       )}
 
@@ -564,6 +704,7 @@ export default function AgendaPage({ initialItems, processos, clientes, canDelet
           form={form}
           setForm={setForm}
           isEdit={!!editId}
+          agendaItem={currentAgendaItem}
           processos={processos}
           clientes={clientes}
           onSave={handleSave}
@@ -572,6 +713,14 @@ export default function AgendaPage({ initialItems, processos, clientes, canDelet
             if (current) void handleDelete(current)
           } : undefined}
           onDuplicate={editId ? handleDuplicate : undefined}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          canManageTimeEntries={canManageTimeEntries}
+          timeEntries={currentAgendaItem?.time_entries ?? []}
+          onUpsertTimeEntry={handleUpsertTimeEntry}
+          onDeleteTimeEntry={handleDeleteTimeEntry}
+          timeEntrySaving={timeEntrySaving}
+          timeEntryDeletingId={timeEntryDeletingId}
           onClose={closeModal}
           saving={saving}
           canDelete={canDelete}

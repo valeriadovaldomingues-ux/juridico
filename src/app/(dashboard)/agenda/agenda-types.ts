@@ -1,3 +1,5 @@
+import type { AgendaTimeEntry } from '@/types'
+
 // ─── Shared types & config for the Agenda module ─────────────────────────────
 
 export type Tipo      = 'tarefa' | 'evento' | 'prazo' | 'audiencia'
@@ -23,6 +25,7 @@ export interface AgendaItem {
   created_at: string
   processo?: { titulo: string } | null
   cliente?: { nome: string } | null
+  time_entries?: AgendaTimeEntry[]
 }
 
 export interface Processo { id: string; titulo: string }

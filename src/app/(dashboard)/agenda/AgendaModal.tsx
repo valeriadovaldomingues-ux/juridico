@@ -7,24 +7,39 @@ import {
   AgendaForm, AgendaItem, Processo, Cliente,
   TIPO_CFG, PRIO_CFG, Tipo, Status, Prioridade,
 } from './agenda-types'
+import type { AgendaTimeEntry, UserRole } from '@/types'
+import AgendaTimeEntriesSection from './components/AgendaTimeEntriesSection'
+import type { AgendaTimeEntryDraft } from '@/lib/agenda-time-entries'
 
 interface Props {
   form: AgendaForm
   setForm: (f: AgendaForm) => void
   isEdit: boolean
+  agendaItem: AgendaItem | null
   processos: Processo[]
   clientes: Cliente[]
   onSave: () => void
   onDelete?: () => void
   onDuplicate?: () => void
   canDelete: boolean
+  currentUserId: string
+  currentUserRole: UserRole
+  canManageTimeEntries: boolean
+  timeEntries: AgendaTimeEntry[]
+  onUpsertTimeEntry: (entryId: string | null, draft: AgendaTimeEntryDraft) => Promise<AgendaTimeEntry | null>
+  onDeleteTimeEntry: (entryId: string) => Promise<boolean>
+  timeEntrySaving: boolean
+  timeEntryDeletingId: string | null
   onClose: () => void
   saving: boolean
 }
 
 export default function AgendaModal({
-  form, setForm, isEdit, processos, clientes,
-  onSave, onDelete, onDuplicate, canDelete, onClose, saving,
+  form, setForm, isEdit, agendaItem, processos, clientes,
+  onSave, onDelete, onDuplicate, canDelete,
+  currentUserId, currentUserRole, canManageTimeEntries, timeEntries,
+  onUpsertTimeEntry, onDeleteTimeEntry, timeEntrySaving, timeEntryDeletingId,
+  onClose, saving,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
 
@@ -51,7 +66,7 @@ export default function AgendaModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <div
-        className="relative bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="relative bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -215,6 +230,22 @@ export default function AgendaModal({
               onChange={e => set({ descricao: e.target.value })}
             />
           </div>
+        </div>
+
+        <div className="px-6 pb-4">
+          <AgendaTimeEntriesSection
+            agendaItem={agendaItem}
+            timeEntries={timeEntries}
+            clientes={clientes}
+            processos={processos}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            canManage={canManageTimeEntries}
+            onUpsert={onUpsertTimeEntry}
+            onDelete={onDeleteTimeEntry}
+            saving={timeEntrySaving}
+            deletingId={timeEntryDeletingId}
+          />
         </div>
 
         {/* Footer */}
