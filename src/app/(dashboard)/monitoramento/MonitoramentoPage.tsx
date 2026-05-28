@@ -484,28 +484,31 @@ export default function MonitoramentoPage({
     })
   }
 
-  const inputCls = 'rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E] focus:bg-white transition-colors w-full'
+  const inputCls = 'rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors w-full'
 
   return (
     <div className="space-y-5 max-w-6xl">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--color-petrol-light)] to-transparent pointer-events-none" />
+        <div className="relative flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[24px] font-bold text-[#0f1923] tracking-tight">Monitoramento</h1>
-          <p className="text-[13px] text-[#9aabb8] mt-0.5">Publicações, intimações e prazos monitorados automaticamente</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">Operacional</p>
+          <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">Monitoramento</h1>
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-2">Publicações, intimações e prazos monitorados automaticamente</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href="/publicacoes"
-            className="flex items-center gap-1.5 text-[12px] font-medium text-[#0F3D3E] border border-[#E2DDD8] px-3 py-2 rounded-xl hover:bg-[#F0F6F6] transition-colors"
+            className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-petrol)] bg-white border border-[var(--color-border)] px-3 py-2 rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors"
           >
             <ExternalLink size={12} /> Publicações gerais
           </Link>
           <button
             onClick={() => triggerSearch({ fontes: FONTES_PRINCIPAIS, modo: 'rapido' })}
             disabled={searching}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
           >
             {searching
               ? <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
@@ -514,16 +517,17 @@ export default function MonitoramentoPage({
           <button
             onClick={() => triggerSearch({ modo: 'lento' })}
             disabled={searching}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0f1923] hover:bg-[#1f2d3b] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-sidebar)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
           >
             {searching
               ? <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
               : <><Clock size={13} /> Buscar tudo — modo lento</>}
           </button>
         </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-[12px] text-amber-800 leading-relaxed">
+      <div className="rounded-2xl border border-[var(--color-copper)]/25 bg-[var(--color-surface-warm)] px-4 py-3 text-[12px] text-[var(--color-ink-2)] leading-relaxed">
         <strong>Modo lento:</strong> a busca nacional completa consulta muitas fontes DJEN/CNJ e pode levar alguns minutos por causa de rate limit. Use “Buscar fontes principais” para uma verificação mais rápida.
       </div>
 
@@ -580,28 +584,28 @@ export default function MonitoramentoPage({
           <button
             key={label}
             onClick={onClick}
-            className={cn('rounded-lg border border-[#E2DDD8] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}
+            className={cn('rounded-2xl border border-[var(--color-border)] shadow-[0_12px_34px_rgba(13,34,53,0.05)] p-4 text-left hover:shadow-[0_18px_42px_rgba(13,34,53,0.08)] hover:-translate-y-0.5 transition-all duration-150', bg)}
           >
             <p className={cn('text-[28px] font-black leading-none', text)}>{value}</p>
-            <p className="text-[11px] text-[#9aabb8] mt-1.5 font-medium">{label}</p>
+            <p className="text-[11px] text-[var(--color-ink-3)] mt-1.5 font-medium">{label}</p>
           </button>
         ))}
       </div>
 
       {/* ── Monitoring sources ── */}
-      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#F0F6F6] flex items-center justify-between gap-3">
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)] flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-[14px] font-bold text-[#0f1923]">Fontes de monitoramento</h2>
-            <p className="text-[12px] text-[#9aabb8] mt-0.5">
+            <h2 className="font-brand text-[22px] font-semibold text-[var(--color-ink)]">Fontes de monitoramento</h2>
+            <p className="text-[12px] text-[var(--color-ink-3)] mt-0.5">
               Cada fonte informa o status real. Apenas fontes ativas executam captura agora.
             </p>
           </div>
-          <span className="text-[11px] font-medium text-[#7a8899] whitespace-nowrap">
+          <span className="text-[11px] font-medium text-[var(--color-ink-3)] whitespace-nowrap">
             {fontes.filter(f => f.status === 'ativo').length} ativa(s)
           </span>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#F0F6F6] max-h-[520px] overflow-y-auto">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-border)] max-h-[520px] overflow-y-auto">
           {fontes.map(fonte => {
             const cfg = FONTE_STATUS_CFG[fonte.status]
             const podeExecutar = fonte.status === 'ativo'
@@ -610,8 +614,8 @@ export default function MonitoramentoPage({
               <div key={fonte.id} className="p-4 min-w-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-[#0f1923] truncate">{fonte.nome}</p>
-                    <p className="text-[11px] text-[#9aabb8] mt-0.5">
+                    <p className="text-[13px] font-bold text-[var(--color-ink)] truncate">{fonte.nome}</p>
+                    <p className="text-[11px] text-[var(--color-ink-3)] mt-0.5">
                       {fonte.tribunal} · {fonte.ramo}
                     </p>
                   </div>
@@ -619,11 +623,11 @@ export default function MonitoramentoPage({
                     {cfg.label}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#7a8899] leading-relaxed mt-2 line-clamp-2">
+                <p className="text-[11px] text-[var(--color-ink-2)] leading-relaxed mt-2 line-clamp-2">
                   {fonte.descricao}
                 </p>
                 <div className="flex items-center justify-between gap-3 mt-3">
-                  <p className="text-[10px] text-[#9aabb8]">
+                  <p className="text-[10px] text-[var(--color-ink-3)]">
                     Última execução: {fonte.ultima_execucao ? timeAgo(fonte.ultima_execucao) : '—'}
                   </p>
                   <button
@@ -632,7 +636,7 @@ export default function MonitoramentoPage({
                     className={cn(
                       'text-[11px] font-semibold px-3 py-1.5 rounded-xl transition-colors',
                       podeExecutar
-                        ? 'bg-[#1D5F60] text-white hover:bg-[#27777A] disabled:opacity-60'
+                        ? 'bg-[var(--color-sidebar)] text-white hover:bg-[var(--color-petrol)] disabled:opacity-60'
                         : 'bg-slate-100 text-slate-400 cursor-not-allowed',
                     )}
                   >
@@ -646,7 +650,7 @@ export default function MonitoramentoPage({
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex border-b border-[#E2DDD8]">
+      <div className="flex border-b border-[var(--color-border)]">
         {([
           { key: 'publicacoes', label: 'Publicações monitoradas', icon: FileText },
           { key: 'advogados',   label: 'Advogados monitorados',   icon: Users },
@@ -658,8 +662,8 @@ export default function MonitoramentoPage({
             className={cn(
               'flex items-center gap-2 px-5 py-3 text-[13px] font-medium border-b-2 transition-colors',
               tab === key
-                ? 'border-[#0F3D3E] text-[#0F3D3E]'
-                : 'border-transparent text-[#7a8899] hover:text-[#0f1923]'
+                ? 'border-[var(--color-copper)] text-[var(--color-petrol)]'
+                : 'border-transparent text-[var(--color-ink-3)] hover:text-[var(--color-ink)]'
             )}
           >
             <Icon size={13} /> {label}
@@ -671,16 +675,16 @@ export default function MonitoramentoPage({
       {tab === 'publicacoes' && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 space-y-3">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] px-5 py-4 space-y-3">
             <div className="flex items-center gap-3 flex-wrap">
               {/* Busca */}
               <div className="relative flex-1 min-w-[180px] max-w-sm">
-                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9aabb8]" />
+                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)]" />
                 <input
                   placeholder="Buscar texto, processo, nome…"
                   value={fBusca}
                   onChange={e => { setFBusca(e.target.value); resetPage() }}
-                  className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                  className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[var(--color-border)] bg-white text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors"
                 />
               </div>
 
@@ -688,7 +692,7 @@ export default function MonitoramentoPage({
               <select
                 value={fAdvogado}
                 onChange={e => { setFAdvogado(e.target.value); resetPage() }}
-                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[220px]"
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 max-w-[220px]"
               >
                 <option value="">Todos os advogados</option>
                 {advogados.map(a => (
@@ -700,16 +704,16 @@ export default function MonitoramentoPage({
               <select
                 value={fTribunal}
                 onChange={e => { setFTribunal(e.target.value); resetPage() }}
-                className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]"
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10"
               >
                 <option value="">Todos os tribunais</option>
                 {tribunais.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[#F0F6F6]">
+            <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[var(--color-border)]">
               {/* Status tabs */}
-              <div className="flex bg-[#F0F6F6] rounded-xl p-1 gap-0.5">
+              <div className="flex bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-1 gap-0.5">
                 {[
                   { v: 'nova',       l: 'Novas'      },
                   { v: 'tratada',    l: 'Tratadas'   },
@@ -718,7 +722,7 @@ export default function MonitoramentoPage({
                 ].map(({ v, l }) => (
                   <button key={v} onClick={() => { setFStatus(v); resetPage() }}
                     className={cn('px-3 py-1 rounded-lg text-[12px] font-medium transition-colors whitespace-nowrap',
-                      fStatus === v ? 'bg-white text-[#0f1923] shadow-sm' : 'text-[#7a8899] hover:text-[#0f1923]')}>
+                      fStatus === v ? 'bg-white text-[var(--color-ink)] shadow-sm' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink)]')}>
                     {l}
                   </button>
                 ))}
@@ -746,11 +750,11 @@ export default function MonitoramentoPage({
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_120px_130px_100px_90px_120px] gap-3 px-5 py-3 border-b border-[#F0F6F6] bg-[#FAFCFC]">
+            <div className="grid grid-cols-[1fr_120px_130px_100px_90px_120px] gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]">
               {['Publicação', 'Tribunal', 'Advogado/OAB', 'Data', 'Critério', 'Status'].map(h => (
-                <p key={h} className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide">{h}</p>
+                <p key={h} className="text-[10px] font-semibold text-[var(--color-ink-3)] uppercase tracking-wide">{h}</p>
               ))}
             </div>
 

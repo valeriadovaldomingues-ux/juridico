@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.advogados_monitorados (
 );
 
 ALTER TABLE public.advogados_monitorados ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.advogados_monitorados TO authenticated;
 CREATE POLICY "Authenticated full access"
   ON public.advogados_monitorados FOR ALL
   TO authenticated USING (true) WITH CHECK (true);
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS public.publicacoes_monitoradas (
 );
 
 ALTER TABLE public.publicacoes_monitoradas ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.publicacoes_monitoradas TO authenticated;
 CREATE POLICY "Authenticated full access"
   ON public.publicacoes_monitoradas FOR ALL
   TO authenticated USING (true) WITH CHECK (true);
@@ -80,6 +82,7 @@ CREATE TABLE IF NOT EXISTS public.monitoramento_logs (
 );
 
 ALTER TABLE public.monitoramento_logs ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.monitoramento_logs TO authenticated;
 CREATE POLICY "Authenticated full access"
   ON public.monitoramento_logs FOR ALL
   TO authenticated USING (true) WITH CHECK (true);
