@@ -7,6 +7,7 @@ import { detectarIntencaoPublicacoes, buscarPublicacoesParaAurora, montarContext
 import {
   carregarPromptCompletoAurora,
 } from '@/lib/aurora/prompt-loader'
+import { AuroraAccessError, exigirAuroraSocio } from '@/lib/aurora/security'
 import { classificarMensagemAurora } from '@/lib/aurora/router'
 import type { AuroraExecucaoModo } from '@/lib/aurora/types'
 
@@ -26,6 +27,14 @@ function getErrorMessage(err: unknown) {
 export async function POST(request: NextRequest) {
   const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
+  try {
+    exigirAuroraSocio(auth.role)
+  } catch (err) {
+    if (err instanceof AuroraAccessError) {
+      return NextResponse.json({ error: err.message }, { status: 403 })
+    }
+    throw err
+  }
 
   let body: { mensagem?: string; historico?: AuroraMensagemHistorico[]; modo?: AuroraExecucaoModo }
   try {
@@ -55,8 +64,9 @@ export async function POST(request: NextRequest) {
       mensagem,
       historicoRecente,
       modo,
+      role: auth.role,
     })
-    const promptSistema = await carregarPromptCompletoAurora(decisao.agentId, modo)
+    const promptSistema = await carregarPromptCompletoAurora(decisao.agentId, modo, auth.role)
     let contextoSistema: string | undefined
 
     if (decisao.agentId === 'olavo') {

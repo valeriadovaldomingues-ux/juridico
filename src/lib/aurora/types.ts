@@ -1,4 +1,5 @@
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
+import type { UserRole } from '@/types'
 
 export type AuroraExecucaoModo = 'rapido' | 'profundo'
 
@@ -29,6 +30,7 @@ export interface AuroraRoutingInput {
   historicoRecente?: string[]
   modo?: AuroraExecucaoModo
   allowExplicitMention?: boolean
+  role?: UserRole
 }
 
 export interface AuroraRoutingDecision {

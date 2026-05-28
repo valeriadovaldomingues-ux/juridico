@@ -1,9 +1,13 @@
 import type { AuroraAgentId, AuroraExecucaoModo } from './types'
+import type { UserRole } from '@/types'
+import { exigirAuroraSocio } from './security'
 
 export async function carregarPromptCompletoAurora(
   agentId: AuroraAgentId,
   modo: AuroraExecucaoModo = 'rapido',
+  role?: UserRole | null,
 ) {
+  exigirAuroraSocio(role)
   switch (agentId) {
     case 'principal':
       return (await import('./prompts/principal')).carregarPromptPrincipal(modo)

@@ -1,5 +1,6 @@
 import { listarAgentesAurora } from './registry'
 import type { AuroraAgentId, AuroraRoutingDecision, AuroraRoutingInput } from './types'
+import { exigirAuroraSocio } from './security'
 
 function normalizar(texto: string) {
   return texto
@@ -37,12 +38,12 @@ function extrairChamadaExplicita(textoOriginal: string) {
     }
   }
 
-    return {
-      token: normalizado,
-      agentId,
-      valido: true,
-    }
+  return {
+    token: normalizado,
+    agentId,
+    valido: true,
   }
+}
 
 function contarOcorrencias(texto: string, termo: string) {
   const alvo = normalizar(termo).trim()
@@ -59,6 +60,7 @@ function contarOcorrencias(texto: string, termo: string) {
 }
 
 export function classificarMensagemAurora(input: AuroraRoutingInput): AuroraRoutingDecision {
+  exigirAuroraSocio(input.role)
   const modo = input.modo ?? 'rapido'
   const chamadaExplicita = input.allowExplicitMention === false
     ? null

@@ -118,6 +118,18 @@ describe('POST /api/ia/aurora', () => {
     expect(mockApiGuard).toHaveBeenCalledWith(['socio'])
   })
 
+  it('bloqueia a Aurora na própria rota quando o papel retornado não é socio', async () => {
+    mockApiGuard.mockResolvedValue({ role: 'gerente', userId: 'uid-2' })
+
+    const res = await POST(request({ mensagem: 'Teste' }) as never)
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toContain('exclusivos para sócios')
+    expect(mockClassificarMensagemAurora).not.toHaveBeenCalled()
+    expect(mockCarregarPromptCompletoAurora).not.toHaveBeenCalled()
+  })
+
   it('retorna o bloqueio do guard para qualquer perfil não autorizado', async () => {
     mockApiGuard.mockResolvedValue(
       NextResponse.json({ error: 'Sem permissão para esta operação' }, { status: 403 }),
@@ -197,8 +209,9 @@ describe('POST /api/ia/aurora', () => {
       mensagem: 'Triagem dos e-mails e rascunho de resposta',
       historicoRecente: ['Resposta intermediária', 'Mais contexto ainda'],
       modo: 'profundo',
+      role: 'socio',
     })
-    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('stella', 'profundo')
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('stella', 'profundo', 'socio')
     expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
       'Triagem dos e-mails e rascunho de resposta',
       mensagensHistorico.slice(-4),
@@ -226,7 +239,7 @@ describe('POST /api/ia/aurora', () => {
 
     expect(res.status).toBe(200)
     expect(text).toBe('resposta')
-    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('olavo', 'rapido')
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('olavo', 'rapido', 'socio')
     expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
       '@Olavo analisar este processo',
       [],
@@ -256,7 +269,7 @@ describe('POST /api/ia/aurora', () => {
 
     expect(res.status).toBe(200)
     expect(text).toBe('resposta')
-    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('principal', 'rapido')
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('principal', 'rapido', 'socio')
     expect(res.headers.get('X-Aurora-Agent')).toBe('principal')
     expect(res.headers.get('X-Aurora-Routing')).toBe('explicit_invalid')
     expect(res.headers.get('X-Aurora-Explicit')).toBe('agentesecreto')
