@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
-import { Settings, UserCog } from 'lucide-react'
+import { Plug, Settings, UserCog } from 'lucide-react'
 
 export default async function ConfiguracoesPage() {
   // Somente sócios acessam a página principal de configurações.
@@ -24,6 +24,21 @@ export default async function ConfiguracoesPage() {
             <h2 className="text-[14px] font-semibold text-[#1a1d23] mb-1">Gestão de Usuários</h2>
             <p className="text-[13px] text-[#7a8899] leading-relaxed">
               Cadastre membros da equipe, defina perfis e gerencie acessos.
+            </p>
+            <span className="inline-flex items-center gap-1 mt-4 text-[12px] font-semibold text-[#1D5F60] group-hover:underline">
+              Acessar &rarr;
+            </span>
+          </div>
+        </Link>
+
+        <Link href="/configuracoes/integracoes-processuais" className="group">
+          <div className="bg-white rounded-lg border border-[#E2DDD8] p-6 hover:border-[#145A5B] hover:shadow-[0_4px_16px_rgba(20,90,91,0.08)] transition-all">
+            <div className="w-10 h-10 rounded-xl bg-[#E8F2F2] flex items-center justify-center mb-4">
+              <Plug size={18} className="text-[#1D5F60]" />
+            </div>
+            <h2 className="text-[14px] font-semibold text-[#1a1d23] mb-1">Integrações Processuais</h2>
+            <p className="text-[13px] text-[#7a8899] leading-relaxed">
+              Configure providers, acompanhe logs e teste consultas processuais seguras.
             </p>
             <span className="inline-flex items-center gap-1 mt-4 text-[12px] font-semibold text-[#1D5F60] group-hover:underline">
               Acessar &rarr;

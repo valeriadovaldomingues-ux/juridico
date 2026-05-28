@@ -53,6 +53,14 @@ const tipoParteBadge: Record<string, string> = {
 // Ordem de exibição das partes
 const TIPO_ORDEM = ['autor', 'reu', 'terceiro', 'outro']
 
+const OFFICIAL_PROCESS_LINKS = [
+  { nome: 'PJe', href: 'https://www.pje.jus.br/' },
+  { nome: 'eproc', href: 'https://eproc.jus.br/eproc/' },
+  { nome: 'ESAJ', href: 'https://esaj.tjsp.jus.br/' },
+  { nome: 'Projudi', href: 'https://projudi.tjpr.jus.br/projudi/' },
+  { nome: 'DJEN/CNJ', href: 'https://comunica.pje.jus.br/' },
+]
+
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
 type TipoParte = 'autor' | 'reu' | 'terceiro' | 'outro'
@@ -218,6 +226,28 @@ export default function ProcessoDetail({
 
           {/* Agenda / Timeline */}
           <AgendaTimeline processoId={processo.id} items={agendaItems} />
+
+          <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
+            <h2 className="text-xs text-[#9ca3af] uppercase tracking-wider mb-3 flex items-center gap-2">
+              <ExternalLink size={12} /> Sistemas oficiais
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {OFFICIAL_PROCESS_LINKS.map(link => (
+                <a
+                  key={link.nome}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#e5e7eb] px-3 py-2 text-[12px] font-medium text-[#1D5F60] hover:border-[#1D5F60] transition-colors"
+                >
+                  {link.nome} <ExternalLink size={11} />
+                </a>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-[#7a8899]">
+              Atalhos abrem os sistemas oficiais em nova aba. O sistema nao preenche login, nao captura cookie e nao salva sessao.
+            </p>
+          </div>
         </div>
       </div>
     </div>
