@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.publicacoes (
 );
 
 ALTER TABLE public.publicacoes ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.publicacoes TO authenticated;
 
 CREATE POLICY "Authenticated full access"
   ON public.publicacoes FOR ALL

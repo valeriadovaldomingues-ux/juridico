@@ -1417,7 +1417,7 @@ export default function PublicacoesPage({
 
       {/* ── Modo Trabalho banner ── */}
       {modoTrabalho && (
-        <div className="flex items-center gap-4 px-5 py-3.5 bg-[#1D5F60] rounded-lg text-white">
+        <div className="flex items-center gap-4 px-5 py-3.5 bg-[var(--color-sidebar)] rounded-2xl border border-[var(--color-copper)]/20 text-white shadow-[0_18px_42px_rgba(13,34,53,0.18)]">
           <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
             <Target size={15} className="text-white" />
           </div>
@@ -1444,17 +1444,19 @@ export default function PublicacoesPage({
 
       {/* ── Header ── */}
       {!modoTrabalho && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--color-petrol-light)] to-transparent pointer-events-none" />
+          <div className="relative flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-[24px] font-bold text-[#0f1923] tracking-tight">Publicações</h1>
-              <p className="text-[13px] text-[#9aabb8] mt-0.5">Publicações, intimações e prazos do escritório</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">Operacional</p>
+              <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">Publicações</h1>
+              <p className="text-[13px] text-[var(--color-ink-3)] mt-2">Publicações, intimações e prazos do escritório</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={executarMonitoramento}
                 disabled={monitoramentoLoading}
-                className="flex items-center gap-2 px-4 py-2 border border-[#E2DDD8] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 border border-[var(--color-border)] bg-white text-[var(--color-ink-2)] text-[13px] font-medium rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {monitoramentoLoading ? (
                   <>
@@ -1467,13 +1469,13 @@ export default function PublicacoesPage({
               </button>
               <button
                 onClick={toggleModoTrabalho}
-                className="flex items-center gap-2 px-4 py-2 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
               >
                 <Play size={13} /> Trabalhar agora
               </button>
               <button
                 onClick={() => setShowImport(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-[#E2DDD8] text-[#4a5a6a] text-[13px] font-medium rounded-xl hover:bg-[#F3F1EE] transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-[var(--color-border)] bg-white text-[var(--color-ink-2)] text-[13px] font-medium rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors"
               >
                 <Upload size={13} /> Importar
               </button>
@@ -1512,9 +1514,9 @@ export default function PublicacoesPage({
               action: () => { setFStatus('nao_tratada'); setFPrazo(true); setFDe(''); setFAte(''); resetPage() } },
           ].map(({ label, value, bg, text, action }) => (
             <button key={label} onClick={action}
-              className={cn('rounded-lg border border-[#E2DDD8] shadow-sm p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-150', bg)}>
+              className={cn('rounded-2xl border border-[var(--color-border)] shadow-[0_12px_34px_rgba(13,34,53,0.05)] p-4 text-left hover:shadow-[0_18px_42px_rgba(13,34,53,0.08)] hover:-translate-y-0.5 transition-all duration-150', bg)}>
               <p className={cn('text-[28px] font-black leading-none', text)}>{value}</p>
-              <p className="text-[11px] text-[#9aabb8] mt-1.5 font-medium leading-tight">{label}</p>
+              <p className="text-[11px] text-[var(--color-ink-3)] mt-1.5 font-medium leading-tight">{label}</p>
             </button>
           ))}
         </div>
@@ -1522,34 +1524,34 @@ export default function PublicacoesPage({
 
       {/* ── Filters ── */}
       {!modoTrabalho && (
-        <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm px-5 py-4 space-y-3">
+        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] px-5 py-4 space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
-              <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9aabb8]" />
+              <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)]" />
               <input
                 placeholder="Buscar texto, processo, nome…"
                 value={fBusca}
                 onChange={e => { setFBusca(e.target.value); resetPage() }}
-                className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors"
+                className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-[var(--color-border)] bg-white text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors"
               />
             </div>
             <select value={fTribunal} onChange={e => { setFTribunal(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E]">
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10">
               <option value="">Todos os tribunais</option>
               {tribunais.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <input placeholder="Nome pesquisado…" value={fAdvogado}
               onChange={e => { setFAdvogado(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#E2DDD8] bg-[#F3F1EE] px-3.5 py-2 text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] transition-colors w-44" />
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors w-44" />
             <select value={fProcesso} onChange={e => { setFProcesso(e.target.value); resetPage() }}
-              className="rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] text-[#4a5a6a] focus:outline-none focus:border-[#0F3D3E] max-w-[200px]">
+              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 max-w-[200px]">
               <option value="">Todos os processos</option>
               {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
             </select>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[#F0F6F6]">
-            <div className="flex bg-[#F0F6F6] rounded-xl p-1 gap-0.5">
+          <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[var(--color-border)]">
+            <div className="flex bg-[var(--color-surface-warm)] border border-[var(--color-border)] rounded-xl p-1 gap-0.5">
               {[
                 { v: 'nao_tratada', l: 'Não tratadas' },
                 { v: 'tratada',     l: 'Tratadas'     },
@@ -1558,7 +1560,7 @@ export default function PublicacoesPage({
               ].map(({ v, l }) => (
                 <button key={v} onClick={() => { setFStatus(v); resetPage() }}
                   className={cn('px-3 py-1 rounded-lg text-[12px] font-medium transition-colors whitespace-nowrap',
-                    fStatus === v ? 'bg-white text-[#0f1923] shadow-sm' : 'text-[#7a8899] hover:text-[#0f1923]')}>
+                    fStatus === v ? 'bg-white text-[var(--color-ink)] shadow-sm' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink)]')}>
                   {l}
                 </button>
               ))}
@@ -1587,21 +1589,21 @@ export default function PublicacoesPage({
       {/* ── Work mode search ── */}
       {modoTrabalho && (
         <div className="relative">
-          <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aabb8]" />
+          <Search size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)]" />
           <input
             placeholder="Buscar publicação…"
             value={fBusca}
             onChange={e => { setFBusca(e.target.value); resetPage() }}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E2DDD8] bg-white text-[13px] placeholder:text-[#9aabb8] focus:outline-none focus:border-[#0F3D3E] shadow-sm transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-white text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 shadow-sm transition-colors"
           />
         </div>
       )}
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-lg border border-[#E2DDD8] shadow-sm overflow-hidden">
+      <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
         {/* Header row */}
         <div className={cn(
-          'grid gap-3 px-5 py-3 border-b border-[#F0F6F6] bg-[#FAFCFC]',
+          'grid gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface-warm)]',
           modoTrabalho
             ? 'grid-cols-[4px_1fr_200px_140px]'
             : 'grid-cols-[4px_1fr_130px_120px_110px_100px]'
@@ -1611,17 +1613,17 @@ export default function PublicacoesPage({
             ? ['Publicação', 'Ações rápidas', 'Status']
             : ['Publicação', 'Tribunal', 'Processo', 'Data', 'Status']
           ).map(h => (
-            <p key={h} className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide">{h}</p>
+            <p key={h} className="text-[10px] font-semibold text-[var(--color-ink-3)] uppercase tracking-wide">{h}</p>
           ))}
         </div>
 
         {paginated.length === 0 ? (
           <div className="py-16 text-center">
-            <FileText size={28} className="text-[#c8d8d8] mx-auto mb-3" />
-            <p className="text-[14px] font-medium text-[#7a8899]">
+            <FileText size={28} className="text-[var(--color-copper)]/60 mx-auto mb-3" />
+            <p className="font-brand text-[20px] font-semibold text-[var(--color-ink)]">
               {pubs.length === 0 ? 'Nenhuma publicação cadastrada' : 'Nenhum resultado com esses filtros'}
             </p>
-            <p className="text-[12px] text-[#9aabb8] mt-1">
+            <p className="text-[12px] text-[var(--color-ink-3)] mt-1">
               {pubs.length === 0 ? 'Importe um arquivo ou aguarde a execução do monitoramento' : 'Tente ajustar os filtros'}
             </p>
           </div>
