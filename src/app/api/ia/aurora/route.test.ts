@@ -9,6 +9,8 @@ const {
   mockDetectarIntencaoPublicacoes,
   mockBuscarPublicacoesParaAurora,
   mockMontarContextoPublicacoesParaAurora,
+  mockClassificarMensagemAurora,
+  mockCarregarPromptCompletoAurora,
 } = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
   mockBuildMensagensAurora: vi.fn(),
@@ -17,6 +19,8 @@ const {
   mockDetectarIntencaoPublicacoes: vi.fn(),
   mockBuscarPublicacoesParaAurora: vi.fn(),
   mockMontarContextoPublicacoesParaAurora: vi.fn(),
+  mockClassificarMensagemAurora: vi.fn(),
+  mockCarregarPromptCompletoAurora: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/api-guard', () => ({
@@ -38,6 +42,14 @@ vi.mock('@/lib/ai/aurora-context', () => ({
   montarContextoPublicacoesParaAurora: mockMontarContextoPublicacoesParaAurora,
 }))
 
+vi.mock('@/lib/aurora/router', () => ({
+  classificarMensagemAurora: mockClassificarMensagemAurora,
+}))
+
+vi.mock('@/lib/aurora/prompt-loader', () => ({
+  carregarPromptCompletoAurora: mockCarregarPromptCompletoAurora,
+}))
+
 import { POST } from './route'
 
 function request(body: unknown) {
@@ -57,6 +69,14 @@ function textStream(text: string) {
   })
 }
 
+const decisaoPadrao = {
+  agentId: 'principal',
+  modo: 'rapido',
+  matchedKeywords: [],
+  score: 0,
+  reason: 'nenhuma_intencao_clara',
+} as const
+
 beforeEach(() => {
   process.env.OPENAI_API_KEY = 'test-key'
   delete process.env.AI_API_KEY
@@ -67,6 +87,10 @@ beforeEach(() => {
   mockDetectarIntencaoPublicacoes.mockReset()
   mockBuscarPublicacoesParaAurora.mockReset()
   mockMontarContextoPublicacoesParaAurora.mockReset()
+  mockClassificarMensagemAurora.mockReset()
+  mockCarregarPromptCompletoAurora.mockReset()
+
+  mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
   mockDetectarIntencaoPublicacoes.mockReturnValue({
     temIntencao: false,
     hoje: false,
@@ -75,6 +99,10 @@ beforeEach(() => {
     audiencia: false,
     triagem: false,
   })
+  mockClassificarMensagemAurora.mockReturnValue(decisaoPadrao)
+  mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT PRINCIPAL')
+  mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
+  mockStreamTextoPreflight.mockResolvedValue(textStream('resposta'))
 })
 
 afterEach(() => {
@@ -84,10 +112,6 @@ afterEach(() => {
 
 describe('POST /api/ia/aurora', () => {
   it('usa apiGuard exclusivamente com role socio', async () => {
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-    mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
-    mockStreamTextoPreflight.mockResolvedValue(textStream('resposta'))
-
     const res = await POST(request({ mensagem: 'Organize esta demanda' }) as never)
 
     expect(res.status).toBe(200)
@@ -109,8 +133,6 @@ describe('POST /api/ia/aurora', () => {
   })
 
   it('valida mensagem obrigatória antes de chamar a IA', async () => {
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-
     const res = await POST(request({ mensagem: '   ' }) as never)
     const body = await res.json()
 
@@ -123,7 +145,6 @@ describe('POST /api/ia/aurora', () => {
   it('retorna erro JSON legível quando não há chave de IA', async () => {
     delete process.env.OPENAI_API_KEY
     delete process.env.AI_API_KEY
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
 
     const res = await POST(request({ mensagem: 'Teste' }) as never)
     const body = await res.json()
@@ -137,9 +158,6 @@ describe('POST /api/ia/aurora', () => {
   it('aceita AI_API_KEY como alias compatível', async () => {
     delete process.env.OPENAI_API_KEY
     process.env.AI_API_KEY = 'test-key'
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-    mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
-    mockStreamTextoPreflight.mockResolvedValue(textStream('ok'))
 
     const res = await POST(request({ mensagem: 'Teste' }) as never)
 
@@ -148,24 +166,110 @@ describe('POST /api/ia/aurora', () => {
     expect(mockStreamTextoPreflight).toHaveBeenCalled()
   })
 
-  it('monta mensagens da Aurora e retorna streaming de texto', async () => {
-    const historico = [{ role: 'user', content: 'Contexto anterior' }]
-    const messages = [{ role: 'system', content: 'Aurora' }]
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-    mockBuildMensagensAurora.mockReturnValue(messages)
-    mockStreamTextoPreflight.mockResolvedValue(textStream('plano de ação'))
+  it('roteia para um único subagente e carrega apenas o prompt selecionado', async () => {
+    const mensagensHistorico = [
+      { role: 'user', content: 'Mensagem antiga' },
+      { role: 'assistant', content: 'Resposta antiga' },
+      { role: 'user', content: 'Contexto intermediário' },
+      { role: 'assistant', content: 'Resposta intermediária' },
+      { role: 'user', content: 'Mais contexto ainda' },
+    ]
 
-    const res = await POST(request({ mensagem: 'Monte um plano', historico }) as never)
+    mockClassificarMensagemAurora.mockReturnValue({
+      agentId: 'stella',
+      modo: 'profundo',
+      matchedKeywords: ['e-mail'],
+      score: 1,
+      reason: 'keyword_match:e-mail',
+    })
+    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT STELLA')
+
+    const res = await POST(
+      request({
+        mensagem: 'Triagem dos e-mails e rascunho de resposta',
+        historico: mensagensHistorico,
+        modo: 'profundo',
+      }) as never,
+    )
+
+    expect(res.status).toBe(200)
+    expect(mockClassificarMensagemAurora).toHaveBeenCalledWith({
+      mensagem: 'Triagem dos e-mails e rascunho de resposta',
+      historicoRecente: ['Resposta intermediária', 'Mais contexto ainda'],
+      modo: 'profundo',
+    })
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('stella', 'profundo')
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
+      'Triagem dos e-mails e rascunho de resposta',
+      mensagensHistorico.slice(-4),
+      undefined,
+      'PROMPT STELLA',
+    )
+    expect(mockBuscarPublicacoesParaAurora).not.toHaveBeenCalled()
+  })
+
+  it('respeita uma chamada direta explícita do sócio para subagente', async () => {
+    mockClassificarMensagemAurora.mockReturnValue({
+      agentId: 'olavo',
+      modo: 'rapido',
+      matchedKeywords: [],
+      score: 1,
+      reason: 'explicit_mention',
+      explicitLabel: 'olavo',
+      explicitToken: 'olavo',
+      explicitValid: true,
+    })
+    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT OLAVO')
+
+    const res = await POST(request({ mensagem: '@Olavo analisar este processo' }) as never)
     const text = await res.text()
 
     expect(res.status).toBe(200)
-    expect(res.headers.get('Content-Type')).toContain('text/plain')
-    expect(text).toBe('plano de ação')
-    expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano', historico, undefined)
-    expect(mockStreamTextoPreflight).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
+    expect(text).toBe('resposta')
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('olavo', 'rapido')
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
+      '@Olavo analisar este processo',
+      [],
+      undefined,
+      'PROMPT OLAVO',
+    )
+    expect(res.headers.get('X-Aurora-Agent')).toBe('olavo')
+    expect(res.headers.get('X-Aurora-Routing')).toBe('explicit_mention')
+    expect(res.headers.get('X-Aurora-Explicit')).toBe('olavo')
   })
 
-  it('busca contexto de publicações quando a mensagem pede publicações', async () => {
+  it('chamada direta inválida cai na Aurora Principal e registra o motivo', async () => {
+    mockClassificarMensagemAurora.mockReturnValue({
+      agentId: 'principal',
+      modo: 'rapido',
+      matchedKeywords: [],
+      score: 0,
+      reason: 'explicit_invalid',
+      explicitLabel: 'agentesecreto',
+      explicitToken: 'agentesecreto',
+      explicitValid: false,
+    })
+    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT PRINCIPAL')
+
+    const res = await POST(request({ mensagem: '@AgenteSecreto analisar isso' }) as never)
+    const text = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(text).toBe('resposta')
+    expect(mockCarregarPromptCompletoAurora).toHaveBeenCalledWith('principal', 'rapido')
+    expect(res.headers.get('X-Aurora-Agent')).toBe('principal')
+    expect(res.headers.get('X-Aurora-Routing')).toBe('explicit_invalid')
+    expect(res.headers.get('X-Aurora-Explicit')).toBe('agentesecreto')
+  })
+
+  it('busca contexto de publicações quando a mensagem pede publicações e a rota escolhe Olavo', async () => {
+    const decisaoOlavo = {
+      agentId: 'olavo',
+      modo: 'rapido',
+      matchedKeywords: ['publicacao'],
+      score: 1,
+      reason: 'keyword_match:publicacao',
+    } as const
     const intencao = {
       temIntencao: true,
       hoje: true,
@@ -176,16 +280,19 @@ describe('POST /api/ia/aurora', () => {
     }
     const publicacoes = [{ id: 'pub-1', prazo_detectado: true }]
     const contexto = 'CONTEXTO DO SISTEMA - PUBLICAÇÕES\nTotal encontrado: 1'
-    const messages = [{ role: 'system', content: 'Aurora' }]
 
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
+    mockClassificarMensagemAurora.mockReturnValue(decisaoOlavo)
     mockDetectarIntencaoPublicacoes.mockReturnValue(intencao)
     mockBuscarPublicacoesParaAurora.mockResolvedValue(publicacoes)
     mockMontarContextoPublicacoesParaAurora.mockReturnValue(contexto)
-    mockBuildMensagensAurora.mockReturnValue(messages)
-    mockStreamTextoPreflight.mockResolvedValue(textStream('resumo executivo'))
+    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT OLAVO')
 
-    const res = await POST(request({ mensagem: 'Quais publicações chegaram hoje com prazo detectado?' }) as never)
+    const res = await POST(
+      request({
+        mensagem: 'Quais publicações chegaram hoje com prazo detectado?',
+        historico: [],
+      }) as never,
+    )
 
     expect(res.status).toBe(200)
     expect(mockBuscarPublicacoesParaAurora).toHaveBeenCalledWith({ ...intencao, limit: 20 })
@@ -194,27 +301,27 @@ describe('POST /api/ia/aurora', () => {
       'Quais publicações chegaram hoje com prazo detectado?',
       [],
       contexto,
+      'PROMPT OLAVO',
     )
   })
 
   it('não busca contexto de publicações quando a mensagem é genérica', async () => {
-    const messages = [{ role: 'system', content: 'Aurora' }]
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-    mockBuildMensagensAurora.mockReturnValue(messages)
-    mockStreamTextoPreflight.mockResolvedValue(textStream('ok'))
+    mockClassificarMensagemAurora.mockReturnValue(decisaoPadrao)
 
     const res = await POST(request({ mensagem: 'Monte um plano de ação' }) as never)
 
     expect(res.status).toBe(200)
     expect(mockBuscarPublicacoesParaAurora).not.toHaveBeenCalled()
     expect(mockMontarContextoPublicacoesParaAurora).not.toHaveBeenCalled()
-    expect(mockBuildMensagensAurora).toHaveBeenCalledWith('Monte um plano de ação', [], undefined)
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
+      'Monte um plano de ação',
+      [],
+      undefined,
+      'PROMPT PRINCIPAL',
+    )
   })
 
   it('retorna JSON de fallback quando o preflight do streaming falha', async () => {
-    const messages = [{ role: 'system', content: 'Aurora' }]
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
-    mockBuildMensagensAurora.mockReturnValue(messages)
     mockStreamTextoPreflight.mockRejectedValue(new Error('stream indisponível'))
     mockCompletarTexto.mockResolvedValue('estou funcionando.')
 
@@ -224,6 +331,9 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(200)
     expect(body.resposta).toBe('estou funcionando.')
     expect(body.aviso).toContain('stream indisponível')
-    expect(mockCompletarTexto).toHaveBeenCalledWith(messages, { maxTokens: 3072, temperature: 0.45 })
+    expect(mockCompletarTexto).toHaveBeenCalledWith(
+      [{ role: 'system', content: 'Aurora' }],
+      { maxTokens: 3072, temperature: 0.45 },
+    )
   })
 })

@@ -3,11 +3,12 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
+import { detectarIntencaoPublicacoes, buscarPublicacoesParaAurora, montarContextoPublicacoesParaAurora } from '@/lib/ai/aurora-context'
 import {
-  buscarPublicacoesParaAurora,
-  detectarIntencaoPublicacoes,
-  montarContextoPublicacoesParaAurora,
-} from '@/lib/ai/aurora-context'
+  carregarPromptCompletoAurora,
+} from '@/lib/aurora/prompt-loader'
+import { classificarMensagemAurora } from '@/lib/aurora/router'
+import type { AuroraExecucaoModo } from '@/lib/aurora/types'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 
@@ -26,12 +27,14 @@ export async function POST(request: NextRequest) {
   const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
 
-  let body: { mensagem?: string; historico?: AuroraMensagemHistorico[] }
+  let body: { mensagem?: string; historico?: AuroraMensagemHistorico[]; modo?: AuroraExecucaoModo }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
+
+  const modo: AuroraExecucaoModo = body.modo === 'profundo' ? 'profundo' : 'rapido'
 
   const mensagem = body.mensagem?.trim()
   if (!mensagem) {
@@ -46,14 +49,23 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const historico = Array.isArray(body.historico) ? body.historico : []
-    const intencaoPublicacoes = detectarIntencaoPublicacoes(mensagem)
+    const historico = Array.isArray(body.historico) ? body.historico.slice(-4) : []
+    const historicoRecente = historico.slice(-2).map(msg => msg.content)
+    const decisao = classificarMensagemAurora({
+      mensagem,
+      historicoRecente,
+      modo,
+    })
+    const promptSistema = await carregarPromptCompletoAurora(decisao.agentId, modo)
     let contextoSistema: string | undefined
 
-    if (intencaoPublicacoes.temIntencao) {
+    if (decisao.agentId === 'olavo') {
       try {
-        const publicacoes = await buscarPublicacoesParaAurora({ ...intencaoPublicacoes, limit: 20 })
-        contextoSistema = montarContextoPublicacoesParaAurora(publicacoes)
+        const intencaoPublicacoes = detectarIntencaoPublicacoes(mensagem)
+        if (intencaoPublicacoes.temIntencao) {
+          const publicacoes = await buscarPublicacoesParaAurora({ ...intencaoPublicacoes, limit: 20 })
+          contextoSistema = montarContextoPublicacoesParaAurora(publicacoes)
+        }
       } catch (contextErr) {
         const contextMsg = getErrorMessage(contextErr)
         if (IS_DEV) {
@@ -68,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const messages  = buildMensagensAurora(mensagem, historico, contextoSistema)
+    const messages  = buildMensagensAurora(mensagem, historico, contextoSistema, promptSistema)
 
     let stream: ReadableStream<Uint8Array>
     try {
@@ -84,6 +96,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           resposta,
           modo: 'json',
+          agente: decisao.agentId,
+          routingReason: decisao.reason,
+          explicitLabel: decisao.explicitLabel ?? null,
+          explicitValid: decisao.explicitValid ?? false,
           aviso: `Streaming indisponível nesta requisição: ${streamMsg}`,
         })
       } catch (fallbackErr) {
@@ -103,6 +119,9 @@ export async function POST(request: NextRequest) {
         'Content-Type':           'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control':          'no-cache',
+        'X-Aurora-Agent':         decisao.agentId,
+        'X-Aurora-Routing':       decisao.reason,
+        'X-Aurora-Explicit':      decisao.explicitLabel ?? '',
       },
     })
   } catch (err) {

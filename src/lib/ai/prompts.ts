@@ -250,6 +250,7 @@ export function buildMensagensAurora(
   mensagem: string,
   historico: AuroraMensagemHistorico[] = [],
   contextoSistema?: string,
+  systemPrompt: string = SYSTEM_AURORA,
 ): OpenAI.Chat.ChatCompletionMessageParam[] {
   const historicoSeguro = historico
     .filter(msg => msg.content?.trim())
@@ -260,7 +261,7 @@ export function buildMensagensAurora(
     }))
 
   return [
-    { role: 'system', content: SYSTEM_AURORA },
+    { role: 'system', content: systemPrompt },
     ...(contextoSistema?.trim()
       ? [{
           role: 'system' as const,
