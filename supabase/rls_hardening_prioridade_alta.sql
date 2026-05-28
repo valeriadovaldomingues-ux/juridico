@@ -18,7 +18,6 @@ ALTER TABLE public.doc_gerados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ia_analises_publicacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agenda_import_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agenda_import_rows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_interactions ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
@@ -309,41 +308,6 @@ CREATE POLICY "agenda_import_rows_update_maintainers"
 
 CREATE POLICY "agenda_import_rows_delete_maintainers"
   ON public.agenda_import_rows
-  FOR DELETE
-  TO authenticated
-  USING (public.current_user_role() IN ('administrativo', 'gerente', 'socio'));
-
--- ============================================================
--- calendar_events
--- ============================================================
-
-DROP POLICY IF EXISTS "Authenticated full access on calendar_events" ON public.calendar_events;
-DROP POLICY IF EXISTS "calendar_events_select_staff" ON public.calendar_events;
-DROP POLICY IF EXISTS "calendar_events_insert_maintainers" ON public.calendar_events;
-DROP POLICY IF EXISTS "calendar_events_update_maintainers" ON public.calendar_events;
-DROP POLICY IF EXISTS "calendar_events_delete_maintainers" ON public.calendar_events;
-
-CREATE POLICY "calendar_events_select_staff"
-  ON public.calendar_events
-  FOR SELECT
-  TO authenticated
-  USING (public.current_user_role() IN ('administrativo', 'advogado', 'gerente', 'socio'));
-
-CREATE POLICY "calendar_events_insert_maintainers"
-  ON public.calendar_events
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (public.current_user_role() IN ('administrativo', 'gerente', 'socio'));
-
-CREATE POLICY "calendar_events_update_maintainers"
-  ON public.calendar_events
-  FOR UPDATE
-  TO authenticated
-  USING (public.current_user_role() IN ('administrativo', 'gerente', 'socio'))
-  WITH CHECK (public.current_user_role() IN ('administrativo', 'gerente', 'socio'));
-
-CREATE POLICY "calendar_events_delete_maintainers"
-  ON public.calendar_events
   FOR DELETE
   TO authenticated
   USING (public.current_user_role() IN ('administrativo', 'gerente', 'socio'));
