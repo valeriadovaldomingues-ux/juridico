@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { FerramentasPdfError } from './errors'
 import {
   MAX_PDF_FILE_BYTES,
+  MAX_IMAGE_FILE_BYTES,
+  MAX_IMAGE_FILES,
+  assertImageUploadLimits,
   assertValidPdfFile,
+  assertValidImageFile,
   parsePageOrder,
   parsePageRange,
   parsePageSet,
@@ -28,6 +32,28 @@ describe('Ferramentas PDF validation', () => {
 
   it('rejeita arquivo maior que o limite', () => {
     expect(() => assertValidPdfFile(pdfFile('grande.pdf', MAX_PDF_FILE_BYTES + 1))).toThrow('25MB')
+  })
+
+  it('aceita imagem válida', () => {
+    expect(() => assertValidImageFile(new File([new Uint8Array(10)], 'foto.jpg', { type: 'image/jpeg' }))).not.toThrow()
+    expect(() => assertValidImageFile(new File([new Uint8Array(10)], 'foto.jpeg', { type: 'image/jpeg' }))).not.toThrow()
+    expect(() => assertValidImageFile(new File([new Uint8Array(10)], 'foto.png', { type: 'image/png' }))).not.toThrow()
+  })
+
+  it('rejeita imagem inválida ou vazia', () => {
+    expect(() => assertValidImageFile(new File([new Uint8Array(10)], 'foto.gif', { type: 'image/gif' }))).toThrow('JPG, JPEG ou PNG')
+    expect(() => assertValidImageFile(new File([new Uint8Array(0)], 'vazia.jpg', { type: 'image/jpeg' }))).toThrow('vazia')
+    expect(() => assertValidImageFile({ name: 'gigante.jpg', type: 'image/jpeg', size: MAX_IMAGE_FILE_BYTES + 1 } as File)).toThrow('25MB')
+  })
+
+  it('respeita limites de upload de imagens', () => {
+    const files = Array.from({ length: MAX_IMAGE_FILES }, (_, index) => new File([new Uint8Array(10)], `foto-${index}.png`, { type: 'image/png' }))
+    expect(() => assertImageUploadLimits(files)).not.toThrow()
+    expect(() => assertImageUploadLimits([...files, new File([new Uint8Array(10)], 'extra.png', { type: 'image/png' })])).toThrow('20')
+    expect(() => assertImageUploadLimits([
+      { name: 'gigante.png', type: 'image/png', size: 60 * 1024 * 1024 } as File,
+      { name: 'gigante2.png', type: 'image/png', size: 50 * 1024 * 1024 } as File,
+    ])).toThrow('100MB')
   })
 
   it('faz parse de intervalo de páginas', () => {

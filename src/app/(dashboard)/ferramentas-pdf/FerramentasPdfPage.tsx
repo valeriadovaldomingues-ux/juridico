@@ -5,7 +5,7 @@ import type { ElementType, FormEvent, ReactNode } from 'react'
 import {
   ArrowDownUp,
   FileDown,
-  FileText,
+  Image as ImageIcon,
   Loader2,
   Merge,
   RotateCcw,
@@ -14,13 +14,14 @@ import {
   Wand2,
 } from 'lucide-react'
 
-type ToolId = 'merge' | 'split' | 'remove-pages' | 'rotate' | 'reorder' | 'compress'
+type ToolId = 'merge' | 'image-to-pdf' | 'split' | 'remove-pages' | 'rotate' | 'reorder' | 'compress'
 
 type ResultState = {
   loading: boolean
   error: string | null
   downloadUrl: string | null
   filename: string | null
+  notice: string | null
 }
 
 const TOOL_TABS: Array<{
@@ -35,7 +36,8 @@ const TOOL_TABS: Array<{
   { id: 'remove-pages', label: 'Remover páginas', description: 'Apague páginas específicas e baixe o arquivo limpo.', icon: Scissors, available: true },
   { id: 'rotate', label: 'Girar PDF', description: 'Gire todas as páginas em 90, 180 ou 270 graus.', icon: RotateCcw, available: true },
   { id: 'reorder', label: 'Reorganizar páginas', description: 'Reordene as páginas sem salvar nada no sistema.', icon: ArrowDownUp, available: true },
-  { id: 'compress', label: 'Comprimir PDF', description: 'Em breve.', icon: FileDown, available: false },
+  { id: 'image-to-pdf', label: 'Imagem para PDF', description: 'Converta JPG, JPEG ou PNG em um PDF.', icon: ImageIcon, available: true },
+  { id: 'compress', label: 'Comprimir PDF', description: 'Reduza o tamanho do arquivo quando tecnicamente possível.', icon: FileDown, available: true },
 ]
 
 const INITIAL_RESULT: ResultState = {
@@ -43,6 +45,7 @@ const INITIAL_RESULT: ResultState = {
   error: null,
   downloadUrl: null,
   filename: null,
+  notice: null,
 }
 
 function ToolCard({
@@ -54,6 +57,7 @@ function ToolCard({
   error,
   downloadUrl,
   filename,
+  notice,
   onSubmit,
   onClear,
   children,
@@ -66,6 +70,7 @@ function ToolCard({
   error: string | null
   downloadUrl: string | null
   filename: string | null
+  notice?: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>
   onClear: () => void
   children: ReactNode
@@ -107,6 +112,12 @@ function ToolCard({
               <FileDown size={14} />
               Baixar resultado
             </a>
+          </div>
+        )}
+
+        {notice && (
+          <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[13px] text-sky-900">
+            {notice}
           </div>
         )}
 
@@ -159,17 +170,19 @@ function useDownloadResult() {
     const match = contentDisposition.match(/filename="([^"]+)"/i)
     const filename = match?.[1] ?? fallbackName
     const downloadUrl = URL.createObjectURL(blob)
+    const notice = response.headers.get('x-ferramentas-pdf-notice')
 
     setState({
       loading: false,
       error: null,
       downloadUrl,
       filename,
+      notice,
     })
   }
 
   function setLoading() {
-    setState(prev => ({ ...prev, loading: true, error: null }))
+    setState(prev => ({ ...prev, loading: true, error: null, notice: null }))
   }
 
   function setError(message: string) {
@@ -225,6 +238,51 @@ function MergeTool() {
         />
         <p className="text-[12px] text-[var(--color-ink-3)]">
           {files.length > 0 ? `${files.length} arquivo(s) selecionado(s).` : 'Selecione de 1 a 20 PDFs.'}
+        </p>
+      </div>
+    </ToolCard>
+  )
+}
+
+function ImageToPdfTool() {
+  const { state, setLoading, setError, handleResponse, clear } = useDownloadResult()
+  const [files, setFiles] = useState<File[]>([])
+
+  return (
+    <ToolCard
+      title="Imagem para PDF"
+      description="Converta JPG, JPEG ou PNG em um único PDF. Cada imagem vira uma página e nada é salvo no sistema."
+      icon={ImageIcon}
+      busy={state.loading}
+      error={state.error}
+      downloadUrl={state.downloadUrl}
+      filename={state.filename}
+      notice={state.notice}
+      onClear={clear}
+      onSubmit={async (event) => {
+        event.preventDefault()
+        setLoading()
+        try {
+          const form = new FormData()
+          files.forEach(file => form.append('files', file))
+          const response = await fetch('/api/ferramentas-pdf/image-to-pdf', { method: 'POST', body: form })
+          await handleResponse(response, 'imagens-convertidas.pdf')
+        } catch (error) {
+          setError(error instanceof Error ? error.message : 'Erro ao converter imagens para PDF.')
+        }
+      }}
+    >
+      <div className="grid gap-2">
+        <PDFUploadLabel>Imagens</PDFUploadLabel>
+        <input
+          type="file"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          multiple
+          onChange={event => setFiles(Array.from(event.target.files ?? []))}
+          className="block w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--color-sidebar)] file:px-3 file:py-2 file:text-[13px] file:font-semibold file:text-white hover:border-[var(--color-copper)]"
+        />
+        <p className="text-[12px] text-[var(--color-ink-3)]">
+          {files.length > 0 ? `${files.length} arquivo(s) selecionado(s).` : 'Selecione de 1 a 20 imagens JPG, JPEG ou PNG.'}
         </p>
       </div>
     </ToolCard>
@@ -441,21 +499,44 @@ function ReorderTool() {
   )
 }
 
-function ComingSoonTool() {
+function CompressTool() {
+  const { state, setLoading, setError, handleResponse, clear } = useDownloadResult()
+  const [file, setFile] = useState<File | null>(null)
+
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-warm)] p-5">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[var(--color-ink-2)] shadow-sm">
-          <FileText size={18} />
-        </div>
-        <div>
-          <h2 className="text-[18px] font-semibold text-[var(--color-ink)] tracking-tight">Comprimir PDF</h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-ink-3)]">
-            Esta etapa fica para depois. Só entraremos com compressão quando conseguirmos manter a qualidade com segurança local.
-          </p>
-        </div>
+    <ToolCard
+      title="Comprimir PDF"
+      description="Reduza o tamanho do arquivo quando tecnicamente possível, com compressão básica local e sem envio para terceiros."
+      icon={FileDown}
+      busy={state.loading}
+      error={state.error}
+      downloadUrl={state.downloadUrl}
+      filename={state.filename}
+      notice={state.notice}
+      onClear={clear}
+      onSubmit={async (event) => {
+        event.preventDefault()
+        setLoading()
+        try {
+          const form = new FormData()
+          if (file) form.append('file', file)
+          const response = await fetch('/api/ferramentas-pdf/compress', { method: 'POST', body: form })
+          await handleResponse(response, 'pdf-comprimido.pdf')
+        } catch (error) {
+          setError(error instanceof Error ? error.message : 'Erro ao comprimir PDF.')
+        }
+      }}
+    >
+      <div className="grid gap-2">
+        <PDFUploadLabel>Arquivo PDF</PDFUploadLabel>
+        <input
+          type="file"
+          accept=".pdf,application/pdf"
+          onChange={event => setFile(event.target.files?.[0] ?? null)}
+          className="block w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--color-sidebar)] file:px-3 file:py-2 file:text-[13px] file:font-semibold file:text-white hover:border-[var(--color-copper)]"
+        />
       </div>
-    </div>
+    </ToolCard>
   )
 }
 
@@ -476,7 +557,7 @@ export default function FerramentasPdfPage() {
             Ferramentas PDF
           </h1>
           <p className="text-[13px] text-[var(--color-ink-3)] mt-2 max-w-3xl">
-            Operações locais para juntar, dividir, remover, girar e reorganizar PDFs. Os arquivos entram por requisição, são processados no servidor e retornam somente para download.
+            Operações locais para juntar, converter imagens, dividir, remover, girar, reorganizar e comprimir PDFs. Os arquivos entram por requisição, são processados no servidor e retornam somente para download.
           </p>
         </div>
       </div>
@@ -538,11 +619,12 @@ export default function FerramentasPdfPage() {
           </div>
 
           {active === 'merge' && <MergeTool />}
+          {active === 'image-to-pdf' && <ImageToPdfTool />}
           {active === 'split' && <SplitTool />}
           {active === 'remove-pages' && <RemovePagesTool />}
           {active === 'rotate' && <RotateTool />}
           {active === 'reorder' && <ReorderTool />}
-          {active === 'compress' && <ComingSoonTool />}
+          {active === 'compress' && <CompressTool />}
         </div>
       </div>
 

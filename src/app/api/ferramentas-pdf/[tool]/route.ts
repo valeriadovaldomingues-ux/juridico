@@ -3,7 +3,9 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import {
   FERRAMENTAS_PDF_ALLOWED_ROLES,
   createPdfDownloadResponse,
-  isFerramentasPdfReadOnlyTool,
+  imageToPdf,
+  isFerramentasPdfSupportedTool,
+  compressPdf,
   mergePdfs,
   removePagesPdf,
   reorderPdf,
@@ -24,10 +26,7 @@ function getFile(formData: FormData, key: string): File | null {
 }
 
 async function processTool(tool: string, formData: FormData): Promise<Response> {
-  if (!isFerramentasPdfReadOnlyTool(tool)) {
-    if (tool === 'compress') {
-      return NextResponse.json({ error: 'Comprimir PDF ainda não está disponível nesta fase.' }, { status: 501 })
-    }
+  if (!isFerramentasPdfSupportedTool(tool)) {
     return NextResponse.json({ error: 'Ferramenta inválida.' }, { status: 404 })
   }
 
@@ -70,6 +69,20 @@ async function processTool(tool: string, formData: FormData): Promise<Response> 
         throw new FerramentasPdfError('invalid_file', 'Envie um PDF válido.')
       }
       return createPdfDownloadResponse(await reorderPdf(file, getText(formData, 'ordem')))
+    }
+    case 'image-to-pdf': {
+      const files = formData.getAll('files').filter((item): item is File => item instanceof File)
+      if (files.length === 0) {
+        throw new FerramentasPdfError('invalid_file', 'Envie pelo menos uma imagem.')
+      }
+      return createPdfDownloadResponse(await imageToPdf(files))
+    }
+    case 'compress': {
+      const file = getFile(formData, 'file')
+      if (!file) {
+        throw new FerramentasPdfError('invalid_file', 'Envie um PDF válido.')
+      }
+      return createPdfDownloadResponse(await compressPdf(file))
     }
     default:
       return NextResponse.json({ error: 'Ferramenta inválida.' }, { status: 404 })

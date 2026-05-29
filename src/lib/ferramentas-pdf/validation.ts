@@ -1,7 +1,9 @@
 import { FerramentasPdfError } from './errors'
 
 export const MAX_PDF_FILE_BYTES = 25 * 1024 * 1024
+export const MAX_IMAGE_FILE_BYTES = 25 * 1024 * 1024
 export const MAX_MERGE_FILES = 20
+export const MAX_IMAGE_FILES = 20
 export const MAX_TOTAL_BYTES = 100 * 1024 * 1024
 
 function stripExtension(filename: string): string {
@@ -40,6 +42,51 @@ export function assertValidPdfFile(file: File, maxBytes = MAX_PDF_FILE_BYTES): v
     throw new FerramentasPdfError(
       'file_too_large',
       `O arquivo "${file.name}" excede o limite permitido de 25MB.`,
+    )
+  }
+}
+
+export function assertValidImageFile(file: File, maxBytes = MAX_IMAGE_FILE_BYTES): void {
+  const extension = file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/)?.[1]
+  const mimeType = file.type.toLowerCase()
+
+  if (!extension) {
+    throw new FerramentasPdfError('invalid_file', 'Envie apenas imagens JPG, JPEG ou PNG.')
+  }
+
+  if (mimeType !== 'image/jpeg' && mimeType !== 'image/png') {
+    throw new FerramentasPdfError('invalid_file', 'Envie apenas imagens JPG, JPEG ou PNG.')
+  }
+
+  if (file.size <= 0) {
+    throw new FerramentasPdfError('empty_file', 'A imagem está vazia.')
+  }
+
+  if (file.size > maxBytes) {
+    throw new FerramentasPdfError(
+      'file_too_large',
+      `A imagem "${file.name}" excede o limite permitido de 25MB.`,
+    )
+  }
+}
+
+export function assertImageUploadLimits(files: File[]): void {
+  if (files.length === 0) {
+    throw new FerramentasPdfError('invalid_file', 'Envie pelo menos uma imagem.')
+  }
+
+  if (files.length > MAX_IMAGE_FILES) {
+    throw new FerramentasPdfError(
+      'too_many_files',
+      `A conversão aceita no máximo ${MAX_IMAGE_FILES} imagens por vez.`,
+    )
+  }
+
+  const total = files.reduce((sum, file) => sum + file.size, 0)
+  if (total > MAX_TOTAL_BYTES) {
+    throw new FerramentasPdfError(
+      'file_too_large',
+      'O total das imagens ultrapassa o limite de 100MB por operação.',
     )
   }
 }

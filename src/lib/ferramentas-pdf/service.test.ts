@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { PDFDocument } from 'pdf-lib'
-import { mergePdfs, removePagesPdf, reorderPdf, rotatePdf, splitPdf } from './service'
+import { compressPdf, imageToPdf, mergePdfs, removePagesPdf, reorderPdf, rotatePdf, splitPdf } from './service'
 
 async function createPdf(pageCount: number, name: string, widths?: number[]) {
   const pdf = await PDFDocument.create()
@@ -10,6 +11,19 @@ async function createPdf(pageCount: number, name: string, widths?: number[]) {
   }
   const bytes = await pdf.save()
   return new File([bytes], name, { type: 'application/pdf' })
+}
+
+function createPngFile(name = 'imagem.png') {
+  const bytes = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3Z5UQAAAAASUVORK5CYII=',
+    'base64',
+  )
+  return new File([bytes], name, { type: 'image/png' })
+}
+
+function createJpegFile(name = 'imagem.jpg') {
+  const bytes = readFileSync('public/logo-pedv-tv.jpeg')
+  return new File([bytes], name, { type: 'image/jpeg' })
 }
 
 afterEach(() => {
@@ -59,5 +73,32 @@ describe('Ferramentas PDF service', () => {
 
     expect(result.pageCount).toBe(4)
     expect(widths).toEqual([220, 200, 210, 230])
+  })
+
+  it('converte imagens em pdf com uma pagina por imagem', async () => {
+    const result = await imageToPdf([createJpegFile('a.jpg'), createJpegFile('b.jpeg'), createPngFile('c.png')])
+    const loaded = await PDFDocument.load(result.bytes)
+
+    expect(result.pageCount).toBe(3)
+    expect(loaded.getPageCount()).toBe(3)
+  })
+
+  it('comprime pdf localmente sem chamar serviço externo', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    const result = await compressPdf(await createPdf(2, 'origem.pdf'))
+    const loaded = await PDFDocument.load(result.bytes)
+
+    expect(result.pageCount).toBe(2)
+    expect(loaded.getPageCount()).toBe(2)
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(result.notice).toBeTruthy()
+  })
+
+  it('rejeita imagem corrompida ao converter para pdf', async () => {
+    await expect(imageToPdf([new File([new Uint8Array([1, 2, 3])], 'ruim.jpg', { type: 'image/jpeg' })])).rejects.toThrow('arquivo pode estar corrompido')
+  })
+
+  it('rejeita pdf corrompido ao comprimir', async () => {
+    await expect(compressPdf(new File([new Uint8Array([1, 2, 3])], 'ruim.pdf', { type: 'application/pdf' }))).rejects.toThrow('corrompido')
   })
 })

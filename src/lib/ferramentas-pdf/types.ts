@@ -17,6 +17,7 @@ export type FerramentasPdfToolName =
   | 'remove-pages'
   | 'rotate'
   | 'reorder'
+  | 'image-to-pdf'
   | 'compress'
 
 export type FerramentasPdfReadOnlyToolName = Exclude<FerramentasPdfToolName, 'compress'>
@@ -62,6 +63,10 @@ export interface FerramentasPdfActionResult {
   bytes: Uint8Array
   filename: string
   pageCount: number
+  notice?: string | null
+  originalBytes?: number
+  optimizedBytes?: number
+  usedOriginal?: boolean
 }
 
 export interface FerramentasPdfRequestBase {
@@ -97,9 +102,15 @@ export interface FerramentasPdfReorderRequest extends FerramentasPdfRequestBase 
   ordem: string
 }
 
+export interface FerramentasPdfImageToPdfRequest extends FerramentasPdfRequestBase {
+  tool: 'image-to-pdf'
+  files: File[]
+}
+
 export type FerramentasPdfRequest =
   | FerramentasPdfMergeRequest
   | FerramentasPdfSplitRequest
   | FerramentasPdfRemovePagesRequest
   | FerramentasPdfRotateRequest
   | FerramentasPdfReorderRequest
+  | FerramentasPdfImageToPdfRequest
