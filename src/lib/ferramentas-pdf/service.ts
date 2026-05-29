@@ -142,7 +142,10 @@ export async function reorderPdf(file: File, ordem: string): Promise<Ferramentas
   return finishPdf(output, buildDownloadFilename(sourceFilename, '-reorganizado'))
 }
 
-async function embedImageDocument(file: File): Promise<{
+async function embedImageDocument(
+  document: PDFDocument,
+  file: File,
+): Promise<{
   width: number
   height: number
   embed: Awaited<ReturnType<PDFDocument['embedJpg']>>
@@ -151,7 +154,6 @@ async function embedImageDocument(file: File): Promise<{
 
   try {
     const bytes = new Uint8Array(await file.arrayBuffer())
-    const document = await PDFDocument.create()
     const type = file.type.toLowerCase()
 
     if (type === 'image/jpeg') {
@@ -180,7 +182,7 @@ export async function imageToPdf(files: File[]): Promise<FerramentasPdfActionRes
 
   const output = await PDFDocument.create()
   for (const file of files) {
-    const { width, height, embed } = await embedImageDocument(file)
+    const { width, height, embed } = await embedImageDocument(output, file)
     const page = output.addPage([width, height])
     page.drawImage(embed, {
       x: 0,

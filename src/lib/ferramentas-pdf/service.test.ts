@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, PDFDict, PDFName } from 'pdf-lib'
 import { compressPdf, imageToPdf, mergePdfs, removePagesPdf, reorderPdf, rotatePdf, splitPdf } from './service'
 
 async function createPdf(pageCount: number, name: string, widths?: number[]) {
@@ -78,9 +78,12 @@ describe('Ferramentas PDF service', () => {
   it('converte imagens em pdf com uma pagina por imagem', async () => {
     const result = await imageToPdf([createJpegFile('a.jpg'), createJpegFile('b.jpeg'), createPngFile('c.png')])
     const loaded = await PDFDocument.load(result.bytes)
+    const resources = loaded.getPages()[0].node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)
 
     expect(result.pageCount).toBe(3)
     expect(loaded.getPageCount()).toBe(3)
+    expect(resources).toBeTruthy()
+    expect(resources?.keys().length).toBeGreaterThan(0)
   })
 
   it('comprime pdf localmente sem chamar serviço externo', async () => {
