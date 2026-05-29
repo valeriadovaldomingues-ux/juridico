@@ -7,6 +7,8 @@ import {
   Search, ChevronRight, User, Building2, SlidersHorizontal, X,
   Phone, Mail, MessageCircle, Scale,
 } from 'lucide-react'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type { Cliente, Profile, TipoContato } from '@/types'
 
 const TIPO_LABELS: Record<TipoContato, string> = {
@@ -142,16 +144,24 @@ export default function ClientesTable({
               ))}
             </select>
 
-            <select
-              value={responsavel}
-              onChange={(e) => setResponsavel(e.target.value)}
-              className="px-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 text-[var(--color-ink)]"
-            >
-              <option value="">Todos os responsáveis</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
+            <div className="min-w-[260px]">
+              <SearchableCombobox
+                value={responsavel}
+                onChange={(value) => setResponsavel(value)}
+                loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                selectedOption={profiles.find((p) => p.id === responsavel) ? {
+                  value: responsavel,
+                  label: profiles.find((p) => p.id === responsavel)?.nome ?? '',
+                  description: null,
+                } : null}
+                placeholder="Todos os responsáveis"
+                searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar responsáveis."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
+            </div>
 
             <input
               value={cpf}

@@ -9,6 +9,8 @@ import {
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import type { UserRole } from '@/types'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -35,8 +37,6 @@ interface Lancamento {
 
 interface Props {
   lancamentos: Lancamento[]
-  clientes:    ClienteOpcao[]
-  processos:   ProcessoOpcao[]
   role:        UserRole
 }
 
@@ -93,7 +93,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, clientes, processos, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, role }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const [aba,         setAba]         = useState<Aba>('lancamentos')
   const [modalAberto, setModalAberto] = useState(false)
@@ -377,14 +377,20 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
                 />
               )}
 
-              <SelectFiltro
-                value={filtCliente}
-                onChange={setFiltCliente}
-                options={[
-                  { value: '', label: 'Todos os clientes' },
-                  ...clientes.map(c => ({ value: c.id, label: c.nome })),
-                ]}
-              />
+              <div className="min-w-[240px] max-w-sm flex-1">
+                <SearchableCombobox
+                  value={filtCliente}
+                  onChange={(value) => setFiltCliente(value)}
+                  loadOptions={async (query) => fetchClienteOptions(query, 10)}
+                  placeholder="Todos os clientes"
+                  searchPlaceholder="Buscar cliente…"
+                  helperText="Digite ao menos 2 caracteres."
+                  emptyText="Digite para buscar clientes."
+                  noResultsText="Nenhum resultado encontrado."
+                  allowClear
+                  clearLabel="Todos os clientes"
+                />
+              </div>
 
               <span className="text-[11px] text-[#9ca3af] ml-auto shrink-0">
                 {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
@@ -528,8 +534,6 @@ export default function FinanceiroPage({ lancamentos: inicial, clientes, process
                 centro_custo: editando.centro_custo ?? '',
               }
             : null}
-          clientes={clientes}
-          processos={processos}
           onSalvar={handleSalvar}
           onFechar={fecharModal}
         />
@@ -641,4 +645,3 @@ function RelatoriosView({ metricas }: { metricas: Metricas }) {
     </div>
   )
 }
-

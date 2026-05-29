@@ -6,6 +6,8 @@ import {
   KanbanSquare, Clock, User, ArrowRight, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type { AnalisePublicacao } from '@/lib/ai/prompts'
 import type { KanbanPrioridade, KanbanStatus } from '@/types/kanban'
 
@@ -330,12 +332,22 @@ export default function ProvidenciaModal({
                 <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">
                   <User size={9} className="inline mr-1" /> Responsável
                 </label>
-                <select value={responsavelId} onChange={e => setResponsavelId(e.target.value)} className={inputCls}>
-                  <option value="">— Sem responsável —</option>
-                  {profiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </select>
+                <SearchableCombobox
+                  value={responsavelId}
+                  selectedOption={profiles.find(p => p.id === responsavelId) ? {
+                    value: responsavelId,
+                    label: profiles.find(p => p.id === responsavelId)?.nome ?? '',
+                    description: null,
+                  } : null}
+                  onChange={(value) => setResponsavelId(value)}
+                  loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                  placeholder="— Sem responsável —"
+                  searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                  helperText="Digite ao menos 2 caracteres."
+                  emptyText="Digite para buscar responsáveis."
+                  noResultsText="Nenhum resultado encontrado."
+                  allowClear
+                />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Prioridade</label>

@@ -8,34 +8,16 @@ export default async function FinanceiroRoute() {
   const { profile } = await requireRole(['socio'])
   const supabase = await createClient()
 
-  const [
-    { data: lancamentos },
-    { data: clientes },
-    { data: processos },
-  ] = await Promise.all([
-    supabase
-      .from('financeiro_lancamentos')
-      .select('*, cliente:clientes(id, nome), processo:processos(id, numero_processo, titulo)')
-      .order('vencimento', { ascending: false })
-      .limit(500),
-    supabase
-      .from('clientes')
-      .select('id, nome')
-      .eq('ativo', true)
-      .order('nome'),
-    supabase
-      .from('processos')
-      .select('id, numero_processo, titulo')
-      .in('status', ['ativo', 'suspenso'])
-      .order('titulo'),
-  ])
+  const { data: lancamentos } = await supabase
+    .from('financeiro_lancamentos')
+    .select('*, cliente:clientes(id, nome), processo:processos(id, numero_processo, titulo)')
+    .order('vencimento', { ascending: false })
+    .limit(500)
 
   return (
     <div className="internal-page">
       <FinanceiroPage
         lancamentos={(lancamentos ?? []) as any}
-        clientes={(clientes ?? []) as any}
-        processos={(processos ?? []) as any}
         role={profile.role}
       />
     </div>

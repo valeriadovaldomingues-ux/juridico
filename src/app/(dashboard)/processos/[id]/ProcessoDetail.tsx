@@ -103,13 +103,11 @@ export default function ProcessoDetail({
   processo,
   partes: partesIniciais,
   prazos,
-  clientes,
   agendaItems = [],
 }: {
   processo: any
   partes: ParteProcesso[]
   prazos: Prazo[]
-  clientes: { id: string; nome: string }[]
   agendaItems?: AgendaItemSimple[]
 }) {
   const [editing, setEditing] = useState(false)
@@ -129,7 +127,6 @@ export default function ProcessoDetail({
         </div>
         <ProcessoForm
           processo={processo}
-          clientes={clientes}
           parteContraria={partesIniciais[0] ?? null}
           onSuccess={() => { setEditing(false); router.refresh() }}
         />

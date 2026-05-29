@@ -6,6 +6,8 @@ import {
   CheckCircle, ChevronRight, Trash2, CalendarDays,
   ExternalLink, ArrowRight,
 } from 'lucide-react'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type {
   Lead, AtendimentoComercial, PropostaComercial,
   LeadOrigem, AtendimentoTipo, TipoContratacao,
@@ -506,14 +508,22 @@ export default function LeadModal({ lead, profiles, currentUserId, onClose, onSa
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
                       <User size={11} className="inline mr-1" />Responsável
                     </label>
-                    <select
+                    <SearchableCombobox
                       value={responsavelId}
-                      onChange={e => setResponsavelId(e.target.value)}
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D5F60]/30"
-                    >
-                      <option value="">Sem responsável</option>
-                      {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                    </select>
+                      selectedOption={profiles.find(p => p.id === responsavelId) ? {
+                        value: responsavelId,
+                        label: profiles.find(p => p.id === responsavelId)?.nome ?? '',
+                        description: null,
+                      } : null}
+                      onChange={(value) => setResponsavelId(value)}
+                      loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                      placeholder="Sem responsável"
+                      searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                      helperText="Digite ao menos 2 caracteres."
+                      emptyText="Digite para buscar responsáveis."
+                      noResultsText="Nenhum resultado encontrado."
+                      allowClear
+                    />
                   </div>
                   {!isNew && (
                     <div>

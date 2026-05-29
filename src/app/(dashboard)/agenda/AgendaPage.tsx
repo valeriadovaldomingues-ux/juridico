@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, List, CalendarDays, AlarmClock, Search, Filter, FileUp, Clock3, DollarSign, BadgeInfo } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchProcessoOptions } from '@/lib/search/remote'
 import {
-  AgendaItem, AgendaForm, Processo, Cliente, ViewMode,
+  AgendaItem, AgendaForm, ViewMode,
   toLocalISODate, emptyForm, getWeekStart,
 } from './agenda-types'
 import AgendaModal from './AgendaModal'
@@ -26,8 +28,6 @@ import {
 
 interface Props {
   initialItems: AgendaItem[]
-  processos: Processo[]
-  clientes: Cliente[]
   currentUserId: string
   currentUserRole: UserRole
   canDelete: boolean
@@ -39,8 +39,6 @@ interface Props {
 
 export default function AgendaPage({
   initialItems,
-  processos,
-  clientes,
   currentUserId,
   currentUserRole,
   canDelete,
@@ -180,29 +178,15 @@ export default function AgendaPage({
     }
 
     if (editId) {
-      // Build optimistic relations
-      const proc = processos.find(p => p.id === form.processo_id)
-      const cli  = clientes.find(c => c.id === form.cliente_id)
-
-      setItems(prev => prev.map(i => i.id === editId ? {
-        ...i,
-        titulo:      payload.titulo,
-        descricao:   payload.descricao    ?? undefined,
-        tipo:        payload.tipo,
-        status:      payload.status,
-        data_inicio: payload.data_inicio,
-        hora_inicio: payload.hora_inicio  ?? undefined,
-        data_fim:    payload.data_fim     ?? undefined,
-        hora_fim:    payload.hora_fim     ?? undefined,
-        prazo_final: payload.prazo_final  ?? undefined,
-        prioridade:  payload.prioridade,
-        processo_id: payload.processo_id  ?? undefined,
-        cliente_id:  payload.cliente_id   ?? undefined,
-        responsavel: payload.responsavel  ?? undefined,
-        processo:    proc ? { titulo: proc.titulo } : undefined,
-        cliente:     cli  ? { nome:   cli.nome   } : undefined,
-      } : i))
-      await supabase.from('agenda_items').update(payload).eq('id', editId)
+      const { data } = await supabase
+        .from('agenda_items')
+        .update(payload)
+        .eq('id', editId)
+        .select('*, processo:processos(titulo), cliente:clientes(nome)')
+        .single()
+      if (data) {
+        setItems(prev => prev.map(i => i.id === editId ? (data as AgendaItem) : i))
+      }
     } else {
       const { data } = await supabase
         .from('agenda_items')
@@ -579,14 +563,20 @@ export default function AgendaPage({
         {showExtraFilters && (
           <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[var(--color-border)]">
             {/* Processo */}
-            <select
-              value={filterProcesso}
-              onChange={e => setFilterProcesso(e.target.value)}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors max-w-[220px]"
-            >
-              <option value="">Todos os processos</option>
-              {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
+            <div className="min-w-[240px] max-w-sm flex-1">
+              <SearchableCombobox
+                value={filterProcesso}
+                onChange={(value) => setFilterProcesso(value)}
+                loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+                placeholder="Todos os processos"
+                searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar processos."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+                clearLabel="Todos os processos"
+              />
+            </div>
 
             {/* Responsável */}
             <input
@@ -705,8 +695,6 @@ export default function AgendaPage({
           setForm={setForm}
           isEdit={!!editId}
           agendaItem={currentAgendaItem}
-          processos={processos}
-          clientes={clientes}
           onSave={handleSave}
           onDelete={editId ? () => {
             const current = items.find(i => i.id === editId)

@@ -31,7 +31,7 @@ interface DocGerado {
   created_at:  string
   updated_at:  string
   modelo:      { nome: string } | null
-  processo:    { id: string; titulo: string; numero_processo: string | null } | null
+  processo:    { id: string; titulo: string; numero_processo: string | null; advogado_responsavel?: { id: string; nome: string } | null } | null
 }
 
 interface ProcessoItem {
@@ -45,9 +45,13 @@ interface ProcessoItem {
   advogado_responsavel_id: string | null
   cliente:                 { nome: string } | null
   partes_processo:         { pessoa_nome: string; tipo_parte: string }[]
+  advogado_responsavel?:   { id: string; nome: string } | null
 }
 
-interface ProfileItem { id: string; nome: string }
+interface ProfileItem {
+  id: string
+  nome: string
+}
 
 interface Props {
   modelos:   DocModelo[]

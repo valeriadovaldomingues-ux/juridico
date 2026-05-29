@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { createClient } from '@/lib/supabase/client'
 import type { ParteProcesso } from '@/types'
+import { buildClienteLookupDescription } from '@/lib/processos/search'
 
 type TipoParte = 'autor' | 'reu' | 'terceiro' | 'outro'
 
@@ -41,12 +43,10 @@ interface ParteContrariaForm {
 
 export default function ProcessoForm({
   processo,
-  clientes,
   parteContraria,
   onSuccess,
 }: {
   processo?: any
-  clientes: { id: string; nome: string }[]
   /** Parte contrária pré-carregada (na edição). Apenas a primeira é exibida aqui;
    *  as demais são gerenciadas na tela de detalhes do processo. */
   parteContraria?: ParteProcesso | null
@@ -248,14 +248,41 @@ export default function ProcessoForm({
             <p className="text-[11px] font-semibold text-[var(--color-copper)] uppercase tracking-[0.12em] mb-2">
               Cliente Principal
             </p>
-            <select
+            <SearchableCombobox
               value={form.cliente_id}
-              onChange={(e) => handleChange('cliente_id', e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Selecionar cliente...</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
+              selectedOption={processo?.cliente?.id ? {
+                value: processo.cliente.id,
+                label: processo.cliente.nome,
+                description: buildClienteLookupDescription(processo.cliente),
+              } : null}
+              onChange={(value) => handleChange('cliente_id', value)}
+              loadOptions={async (query) => {
+                const params = new URLSearchParams({ q: query, limit: '10' })
+                const res = await fetch(`/api/clientes/busca?${params.toString()}`)
+                if (!res.ok) return []
+                const data = await res.json()
+                return (data as Array<{
+                  id: string
+                  nome: string
+                  cpf_cnpj: string | null
+                  telefone: string | null
+                  celular: string | null
+                  email: string | null
+                }>).map(cliente => ({
+                  value: cliente.id,
+                  label: cliente.nome,
+                  description: buildClienteLookupDescription(cliente),
+                }))
+              }}
+              placeholder="Selecionar cliente..."
+              searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar clientes."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+              createHref="/clientes/novo"
+              createLabel="Cadastrar novo"
+            />
           </div>
 
           {/* Parte contrária principal */}

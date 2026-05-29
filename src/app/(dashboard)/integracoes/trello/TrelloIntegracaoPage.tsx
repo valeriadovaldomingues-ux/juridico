@@ -6,6 +6,8 @@ import {
   Loader2, RefreshCw, Unlink, Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type { TrelloIntegration, TrelloList, TrelloMember, TrelloListMapping, TrelloMemberMapping, TrelloSyncLog } from '@/types/trello'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -35,7 +37,7 @@ const selectCls = inputCls
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface Profile { id: string; nome: string }
+interface Profile { id: string; nome: string; role?: string | null }
 
 interface Props {
   initialIntegration:    TrelloIntegration | null
@@ -403,14 +405,24 @@ export default function TrelloIntegracaoPage({
                         <p className="text-[10px] text-[#9ca3af]">@{member.username}</p>
                       </div>
                       <span className="text-[#9ca3af] text-[12px]">→</span>
-                      <select
-                        value={memberMap[member.id] ?? ''}
-                        onChange={e => setMemberMap(prev => ({ ...prev, [member.id]: e.target.value }))}
-                        className={selectCls}
-                      >
-                        <option value="">— Sem vínculo —</option>
-                        {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                      </select>
+                      <div className="min-w-[260px]">
+                        <SearchableCombobox
+                          value={memberMap[member.id] ?? ''}
+                          onChange={(value) => setMemberMap(prev => ({ ...prev, [member.id]: value }))}
+                          loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                          selectedOption={profiles.find(p => p.id === (memberMap[member.id] ?? '')) ? {
+                            value: memberMap[member.id] ?? '',
+                            label: profiles.find(p => p.id === (memberMap[member.id] ?? ''))?.nome ?? '',
+                            description: profiles.find(p => p.id === (memberMap[member.id] ?? ''))?.role ?? null,
+                          } : null}
+                          placeholder="— Sem vínculo —"
+                          searchPlaceholder="Buscar membro por nome, e-mail ou função"
+                          helperText="Digite ao menos 2 caracteres."
+                          emptyText="Digite para buscar usuários."
+                          noResultsText="Nenhum resultado encontrado."
+                          allowClear
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

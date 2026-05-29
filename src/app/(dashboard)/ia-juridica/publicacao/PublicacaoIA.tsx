@@ -11,6 +11,8 @@ import {
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type { AnalisePublicacao } from '@/lib/ai/prompts'
 import type { KanbanPrioridade } from '@/types/kanban'
 import ProvidenciaModal from '@/components/kanban/ProvidenciaModal'
@@ -581,18 +583,26 @@ export default function PublicacaoIA({
               </button>
               {mostrarVincular && (
                 <div className="mt-2 relative">
-                  <select
+                  <SearchableCombobox
                     value={processoVinculadoId}
-                    onChange={e => { setProcessoVinculadoId(e.target.value); setAutoVinculado(false) }}
-                    className="w-full px-3 py-2 text-[12px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-violet-400 text-[#374151] transition-all appearance-none"
-                  >
-                    <option value="">— Sem vínculo —</option>
-                    {processos.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.numero_processo ? `${p.numero_processo} — ` : ''}{p.titulo}
-                      </option>
-                    ))}
-                  </select>
+                    selectedOption={processoVinculado ? {
+                      value: processoVinculado.id,
+                      label: processoVinculado.numero_processo ? `${processoVinculado.numero_processo} — ${processoVinculado.titulo}` : processoVinculado.titulo,
+                      description: null,
+                    } : null}
+                    onChange={(value) => { setProcessoVinculadoId(value); setAutoVinculado(false) }}
+                    options={processos.map(p => ({
+                      value: p.id,
+                      label: p.numero_processo ? `${p.numero_processo} — ${p.titulo}` : p.titulo,
+                      description: null,
+                    }))}
+                    placeholder="— Sem vínculo —"
+                    searchPlaceholder="Buscar processo por número ou título"
+                    helperText="Digite ao menos 2 caracteres."
+                    emptyText="Digite para buscar processos."
+                    noResultsText="Nenhum resultado encontrado."
+                    allowClear
+                  />
                 </div>
               )}
             </div>
@@ -886,14 +896,22 @@ export default function PublicacaoIA({
                       {/* Responsável */}
                       <div className="flex items-center gap-2">
                         <User size={11} className="text-[#7a8899] shrink-0" />
-                        <select
+                        <SearchableCombobox
                           value={responsavelDelegacao}
-                          onChange={e => setResponsavelDelegacao(e.target.value)}
-                          className="flex-1 px-3 py-2 text-[12px] bg-white border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] text-[#374151] transition-all"
-                        >
-                          <option value="">— Sem responsável —</option>
-                          {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                        </select>
+                          selectedOption={profiles.find(p => p.id === responsavelDelegacao) ? {
+                            value: responsavelDelegacao,
+                            label: profiles.find(p => p.id === responsavelDelegacao)?.nome ?? '',
+                            description: null,
+                          } : null}
+                          onChange={(value) => setResponsavelDelegacao(value)}
+                          loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                          placeholder="— Sem responsável —"
+                          searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                          helperText="Digite ao menos 2 caracteres."
+                          emptyText="Digite para buscar responsáveis."
+                          noResultsText="Nenhum resultado encontrado."
+                          allowClear
+                        />
                       </div>
 
                       {/* Botões */}

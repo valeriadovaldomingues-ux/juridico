@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface ClienteOpcao  { id: string; nome: string }
-interface ProcessoOpcao { id: string; numero_processo: string | null; titulo: string }
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import {
+  fetchClienteOptions,
+  fetchProcessoOptions,
+} from '@/lib/search/remote'
 
 interface LancamentoForm {
   id?:          string
@@ -35,14 +37,15 @@ const FORM_VAZIO: LancamentoForm = {
 }
 
 interface Props {
-  lancamento:  Partial<LancamentoForm> | null
-  clientes:    ClienteOpcao[]
-  processos:   ProcessoOpcao[]
+  lancamento:  (Partial<LancamentoForm> & {
+    cliente?: { id: string; nome: string; cpf_cnpj?: string | null; telefone?: string | null; celular?: string | null; email?: string | null } | null
+    processo?: { id: string; numero_processo: string | null; titulo: string; description?: string | null } | null
+  }) | null
   onSalvar:    (data: LancamentoForm) => Promise<string | null>
   onFechar:    () => void
 }
 
-export default function LancamentoModal({ lancamento, clientes, processos, onSalvar, onFechar }: Props) {
+export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Props) {
   const [form,    setForm]    = useState<LancamentoForm>(FORM_VAZIO)
   const [loading, setLoading] = useState(false)
   const [erro,    setErro]    = useState('')
@@ -209,33 +212,45 @@ export default function LancamentoModal({ lancamento, clientes, processos, onSal
           {/* Cliente */}
           <div>
             <label className={labelCls}>Cliente</label>
-            <select
+            <SearchableCombobox
               value={form.cliente_id}
-              onChange={e => { set('cliente_id', e.target.value); set('processo_id', '') }}
-              className={inputCls}
-            >
-              <option value="">— Sem cliente —</option>
-              {clientes.map(c => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
+              selectedOption={lancamento?.cliente?.id ? {
+                value: lancamento.cliente.id,
+                label: lancamento.cliente.nome,
+                description: [lancamento.cliente.cpf_cnpj, lancamento.cliente.telefone ?? lancamento.cliente.celular, lancamento.cliente.email]
+                  .filter(Boolean)
+                  .join(' · ') || null,
+              } : null}
+              onChange={(value) => { set('cliente_id', value); set('processo_id', '') }}
+              loadOptions={async (query) => fetchClienteOptions(query, 10)}
+              placeholder="— Sem cliente —"
+              searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar clientes."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
 
           {/* Processo */}
           <div>
             <label className={labelCls}>Processo</label>
-            <select
+            <SearchableCombobox
               value={form.processo_id}
-              onChange={e => set('processo_id', e.target.value)}
-              className={inputCls}
-            >
-              <option value="">— Sem processo —</option>
-              {processos.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.numero_processo ? `${p.numero_processo} — ` : ''}{p.titulo}
-                </option>
-              ))}
-            </select>
+              selectedOption={lancamento?.processo?.id ? {
+                value: lancamento.processo.id,
+                label: lancamento.processo.numero_processo ? `${lancamento.processo.numero_processo} — ${lancamento.processo.titulo}` : lancamento.processo.titulo,
+                description: lancamento.processo.description ?? lancamento.processo.numero_processo ?? null,
+              } : null}
+              onChange={(value) => set('processo_id', value)}
+              loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+              placeholder="— Sem processo —"
+              searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar processos."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
 
           {/* Centro de custo */}

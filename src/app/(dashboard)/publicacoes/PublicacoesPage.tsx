@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import ProvidenciaModal from '@/components/kanban/ProvidenciaModal'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { createClient } from '@/lib/supabase/client'
 import {
   AlertTriangle, CheckCircle2, XCircle, Search,
@@ -17,6 +18,7 @@ import {
   type DetectionResult,
 } from '@/lib/monitoramento/prazo-detector'
 import { calcularPrazoFinal } from '@/lib/monitoramento/prazo-util'
+import { fetchProcessoOptions, fetchUsuarioOptions } from '@/lib/search/remote'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,10 @@ interface Publicacao {
 
 interface Processo { id: string; titulo: string; numero_processo?: string }
 interface Advogado { id: string; nome_completo: string; oab_numero: string; oab_uf: string }
+
+function buildProcessoLabel(processo: Processo) {
+  return processo.numero_processo ? `${processo.numero_processo} — ${processo.titulo}` : processo.titulo
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -258,17 +264,25 @@ function QuickActions({
         className="flex items-center gap-2 flex-wrap"
         onClick={e => e.stopPropagation()}
       >
-        <select
-          value={processoSel}
-          onChange={e => setProcessoSel(e.target.value)}
-          className="text-[11px] rounded-lg border border-[#E2DDD8] bg-white px-2 py-1 focus:outline-none focus:border-[#0F3D3E] max-w-[180px]"
-          autoFocus
-        >
-          <option value="">— Selecione —</option>
-          {processos.map(p => (
-            <option key={p.id} value={p.id}>{p.titulo}</option>
-          ))}
-        </select>
+        <div className="min-w-[240px]">
+          <SearchableCombobox
+            value={processoSel}
+            onChange={(value) => setProcessoSel(value)}
+            loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+            selectedOption={processos.find(p => p.id === processoSel) ? {
+              value: processoSel,
+              label: buildProcessoLabel(processos.find(p => p.id === processoSel)!),
+              description: null,
+            } : null}
+            placeholder="— Selecione —"
+            searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+            helperText="Digite ao menos 2 caracteres."
+            emptyText="Digite para buscar processos."
+            noResultsText="Nenhum resultado encontrado."
+            allowClear
+            className="text-[11px]"
+          />
+        </div>
         <button
           onClick={vincular}
           disabled={!processoSel || saving}
@@ -605,16 +619,22 @@ function PublicacaoModal({
           {vinculando ? (
             <div className="space-y-2 p-3 bg-[#F3F1EE] rounded-xl border border-[#E2DDD8]">
               <p className="text-[12px] font-semibold text-[#0f1923]">Vincular ao processo</p>
-              <select
+              <SearchableCombobox
                 value={processoSelecionado}
-                onChange={e => setProcessoSelecionado(e.target.value)}
-                className="w-full rounded-xl border border-[#E2DDD8] bg-white px-3 py-2 text-[13px] focus:outline-none focus:border-[#0F3D3E]"
-              >
-                <option value="">— Selecione um processo —</option>
-                {processos.map(p => (
-                  <option key={p.id} value={p.id}>{p.titulo}{p.numero_processo ? ` · ${p.numero_processo}` : ''}</option>
-                ))}
-              </select>
+                onChange={(value) => setProcessoSelecionado(value)}
+                loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+                selectedOption={processos.find(p => p.id === processoSelecionado) ? {
+                  value: processoSelecionado,
+                  label: buildProcessoLabel(processos.find(p => p.id === processoSelecionado)!),
+                  description: null,
+                } : null}
+                placeholder="— Selecione um processo —"
+                searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar processos."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
               <div className="flex gap-2">
                 <button onClick={() => setVinculando(false)} className="flex-1 py-2 rounded-xl border border-[#E2DDD8] text-[12px] text-[#7a8899] hover:bg-[#F0F6F6]">Cancelar</button>
                 <button onClick={salvarVinculo} disabled={!processoSelecionado || salvando} className="flex-1 py-2 rounded-xl bg-[#1D5F60] text-white text-[12px] font-semibold hover:bg-[#145A5B] disabled:opacity-40">
@@ -932,10 +952,22 @@ function AgendaQuickModal({
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Processo</label>
-            <select className={inputCls} value={processoId} onChange={e => setProcessoId(e.target.value)}>
-              <option value="">— Nenhum —</option>
-              {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
+            <SearchableCombobox
+              value={processoId}
+              onChange={(value) => setProcessoId(value)}
+              loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+              selectedOption={processos.find(p => p.id === processoId) ? {
+                value: processoId,
+                label: buildProcessoLabel(processos.find(p => p.id === processoId)!),
+                description: null,
+              } : null}
+              placeholder="— Nenhum —"
+              searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar processos."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
         </div>
         <div className="px-6 pb-5 flex gap-2">
@@ -1045,10 +1077,22 @@ function NovaPublicacaoModal({
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Vincular processo</label>
-            <select className={inputCls} value={processoId} onChange={e => setProcessoId(e.target.value)}>
-              <option value="">— Auto-detectar pelo número —</option>
-              {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
+            <SearchableCombobox
+              value={processoId}
+              onChange={(value) => setProcessoId(value)}
+              loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+              selectedOption={processos.find(p => p.id === processoId) ? {
+                value: processoId,
+                label: buildProcessoLabel(processos.find(p => p.id === processoId)!),
+                description: null,
+              } : null}
+              placeholder="— Auto-detectar pelo número —"
+              searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar processos."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
           {erro && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
           <div className="flex gap-2 pt-1">
@@ -1072,7 +1116,6 @@ function KanbanFromPubModal({
   processos: Processo[]
   onClose:   () => void
 }) {
-  const [profiles,    setProfiles]    = useState<{ id: string; nome: string }[]>([])
   const [titulo,      setTitulo]      = useState(`Publicação: ${pub.numero_processo ?? getTextoPublicacao(pub)?.slice(0, 50) ?? ''}`.trim())
   const [responsavel, setResponsavel] = useState('')
   const [prioridade,  setPrioridade]  = useState('media')
@@ -1080,23 +1123,6 @@ function KanbanFromPubModal({
   const [saving,      setSaving]      = useState(false)
   const [done,        setDone]        = useState(false)
   const [erro,        setErro]        = useState('')
-
-  useEffect(() => {
-    fetch('/api/kanban-tasks')
-      .then(r => r.json())
-      .then(() => {})
-      .catch(() => {})
-    // Buscar profiles via API de kanban (GET retorna tasks mas não profiles)
-    // Usamos createClient no cliente
-    import('@/lib/supabase/client').then(({ createClient }) => {
-      createClient()
-        .from('profiles')
-        .select('id, nome')
-        .eq('ativo', true)
-        .order('nome')
-        .then(({ data }) => { if (data) setProfiles(data) })
-    })
-  }, [])
 
   async function enviar() {
     if (!titulo.trim()) { setErro('Título obrigatório'); return }
@@ -1149,10 +1175,17 @@ function KanbanFromPubModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Responsável</label>
-                <select value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls}>
-                  <option value="">— Sem responsável —</option>
-                  {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
+                <SearchableCombobox
+                  value={responsavel}
+                  onChange={(value) => setResponsavel(value)}
+                  loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                  placeholder="— Sem responsável —"
+                  searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                  helperText="Digite ao menos 2 caracteres."
+                  emptyText="Digite para buscar responsáveis."
+                  noResultsText="Nenhum resultado encontrado."
+                  allowClear
+                />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Prioridade</label>
@@ -1543,11 +1576,24 @@ export default function PublicacoesPage({
             <input placeholder="Nome pesquisado…" value={fAdvogado}
               onChange={e => { setFAdvogado(e.target.value); resetPage() }}
               className="rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors w-44" />
-            <select value={fProcesso} onChange={e => { setFProcesso(e.target.value); resetPage() }}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 max-w-[200px]">
-              <option value="">Todos os processos</option>
-              {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
+            <div className="min-w-[240px] max-w-[320px]">
+              <SearchableCombobox
+                value={fProcesso}
+                onChange={(value) => { setFProcesso(value); resetPage() }}
+                loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+                selectedOption={processos.find(p => p.id === fProcesso) ? {
+                  value: fProcesso,
+                  label: buildProcessoLabel(processos.find(p => p.id === fProcesso)!),
+                  description: null,
+                } : null}
+                placeholder="Todos os processos"
+                searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar processos."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-[var(--color-border)]">

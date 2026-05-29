@@ -17,24 +17,21 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
   const [
     { data: partes },
     { data: prazos },
-    { data: clientes },
     { data: agendaItems },
   ] = await Promise.all([
     supabase.from('partes_processo').select('*').eq('processo_id', id),
     supabase.from('prazos').select('*').eq('processo_id', id).order('data_final', { ascending: true }),
-    supabase.from('clientes').select('id, nome').eq('ativo', true).order('nome'),
     supabase.from('agenda_items').select('*').eq('processo_id', id).order('data_inicio', { ascending: true }),
   ])
 
   return (
     <div className="internal-page max-w-7xl">
-      <ProcessoDetail
-        processo={processo}
-        partes={partes ?? []}
-        prazos={prazos ?? []}
-        clientes={clientes ?? []}
-        agendaItems={agendaItems ?? []}
-      />
+        <ProcessoDetail
+          processo={processo}
+          partes={partes ?? []}
+          prazos={prazos ?? []}
+          agendaItems={agendaItems ?? []}
+        />
     </div>
   )
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2, Clock3, DollarSign, FileText, BadgeInfo } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchClienteOptions, fetchProcessoOptions } from '@/lib/search/remote'
 import type { AgendaItem } from '../agenda-types'
 import type { AgendaTimeEntry, UserRole } from '@/types'
 import {
@@ -33,8 +35,6 @@ interface FormState {
 interface Props {
   agendaItem: AgendaItem | null
   timeEntries: AgendaTimeEntry[]
-  clientes: Array<{ id: string; nome: string }>
-  processos: Array<{ id: string; titulo: string }>
   currentUserId: string
   currentUserRole: UserRole
   canManage: boolean
@@ -85,8 +85,6 @@ function buildFormFromEntry(entry: AgendaTimeEntry, agendaItem: AgendaItem | nul
 export default function AgendaTimeEntriesSection({
   agendaItem,
   timeEntries,
-  clientes,
-  processos,
   currentUserId,
   currentUserRole,
   canManage,
@@ -292,35 +290,33 @@ export default function AgendaTimeEntriesSection({
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-2)]">
                       Cliente
                     </label>
-                    <select
+                    <SearchableCombobox
                       value={form.cliente_id}
-                      onChange={e => setForm(prev => ({ ...prev, cliente_id: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10"
-                    >
-                      <option value="">— Nenhum —</option>
-                      {clientes.map(cliente => (
-                        <option key={cliente.id} value={cliente.id}>
-                          {cliente.nome}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setForm(prev => ({ ...prev, cliente_id: value }))}
+                      loadOptions={async (query) => fetchClienteOptions(query, 10)}
+                      placeholder="— Nenhum —"
+                      searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
+                      helperText="Digite ao menos 2 caracteres."
+                      emptyText="Digite para buscar clientes."
+                      noResultsText="Nenhum resultado encontrado."
+                      allowClear
+                    />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-2)]">
                       Processo
                     </label>
-                    <select
+                    <SearchableCombobox
                       value={form.processo_id}
-                      onChange={e => setForm(prev => ({ ...prev, processo_id: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10"
-                    >
-                      <option value="">— Nenhum —</option>
-                      {processos.map(processo => (
-                        <option key={processo.id} value={processo.id}>
-                          {processo.titulo}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setForm(prev => ({ ...prev, processo_id: value }))}
+                      loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+                      placeholder="— Nenhum —"
+                      searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                      helperText="Digite ao menos 2 caracteres."
+                      emptyText="Digite para buscar processos."
+                      noResultsText="Nenhum resultado encontrado."
+                      allowClear
+                    />
                   </div>
                 </div>
 

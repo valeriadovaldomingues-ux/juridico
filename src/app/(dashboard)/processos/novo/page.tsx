@@ -1,17 +1,10 @@
 import { requireRole } from '@/lib/auth/guards'
-import { createClient } from '@/lib/supabase/server'
 import ProcessoForm from '../ProcessoForm'
 import { Scale } from 'lucide-react'
 
 export default async function NovoProcessoPage() {
   // estagiario e comercial não criam processos
   await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
-  const supabase = await createClient()
-  const { data: clientes } = await supabase
-    .from('clientes')
-    .select('id, nome')
-    .eq('ativo', true)
-    .order('nome')
 
   return (
     <div className="internal-page space-y-6 max-w-5xl">
@@ -31,7 +24,7 @@ export default async function NovoProcessoPage() {
         </div>
       </div>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] p-1 sm:p-2">
-        <ProcessoForm clientes={clientes ?? []} />
+        <ProcessoForm />
       </div>
     </div>
   )

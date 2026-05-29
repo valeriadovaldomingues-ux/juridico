@@ -47,8 +47,6 @@ export default async function AgendaRoute() {
 
   const [
     { data: items, error: itemsError },
-    { data: processos },
-    { data: clientes },
   ] = await Promise.all([
     supabase
       .from('agenda_items')
@@ -64,8 +62,6 @@ export default async function AgendaRoute() {
         )
       `)
       .order('data_inicio', { ascending: true }),
-    supabase.from('processos').select('id, titulo').order('titulo'),
-    supabase.from('clientes').select('id, nome').order('nome'),
   ])
 
   if (itemsError) {
@@ -108,8 +104,6 @@ export default async function AgendaRoute() {
     <div className="internal-page">
       <AgendaPage
         initialItems={items ?? []}
-        processos={processos ?? []}
-        clientes={clientes ?? []}
         currentUserId={userId}
         currentUserRole={(role ?? 'cliente') as UserRole}
         canDelete={canDelete}

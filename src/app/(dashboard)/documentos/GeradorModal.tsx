@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Loader2, Copy, Check, ChevronRight, Wand2 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
 
 interface DocModelo {
   id:            string
@@ -25,12 +26,10 @@ interface ProcessoItem {
   partes_processo:       { pessoa_nome: string; tipo_parte: string }[]
 }
 
-interface ProfileItem { id: string; nome: string }
-
 interface Props {
   modelos:      DocModelo[]
   processos:    ProcessoItem[]
-  profiles:     ProfileItem[]
+  profiles:     { id: string; nome: string }[]
   modeloInicial?: string
   onSalvar:     (data: { modelo_id: string | null; processo_id: string; titulo: string; conteudo: string }) => Promise<string | null>
   onFechar:     () => void
@@ -161,19 +160,30 @@ export default function GeradorModal({ modelos, processos, profiles, modeloInici
                 <label className="block text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider mb-1.5">
                   Processo <span className="text-red-500 normal-case font-normal">*</span>
                 </label>
-                <select value={processoId} onChange={e => setProcessoId(e.target.value)} className={inputCls}>
-                  <option value="">Selecione o processo…</option>
-                  {processos.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.numero_processo ? `${p.numero_processo} — ` : ''}{p.titulo}
-                    </option>
-                  ))}
-                </select>
+                <SearchableCombobox
+                  value={processoId}
+                  onChange={(value) => setProcessoId(value)}
+                  options={processos.map(p => ({
+                    value: p.id,
+                    label: p.numero_processo ? `${p.numero_processo} — ${p.titulo}` : p.titulo,
+                    description: [
+                      p.cliente?.nome ? `Cliente: ${p.cliente.nome}` : null,
+                      p.tribunal ? `Tribunal: ${p.tribunal}` : null,
+                      p.vara ? `Vara: ${p.vara}` : null,
+                    ].filter(Boolean).join(' · ') || null,
+                  }))}
+                  placeholder="Selecione o processo…"
+                  searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                  helperText="Digite ao menos 2 caracteres."
+                  emptyText="Digite para buscar processos."
+                  noResultsText="Nenhum resultado encontrado."
+                  allowClear
+                />
               </div>
 
               {/* Preview dos dados */}
-              {processo && (
-                <div className="bg-[#f9fafb] rounded-xl p-4 border border-[#f3f4f6]">
+                {processo && (
+                  <div className="bg-[#f9fafb] rounded-xl p-4 border border-[#f3f4f6]">
                   <p className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-2">Dados que serão preenchidos</p>
                   <div className="grid grid-cols-2 gap-y-1.5 gap-x-4">
                     {[

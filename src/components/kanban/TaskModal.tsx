@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchProcessoOptions, fetchUsuarioOptions } from '@/lib/search/remote'
 import type { KanbanTask, KanbanStatus, KanbanPrioridade } from '@/types/kanban'
 import type { KanbanProfile } from '@/types/kanban'
 import KanbanHistorico from './KanbanHistorico'
@@ -177,10 +179,22 @@ export default function TaskModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Responsável</label>
-              <select className={inputCls} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-                <option value="">— Sem responsável —</option>
-                {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
+              <SearchableCombobox
+                value={responsavelId}
+                selectedOption={profiles.find(p => p.id === responsavelId) ? {
+                  value: responsavelId,
+                  label: profiles.find(p => p.id === responsavelId)?.nome ?? '',
+                  description: profiles.find(p => p.id === responsavelId)?.role ?? null,
+                } : null}
+                onChange={(value) => setResponsavelId(value)}
+                loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                placeholder="— Sem responsável —"
+                searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar responsáveis."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Prazo</label>
@@ -191,10 +205,22 @@ export default function TaskModal({
           {/* Processo */}
           <div>
             <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Processo vinculado</label>
-            <select className={inputCls} value={processoId} onChange={e => setProcessoId(e.target.value)}>
-              <option value="">— Nenhum —</option>
-              {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
+            <SearchableCombobox
+              value={processoId}
+              selectedOption={processos.find(p => p.id === processoId) ? {
+                value: processoId,
+                label: processos.find(p => p.id === processoId)?.titulo ?? '',
+                description: processos.find(p => p.id === processoId)?.numero_processo ?? null,
+              } : null}
+              onChange={(value) => setProcessoId(value)}
+              loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+              placeholder="— Nenhum —"
+              searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar processos."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
 
           {/* Partes / Área */}

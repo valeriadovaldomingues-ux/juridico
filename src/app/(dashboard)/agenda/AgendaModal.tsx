@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 import { X, Copy, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchClienteOptions, fetchProcessoOptions, fetchUsuarioOptions } from '@/lib/search/remote'
 import {
   AgendaForm, AgendaItem, Processo, Cliente,
   TIPO_CFG, PRIO_CFG, Tipo, Status, Prioridade,
@@ -16,8 +18,6 @@ interface Props {
   setForm: (f: AgendaForm) => void
   isEdit: boolean
   agendaItem: AgendaItem | null
-  processos: Processo[]
-  clientes: Cliente[]
   onSave: () => void
   onDelete?: () => void
   onDuplicate?: () => void
@@ -35,7 +35,7 @@ interface Props {
 }
 
 export default function AgendaModal({
-  form, setForm, isEdit, agendaItem, processos, clientes,
+  form, setForm, isEdit, agendaItem,
   onSave, onDelete, onDuplicate, canDelete,
   currentUserId, currentUserRole, canManageTimeEntries, timeEntries,
   onUpsertTimeEntry, onDeleteTimeEntry, timeEntrySaving, timeEntryDeletingId,
@@ -194,28 +194,56 @@ export default function AgendaModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Processo</label>
-              <select className={inputCls} value={form.processo_id} onChange={e => set({ processo_id: e.target.value })}>
-                <option value="">— Nenhum —</option>
-                {processos.map(p => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-              </select>
+              <SearchableCombobox
+                value={form.processo_id}
+                onChange={value => set({ processo_id: value })}
+                loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+                placeholder="— Nenhum —"
+                searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar processos."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
             </div>
             <div>
               <label className={labelCls}>Cliente</label>
-              <select className={inputCls} value={form.cliente_id} onChange={e => set({ cliente_id: e.target.value })}>
-                <option value="">— Nenhum —</option>
-                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
+              <SearchableCombobox
+                value={form.cliente_id}
+                onChange={value => set({ cliente_id: value })}
+                loadOptions={async (query) => fetchClienteOptions(query, 10)}
+                placeholder="— Nenhum —"
+                searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar clientes."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
             </div>
           </div>
 
           {/* Responsável */}
           <div>
             <label className={labelCls}>Responsável</label>
-            <input
-              className={inputCls}
-              placeholder="Nome do responsável"
+            <SearchableCombobox
               value={form.responsavel}
-              onChange={e => set({ responsavel: e.target.value })}
+              selectedOption={form.responsavel ? {
+                value: form.responsavel,
+                label: form.responsavel,
+                description: null,
+              } : null}
+              onChange={(_, option) => set({ responsavel: option?.label ?? '' })}
+              loadOptions={async (query) => (await fetchUsuarioOptions(query, 10)).map(option => ({
+                value: option.label,
+                label: option.label,
+                description: option.description,
+              }))}
+              placeholder="Nome do responsável"
+              searchPlaceholder="Buscar por nome, e-mail ou função"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar responsáveis."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
             />
           </div>
 
@@ -236,8 +264,6 @@ export default function AgendaModal({
           <AgendaTimeEntriesSection
             agendaItem={agendaItem}
             timeEntries={timeEntries}
-            clientes={clientes}
-            processos={processos}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
             canManage={canManageTimeEntries}

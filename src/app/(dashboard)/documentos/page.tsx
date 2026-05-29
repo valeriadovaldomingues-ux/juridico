@@ -20,7 +20,7 @@ export default async function DocumentosRoute() {
       .order('created_at', { ascending: false }),
     supabase
       .from('doc_gerados')
-      .select('id, titulo, conteudo, created_at, updated_at, modelo:doc_modelos(nome), processo:processos(id, titulo, numero_processo)')
+      .select('id, titulo, conteudo, created_at, updated_at, modelo:doc_modelos(nome), processo:processos(id, titulo, numero_processo, area_direito, tribunal, vara, valor_causa, advogado_responsavel_id, cliente:clientes(nome), partes_processo(pessoa_nome, tipo_parte))')
       .order('created_at', { ascending: false })
       .limit(100),
     supabase
@@ -36,12 +36,12 @@ export default async function DocumentosRoute() {
   ])
 
   return (
-    <DocumentosPage
-      modelos={(modelos   ?? []) as any}
-      gerados={(gerados   ?? []) as any}
-      processos={(processos ?? []) as any}
-      profiles={(profiles ?? []) as any}
-      role={profile.role}
-    />
+      <DocumentosPage
+        modelos={(modelos   ?? []) as any}
+        gerados={(gerados   ?? []) as any}
+        processos={(processos ?? []) as any}
+        profiles={(profiles ?? []) as any}
+        role={profile.role}
+      />
   )
 }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { TIPOS_PECA } from '@/lib/ai/prompts'
 import type { DadosProcesso } from '@/lib/ai/prompts'
 import { cn } from '@/lib/utils'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -144,21 +145,32 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
           <label className="block text-[12px] font-semibold text-[#374151] mb-2">
             Processo <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <select
-              value={processoId}
-              onChange={e => { setProcessoId(e.target.value); setErro('') }}
-              className="w-full px-3 py-2.5 pr-9 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl appearance-none outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23] transition-all"
-            >
-              <option value="">Selecione o processo…</option>
-              {processos.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.numero_processo ? `${p.numero_processo} — ` : ''}{p.titulo}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none" />
-          </div>
+          <SearchableCombobox
+            value={processoId}
+            selectedOption={processos.find(p => p.id === processoId) ? {
+              value: processoId,
+              label: processos.find(p => p.id === processoId)?.numero_processo
+                ? `${processos.find(p => p.id === processoId)?.numero_processo} — ${processos.find(p => p.id === processoId)?.titulo}`
+                : processos.find(p => p.id === processoId)?.titulo ?? '',
+              description: processos.find(p => p.id === processoId)?.cliente?.nome ?? null,
+            } : null}
+            onChange={(value) => { setProcessoId(value); setErro('') }}
+            options={processos.map(p => ({
+              value: p.id,
+              label: p.numero_processo ? `${p.numero_processo} — ${p.titulo}` : p.titulo,
+              description: [
+                p.cliente?.nome ? `Cliente: ${p.cliente.nome}` : null,
+                p.tribunal ? `Tribunal: ${p.tribunal}` : null,
+                p.vara ? `Vara: ${p.vara}` : null,
+              ].filter(Boolean).join(' · ') || null,
+            }))}
+            placeholder="Selecione o processo…"
+            searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+            helperText="Digite ao menos 2 caracteres."
+            emptyText="Digite para buscar processos."
+            noResultsText="Nenhum resultado encontrado."
+            allowClear
+          />
         </div>
 
         {/* Dados carregados do processo */}

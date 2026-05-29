@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { Plus, TrendingUp, Search, ChevronRight, AlertCircle } from 'lucide-react'
+import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
 import type { Lead, LeadOrigem, LeadStatus } from '@/types/comercial'
 import { STATUS_LABEL, ORIGEM_LABEL, FUNIL_COLUNAS } from '@/types/comercial'
 import FunilBoard from './FunilBoard'
@@ -258,14 +260,24 @@ export default function ComercialPage({ initialLeads, profiles, currentUserId, r
               <option value="">Todas as origens</option>
               {Object.entries(ORIGEM_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            <select
-              value={filterResp}
-              onChange={e => setFilterResp(e.target.value)}
-              className="border border-zinc-200 rounded-xl px-3 py-2 text-xs focus:outline-none bg-white text-zinc-600"
-            >
-              <option value="">Todos os responsáveis</option>
-              {profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
+            <div className="min-w-[260px]">
+              <SearchableCombobox
+                value={filterResp}
+                onChange={(value) => setFilterResp(value)}
+                loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                selectedOption={profiles.find(p => p.id === filterResp) ? {
+                  value: filterResp,
+                  label: profiles.find(p => p.id === filterResp)?.nome ?? '',
+                  description: profiles.find(p => p.id === filterResp)?.role ?? null,
+                } : null}
+                placeholder="Todos os responsáveis"
+                searchPlaceholder="Buscar responsável por nome, e-mail ou função"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar responsáveis."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
+            </div>
             {(search || filterOrigem || filterResp || filterStatus) && (
               <button
                 onClick={() => { setSearch(''); setFilterOrigem(''); setFilterResp(''); setFilterStatus('') }}
