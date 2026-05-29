@@ -12,7 +12,6 @@ export type AuroraAgentId =
   | 'dominic'
   | 'olivia'
   | 'oraculo'
-  | 'clara'
 
 export interface AuroraAgentRegistryEntry {
   id: AuroraAgentId

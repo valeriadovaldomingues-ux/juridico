@@ -23,8 +23,6 @@ export async function carregarPromptCompletoAurora(
       return (await import('./prompts/oraculo')).carregarPromptOraculo(modo)
     case 'atlas':
       return (await import('./prompts/atlas')).carregarPromptAtlas(modo)
-    case 'clara':
-      return (await import('./prompts/clara')).carregarPromptClara(modo)
     case 'dominic':
       return (await import('./prompts/dominic')).carregarPromptDominic(modo)
     default:

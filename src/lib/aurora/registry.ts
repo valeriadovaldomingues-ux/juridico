@@ -125,21 +125,6 @@ export const AURORA_AGENT_REGISTRY = [
     modoPadrao: 'rapido',
     suportaModoProfundo: true,
   },
-  {
-    id: 'clara',
-    nome: 'Clara',
-    descricaoCurta: 'Clientes, follow-up e relacionamento.',
-    escopoResumido: 'Histórico, pendências, acompanhamento e relacionamento com clientes.',
-    keywords: ['cliente', 'clientes', 'follow-up', 'follow up', 'atendimento', 'pendencia', 'pendência', 'relacionamento', 'contato', 'retorno'],
-    restricoesPrincipais: [
-      'Não envia mensagens automaticamente.',
-      'Não executa follow-up externo sem confirmação.',
-    ],
-    promptCompacto: 'Organize relacionamento com clientes, pendências e follow-up sem enviar mensagens automaticamente.',
-    ferramentasPermitidas: ['historico_cliente', 'follow_up'],
-    modoPadrao: 'rapido',
-    suportaModoProfundo: true,
-  },
 ] as const satisfies readonly AuroraAgentRegistryEntry[]
 
 export function listarAgentesAurora() {

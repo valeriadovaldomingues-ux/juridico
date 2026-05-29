@@ -222,14 +222,15 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.agentId).toBe('olivia')
   })
 
-  it('roteia follow-up e relacionamento com cliente para Clara', () => {
+  it('menção a Clara cai na Aurora Principal como inválida', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: 'Precisamos de follow-up com o cliente sobre a pendência',
+      mensagem: '@Clara listar pendências do cliente',
       modo: 'rapido',
       role: 'socio',
     })
 
-    expect(resultado.agentId).toBe('clara')
+    expect(resultado.agentId).toBe('principal')
+    expect(resultado.reason).toBe('explicit_invalid')
   })
 
   it('roteia estratégia e risco para Oráculo', () => {

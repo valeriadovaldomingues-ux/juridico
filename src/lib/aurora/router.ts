@@ -18,7 +18,6 @@ const EXPLICIT_AGENT_ALIASES: Record<string, AuroraAgentId> = {
   atena: 'atena',
   olivia: 'olivia',
   oraculo: 'oraculo',
-  clara: 'clara',
   dominic: 'dominic',
 }
 

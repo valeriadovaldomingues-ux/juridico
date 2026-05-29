@@ -14,7 +14,6 @@ describe('AURORA_AGENT_REGISTRY', () => {
       'dominic',
       'olivia',
       'oraculo',
-      'clara',
     ])
     expect(ids).not.toContain('lívia')
   })
