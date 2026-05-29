@@ -7,12 +7,14 @@ describe('AURORA_AGENT_REGISTRY', () => {
 
     expect(ids).toEqual([
       'principal',
-      'olavo',
       'stella',
-      'oraculo',
+      'olavo',
       'atlas',
-      'clara',
+      'atena',
       'dominic',
+      'olivia',
+      'oraculo',
+      'clara',
     ])
     expect(ids).not.toContain('lívia')
   })

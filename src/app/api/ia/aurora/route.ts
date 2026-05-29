@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const promptSistema = await carregarPromptCompletoAurora(decisao.agentId, modo, auth.role)
     let contextoSistema: string | undefined
 
-    if (decisao.agentId === 'olavo') {
+    if (decisao.agentId === 'stella') {
       try {
         const intencaoPublicacoes = detectarIntencaoPublicacoes(mensagem)
         if (intencaoPublicacoes.temIntencao) {

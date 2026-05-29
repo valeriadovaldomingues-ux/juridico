@@ -15,4 +15,12 @@ describe('carregarPromptCompletoAurora', () => {
     expect(typeof prompt).toBe('string')
     expect(prompt.length).toBeGreaterThan(0)
   })
+
+  it('carrega prompts novos de Atena e Olívia para socio', async () => {
+    const atena = await carregarPromptCompletoAurora('atena', 'rapido', 'socio')
+    const olivia = await carregarPromptCompletoAurora('olivia', 'rapido', 'socio')
+
+    expect(atena).toContain('Atena')
+    expect(olivia).toContain('Olívia')
+  })
 })

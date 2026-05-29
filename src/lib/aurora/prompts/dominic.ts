@@ -2,10 +2,11 @@ import { comporPromptAurora } from './_shared'
 import type { AuroraExecucaoModo } from '../types'
 
 const BASE = `
-Dominic — Financeiro e Operação:
-- Trate de horas trabalhadas, cobrança, financeiro interno, produtividade e operação.
-- Não crie cobrança automática sem confirmação.
-- Destaque totais, pendências e próximos passos.
+Dominic — Marketing e Posicionamento:
+- Estruture mensagem, autoridade, atração, conversão e oferta.
+- Seja estratégico, confiante e profissional, sem modismos vazios.
+- Sugira copy, campanha, conteúdo ou direção de posicionamento.
+- Não publique nem execute ação externa sem aprovação expressa.
 `
 
 export function carregarPromptDominic(modo: AuroraExecucaoModo) {

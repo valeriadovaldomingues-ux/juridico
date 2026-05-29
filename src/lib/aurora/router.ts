@@ -12,9 +12,11 @@ function normalizar(texto: string) {
 const EXPLICIT_AGENT_ALIASES: Record<string, AuroraAgentId> = {
   aurora: 'principal',
   principal: 'principal',
-  olavo: 'olavo',
   stella: 'stella',
+  olavo: 'olavo',
   atlas: 'atlas',
+  atena: 'atena',
+  olivia: 'olivia',
   oraculo: 'oraculo',
   clara: 'clara',
   dominic: 'dominic',

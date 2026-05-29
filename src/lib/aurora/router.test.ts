@@ -26,9 +26,31 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.reason).toBe('explicit_mention')
   })
 
+  it('roteia comando explícito /atena para Atena', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: '/atena avaliar honorários',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('atena')
+    expect(resultado.reason).toBe('explicit_mention')
+  })
+
+  it('roteia comando explícito /olivia para Olívia', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: '/olivia organizar agenda',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('olivia')
+    expect(resultado.reason).toBe('explicit_mention')
+  })
+
   it('roteia @Stella para Stella', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: '@Stella preparar resposta para este e-mail',
+      mensagem: '@Stella analisar publicações e prazos',
       modo: 'rapido',
       role: 'socio',
     })
@@ -39,7 +61,7 @@ describe('classificarMensagemAurora', () => {
 
   it('roteia @Atlas e @Oráculo com normalização de acentos', () => {
     const atlas = classificarMensagemAurora({
-      mensagem: '@Atlas revisar contrato',
+      mensagem: '@Atlas revisar status e bloqueadores',
       modo: 'rapido',
       role: 'socio',
     })
@@ -64,20 +86,26 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.reason).toBe('explicit_mention')
   })
 
-  it('roteia @Dominic e @Clara para os agentes corretos', () => {
-    const dominic = classificarMensagemAurora({
-      mensagem: '@Dominic levantar horas cobradas',
+  it('roteia @Atena, @Olivia e @Dominic para os agentes corretos', () => {
+    const atena = classificarMensagemAurora({
+      mensagem: '@Atena avaliar honorários e viabilidade',
       modo: 'rapido',
       role: 'socio',
     })
-    const clara = classificarMensagemAurora({
-      mensagem: '@Clara listar pendências do cliente',
+    const olivia = classificarMensagemAurora({
+      mensagem: '@Olivia organizar agenda e compromissos',
+      modo: 'rapido',
+      role: 'socio',
+    })
+    const dominic = classificarMensagemAurora({
+      mensagem: '@Dominic estruturar marketing e conversão',
       modo: 'rapido',
       role: 'socio',
     })
 
+    expect(atena.agentId).toBe('atena')
+    expect(olivia.agentId).toBe('olivia')
     expect(dominic.agentId).toBe('dominic')
-    expect(clara.agentId).toBe('clara')
   })
 
   it('roteia @Aurora e /aurora para Aurora Principal', () => {
@@ -109,9 +137,9 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.explicitValid).toBe(false)
   })
 
-  it('menção a Atena sem registry cai na Aurora Principal como inválida', () => {
+  it('menção a Lívia cai na Aurora Principal como inválida', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: '@Atena analisar isso',
+      mensagem: '@Lívia analisar isso',
       modo: 'rapido',
       role: 'socio',
     })
@@ -121,30 +149,42 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.explicitValid).toBe(false)
   })
 
-  it('roteia processos, prazos, publicações e andamentos para Olavo', () => {
+  it('menção a Livia sem acento cai na Aurora Principal como inválida', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: '@Livia analisar isso',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('principal')
+    expect(resultado.reason).toBe('explicit_invalid')
+    expect(resultado.explicitValid).toBe(false)
+  })
+
+  it('roteia processos, prazos, publicações e andamentos para Stella', () => {
     const resultado = classificarMensagemAurora({
       mensagem: 'Confira processo, prazo e publicações de hoje',
       modo: 'rapido',
       role: 'socio',
     })
 
-    expect(resultado.agentId).toBe('olavo')
+    expect(resultado.agentId).toBe('stella')
     expect(resultado.modo).toBe('rapido')
   })
 
-  it('roteia e-mails para Stella', () => {
+  it('roteia peças, teses e providências para Olavo', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: 'Preciso de triagem do inbox e rascunho de resposta',
+      mensagem: 'Preciso de uma petição com tese e providência processual',
       modo: 'rapido',
       role: 'socio',
     })
 
-    expect(resultado.agentId).toBe('stella')
+    expect(resultado.agentId).toBe('olavo')
   })
 
-  it('roteia documentos para Atlas', () => {
+  it('roteia status, bloqueadores e sincronia para Atlas', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: 'Revisar contrato e notificação com procuração',
+      mensagem: 'Atualize o status, identifique bloqueadores e sincronize o fluxo',
       modo: 'rapido',
       role: 'socio',
     })
@@ -152,14 +192,34 @@ describe('classificarMensagemAurora', () => {
     expect(resultado.agentId).toBe('atlas')
   })
 
-  it('roteia financeiro e cobrança para Dominic', () => {
+  it('roteia financeiro e honorários para Atena', () => {
     const resultado = classificarMensagemAurora({
-      mensagem: 'Ver horas trabalhadas e cobrança do mês',
+      mensagem: 'Ver honorários, lucro e viabilidade financeira do caso',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('atena')
+  })
+
+  it('roteia marketing e conversão para Dominic', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: 'Ajuste o posicionamento, a autoridade e a conversão da campanha',
       modo: 'rapido',
       role: 'socio',
     })
 
     expect(resultado.agentId).toBe('dominic')
+  })
+
+  it('roteia agenda, compromissos e conflitos para Olívia', () => {
+    const resultado = classificarMensagemAurora({
+      mensagem: 'Organize a agenda, conflitos de horário e compromissos da semana',
+      modo: 'rapido',
+      role: 'socio',
+    })
+
+    expect(resultado.agentId).toBe('olivia')
   })
 
   it('roteia follow-up e relacionamento com cliente para Clara', () => {

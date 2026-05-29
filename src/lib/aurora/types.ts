@@ -5,12 +5,14 @@ export type AuroraExecucaoModo = 'rapido' | 'profundo'
 
 export type AuroraAgentId =
   | 'principal'
-  | 'olavo'
   | 'stella'
-  | 'oraculo'
+  | 'olavo'
   | 'atlas'
-  | 'clara'
+  | 'atena'
   | 'dominic'
+  | 'olivia'
+  | 'oraculo'
+  | 'clara'
 
 export interface AuroraAgentRegistryEntry {
   id: AuroraAgentId

@@ -275,9 +275,9 @@ describe('POST /api/ia/aurora', () => {
     expect(res.headers.get('X-Aurora-Explicit')).toBe('agentesecreto')
   })
 
-  it('busca contexto de publicações quando a mensagem pede publicações e a rota escolhe Olavo', async () => {
-    const decisaoOlavo = {
-      agentId: 'olavo',
+  it('busca contexto de publicações quando a mensagem pede publicações e a rota escolhe Stella', async () => {
+    const decisaoStella = {
+      agentId: 'stella',
       modo: 'rapido',
       matchedKeywords: ['publicacao'],
       score: 1,
@@ -294,11 +294,11 @@ describe('POST /api/ia/aurora', () => {
     const publicacoes = [{ id: 'pub-1', prazo_detectado: true }]
     const contexto = 'CONTEXTO DO SISTEMA - PUBLICAÇÕES\nTotal encontrado: 1'
 
-    mockClassificarMensagemAurora.mockReturnValue(decisaoOlavo)
+    mockClassificarMensagemAurora.mockReturnValue(decisaoStella)
     mockDetectarIntencaoPublicacoes.mockReturnValue(intencao)
     mockBuscarPublicacoesParaAurora.mockResolvedValue(publicacoes)
     mockMontarContextoPublicacoesParaAurora.mockReturnValue(contexto)
-    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT OLAVO')
+    mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT STELLA')
 
     const res = await POST(
       request({
@@ -314,7 +314,7 @@ describe('POST /api/ia/aurora', () => {
       'Quais publicações chegaram hoje com prazo detectado?',
       [],
       contexto,
-      'PROMPT OLAVO',
+      'PROMPT STELLA',
     )
   })
 
