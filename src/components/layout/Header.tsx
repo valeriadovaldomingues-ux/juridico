@@ -24,6 +24,7 @@ const routeLabels: Record<string, string> = {
   '/automacoes':             'Automações',
   '/monitoramento':          'Monitoramento',
   '/comercial':              'Comercial',
+  '/ferramentas-pdf':        'Ferramentas PDF',
 }
 
 function getLabel(pathname: string): string {

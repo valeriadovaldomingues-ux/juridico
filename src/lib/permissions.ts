@@ -47,6 +47,7 @@ export type Module =
   | 'importacao'
   | 'financeiro'
   | 'comercial'
+  | 'ferramentasPdf'
   | 'relatorios'
   | 'monitoramento'
   | 'usuarios'
@@ -89,6 +90,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:      ['view', 'create', 'edit'],
     publicacoes: ['view'],
     documentos:  ['view', 'create'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Comercial ────────────────────────────────────────────────────────────────
@@ -98,6 +100,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:  ['view'],
     clientes:   ['view', 'create', 'edit'],
     comercial:  ['view', 'create', 'edit', 'delete'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Administrativo ───────────────────────────────────────────────────────────
@@ -113,6 +116,7 @@ const PERMISSIONS: PermMatrix = {
     documentos:   ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
     comercial:    ['view'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Advogado ─────────────────────────────────────────────────────────────────
@@ -128,6 +132,7 @@ const PERMISSIONS: PermMatrix = {
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
     monitoramento: ['view'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Gerente ──────────────────────────────────────────────────────────────────
@@ -145,6 +150,7 @@ const PERMISSIONS: PermMatrix = {
     importacao:   ['view', 'create'],
     relatorios:   ['view'],
     monitoramento: ['view'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Sócio ────────────────────────────────────────────────────────────────────
@@ -166,6 +172,7 @@ const PERMISSIONS: PermMatrix = {
     monitoramento: ['view', 'create', 'edit', 'manage'],
     usuarios:     ['view', 'create', 'edit', 'delete', 'manage'],
     configuracoes: ['view', 'edit', 'manage'],
+    ferramentasPdf: ['view'],
   },
 
   // ── Cliente (portal externo) ──────────────────────────────────────────────
@@ -212,11 +219,13 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/documentos',
+    '/ferramentas-pdf',
   ],
   comercial: [
     '/dashboard',
     '/clientes',
     '/comercial',
+    '/ferramentas-pdf',
   ],
   administrativo: [
     '/dashboard',
@@ -225,6 +234,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/agenda',
     '/kanban',
     '/documentos',
+    '/ferramentas-pdf',
     '/importar',
     '/comercial',
   ],
@@ -236,6 +246,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/documentos',
+    '/ferramentas-pdf',
     '/monitoramento',
     '/ia-juridica',
   ],
@@ -247,6 +258,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/documentos',
+    '/ferramentas-pdf',
     '/relatorios',
     '/importar',
     '/automacoes',
@@ -263,6 +275,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/publicacoes',
     '/financeiro',
     '/documentos',
+    '/ferramentas-pdf',
     '/comercial',
     '/relatorios',
     '/importar',
