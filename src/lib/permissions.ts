@@ -44,6 +44,7 @@ export type Module =
   | 'kanban'
   | 'publicacoes'
   | 'documentos'
+  | 'centralArquivos'
   | 'importacao'
   | 'financeiro'
   | 'comercial'
@@ -90,6 +91,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:      ['view', 'create', 'edit'],
     publicacoes: ['view'],
     documentos:  ['view', 'create'],
+    centralArquivos: ['view', 'create'],
     ferramentasPdf: ['view'],
   },
 
@@ -114,6 +116,7 @@ const PERMISSIONS: PermMatrix = {
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
     documentos:   ['view', 'create', 'edit', 'delete'],
+    centralArquivos: ['view', 'create', 'edit'],
     importacao:   ['view', 'create'],
     comercial:    ['view'],
     ferramentasPdf: ['view'],
@@ -131,6 +134,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
+    centralArquivos: ['view', 'create', 'edit'],
     monitoramento: ['view'],
     ferramentasPdf: ['view'],
   },
@@ -147,6 +151,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
+    centralArquivos: ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
     relatorios:   ['view'],
     monitoramento: ['view'],
@@ -165,6 +170,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     publicacoes:  ['view', 'create', 'edit', 'delete'],
     documentos:   ['view', 'create', 'edit', 'delete'],
+    centralArquivos: ['view', 'create', 'edit', 'delete', 'manage'],
     importacao:   ['view', 'create'],
     financeiro:   ['view', 'create', 'edit', 'delete'],
     comercial:    ['view', 'create', 'edit', 'delete'],
@@ -268,6 +274,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
   ],
   socio: [
     '/dashboard',
+    '/dashboard/central-arquivos',
     '/clientes',
     '/processos',
     '/agenda',

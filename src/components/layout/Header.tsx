@@ -14,6 +14,7 @@ const routeLabels: Record<string, string> = {
   '/agenda':                 'Agenda',
   '/financeiro':             'Financeiro',
   '/documentos':             'Documentos',
+  '/dashboard/central-arquivos': 'Dossiê Aurora',
   '/ia-juridica':            'IA Jurídica',
   '/relatorios':             'Relatórios',
   '/importar':               'Importar',
