@@ -243,7 +243,7 @@ describe('POST /api/ia/aurora', () => {
     expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
       '@Olavo analisar este processo',
       [],
-      undefined,
+      expect.any(String),
       'PROMPT OLAVO',
     )
     expect(res.headers.get('X-Aurora-Agent')).toBe('olavo')

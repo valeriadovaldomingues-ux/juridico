@@ -4,6 +4,7 @@ import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
 import { detectarIntencaoPublicacoes, buscarPublicacoesParaAurora, montarContextoPublicacoesParaAurora } from '@/lib/ai/aurora-context'
+import { consultarOlavoDrive, montarContextoOlavoDrive } from '@/lib/aurora/olavo-drive'
 import {
   carregarPromptCompletoAurora,
 } from '@/lib/aurora/prompt-loader'
@@ -68,6 +69,24 @@ export async function POST(request: NextRequest) {
     })
     const promptSistema = await carregarPromptCompletoAurora(decisao.agentId, modo, auth.role)
     let contextoSistema: string | undefined
+
+    if (decisao.agentId === 'olavo') {
+      try {
+        const respostaEspecialista = await consultarOlavoDrive(mensagem)
+        contextoSistema = montarContextoOlavoDrive(respostaEspecialista)
+      } catch (contextErr) {
+        const contextMsg = getErrorMessage(contextErr)
+        if (IS_DEV) {
+          console.error('[Aurora API] falha ao consultar Olavo Drive', contextErr)
+        }
+        contextoSistema = [
+          'CONTEXTO DO SISTEMA - OLAVO DRIVE',
+          'A Aurora tentou consultar o Olavo Drive, mas a consulta falhou.',
+          `Erro técnico: ${contextMsg}`,
+          'Continue a análise com base no seu conhecimento jurídico.',
+        ].join('\n')
+      }
+    }
 
     if (decisao.agentId === 'stella') {
       try {
