@@ -9,7 +9,7 @@ const { mockApiGuard, mockListPastas, mockCreatePasta } = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth/api-guard', () => ({ apiGuard: mockApiGuard }))
 vi.mock('@/lib/central-arquivos', () => ({
-  CENTRAL_ARQUIVOS_ALLOWED_INTERNAL_ROLES: ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'],
+  CENTRAL_ARQUIVOS_ALLOWED_INTERNAL_ROLES: ['socio'],
   listPastas: mockListPastas,
   createPasta: mockCreatePasta,
   isCentralArquivosError: (error: unknown) => Boolean(error && typeof error === 'object' && 'status' in (error as any)),

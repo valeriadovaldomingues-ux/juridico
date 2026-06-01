@@ -8,7 +8,7 @@ const { mockRequireRole, mockListPastas, mockListDocumentos } = vi.hoisted(() =>
 
 vi.mock('@/lib/auth/guards', () => ({ requireRole: mockRequireRole }))
 vi.mock('@/lib/central-arquivos', () => ({
-  CENTRAL_ARQUIVOS_ALLOWED_INTERNAL_ROLES: ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'],
+  CENTRAL_ARQUIVOS_ALLOWED_INTERNAL_ROLES: ['socio'],
   listPastas: mockListPastas,
   listDocumentos: mockListDocumentos,
 }))
@@ -29,7 +29,7 @@ describe('dashboard/central-arquivos page', () => {
 
     const element = await CentralArquivosRoute()
 
-    expect(mockRequireRole).toHaveBeenCalledWith(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
+    expect(mockRequireRole).toHaveBeenCalledWith(['socio'])
     expect(mockListPastas).toHaveBeenCalledWith({ limit: 50 })
     expect(mockListDocumentos).toHaveBeenCalledWith({ limit: 50 })
     expect(element.props.role).toBe('socio')

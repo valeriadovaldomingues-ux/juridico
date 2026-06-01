@@ -278,13 +278,13 @@ export default function CentralArquivosPage({ role, initialPastas, initialDocume
       <header className="space-y-2">
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-3)]">
           <FolderArchive size={14} />
-          Central de Arquivos
+          IA Jurídica · Aurora exclusiva para sócios
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-brand text-[30px] font-semibold text-[var(--color-ink)]">Dossiê Aurora</h1>
             <p className="text-[13px] text-[var(--color-ink-3)]">
-              Upload, organização e vínculo de documentos do escritório em um único lugar.
+              Central de documentos para análise jurídica da Aurora.
             </p>
           </div>
           {canAnalyze && (
@@ -300,6 +300,12 @@ export default function CentralArquivosPage({ role, initialPastas, initialDocume
         </div>
         <p className="text-[11px] text-[var(--color-ink-3)]">
           Esta ferramenta não usa IA. Os arquivos são usados apenas para a operação e não são salvos fora do sistema.
+        </p>
+        <p className="text-[11px] text-[var(--color-ink-3)]">
+          Aqui você pode reunir documentos, fotos, áudios, prints, contratos, certidões, comprovantes e demais arquivos relacionados a um caso.
+        </p>
+        <p className="text-[11px] text-[var(--color-ink-3)]">
+          Em fase posterior, a Aurora poderá analisar esse material, extrair fatos relevantes, montar linha do tempo, apontar documentos faltantes e sugerir peças ou providências jurídicas.
         </p>
       </header>
 
@@ -735,6 +741,11 @@ export default function CentralArquivosPage({ role, initialPastas, initialDocume
                           <Sparkles size={13} />
                           Analisar com Aurora
                         </button>
+                      )}
+                      {canAnalyze && (
+                        <p className="text-[10px] text-[var(--color-ink-3)]">
+                          Recurso em desenvolvimento para a próxima fase.
+                        </p>
                       )}
                     </div>
                   </div>

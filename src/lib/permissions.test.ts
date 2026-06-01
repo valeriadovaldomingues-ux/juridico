@@ -21,8 +21,8 @@ describe('Ferramentas PDF permissioning', () => {
 })
 
 describe('Central de Arquivos permissioning', () => {
-  it('exibe Dossiê Aurora apenas para sócios no menu inicial', () => {
-    expect(ALLOWED_ROUTES.socio).toContain('/dashboard/central-arquivos')
+  it('não exibe Dossiê Aurora como item solto na lateral principal', () => {
+    expect(ALLOWED_ROUTES.socio).not.toContain('/dashboard/central-arquivos')
     expect(ALLOWED_ROUTES.gerente).not.toContain('/dashboard/central-arquivos')
     expect(ALLOWED_ROUTES.administrativo).not.toContain('/dashboard/central-arquivos')
     expect(ALLOWED_ROUTES.estagiario).not.toContain('/dashboard/central-arquivos')
@@ -30,10 +30,12 @@ describe('Central de Arquivos permissioning', () => {
     expect(ALLOWED_ROUTES.cliente).not.toContain('/dashboard/central-arquivos')
   })
 
-  it('marca o módulo como acessível para staff e bloqueado para cliente', () => {
+  it('marca o módulo como acessível apenas para sócio e bloqueado para demais perfis', () => {
     expect(can('socio', 'centralArquivos', 'view')).toBe(true)
-    expect(can('gerente', 'centralArquivos', 'view')).toBe(true)
-    expect(can('administrativo', 'centralArquivos', 'create')).toBe(true)
+    expect(can('gerente', 'centralArquivos', 'view')).toBe(false)
+    expect(can('administrativo', 'centralArquivos', 'create')).toBe(false)
+    expect(can('estagiario', 'centralArquivos', 'view')).toBe(false)
+    expect(can('comercial', 'centralArquivos', 'view')).toBe(false)
     expect(can('cliente', 'centralArquivos', 'view')).toBe(false)
   })
 
