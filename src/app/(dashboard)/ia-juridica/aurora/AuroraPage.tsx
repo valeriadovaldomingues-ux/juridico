@@ -3,8 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, Bot, Check, Copy, Loader2, RotateCcw, Send, ShieldCheck, Sparkles,
+  ArrowLeft, Bot, Check, Copy, Loader2, Paperclip, RotateCcw, Send, ShieldCheck, Sparkles, X,
 } from 'lucide-react'
+import {
+  CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS,
+  CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES,
+} from '@/lib/central-arquivos/types'
 import { cn } from '@/lib/utils'
 
 type MensagemRole = 'user' | 'assistant'
@@ -16,6 +20,14 @@ interface Mensagem {
   loading?: boolean
 }
 
+interface AnexoSelecionado {
+  id: string
+  file: File
+  nome: string
+  tipo: string
+  tamanho: number
+}
+
 const SUGESTOES = [
   'Resuma esta demanda',
   'Classifique a urgência',
@@ -24,6 +36,12 @@ const SUGESTOES = [
   'Liste riscos e providências',
 ]
 
+const ACCEPTED_FILES = [
+  ...CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS.map(ext => `.${ext}`),
+  ...CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES,
+].join(',')
+const AURORA_ATTACHMENT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
 const IS_DEV = process.env.NODE_ENV === 'development'
 
 function makeMessageId() {
@@ -31,6 +49,46 @@ function makeMessageId() {
     return crypto.randomUUID()
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function makeAttachmentId(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let index = 0
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024
+    index += 1
+  }
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`
+}
+
+function validarAnexo(file: File) {
+  const nome = file.name.toLowerCase()
+  const extensao = nome.includes('.') ? nome.split('.').pop() ?? '' : ''
+  const mime = file.type.toLowerCase()
+
+  if (!CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS.includes(extensao as typeof CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS[number])) {
+    return 'Tipo de arquivo não permitido.'
+  }
+
+  if (!CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES.includes(mime as typeof CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES[number])) {
+    return 'Tipo de arquivo não permitido.'
+  }
+
+  if (file.size <= 0) {
+    return 'Arquivo excede o tamanho máximo permitido.'
+  }
+
+  if (file.size > AURORA_ATTACHMENT_MAX_UPLOAD_BYTES) {
+    return 'Arquivo excede o tamanho máximo permitido.'
+  }
+
+  return null
 }
 
 function getErrorMessage(error: unknown) {
@@ -44,8 +102,12 @@ export default function AuroraPage() {
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
   const [loading, setLoading] = useState(false)
   const [copiado, setCopiado] = useState<string | null>(null)
+  const [anexos, setAnexos] = useState<AnexoSelecionado[]>([])
+  const [salvarAnexosNoDossie, setSalvarAnexosNoDossie] = useState(false)
+  const [erroAnexos, setErroAnexos] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -68,6 +130,7 @@ export default function AuroraPage() {
     ])
     setMensagem('')
     setLoading(true)
+    setErroAnexos(null)
 
     try {
       if (IS_DEV) {
@@ -77,10 +140,20 @@ export default function AuroraPage() {
         })
       }
 
+      const deveEnviarAnexos = anexos.length > 0
       const res = await fetch('/api/ia/aurora', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensagem: conteudo, historico }),
+        headers: deveEnviarAnexos ? undefined : { 'Content-Type': 'application/json' },
+        body: deveEnviarAnexos
+          ? (() => {
+              const formData = new FormData()
+              formData.append('mensagem', conteudo)
+              formData.append('historico', JSON.stringify(historico))
+              formData.append('salvarAnexosNoDossie', String(salvarAnexosNoDossie))
+              anexos.forEach(anexo => formData.append('anexos', anexo.file))
+              return formData
+            })()
+          : JSON.stringify({ mensagem: conteudo, historico }),
       })
 
       if (IS_DEV) {
@@ -111,6 +184,7 @@ export default function AuroraPage() {
             ? { ...msg, content: resposta ? `${resposta}${aviso}` : `Erro: ${erro || 'Resposta vazia da Aurora.'}`, loading: false }
             : msg
         ))
+        limparAnexosSelecionados()
         return
       }
 
@@ -118,6 +192,7 @@ export default function AuroraPage() {
         setMensagens(prev => prev.map(msg =>
           msg.id === asstId ? { ...msg, content: 'Resposta vazia da Aurora.', loading: false } : msg
         ))
+        limparAnexosSelecionados()
         return
       }
 
@@ -137,6 +212,7 @@ export default function AuroraPage() {
       setMensagens(prev => prev.map(msg =>
         msg.id === asstId ? { ...msg, loading: false } : msg
       ))
+      limparAnexosSelecionados()
     } catch (error) {
       if (IS_DEV) {
         console.error('[Aurora] erro no envio', error)
@@ -166,6 +242,38 @@ export default function AuroraPage() {
       e.preventDefault()
       enviar()
     }
+  }
+
+  function limparAnexosSelecionados() {
+    setAnexos([])
+    setSalvarAnexosNoDossie(false)
+    setErroAnexos(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function anexarArquivos(files: FileList | File[]) {
+    setErroAnexos(null)
+    const selecionados = Array.from(files)
+    if (!selecionados.length) return
+
+    const anexosValidos: AnexoSelecionado[] = []
+
+    for (const file of selecionados) {
+      const erro = validarAnexo(file)
+      if (erro) {
+        setErroAnexos(erro)
+        return
+      }
+      anexosValidos.push({
+        id: makeAttachmentId(file),
+        file,
+        nome: file.name,
+        tipo: file.type || 'desconhecido',
+        tamanho: file.size,
+      })
+    }
+
+    setAnexos(prev => [...prev, ...anexosValidos])
   }
 
   return (
@@ -297,6 +405,36 @@ export default function AuroraPage() {
 
             <div className="p-5 border-t border-white/[0.08]">
               <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+                {anexos.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {anexos.map(anexo => (
+                      <div
+                        key={anexo.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/10 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-[12px] font-medium text-[#F7F0E8]">{anexo.nome}</p>
+                          <p className="text-[11px] text-white/[0.42]">
+                            {anexo.tipo || 'desconhecido'} • {formatFileSize(anexo.tamanho)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAnexos(prev => prev.filter(item => item.id !== anexo.id))}
+                          className="rounded-lg p-1.5 text-white/45 hover:bg-white/[0.08] hover:text-white"
+                          aria-label={`Remover ${anexo.nome}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {erroAnexos && (
+                  <p className="mb-3 text-[12px] font-medium text-rose-300">{erroAnexos}</p>
+                )}
+
                 <textarea
                   ref={textareaRef}
                   value={mensagem}
@@ -308,18 +446,53 @@ export default function AuroraPage() {
                   className="w-full resize-none bg-transparent outline-none text-[14px] leading-relaxed text-[#F7F0E8] placeholder:text-white/[0.28]"
                   style={{ maxHeight: 180 }}
                 />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-white/[0.28]">
-                    Ações sensíveis exigem confirmação expressa de um sócio.
-                  </p>
-                  <button
-                    onClick={() => enviar()}
-                    disabled={loading || !mensagem.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#C49557] px-4 py-2 text-[13px] font-semibold text-[#081422] hover:bg-[#D4AA6D] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-                  >
-                    {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                    Enviar
-                  </button>
+                <div className="mt-3 flex flex-col gap-3">
+                  <label className="inline-flex items-center gap-2 text-[11px] font-medium text-white/[0.55]">
+                    <input
+                      type="checkbox"
+                      checked={salvarAnexosNoDossie}
+                      onChange={e => setSalvarAnexosNoDossie(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/20 bg-transparent text-[#C49557] focus:ring-[#C49557]"
+                    />
+                    Salvar estes anexos no Dossiê Aurora
+                  </label>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={ACCEPTED_FILES}
+                        multiple
+                        className="hidden"
+                        onChange={e => {
+                          anexarArquivos(e.target.files ?? [])
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px] font-medium text-white/[0.7] hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        title="Anexar documentos"
+                      >
+                        <Paperclip size={14} />
+                        Anexar documentos
+                      </button>
+                      <p className="text-[11px] text-white/[0.28]">
+                        Ações sensíveis exigem confirmação expressa de um sócio.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => enviar()}
+                      disabled={loading || !mensagem.trim()}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#C49557] px-4 py-2 text-[13px] font-semibold text-[#081422] hover:bg-[#D4AA6D] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                    >
+                      {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                      Enviar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

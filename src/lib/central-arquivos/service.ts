@@ -142,6 +142,7 @@ export async function listDocumentos(filters: CentralArquivosFiltroBase = {}): P
   if (error) throw new CentralArquivosError(error.message, 500, 'list_documentos_failed')
 
   return ((data ?? []) as unknown as CentralArquivosDocumento[]).filter(row => {
+    if (row.categoria === 'anexo_conversa_aurora' && !row.pasta_id) return false
     if (filters.cliente_id && row.cliente_id !== filters.cliente_id) return false
     if (filters.processo_id && row.processo_id !== filters.processo_id) return false
     if (filters.caso_id && row.caso_id !== filters.caso_id) return false

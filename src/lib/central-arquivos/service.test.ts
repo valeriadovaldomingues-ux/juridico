@@ -22,6 +22,7 @@ vi.mock('./storage', () => ({
 import {
   createPasta,
   getDocumentoDownload,
+  listDocumentos,
   uploadCentralArquivos,
 } from './service'
 
@@ -35,6 +36,7 @@ function makeQueryResult(result: { data: unknown; error: unknown }) {
     in: vi.fn(() => chain),
     maybeSingle: vi.fn(async () => result),
     single: vi.fn(async () => result),
+    then: (resolve: (value: { data: unknown; error: unknown }) => void) => Promise.resolve(result).then(resolve),
   }
   return chain
 }
@@ -112,5 +114,67 @@ describe('central-arquivos service', () => {
     expect(download.signedUrl).toBe('https://example.com/download')
     expect(download.fileName).toBe('Arquivo.pdf')
     expect(download.mimeType).toBe('application/pdf')
+  })
+
+  it('oculta anexos temporários da conversa da listagem padrão', async () => {
+    const query = makeQueryResult({
+      data: [
+        {
+          id: 'temp-1',
+          pasta_id: null,
+          nome_original: 'anexo.pdf',
+          nome_armazenado: 'anexo.pdf',
+          tipo_mime: 'application/pdf',
+          extensao: 'pdf',
+          tamanho_bytes: 123,
+          storage_bucket: 'central-arquivos',
+          storage_path: 'docs/temp/anexo.pdf',
+          cliente_id: null,
+          processo_id: null,
+          caso_id: null,
+          categoria: 'anexo_conversa_aurora',
+          descricao: null,
+          enviado_por: 'uid',
+          status_processamento: 'pendente',
+          status_transcricao: null,
+          visibilidade: 'interna',
+          analise_aurora: null,
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-01T00:00:00Z',
+        },
+        {
+          id: 'doc-1',
+          pasta_id: 'p1',
+          nome_original: 'dossiê.pdf',
+          nome_armazenado: 'dossie.pdf',
+          tipo_mime: 'application/pdf',
+          extensao: 'pdf',
+          tamanho_bytes: 456,
+          storage_bucket: 'central-arquivos',
+          storage_path: 'docs/dossie.pdf',
+          cliente_id: null,
+          processo_id: null,
+          caso_id: null,
+          categoria: 'dossiê',
+          descricao: null,
+          enviado_por: 'uid',
+          status_processamento: 'pendente',
+          status_transcricao: null,
+          visibilidade: 'interna',
+          analise_aurora: null,
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-01T00:00:00Z',
+        },
+      ],
+      error: null,
+    })
+    mockCreateServiceClient.mockReturnValue({
+      from: vi.fn(() => query),
+    })
+
+    const documentos = await listDocumentos()
+
+    expect(documentos).toHaveLength(1)
+    expect(documentos[0]?.id).toBe('doc-1')
   })
 })

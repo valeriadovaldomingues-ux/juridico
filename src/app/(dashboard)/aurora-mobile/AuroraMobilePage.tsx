@@ -11,6 +11,7 @@ import {
   Mic,
   MicOff,
   Plus,
+  Paperclip,
   Send,
   Sparkles,
   X,
@@ -20,6 +21,10 @@ import {
   AURORA_MOBILE_QUICK_COMMANDS,
   type AuroraMobileQuickCommand,
 } from '@/lib/aurora-mobile'
+import {
+  CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS,
+  CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES,
+} from '@/lib/central-arquivos/types'
 import { cn } from '@/lib/utils'
 
 type MensagemRole = 'user' | 'assistant'
@@ -29,6 +34,14 @@ interface Mensagem {
   role: MensagemRole
   content: string
   loading?: boolean
+}
+
+interface AnexoSelecionado {
+  id: string
+  file: File
+  nome: string
+  tipo: string
+  tamanho: number
 }
 
 type MobileSpeechRecognitionCtor = new () => {
@@ -68,6 +81,48 @@ function mapHistorico(mensagens: Mensagem[]) {
     .map(msg => ({ role: msg.role, content: msg.content }))
 }
 
+const ACCEPTED_FILES = [
+  ...CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS.map(ext => `.${ext}`),
+  ...CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES,
+].join(',')
+const AURORA_ATTACHMENT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+function makeAttachmentId(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let index = 0
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024
+    index += 1
+  }
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`
+}
+
+function validarAnexo(file: File) {
+  const nome = file.name.toLowerCase()
+  const extensao = nome.includes('.') ? nome.split('.').pop() ?? '' : ''
+  const mime = file.type.toLowerCase()
+
+  if (!CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS.includes(extensao as typeof CENTRAL_ARQUIVOS_ALLOWED_EXTENSIONS[number])) {
+    return 'Tipo de arquivo não permitido.'
+  }
+
+  if (!CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES.includes(mime as typeof CENTRAL_ARQUIVOS_ALLOWED_MIME_TYPES[number])) {
+    return 'Tipo de arquivo não permitido.'
+  }
+
+  if (file.size <= 0 || file.size > AURORA_ATTACHMENT_MAX_UPLOAD_BYTES) {
+    return 'Arquivo excede o tamanho máximo permitido.'
+  }
+
+  return null
+}
+
 export default function AuroraMobilePage() {
   const [mensagem, setMensagem] = useState('')
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
@@ -76,9 +131,13 @@ export default function AuroraMobilePage() {
   const [listening, setListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
   const [showInstallHint, setShowInstallHint] = useState(true)
+  const [anexos, setAnexos] = useState<AnexoSelecionado[]>([])
+  const [salvarAnexosNoDossie, setSalvarAnexosNoDossie] = useState(false)
+  const [erroAnexos, setErroAnexos] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<InstanceType<MobileSpeechRecognitionCtor> | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const hasMessages = mensagens.length > 0
   const canSend = mensagem.trim().length > 0 && !loading
@@ -104,8 +163,10 @@ export default function AuroraMobilePage() {
     const userId = makeMessageId()
     const assistantId = makeMessageId()
     const historico = mapHistorico(mensagens)
+    const deveEnviarAnexos = anexos.length > 0
 
     setErro('')
+    setErroAnexos('')
     setMensagem('')
     setLoading(true)
     setMensagens(prev => [
@@ -117,8 +178,17 @@ export default function AuroraMobilePage() {
     try {
       const res = await fetch('/api/ia/aurora', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensagem: conteudo, historico }),
+        headers: deveEnviarAnexos ? undefined : { 'Content-Type': 'application/json' },
+        body: deveEnviarAnexos
+          ? (() => {
+              const formData = new FormData()
+              formData.append('mensagem', conteudo)
+              formData.append('historico', JSON.stringify(historico))
+              formData.append('salvarAnexosNoDossie', String(salvarAnexosNoDossie))
+              anexos.forEach(anexo => formData.append('anexos', anexo.file))
+              return formData
+            })()
+          : JSON.stringify({ mensagem: conteudo, historico }),
       })
 
       if (!res.ok) {
@@ -134,6 +204,7 @@ export default function AuroraMobilePage() {
         setMensagens(prev => prev.map(msg =>
           msg.id === assistantId ? { ...msg, content: resposta, loading: false } : msg
         ))
+        limparAnexosSelecionados()
         return
       }
 
@@ -154,6 +225,7 @@ export default function AuroraMobilePage() {
       setMensagens(prev => prev.map(msg =>
         msg.id === assistantId ? { ...msg, loading: false } : msg
       ))
+      limparAnexosSelecionados()
     } catch (error) {
       if (IS_DEV) console.error('[Aurora mobile] erro ao enviar', error)
       const detalhe = getErrorMessage(error)
@@ -212,7 +284,39 @@ export default function AuroraMobilePage() {
     setMensagens([])
     setErro('')
     setMensagem('')
+    limparAnexosSelecionados()
     textareaRef.current?.focus()
+  }
+
+  function limparAnexosSelecionados() {
+    setAnexos([])
+    setSalvarAnexosNoDossie(false)
+    setErroAnexos('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function anexarArquivos(files: FileList | File[]) {
+    setErroAnexos('')
+    const selecionados = Array.from(files)
+    if (!selecionados.length) return
+
+    const anexosValidos: AnexoSelecionado[] = []
+    for (const file of selecionados) {
+      const erroFile = validarAnexo(file)
+      if (erroFile) {
+        setErroAnexos(erroFile)
+        return
+      }
+      anexosValidos.push({
+        id: makeAttachmentId(file),
+        file,
+        nome: file.name,
+        tipo: file.type || 'desconhecido',
+        tamanho: file.size,
+      })
+    }
+
+    setAnexos(prev => [...prev, ...anexosValidos])
   }
 
   return (
@@ -343,6 +447,36 @@ export default function AuroraMobilePage() {
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-2">
+            {anexos.length > 0 && (
+              <div className="space-y-2 px-2 pb-2">
+                {anexos.map(anexo => (
+                  <div
+                    key={anexo.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-medium">{anexo.nome}</p>
+                      <p className="text-[11px] text-white/45">
+                        {anexo.tipo} • {formatFileSize(anexo.tamanho)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAnexos(prev => prev.filter(item => item.id !== anexo.id))}
+                      className="rounded-full p-1.5 text-white/45 hover:bg-white/10 hover:text-white"
+                      aria-label={`Remover ${anexo.nome}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {erroAnexos && (
+              <p className="px-2 pb-2 text-[12px] font-medium text-rose-300">{erroAnexos}</p>
+            )}
+
             <textarea
               ref={textareaRef}
               value={mensagem}
@@ -353,22 +487,45 @@ export default function AuroraMobilePage() {
               className="max-h-36 w-full resize-none bg-transparent px-2 py-2 text-[16px] leading-relaxed text-[#F7F0E8] outline-none placeholder:text-white/30"
             />
             <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={toggleSpeech}
-                disabled={!speechSupported || loading}
-                className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors',
-                  listening
-                    ? 'border-red-300/30 bg-red-500/20 text-red-100'
-                    : 'border-white/10 bg-white/[0.04] text-white/65 hover:bg-white/[0.08] hover:text-white',
-                  (!speechSupported || loading) && 'cursor-not-allowed opacity-40',
-                )}
-                aria-label={listening ? 'Parar ditado' : 'Ditar mensagem'}
-                title={speechSupported ? 'Ditar mensagem' : 'Ditado não suportado neste navegador'}
-              >
-                {speechSupported ? (listening ? <MicOff size={18} /> : <Mic size={18} />) : <MicOff size={18} />}
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_FILES}
+                  multiple
+                  className="hidden"
+                  onChange={event => {
+                    anexarArquivos(event.target.files ?? [])
+                    event.currentTarget.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/65 transition-colors hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Anexar documentos"
+                  title="Anexar documentos"
+                >
+                  <Paperclip size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSpeech}
+                  disabled={!speechSupported || loading}
+                  className={cn(
+                    'flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors',
+                    listening
+                      ? 'border-red-300/30 bg-red-500/20 text-red-100'
+                      : 'border-white/10 bg-white/[0.04] text-white/65 hover:bg-white/[0.08] hover:text-white',
+                    (!speechSupported || loading) && 'cursor-not-allowed opacity-40',
+                  )}
+                  aria-label={listening ? 'Parar ditado' : 'Ditar mensagem'}
+                  title={speechSupported ? 'Ditar mensagem' : 'Ditado não suportado neste navegador'}
+                >
+                  {speechSupported ? (listening ? <MicOff size={18} /> : <Mic size={18} />) : <MicOff size={18} />}
+                </button>
+              </div>
 
               <p className="min-w-0 flex-1 truncate px-1 text-[11px] text-white/30">
                 {speechSupported ? 'Microfone disponível no navegador' : 'Digite a mensagem; microfone indisponível'}
@@ -384,6 +541,15 @@ export default function AuroraMobilePage() {
                 Enviar
               </button>
             </div>
+            <label className="mt-2 flex items-center gap-2 px-1 text-[11px] font-medium text-white/55">
+              <input
+                type="checkbox"
+                checked={salvarAnexosNoDossie}
+                onChange={event => setSalvarAnexosNoDossie(event.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-transparent text-[#C49557] focus:ring-[#C49557]"
+              />
+              Salvar estes anexos no Dossiê Aurora
+            </label>
           </div>
         </footer>
       </div>

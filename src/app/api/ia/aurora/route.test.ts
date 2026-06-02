@@ -11,6 +11,11 @@ const {
   mockMontarContextoPublicacoesParaAurora,
   mockClassificarMensagemAurora,
   mockCarregarPromptCompletoAurora,
+  mockConsultarOlavoDrive,
+  mockMontarContextoOlavoDrive,
+  mockUploadCentralArquivos,
+  mockListPastas,
+  mockCreatePasta,
 } = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
   mockBuildMensagensAurora: vi.fn(),
@@ -21,6 +26,11 @@ const {
   mockMontarContextoPublicacoesParaAurora: vi.fn(),
   mockClassificarMensagemAurora: vi.fn(),
   mockCarregarPromptCompletoAurora: vi.fn(),
+  mockConsultarOlavoDrive: vi.fn(),
+  mockMontarContextoOlavoDrive: vi.fn(),
+  mockUploadCentralArquivos: vi.fn(),
+  mockListPastas: vi.fn(),
+  mockCreatePasta: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/api-guard', () => ({
@@ -50,6 +60,18 @@ vi.mock('@/lib/aurora/prompt-loader', () => ({
   carregarPromptCompletoAurora: mockCarregarPromptCompletoAurora,
 }))
 
+vi.mock('@/lib/aurora/olavo-drive', () => ({
+  consultarOlavoDrive: mockConsultarOlavoDrive,
+  montarContextoOlavoDrive: mockMontarContextoOlavoDrive,
+}))
+
+vi.mock('@/lib/central-arquivos', () => ({
+  uploadCentralArquivos: mockUploadCentralArquivos,
+  listPastas: mockListPastas,
+  createPasta: mockCreatePasta,
+  isCentralArquivosError: (error: unknown) => Boolean(error && typeof error === 'object' && 'status' in (error as any)),
+}))
+
 import { POST } from './route'
 
 function request(body: unknown) {
@@ -57,6 +79,13 @@ function request(body: unknown) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+  })
+}
+
+function multipartRequest(form: FormData) {
+  return new Request('http://localhost/api/ia/aurora', {
+    method: 'POST',
+    body: form,
   })
 }
 
@@ -89,6 +118,11 @@ beforeEach(() => {
   mockMontarContextoPublicacoesParaAurora.mockReset()
   mockClassificarMensagemAurora.mockReset()
   mockCarregarPromptCompletoAurora.mockReset()
+  mockConsultarOlavoDrive.mockReset()
+  mockMontarContextoOlavoDrive.mockReset()
+  mockUploadCentralArquivos.mockReset()
+  mockListPastas.mockReset()
+  mockCreatePasta.mockReset()
 
   mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid-1' })
   mockDetectarIntencaoPublicacoes.mockReturnValue({
@@ -103,6 +137,51 @@ beforeEach(() => {
   mockCarregarPromptCompletoAurora.mockResolvedValue('PROMPT PRINCIPAL')
   mockBuildMensagensAurora.mockReturnValue([{ role: 'system', content: 'Aurora' }])
   mockStreamTextoPreflight.mockResolvedValue(textStream('resposta'))
+  mockConsultarOlavoDrive.mockResolvedValue({
+    fonte: 'olavo-drive',
+    especialista: 'Olavo Drive',
+    resposta: 'Contexto documental do Olavo Drive.',
+  })
+  mockMontarContextoOlavoDrive.mockReturnValue('CONTEXTO DO SISTEMA - OLAVO DRIVE\nContexto documental do Olavo Drive.')
+  mockListPastas.mockResolvedValue([])
+  mockCreatePasta.mockResolvedValue({
+    id: 'pasta-aurora',
+    nome: 'Anexos da Aurora',
+    descricao: 'Arquivos anexados às conversas com a Aurora e salvos no Dossiê Aurora.',
+    cliente_id: null,
+    processo_id: null,
+    caso_id: null,
+    pasta_pai_id: null,
+    criado_por: 'uid-1',
+    visibilidade: 'interna',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  })
+  mockUploadCentralArquivos.mockResolvedValue([
+    {
+      id: 'doc-1',
+      pasta_id: 'pasta-aurora',
+      nome_original: 'contrato.pdf',
+      nome_armazenado: 'arquivo.pdf',
+      tipo_mime: 'application/pdf',
+      extensao: 'pdf',
+      tamanho_bytes: 1234,
+      storage_bucket: 'central-arquivos',
+      storage_path: 'docs/pasta-aurora/2026/06/01/arquivo.pdf',
+      cliente_id: null,
+      processo_id: null,
+      caso_id: null,
+      categoria: 'anexo_conversa_aurora',
+      descricao: 'Anexos enviados na conversa com a Aurora.',
+      enviado_por: 'uid-1',
+      status_processamento: 'pendente',
+      status_transcricao: null,
+      visibilidade: 'interna',
+      analise_aurora: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+  ])
 })
 
 afterEach(() => {
@@ -176,6 +255,37 @@ describe('POST /api/ia/aurora', () => {
     expect(res.status).toBe(200)
     expect(mockBuildMensagensAurora).toHaveBeenCalled()
     expect(mockStreamTextoPreflight).toHaveBeenCalled()
+  })
+
+  it('aceita anexos multipart e injeta contexto factual dos arquivos', async () => {
+    mockClassificarMensagemAurora.mockReturnValue(decisaoPadrao)
+
+    const form = new FormData()
+    form.append('mensagem', 'Analise os anexos enviados')
+    form.append('historico', JSON.stringify([{ role: 'user', content: 'Contexto anterior' }]))
+    form.append('salvarAnexosNoDossie', 'true')
+    form.append('anexos', new File([new Uint8Array([1, 2, 3])], 'contrato.pdf', { type: 'application/pdf' }))
+
+    const res = await POST(multipartRequest(form) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockCreatePasta).toHaveBeenCalledWith(expect.objectContaining({
+      nome: 'Anexos da Aurora',
+    }), 'uid-1')
+    expect(mockUploadCentralArquivos).toHaveBeenCalledWith(expect.objectContaining({
+      files: [expect.any(File)],
+      pasta_id: 'pasta-aurora',
+      categoria: 'anexo_conversa_aurora',
+      descricao: 'Anexos enviados na conversa com a Aurora.',
+      visibilidade: 'interna',
+    }), 'uid-1')
+    expect(mockBuildMensagensAurora).toHaveBeenCalledWith(
+      'Analise os anexos enviados',
+      [{ role: 'user', content: 'Contexto anterior' }],
+      expect.stringContaining('contrato.pdf'),
+      'PROMPT PRINCIPAL',
+    )
+    expect(mockBuildMensagensAurora.mock.calls.at(-1)?.[2]).toContain('storage_path: docs/pasta-aurora/2026/06/01/arquivo.pdf')
   })
 
   it('roteia para um único subagente e carrega apenas o prompt selecionado', async () => {
