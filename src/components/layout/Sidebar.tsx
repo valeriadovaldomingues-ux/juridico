@@ -63,6 +63,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/ferramentas-pdf', label: 'Ferramentas PDF', icon: Scissors },
       { href: '/tv/painel-diario', label: 'Painel TV Diário', icon: Tv2 },
+      { href: '/dashboard/tv', label: 'Dashboard TV', icon: Tv2 },
     ],
   },
   {

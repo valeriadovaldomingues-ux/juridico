@@ -42,6 +42,7 @@ function getServiceClient(): ReturnType<typeof createClient> | null {
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/aurora-mobile',           roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
+  { prefix: '/dashboard/tv',           roles: ['socio'] },
   { prefix: '/financeiro',             roles: ['socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
   { prefix: '/integracoes/gmail',       roles: ['socio'] },

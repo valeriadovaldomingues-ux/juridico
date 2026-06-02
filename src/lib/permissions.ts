@@ -301,6 +301,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/configuracoes/usuarios',
     '/configuracoes',
     '/tv/painel-diario',
+    '/dashboard/tv',
   ],
   // Cliente externo: sem rotas internas — acesso exclusivo via /portal/*
   cliente: [],
@@ -316,6 +317,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
   { prefix: '/aurora-mobile',          roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',    roles: ['socio'] },
+  { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
   { prefix: '/financeiro',            roles: ['socio'] },

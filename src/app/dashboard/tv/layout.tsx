@@ -28,8 +28,8 @@ export default async function TVLayout({ children }: { children: React.ReactNode
     redirect('/login?erro=conta-desativada')
   }
 
-  // Painel TV restrito a gerente e socio (dados sensiveis do escritorio)
-  if (!['gerente', 'socio'].includes(profile.role)) {
+  // Painel TV restrito a sócio (dados sensiveis do escritorio)
+  if (profile.role !== 'socio') {
     redirect('/dashboard')
   }
 
