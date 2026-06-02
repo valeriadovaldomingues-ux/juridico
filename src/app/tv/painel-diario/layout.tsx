@@ -1,4 +1,5 @@
-import { requireRole } from '@/lib/auth/guards'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
   title: 'Painel Diário — Pessoa e do Val Advocacia',
@@ -7,15 +8,32 @@ export const metadata = {
 /**
  * Layout isolado para o Painel TV Diário.
  * Sem Sidebar nem Header do dashboard — tela limpa para exibição em TV.
- * Acesso restrito a gerente e sócio.
+ * Acesso para usuários internos autenticados, exceto cliente.
  */
 export default async function PainelDiarioLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Guard server-side — consistente com o padrão do sistema
-  await requireRole(['gerente', 'socio'])
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, ativo')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.ativo) {
+    await supabase.auth.signOut()
+    redirect('/login?erro=conta-desativada')
+  }
+
+  if (profile.role === 'cliente') {
+    redirect('/portal')
+  }
 
   return (
     <div

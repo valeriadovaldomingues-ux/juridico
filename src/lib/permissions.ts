@@ -51,6 +51,7 @@ export type Module =
   | 'ferramentasPdf'
   | 'relatorios'
   | 'monitoramento'
+  | 'tv'
   | 'usuarios'
   | 'configuracoes'
 
@@ -92,6 +93,7 @@ const PERMISSIONS: PermMatrix = {
     publicacoes: ['view'],
     documentos:  ['view', 'create'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Comercial ────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ const PERMISSIONS: PermMatrix = {
     clientes:   ['view', 'create', 'edit'],
     comercial:  ['view', 'create', 'edit', 'delete'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Administrativo ───────────────────────────────────────────────────────────
@@ -118,6 +121,7 @@ const PERMISSIONS: PermMatrix = {
     importacao:   ['view', 'create'],
     comercial:    ['view'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Advogado ─────────────────────────────────────────────────────────────────
@@ -134,6 +138,7 @@ const PERMISSIONS: PermMatrix = {
     documentos:   ['view', 'create', 'edit'],
     monitoramento: ['view'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Gerente ──────────────────────────────────────────────────────────────────
@@ -152,6 +157,7 @@ const PERMISSIONS: PermMatrix = {
     relatorios:   ['view'],
     monitoramento: ['view'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Sócio ────────────────────────────────────────────────────────────────────
@@ -175,6 +181,7 @@ const PERMISSIONS: PermMatrix = {
     usuarios:     ['view', 'create', 'edit', 'delete', 'manage'],
     configuracoes: ['view', 'edit', 'manage'],
     ferramentasPdf: ['view'],
+    tv: ['view'],
   },
 
   // ── Cliente (portal externo) ──────────────────────────────────────────────
@@ -222,12 +229,14 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
+    '/tv/painel-diario',
   ],
   comercial: [
     '/dashboard',
     '/clientes',
     '/comercial',
     '/ferramentas-pdf',
+    '/tv/painel-diario',
   ],
   administrativo: [
     '/dashboard',
@@ -239,6 +248,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/ferramentas-pdf',
     '/importar',
     '/comercial',
+    '/tv/painel-diario',
   ],
   advogado: [
     '/dashboard',
@@ -251,6 +261,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/ferramentas-pdf',
     '/monitoramento',
     '/ia-juridica',
+    '/tv/painel-diario',
   ],
   gerente: [
     '/dashboard',
@@ -267,6 +278,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/monitoramento',
     '/ia-juridica',
     '/integracoes/trello',
+    '/tv/painel-diario',
   ],
   socio: [
     '/dashboard',
@@ -288,6 +300,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/integracoes/gmail',
     '/configuracoes/usuarios',
     '/configuracoes',
+    '/tv/painel-diario',
   ],
   // Cliente externo: sem rotas internas — acesso exclusivo via /portal/*
   cliente: [],

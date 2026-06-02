@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
-  Mail, Scissors,
+  Mail, Scissors, Tv2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -62,6 +62,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     label: 'Ferramentas',
     items: [
       { href: '/ferramentas-pdf', label: 'Ferramentas PDF', icon: Scissors },
+      { href: '/tv/painel-diario', label: 'Painel TV Diário', icon: Tv2 },
     ],
   },
   {
