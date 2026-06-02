@@ -1,16 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import type { ParteProcesso, Prazo } from '@/types'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
+import {
+  ANDAMENTO_ORIGEM_LABELS,
+  ANDAMENTO_ORIGENS,
+  ANDAMENTO_TIPO_LABELS,
+  ANDAMENTO_TIPOS,
+  andamentoTipoPermitidoParaRole,
+  buildAndamentosAuroraContext,
+  normalizeAndamentoOrigem,
+  normalizeAndamentoTipo,
+} from '@/lib/processos/andamentos'
+import type {
+  AndamentoOrigem,
+  AndamentoTipo,
+  ParteProcesso,
+  Prazo,
+  ProcessoAndamento,
+  UserRole,
+} from '@/types'
 import ProcessoForm from '../ProcessoForm'
 
 // ─── Labels e cores ───────────────────────────────────────────────────────────
@@ -97,6 +117,57 @@ interface ClienteSimple {
   email?: string | null
 }
 
+interface DocumentoProcessoSimple {
+  id: string
+  processo_id: string | null
+  cliente_id: string | null
+  nome_arquivo: string
+  tipo_documento: string
+  storage_path: string
+  uploaded_by: string | null
+  created_at: string
+  uploaded_by_profile?: {
+    id: string
+    nome: string
+    email: string | null
+    role: string | null
+  } | null
+}
+
+type TabAtiva = 'dados' | 'andamentos' | 'documentos' | 'prazos' | 'observacoes'
+
+const TAB_OPTIONS: Array<{ id: TabAtiva; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
+  { id: 'dados', label: 'Dados gerais', icon: ListChecks },
+  { id: 'andamentos', label: 'Andamentos', icon: Clock3 },
+  { id: 'documentos', label: 'Documentos', icon: FileText },
+  { id: 'prazos', label: 'Prazos', icon: CalendarRange },
+  { id: 'observacoes', label: 'Observações', icon: Paperclip },
+]
+
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+function toInputDateTimeValue(iso?: string | null) {
+  const date = iso ? new Date(iso) : new Date()
+  if (Number.isNaN(date.getTime())) return ''
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60 * 1000)
+  return local.toISOString().slice(0, 16)
+}
+
+function fromInputDateTimeValue(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function ProcessoDetail({
@@ -104,14 +175,31 @@ export default function ProcessoDetail({
   partes: partesIniciais,
   prazos,
   agendaItems = [],
+  andamentos: andamentosIniciais = [],
+  documentos = [],
+  role,
 }: {
   processo: any
   partes: ParteProcesso[]
   prazos: Prazo[]
   agendaItems?: AgendaItemSimple[]
+  andamentos?: ProcessoAndamento[]
+  documentos?: DocumentoProcessoSimple[]
+  role: UserRole
 }) {
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<TabAtiva>('dados')
+  const [andamentos, setAndamentos] = useState(andamentosIniciais)
   const router = useRouter()
+  const latestAndamento = andamentos[0] ?? null
+  const nextPrazo = prazos[0] ?? null
+  const tabCount = {
+    dados: 0,
+    andamentos: andamentos.length,
+    documentos: documentos.length,
+    prazos: prazos.length,
+    observacoes: processo.observacoes ? 1 : 0,
+  }
 
   if (editing) {
     return (
@@ -160,68 +248,111 @@ export default function ProcessoDetail({
         {/* ── Coluna principal ── */}
         <div className="col-span-2 space-y-4">
 
-          {/* Dados do processo */}
-          <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-[#1a1d23]">Dados do Processo</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <SummaryCard
+              label="Último andamento"
+              value={latestAndamento ? latestAndamento.titulo : 'Nenhum andamento'}
+              detail={latestAndamento ? `${formatDateTime(latestAndamento.data_andamento)} · ${ANDAMENTO_TIPO_LABELS[latestAndamento.tipo] ?? latestAndamento.tipo}` : 'Registre o primeiro andamento'}
+            />
+            <SummaryCard
+              label="Próximo prazo"
+              value={nextPrazo ? nextPrazo.titulo : 'Sem prazo'}
+              detail={nextPrazo ? `${formatDate(nextPrazo.data_final)} · ${prioridadeColors[nextPrazo.prioridade] ? nextPrazo.prioridade : '—'}` : 'Sem prazos cadastrados'}
+            />
+            <SummaryCard
+              label="Documentos"
+              value={`${documentos.length}`}
+              detail={documentos.length ? 'Arquivos vinculados ao processo' : 'Sem documentos vinculados'}
+            />
+          </div>
+
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]">
+              <div>
+                <p className="text-xs text-[#9ca3af] uppercase tracking-wider">Processo</p>
+                <h2 className="text-sm font-semibold text-[#1a1d23] mt-1">Acompanhamento e documentos</h2>
+              </div>
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[processo.status] ?? 'bg-gray-100'}`}>
                 {processo.status}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Field label="Número do Processo" value={processo.numero_processo} mono />
-              <Field label="Área do Direito"     value={areaLabels[processo.area_direito] ?? processo.area_direito} />
-              <Field label="Tribunal"             value={processo.tribunal} />
-              <Field label="Vara"                 value={processo.vara} />
-              <Field label="Fase"                 value={processo.fase} />
-              <Field label="Distribuição"         value={processo.data_distribuicao ? formatDate(processo.data_distribuicao) : null} />
-              <Field label="Valor da Causa"       value={processo.valor_causa ? formatCurrency(processo.valor_causa) : null} />
-            </div>
-            {processo.observacoes && (
-              <div className="mt-4 pt-4 border-t border-[#f3f4f6]">
-                <p className="text-xs text-[#9ca3af] uppercase tracking-wider mb-1.5">Observações</p>
-                <p className="text-sm text-[#374151]">{processo.observacoes}</p>
-              </div>
-            )}
-          </div>
 
-          {/* Partes do processo — visual + CRUD inline */}
-          <PartesSection
-            processoId={processo.id}
-            partesIniciais={partesIniciais}
-            cliente={processo.cliente ?? null}
-            onEditar={() => setEditing(true)}
-          />
+            <div className="flex flex-wrap items-center gap-1 px-3 py-3 border-b border-[#f3f4f6] bg-[#fafafa]">
+              {TAB_OPTIONS.map(tabOption => {
+                const Icon = tabOption.icon
+                const active = tab === tabOption.id
+                return (
+                  <button
+                    key={tabOption.id}
+                    onClick={() => setTab(tabOption.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium transition-colors ${
+                      active
+                        ? 'bg-[#1D5F60] text-white shadow-sm'
+                        : 'text-[#374151] hover:bg-white hover:text-[#1D5F60]'
+                    }`}
+                  >
+                    <Icon size={13} />
+                    {tabOption.label}
+                    {tabCount[tabOption.id] > 0 && (
+                      <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/15 text-white' : 'bg-[#E8F2F2] text-[#1D5F60]'}`}>
+                        {tabCount[tabOption.id]}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="p-5">
+              {tab === 'dados' && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                      <Field label="Número do Processo" value={processo.numero_processo} mono />
+                      <Field label="Área do Direito"     value={areaLabels[processo.area_direito] ?? processo.area_direito} />
+                      <Field label="Tribunal"             value={processo.tribunal} />
+                      <Field label="Vara"                 value={processo.vara} />
+                      <Field label="Fase"                 value={processo.fase} />
+                      <Field label="Distribuição"         value={processo.data_distribuicao ? formatDate(processo.data_distribuicao) : null} />
+                      <Field label="Valor da Causa"       value={processo.valor_causa ? formatCurrency(processo.valor_causa) : null} />
+                    </div>
+                  </div>
+
+                  <PartesSection
+                    processoId={processo.id}
+                    partesIniciais={partesIniciais}
+                    cliente={processo.cliente ?? null}
+                    onEditar={() => setEditing(true)}
+                  />
+                </div>
+              )}
+
+              {tab === 'andamentos' && (
+                <AndamentosTab
+                  processoId={processo.id}
+                  role={role}
+                  andamentos={andamentos}
+                  setAndamentos={setAndamentos}
+                />
+              )}
+
+              {tab === 'documentos' && (
+                <DocumentosTab documentos={documentos} />
+              )}
+
+              {tab === 'prazos' && (
+                <PrazosTab prazos={prazos} />
+              )}
+
+              {tab === 'observacoes' && (
+                <ObservacoesTab observacoes={processo.observacoes} />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Coluna lateral ── */}
         <div className="space-y-4">
-
-          {/* Prazos */}
-          <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
-            <h2 className="text-xs text-[#9ca3af] uppercase tracking-wider mb-3 flex items-center gap-2">
-              <CalendarDays size={12} /> Prazos ({prazos.length})
-            </h2>
-            {prazos.length === 0 ? (
-              <p className="text-sm text-[#9ca3af]">Nenhum prazo</p>
-            ) : (
-              <div className="space-y-2.5">
-                {prazos.map((prazo) => (
-                  <div key={prazo.id} className="p-2.5 rounded-xl bg-[#f9fafb]">
-                    <p className="text-sm font-medium text-[#1a1d23] leading-tight">{prazo.titulo}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-[#9ca3af]">{formatDate(prazo.data_final)}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${prioridadeColors[prazo.prioridade] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {prazo.prioridade}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Agenda / Timeline */}
           <AgendaTimeline processoId={processo.id} items={agendaItems} />
 
           <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
@@ -719,6 +850,615 @@ function AgendaTimeline({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function SummaryCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[#9ca3af]">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-[#1a1d23] leading-tight">{value}</p>
+      <p className="mt-1.5 text-[11px] text-[#6b7280] leading-relaxed">{detail}</p>
+    </div>
+  )
+}
+
+interface AndamentoFormState {
+  data_andamento: string
+  tipo: AndamentoTipo
+  titulo: string
+  descricao: string
+  origem: AndamentoOrigem
+  responsavel_id: string
+}
+
+const ANDAMENTO_FORM_VAZIO: AndamentoFormState = {
+  data_andamento: toInputDateTimeValue(),
+  tipo: 'outro',
+  titulo: '',
+  descricao: '',
+  origem: 'manual',
+  responsavel_id: '',
+}
+
+function AndamentosTab({
+  processoId,
+  role,
+  andamentos,
+  setAndamentos,
+}: {
+  processoId: string
+  role: UserRole
+  andamentos: ProcessoAndamento[]
+  setAndamentos: Dispatch<SetStateAction<ProcessoAndamento[]>>
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<AndamentoFormState>(ANDAMENTO_FORM_VAZIO)
+  const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | AndamentoTipo>('todos')
+  const [filtroOrigem, setFiltroOrigem] = useState<'todos' | AndamentoOrigem>('todos')
+  const [busca, setBusca] = useState('')
+  const [periodoInicio, setPeriodoInicio] = useState('')
+  const [periodoFim, setPeriodoFim] = useState('')
+  const [responsavelOption, setResponsavelOption] = useState<SearchableComboboxOption | null>(null)
+
+  const andamentosOrdenados = useMemo(() => {
+    return [...andamentos].sort((a, b) => new Date(b.data_andamento).getTime() - new Date(a.data_andamento).getTime())
+  }, [andamentos])
+
+  const andamentosFiltrados = useMemo(() => {
+    return andamentosOrdenados.filter(andamento => {
+      if (filtroTipo !== 'todos' && andamento.tipo !== filtroTipo) return false
+      if (filtroOrigem !== 'todos' && andamento.origem !== filtroOrigem) return false
+
+      if (busca.trim()) {
+        const q = busca.trim().toLowerCase()
+        const texto = [
+          andamento.titulo,
+          andamento.descricao ?? '',
+          ANDAMENTO_TIPO_LABELS[andamento.tipo] ?? andamento.tipo,
+          ANDAMENTO_ORIGEM_LABELS[andamento.origem] ?? andamento.origem,
+          andamento.responsavel?.nome ?? '',
+          andamento.criado_por_profile?.nome ?? '',
+        ].join(' | ').toLowerCase()
+        if (!texto.includes(q)) return false
+      }
+
+      if (periodoInicio) {
+        const inicio = new Date(periodoInicio)
+        const andamentoData = new Date(andamento.data_andamento)
+        if (!Number.isNaN(inicio.getTime()) && andamentoData < inicio) return false
+      }
+
+      if (periodoFim) {
+        const fim = new Date(`${periodoFim}T23:59:59.999`)
+        const andamentoData = new Date(andamento.data_andamento)
+        if (!Number.isNaN(fim.getTime()) && andamentoData > fim) return false
+      }
+
+      return true
+    })
+  }, [andamentosOrdenados, busca, filtroOrigem, filtroTipo, periodoFim, periodoInicio])
+
+  const contextoAurora = useMemo(
+    () => buildAndamentosAuroraContext(andamentosFiltrados),
+    [andamentosFiltrados],
+  )
+
+  const tiposDisponiveis = role === 'estagiario'
+    ? (['observacao'] as AndamentoTipo[])
+    : ANDAMENTO_TIPOS
+
+  function limparForm() {
+    setShowForm(false)
+    setEditingId(null)
+    setErro('')
+    setForm(ANDAMENTO_FORM_VAZIO)
+    setResponsavelOption(null)
+  }
+
+  function abrirNovo() {
+    setEditingId(null)
+    setErro('')
+    setShowForm(true)
+    setForm({
+      ...ANDAMENTO_FORM_VAZIO,
+      data_andamento: toInputDateTimeValue(),
+      tipo: role === 'estagiario' ? 'observacao' : 'outro',
+      origem: 'manual',
+    })
+    setResponsavelOption(null)
+  }
+
+  function abrirEdicao(andamento: ProcessoAndamento) {
+    setShowForm(true)
+    setEditingId(andamento.id)
+    setErro('')
+    setForm({
+      data_andamento: toInputDateTimeValue(andamento.data_andamento),
+      tipo: andamento.tipo,
+      titulo: andamento.titulo,
+      descricao: andamento.descricao ?? '',
+      origem: andamento.origem,
+      responsavel_id: andamento.responsavel_id ?? '',
+    })
+    setResponsavelOption(andamento.responsavel
+      ? {
+          value: andamento.responsavel.id,
+          label: andamento.responsavel.nome,
+          description: andamento.responsavel.email ?? andamento.responsavel.role ?? null,
+          keywords: [andamento.responsavel.nome, andamento.responsavel.email, andamento.responsavel.role].filter(Boolean) as string[],
+        }
+      : null)
+  }
+
+  async function salvarAndamento() {
+    if (!form.titulo.trim()) {
+      setErro('Informe o título do andamento.')
+      return
+    }
+
+    if (!andamentoTipoPermitidoParaRole(role, form.tipo)) {
+      setErro('Você pode registrar apenas observações internas.')
+      return
+    }
+
+    const payload = {
+      data_andamento: fromInputDateTimeValue(form.data_andamento) ?? new Date().toISOString(),
+      tipo: form.tipo,
+      titulo: form.titulo.trim(),
+      descricao: form.descricao.trim() || null,
+      origem: normalizeAndamentoOrigem(form.origem),
+      responsavel_id: form.responsavel_id.trim() || null,
+    }
+
+    setSaving(true)
+    setErro('')
+
+    const method = editingId ? 'PATCH' : 'POST'
+    const url = editingId
+      ? `/api/processos/andamentos/${editingId}`
+      : `/api/processos/${processoId}/andamentos`
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    setSaving(false)
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      setErro(body.error ?? 'Falha ao salvar andamento')
+      return
+    }
+
+    const saved = await res.json()
+    setAndamentos(prev => {
+      if (editingId) {
+        return prev.map(item => item.id === editingId ? saved : item)
+      }
+      return [saved, ...prev]
+    })
+    limparForm()
+  }
+
+  async function excluirAndamento(id: string) {
+    if (!confirm('Deseja excluir este andamento?')) return
+    const res = await fetch(`/api/processos/andamentos/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      alert(body.error ?? 'Falha ao excluir andamento')
+      return
+    }
+    setAndamentos(prev => prev.filter(item => item.id !== id))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Linha do tempo</p>
+          <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Andamentos do processo</h3>
+          <p className="text-[12px] text-[#6b7280] mt-1">
+            Registre o histórico cronológico do processo. A Aurora poderá usar esta base como contexto futuro.
+          </p>
+        </div>
+        <button
+          onClick={abrirNovo}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#145A5B] text-white text-[12px] font-medium hover:bg-[#1B6E70] transition-colors"
+        >
+          <Plus size={13} /> Novo andamento
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">
+                {editingId ? 'Editar andamento' : 'Novo andamento'}
+              </p>
+              <p className="text-[12px] text-[#6b7280] mt-1">
+                {role === 'estagiario'
+                  ? 'Estagiário pode registrar apenas observações internas.'
+                  : 'Preencha os dados e salve para incluir o andamento na linha do tempo.'}
+              </p>
+            </div>
+            <button
+              onClick={limparForm}
+              className="text-[12px] text-[#6b7280] hover:text-[#1a1d23]"
+            >
+              Fechar
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Data do andamento
+              </label>
+              <input
+                type="datetime-local"
+                value={form.data_andamento}
+                onChange={e => setForm(prev => ({ ...prev, data_andamento: e.target.value }))}
+                className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Tipo
+              </label>
+              <select
+                value={form.tipo}
+                onChange={e => setForm(prev => ({ ...prev, tipo: normalizeAndamentoTipo(e.target.value) }))}
+                className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+              >
+                {tiposDisponiveis.map(tipo => (
+                  <option key={tipo} value={tipo}>
+                    {ANDAMENTO_TIPO_LABELS[tipo]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Título
+              </label>
+              <input
+                value={form.titulo}
+                onChange={e => setForm(prev => ({ ...prev, titulo: e.target.value }))}
+                placeholder="Ex.: Decisão publicada"
+                className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Descrição
+              </label>
+              <textarea
+                value={form.descricao}
+                onChange={e => setForm(prev => ({ ...prev, descricao: e.target.value }))}
+                placeholder="Observações resumidas do andamento"
+                rows={4}
+                className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Origem
+              </label>
+              <select
+                value={form.origem}
+                onChange={e => setForm(prev => ({ ...prev, origem: normalizeAndamentoOrigem(e.target.value) }))}
+                className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+              >
+                {ANDAMENTO_ORIGENS.map(origem => (
+                  <option key={origem} value={origem}>
+                    {ANDAMENTO_ORIGEM_LABELS[origem]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">
+                Responsável
+              </label>
+              <SearchableCombobox
+                value={form.responsavel_id}
+                onChange={(value, option) => {
+                  setForm(prev => ({ ...prev, responsavel_id: value }))
+                  setResponsavelOption(option)
+                }}
+                selectedOption={responsavelOption}
+                loadOptions={fetchUsuarioOptions}
+                placeholder="Opcional"
+                searchPlaceholder="Digite para buscar responsáveis"
+                emptyText="Digite para buscar responsáveis."
+                minSearchLength={2}
+                maxResults={10}
+                allowClear
+                clearLabel="Remover responsável"
+              />
+            </div>
+          </div>
+
+          {erro && <p className="mt-3 text-[12px] text-red-500">{erro}</p>}
+
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={salvarAndamento}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#145A5B] px-4 py-2 text-[12px] font-medium text-white hover:bg-[#1B6E70] disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              Salvar andamento
+            </button>
+            <button
+              onClick={limparForm}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] px-4 py-2 text-[12px] font-medium text-[#374151] hover:bg-white"
+            >
+              <X size={13} />
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-4 gap-3">
+        <div className="col-span-2">
+          <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Buscar</label>
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Filtrar por título, descrição, responsável..."
+            className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Tipo</label>
+          <select
+            value={filtroTipo}
+            onChange={e => setFiltroTipo(e.target.value as 'todos' | AndamentoTipo)}
+            className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+          >
+            <option value="todos">Todos</option>
+            {ANDAMENTO_TIPOS.map(tipo => (
+              <option key={tipo} value={tipo}>{ANDAMENTO_TIPO_LABELS[tipo]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Origem</label>
+          <select
+            value={filtroOrigem}
+            onChange={e => setFiltroOrigem(e.target.value as 'todos' | AndamentoOrigem)}
+            className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+          >
+            <option value="todos">Todas</option>
+            {ANDAMENTO_ORIGENS.map(origem => (
+              <option key={origem} value={origem}>{ANDAMENTO_ORIGEM_LABELS[origem]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Período inicial</label>
+          <input
+            type="date"
+            value={periodoInicio}
+            onChange={e => setPeriodoInicio(e.target.value)}
+            className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Período final</label>
+          <input
+            type="date"
+            value={periodoFim}
+            onChange={e => setPeriodoFim(e.target.value)}
+            className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-[#e5e7eb] bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f3f4f6]">
+          <p className="text-[12px] font-semibold text-[#1a1d23]">Andamentos</p>
+          <span className="text-[11px] text-[#9ca3af]">{andamentosFiltrados.length} registro{andamentosFiltrados.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {andamentosFiltrados.length === 0 ? (
+          <div className="px-4 py-8 text-center">
+            <p className="text-sm text-[#6b7280]">Nenhum andamento encontrado.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#f3f4f6]">
+            {andamentosFiltrados.map(andamento => (
+              <div key={andamento.id} className="px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex rounded-full bg-[#E8F2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#1D5F60]">
+                        {ANDAMENTO_TIPO_LABELS[andamento.tipo] ?? andamento.tipo}
+                      </span>
+                      <span className="inline-flex rounded-full border border-[#e5e7eb] bg-[#fafafa] px-2.5 py-0.5 text-[11px] font-medium text-[#374151]">
+                        {ANDAMENTO_ORIGEM_LABELS[andamento.origem] ?? andamento.origem}
+                      </span>
+                      <span className="text-[11px] text-[#9ca3af]">
+                        {formatDateTime(andamento.data_andamento)}
+                      </span>
+                    </div>
+                    <h4 className="mt-2 text-sm font-semibold text-[#1a1d23]">{andamento.titulo}</h4>
+                    {andamento.descricao && (
+                      <p className="mt-1 text-[12px] leading-relaxed text-[#4b5563] whitespace-pre-line">
+                        {andamento.descricao}
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-[#9ca3af]">
+                      <span>Responsável: {andamento.responsavel?.nome ?? '—'}</span>
+                      <span>Criado por: {andamento.criado_por_profile?.nome ?? '—'}</span>
+                      <span>Criação: {formatDateTime(andamento.created_at)}</span>
+                    </div>
+                  </div>
+
+                  {role === 'socio' && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => abrirEdicao(andamento)}
+                        className="rounded-lg p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#1a1d23] transition-colors"
+                        title="Editar andamento"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => excluirAndamento(andamento.id)}
+                        className="rounded-lg p-2 text-[#6b7280] hover:bg-red-50 hover:text-red-600 transition-colors"
+                        title="Excluir andamento"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="sr-only" aria-hidden="true">
+        {buildAndamentosAuroraContext(andamentosFiltrados)}
+      </div>
+    </div>
+  )
+}
+
+function DocumentosTab({ documentos }: { documentos: DocumentoProcessoSimple[] }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Documentos</p>
+        <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Arquivos vinculados ao processo</h3>
+        <p className="text-[12px] text-[#6b7280] mt-1">
+          Use esta lista para baixar os documentos já vinculados ao processo.
+        </p>
+      </div>
+
+      {documentos.length === 0 ? (
+        <div className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-8 text-center">
+          <p className="text-sm text-[#6b7280]">Nenhum documento vinculado a este processo.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
+          <div className="divide-y divide-[#f3f4f6]">
+            {documentos.map(documento => (
+              <div key={documento.id} className="flex items-start justify-between gap-4 px-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#1a1d23] truncate">{documento.nome_arquivo}</p>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[#6b7280]">
+                    <span className="rounded-full bg-[#f3f4f6] px-2 py-0.5 uppercase tracking-wide">
+                      {documento.tipo_documento}
+                    </span>
+                    <span>{formatDateTime(documento.created_at)}</span>
+                    {documento.uploaded_by_profile?.nome && (
+                      <span>Enviado por {documento.uploaded_by_profile.nome}</span>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href={`/api/documentos/${documento.id}/download`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#e5e7eb] px-3 py-2 text-[12px] font-medium text-[#1D5F60] hover:border-[#1D5F60] transition-colors"
+                >
+                  <Paperclip size={12} /> Baixar
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PrazosTab({ prazos }: { prazos: Prazo[] }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Prazos</p>
+        <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Prazos e compromissos do processo</h3>
+        <p className="text-[12px] text-[#6b7280] mt-1">
+          O próximo prazo aparece primeiro; a timeline da agenda continua disponível na lateral.
+        </p>
+      </div>
+
+      {prazos.length === 0 ? (
+        <div className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-8 text-center">
+          <p className="text-sm text-[#6b7280]">Nenhum prazo cadastrado.</p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {prazos.map((prazo) => (
+            <div key={prazo.id} className="rounded-xl border border-[#e5e7eb] bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#1a1d23]">{prazo.titulo}</p>
+                  {prazo.descricao && (
+                    <p className="mt-1 text-[12px] text-[#4b5563] whitespace-pre-line">{prazo.descricao}</p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-[#6b7280]">
+                    <span>{formatDate(prazo.data_final)}</span>
+                    <span>{prazo.prioridade}</span>
+                    <span>{prazo.status}</span>
+                    <span>{prazo.tipo}</span>
+                  </div>
+                </div>
+                <span className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full ${prioridadeColors[prazo.prioridade] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {prazo.prioridade}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ObservacoesTab({ observacoes }: { observacoes: string | null }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Observações</p>
+        <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Notas gerais do processo</h3>
+        <p className="text-[12px] text-[#6b7280] mt-1">
+          Este campo continua editável no formulário principal do processo.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-[#e5e7eb] bg-white p-4">
+        {observacoes ? (
+          <p className="text-sm leading-relaxed text-[#374151] whitespace-pre-line">{observacoes}</p>
+        ) : (
+          <p className="text-sm text-[#6b7280]">Nenhuma observação registrada.</p>
+        )}
+      </div>
     </div>
   )
 }

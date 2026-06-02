@@ -220,6 +220,39 @@ export interface Prazo {
   responsavel?: Profile
 }
 
+// ─── Andamentos do Processo ───────────────────────────────────────────────────
+
+export type AndamentoOrigem = 'manual' | 'tribunal' | 'publicacao' | 'sistema' | 'aurora'
+
+export type AndamentoTipo =
+  | 'peticao'
+  | 'decisao'
+  | 'despacho'
+  | 'audiencia'
+  | 'prazo'
+  | 'publicacao'
+  | 'juntada'
+  | 'contato_cliente'
+  | 'observacao'
+  | 'documento'
+  | 'outro'
+
+export interface ProcessoAndamento {
+  id: string
+  processo_id: string
+  data_andamento: string
+  tipo: AndamentoTipo
+  titulo: string
+  descricao: string | null
+  origem: AndamentoOrigem
+  responsavel_id: string | null
+  criado_por: string
+  created_at: string
+  updated_at: string
+  responsavel?: Profile | null
+  criado_por_profile?: Profile | null
+}
+
 // ─── Financeiro ───────────────────────────────────────────────────────────────
 
 export type TipoLancamento   = 'receita' | 'despesa'

@@ -2,8 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus, Scale } from 'lucide-react'
 import ProcessosTable from './ProcessosTable'
+import { requireRole } from '@/lib/auth/guards'
 
 export default async function ProcessosPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  await requireRole(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
+
   const params = await searchParams
   const supabase = await createClient()
 
