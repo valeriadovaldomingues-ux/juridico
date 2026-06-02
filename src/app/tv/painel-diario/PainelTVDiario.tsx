@@ -286,48 +286,55 @@ function AreaAuxiliarAutenticadores() {
     <aside
       className="h-full rounded-2xl border relative overflow-hidden flex flex-col"
       style={{
-        borderColor: 'rgba(196,149,87,0.22)',
+        borderColor: 'rgba(196,149,87,0.38)',
         background:
-          'linear-gradient(180deg, rgba(196,149,87,0.07), rgba(255,255,255,0.025) 28%, rgba(3,12,23,0.75))',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          'linear-gradient(180deg, rgba(196,149,87,0.12), rgba(255,255,255,0.035) 26%, rgba(3,12,23,0.88))',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(196,149,87,0.06)',
       }}
     >
       <div
-        className="absolute inset-x-8 top-0 h-px"
-        style={{ background: `linear-gradient(to right, transparent, ${GOLD}80, transparent)` }}
+        className="absolute inset-x-6 top-0 h-px"
+        style={{ background: `linear-gradient(to right, transparent, ${GOLD}c0, transparent)` }}
       />
 
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: GOLD }}>
-          Área auxiliar externa
+          AUTENTICADOR / CELULAR ESPELHADO
         </p>
-        <p className="mt-1 text-[11px] text-white/32">
-          Espelhamento do celular
+        <p className="mt-1 text-[11px] text-white/44 leading-relaxed">
+          Posicione aqui a janela do celular espelhado
         </p>
       </div>
 
       <div className="flex-1 min-h-0 px-5 pb-5 flex items-center justify-center">
         <div
-          className="w-full max-w-[360px] aspect-[9/19.5] rounded-[2rem] border flex items-center justify-center"
+          className="w-full max-w-[390px] aspect-[9/19.5] rounded-[2.25rem] border flex items-center justify-center shadow-[0_0_0_1px_rgba(196,149,87,0.08),inset_0_0_0_1px_rgba(255,255,255,0.02)]"
           style={{
-            borderColor: 'rgba(196,149,87,0.28)',
-            background: 'rgba(0,0,0,0.22)',
+            borderColor: 'rgba(196,149,87,0.38)',
+            background: 'rgba(0,0,0,0.30)',
           }}
         >
           <div
-            className="w-[92%] h-[95%] rounded-[1.55rem] border border-dashed flex flex-col items-center justify-center text-center px-5"
-            style={{ borderColor: 'rgba(196,149,87,0.22)' }}
+            className="w-[92%] h-[95%] rounded-[1.65rem] border border-dashed flex flex-col items-center justify-center text-center px-5"
+            style={{
+              borderColor: 'rgba(196,149,87,0.45)',
+              background: 'radial-gradient(circle at top, rgba(196,149,87,0.10), rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.08) 100%)',
+            }}
           >
             <div
-              className="w-14 h-1.5 rounded-full mb-7"
-              style={{ background: 'rgba(196,149,87,0.28)' }}
+              className="w-16 h-1.5 rounded-full mb-7 shadow-[0_0_18px_rgba(196,149,87,0.35)]"
+              style={{ background: 'rgba(196,149,87,0.45)' }}
             />
-            <p className="text-[13px] font-medium text-white/50 leading-relaxed">
-              Posicione aqui a janela externa de espelhamento.
+            <p className="text-[13px] font-medium text-white/60 leading-relaxed max-w-[260px]">
+              Posicione aqui a janela do celular espelhado na TV.
             </p>
-            <p className="mt-3 text-[10px] text-white/22 leading-relaxed">
+            <p className="mt-3 text-[10px] text-white/28 leading-relaxed max-w-[250px]">
               Este painel não captura, lê, armazena ou registra códigos.
             </p>
+            <div className="mt-5 rounded-full border border-dashed px-3 py-1.5 text-[9px] uppercase tracking-[0.16em] text-white/20"
+                 style={{ borderColor: 'rgba(196,149,87,0.25)' }}>
+              Área visual externa
+            </div>
           </div>
         </div>
       </div>
