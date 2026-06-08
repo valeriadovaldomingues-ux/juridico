@@ -303,6 +303,23 @@ export interface FinanceiroLancamento {
   processo?: Processo
 }
 
+// ─── Aurora Cliente no Portal ───────────────────────────────────────────────
+
+export type AuroraClienteStatus = 'respondida' | 'precisa_revisao' | 'encaminhada_equipe'
+
+export interface PortalAiConversation {
+  id: string
+  cliente_id: string
+  processo_id: string
+  pergunta: string
+  resposta: string
+  status: AuroraClienteStatus
+  precisa_retorno_humano: boolean
+  created_at: string
+  created_by: string
+  created_by_profile?: Profile | null
+}
+
 // ─── Documentos ───────────────────────────────────────────────────────────────
 
 export interface Documento {

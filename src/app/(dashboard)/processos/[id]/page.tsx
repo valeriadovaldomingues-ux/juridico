@@ -23,6 +23,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
     { data: andamentos },
     { data: relatorios },
     { data: documentos },
+    { data: auroraClienteHistorico },
   ] = await Promise.all([
     supabase.from('partes_processo').select('*').eq('processo_id', id),
     supabase.from('prazos').select('*').eq('processo_id', id).order('data_final', { ascending: true }),
@@ -47,6 +48,23 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
       .select('id, processo_id, cliente_id, nome_arquivo, tipo_documento, storage_path, uploaded_by, created_at, uploaded_by_profile:profiles!uploaded_by(id, nome, email, role)')
       .eq('processo_id', id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('portal_ai_conversations')
+      .select(`
+        id,
+        cliente_id,
+        processo_id,
+        pergunta,
+        resposta,
+        status,
+        precisa_retorno_humano,
+        created_at,
+        created_by,
+        created_by_profile:profiles!created_by(id, nome, email, role)
+      `)
+      .eq('processo_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20),
   ])
 
   return (
@@ -59,6 +77,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
           andamentos={(andamentos ?? []) as any}
           relatorios={(relatorios ?? []) as any}
           documentos={(documentos ?? []) as any}
+          auroraClienteHistorico={(auroraClienteHistorico ?? []) as any}
           role={auth.profile.role}
         />
     </div>

@@ -2,10 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound }     from 'next/navigation'
 import { isUUID }       from '@/lib/portal/validate'
 import Link             from 'next/link'
-import { ArrowLeft, Scale, Users, CalendarDays, FileText, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Scale, Users, CalendarDays, FileText, ArrowRight, Sparkles } from 'lucide-react'
 import ProcessStatusBadge from '../../_components/ProcessStatusBadge'
 import TimelineItem       from '../../_components/TimelineItem'
 import { buildRelatorioPeriodoLabel } from '@/lib/relatorios-inteligentes/validation'
+import AuroraClientePanel from './AuroraClientePanel'
 
 const TIPO_PARTE_LABELS: Record<string, string> = {
   autor: 'Autor', reu: 'Réu', terceiro: 'Terceiro', outro: 'Outro',
@@ -123,6 +124,14 @@ export default async function PortalProcessoDetailPage({
       .limit(10),
   ])
   const relatoriosPublicados = relatorios ?? []
+
+  const { data: historicoAurora } = await supabase
+    .from('portal_ai_conversations')
+    .select('id, cliente_id, processo_id, pergunta, resposta, status, precisa_retorno_humano, created_at, created_by')
+    .eq('cliente_id', pc.cliente_id)
+    .eq('processo_id', id)
+    .order('created_at', { ascending: false })
+    .limit(10)
 
   // Monta timeline em linguagem amigável, sem juridiquês
   type TLEntry = {
@@ -300,6 +309,14 @@ export default async function PortalProcessoDetailPage({
             <ArrowRight size={10} className="text-[#C5C0B8]" />
           </Link>
         )}
+        <Link
+          href="#aurora-cliente"
+          className="inline-flex items-center gap-1.5 text-[10px] text-[#6B7280] border border-[#E8E3D8] px-3 py-1.5 hover:border-[#C49557]/40 hover:text-[#C49557] transition-all duration-150 tracking-wide uppercase"
+        >
+          <Sparkles size={11} />
+          Aurora Cliente
+          <ArrowRight size={10} className="text-[#C5C0B8]" />
+        </Link>
       </div>
 
       {/* ── Relatórios publicados ───────────────────────────────────────── */}
@@ -341,6 +358,13 @@ export default async function PortalProcessoDetailPage({
           </div>
         </div>
       )}
+
+      <section id="aurora-cliente" className="space-y-3">
+        <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase">
+          Aurora Cliente
+        </p>
+        <AuroraClientePanel processoId={processo.id} historicoInicial={(historicoAurora ?? []) as any} />
+      </section>
 
       {/* ── Grid: Timeline + Partes ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
