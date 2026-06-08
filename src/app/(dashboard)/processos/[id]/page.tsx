@@ -21,6 +21,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
     { data: prazos },
     { data: agendaItems },
     { data: andamentos },
+    { data: relatorios },
     { data: documentos },
   ] = await Promise.all([
     supabase.from('partes_processo').select('*').eq('processo_id', id),
@@ -31,6 +32,16 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
       .select('*, responsavel:profiles(id, nome, email, role), criado_por_profile:profiles!criado_por(id, nome, email, role)')
       .eq('processo_id', id)
       .order('data_andamento', { ascending: false }),
+    supabase
+      .from('client_reports')
+      .select(`
+        *,
+        gerado_por_profile:profiles!gerado_por(id, nome, email, role),
+        aprovado_por_profile:profiles!aprovado_por(id, nome, email, role),
+        publicado_por_profile:profiles!publicado_por(id, nome, email, role)
+      `)
+      .eq('processo_id', id)
+      .order('created_at', { ascending: false }),
     supabase
       .from('documentos')
       .select('id, processo_id, cliente_id, nome_arquivo, tipo_documento, storage_path, uploaded_by, created_at, uploaded_by_profile:profiles!uploaded_by(id, nome, email, role)')
@@ -46,6 +57,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
           prazos={prazos ?? []}
           agendaItems={agendaItems ?? []}
           andamentos={(andamentos ?? []) as any}
+          relatorios={(relatorios ?? []) as any}
           documentos={(documentos ?? []) as any}
           role={auth.profile.role}
         />

@@ -7,7 +7,7 @@ import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
-  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -23,6 +23,8 @@ import {
   normalizeAndamentoOrigem,
   normalizeAndamentoTipo,
 } from '@/lib/processos/andamentos'
+import { canViewRelatorio } from '@/lib/relatorios-inteligentes/permissions'
+import type { RelatorioClienteDraft } from '@/lib/relatorios-inteligentes'
 import type {
   AndamentoOrigem,
   AndamentoTipo,
@@ -33,6 +35,7 @@ import type {
 } from '@/types'
 import ProcessoForm from '../ProcessoForm'
 import ComunicacoesTab from './ComunicacoesTab'
+import RelatoriosTab from './RelatoriosTab'
 
 // ─── Labels e cores ───────────────────────────────────────────────────────────
 
@@ -135,12 +138,13 @@ interface DocumentoProcessoSimple {
   } | null
 }
 
-type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'documentos' | 'prazos' | 'observacoes'
+type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'relatorios' | 'documentos' | 'prazos' | 'observacoes'
 
 const TAB_OPTIONS: Array<{ id: TabAtiva; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
   { id: 'dados', label: 'Dados gerais', icon: ListChecks },
   { id: 'andamentos', label: 'Andamentos', icon: Clock3 },
   { id: 'comunicacoes', label: 'Comunicação', icon: MessageSquare },
+  { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
   { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'prazos', label: 'Prazos', icon: CalendarRange },
   { id: 'observacoes', label: 'Observações', icon: Paperclip },
@@ -179,6 +183,7 @@ export default function ProcessoDetail({
   agendaItems = [],
   andamentos: andamentosIniciais = [],
   comunicacoes: comunicacoesIniciais = [],
+  relatorios: relatoriosIniciais = [],
   documentos = [],
   role,
 }: {
@@ -188,6 +193,7 @@ export default function ProcessoDetail({
   agendaItems?: AgendaItemSimple[]
   andamentos?: ProcessoAndamento[]
   comunicacoes?: any[]
+  relatorios?: RelatorioClienteDraft[]
   documentos?: DocumentoProcessoSimple[]
   role: UserRole
 }) {
@@ -195,6 +201,7 @@ export default function ProcessoDetail({
   const [tab, setTab] = useState<TabAtiva>('dados')
   const [andamentos, setAndamentos] = useState(andamentosIniciais)
   const [comunicacoes, setComunicacoes] = useState(comunicacoesIniciais)
+  const relatorios = relatoriosIniciais ?? []
   const router = useRouter()
   const latestAndamento = andamentos[0] ?? null
   const nextPrazo = prazos[0] ?? null
@@ -202,14 +209,15 @@ export default function ProcessoDetail({
     dados: 0,
     andamentos: andamentos.length,
     comunicacoes: comunicacoes.length,
+    relatorios: canViewRelatorio(role) ? relatorios.length : 0,
     documentos: documentos.length,
     prazos: prazos.length,
     observacoes: processo.observacoes ? 1 : 0,
   }
 
-  const tabsVisiveis = role === 'estagiario'
-    ? TAB_OPTIONS.filter(option => option.id !== 'comunicacoes')
-    : TAB_OPTIONS
+  const tabsVisiveis = TAB_OPTIONS
+    .filter(option => option.id !== 'comunicacoes' || role !== 'estagiario')
+    .filter(option => option.id !== 'relatorios' || canViewRelatorio(role))
 
   if (editing) {
     return (
@@ -358,6 +366,16 @@ export default function ProcessoDetail({
                   role={role}
                   comunicacoesIniciais={comunicacoes}
                   onChange={setComunicacoes}
+                />
+              )}
+
+              {tab === 'relatorios' && canViewRelatorio(role) && (
+                <RelatoriosTab
+                  processoId={processo.id}
+                  processoTitulo={processo.titulo}
+                  clienteNome={processo.cliente?.nome ?? processo.titulo}
+                  role={role}
+                  relatoriosIniciais={relatorios}
                 />
               )}
 

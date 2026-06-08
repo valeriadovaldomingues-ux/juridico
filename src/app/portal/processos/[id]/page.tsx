@@ -5,6 +5,7 @@ import Link             from 'next/link'
 import { ArrowLeft, Scale, Users, CalendarDays, FileText, ArrowRight } from 'lucide-react'
 import ProcessStatusBadge from '../../_components/ProcessStatusBadge'
 import TimelineItem       from '../../_components/TimelineItem'
+import { buildRelatorioPeriodoLabel } from '@/lib/relatorios-inteligentes/validation'
 
 const TIPO_PARTE_LABELS: Record<string, string> = {
   autor: 'Autor', reu: 'Réu', terceiro: 'Terceiro', outro: 'Outro',
@@ -63,6 +64,7 @@ export default async function PortalProcessoDetailPage({
     { data: prazos },
     { data: documentos },
     { data: comunicacoesEscritorio },
+    { data: relatorios },
   ] = await Promise.all([
     // EXCLUÍDOS: documento (CPF/CNPJ — LGPD), observacoes (notas internas)
     supabase.from('partes_processo')
@@ -111,7 +113,16 @@ export default async function PortalProcessoDetailPage({
       .eq('autor_tipo', 'escritorio')
       .order('created_at', { ascending: true })
       .limit(10),
+
+    supabase.from('client_reports')
+      .select('id, titulo, resumo_executivo, periodo_inicio, periodo_fim, published_at, created_at, publicado_por_profile:profiles!publicado_por(id, nome, email, role)')
+      .eq('processo_id', id)
+      .eq('cliente_id', pc.cliente_id)
+      .eq('status', 'publicado')
+      .order('published_at', { ascending: false })
+      .limit(10),
   ])
+  const relatoriosPublicados = relatorios ?? []
 
   // Monta timeline em linguagem amigável, sem juridiquês
   type TLEntry = {
@@ -290,6 +301,46 @@ export default async function PortalProcessoDetailPage({
           </Link>
         )}
       </div>
+
+      {/* ── Relatórios publicados ───────────────────────────────────────── */}
+      {relatoriosPublicados.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase">
+            Relatórios
+          </p>
+          <div className="bg-white border border-[#E8E3D8] divide-y divide-[#F5F2EE]">
+            {relatoriosPublicados.map(relatorio => (
+              <div key={relatorio.id} className="px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-[13px] font-semibold text-[#1C1C2E]">{relatorio.titulo}</h3>
+                  <p className="mt-1 text-[12px] text-[#6B7280] leading-relaxed line-clamp-3">
+                    {relatorio.resumo_executivo || 'Relatório publicado disponível para consulta.'}
+                  </p>
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#9CA3AF]">
+                    {buildRelatorioPeriodoLabel(relatorio.periodo_inicio, relatorio.periodo_fim)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-start gap-2 sm:items-end shrink-0">
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Publicado em {relatorio.published_at ? new Date(relatorio.published_at).toLocaleDateString('pt-BR') : '—'}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/api/processos/relatorios/${relatorio.id}/pdf`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1.5 text-[10px] text-[#6B7280] border border-[#E8E3D8] px-3 py-1.5 hover:border-[#C49557]/40 hover:text-[#C49557] transition-all duration-150 tracking-wide uppercase"
+                    >
+                      <FileText size={11} />
+                      PDF
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Grid: Timeline + Partes ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
