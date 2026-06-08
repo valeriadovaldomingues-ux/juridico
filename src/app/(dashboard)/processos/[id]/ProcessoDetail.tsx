@@ -7,7 +7,7 @@ import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
-  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -32,6 +32,7 @@ import type {
   UserRole,
 } from '@/types'
 import ProcessoForm from '../ProcessoForm'
+import ComunicacoesTab from './ComunicacoesTab'
 
 // ─── Labels e cores ───────────────────────────────────────────────────────────
 
@@ -134,11 +135,12 @@ interface DocumentoProcessoSimple {
   } | null
 }
 
-type TabAtiva = 'dados' | 'andamentos' | 'documentos' | 'prazos' | 'observacoes'
+type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'documentos' | 'prazos' | 'observacoes'
 
 const TAB_OPTIONS: Array<{ id: TabAtiva; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
   { id: 'dados', label: 'Dados gerais', icon: ListChecks },
   { id: 'andamentos', label: 'Andamentos', icon: Clock3 },
+  { id: 'comunicacoes', label: 'Comunicação', icon: MessageSquare },
   { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'prazos', label: 'Prazos', icon: CalendarRange },
   { id: 'observacoes', label: 'Observações', icon: Paperclip },
@@ -176,6 +178,7 @@ export default function ProcessoDetail({
   prazos,
   agendaItems = [],
   andamentos: andamentosIniciais = [],
+  comunicacoes: comunicacoesIniciais = [],
   documentos = [],
   role,
 }: {
@@ -184,22 +187,29 @@ export default function ProcessoDetail({
   prazos: Prazo[]
   agendaItems?: AgendaItemSimple[]
   andamentos?: ProcessoAndamento[]
+  comunicacoes?: any[]
   documentos?: DocumentoProcessoSimple[]
   role: UserRole
 }) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<TabAtiva>('dados')
   const [andamentos, setAndamentos] = useState(andamentosIniciais)
+  const [comunicacoes, setComunicacoes] = useState(comunicacoesIniciais)
   const router = useRouter()
   const latestAndamento = andamentos[0] ?? null
   const nextPrazo = prazos[0] ?? null
   const tabCount = {
     dados: 0,
     andamentos: andamentos.length,
+    comunicacoes: comunicacoes.length,
     documentos: documentos.length,
     prazos: prazos.length,
     observacoes: processo.observacoes ? 1 : 0,
   }
+
+  const tabsVisiveis = role === 'estagiario'
+    ? TAB_OPTIONS.filter(option => option.id !== 'comunicacoes')
+    : TAB_OPTIONS
 
   if (editing) {
     return (
@@ -216,6 +226,7 @@ export default function ProcessoDetail({
         <ProcessoForm
           processo={processo}
           parteContraria={partesIniciais[0] ?? null}
+          allowImportDocumento={['administrativo', 'advogado', 'gerente', 'socio'].includes(role)}
           onSuccess={() => { setEditing(false); router.refresh() }}
         />
       </div>
@@ -278,7 +289,7 @@ export default function ProcessoDetail({
             </div>
 
             <div className="flex flex-wrap items-center gap-1 px-3 py-3 border-b border-[#f3f4f6] bg-[#fafafa]">
-              {TAB_OPTIONS.map(tabOption => {
+              {tabsVisiveis.map(tabOption => {
                 const Icon = tabOption.icon
                 const active = tab === tabOption.id
                 return (
@@ -311,10 +322,14 @@ export default function ProcessoDetail({
                       <Field label="Número do Processo" value={processo.numero_processo} mono />
                       <Field label="Área do Direito"     value={areaLabels[processo.area_direito] ?? processo.area_direito} />
                       <Field label="Tribunal"             value={processo.tribunal} />
+                      <Field label="Comarca"              value={processo.comarca} />
                       <Field label="Vara"                 value={processo.vara} />
+                      <Field label="Classe processual"    value={processo.classe_processual} />
+                      <Field label="Assunto"              value={processo.assunto} />
                       <Field label="Fase"                 value={processo.fase} />
                       <Field label="Distribuição"         value={processo.data_distribuicao ? formatDate(processo.data_distribuicao) : null} />
                       <Field label="Valor da Causa"       value={processo.valor_causa ? formatCurrency(processo.valor_causa) : null} />
+                      <Field label="Segredo de justiça"   value={processo.segredo_justica === null || processo.segredo_justica === undefined ? null : (processo.segredo_justica ? 'Sim' : 'Não')} />
                     </div>
                   </div>
 
@@ -333,6 +348,16 @@ export default function ProcessoDetail({
                   role={role}
                   andamentos={andamentos}
                   setAndamentos={setAndamentos}
+                />
+              )}
+
+              {tab === 'comunicacoes' && role !== 'estagiario' && (
+                <ComunicacoesTab
+                  processoId={processo.id}
+                  processoTitulo={processo.titulo}
+                  role={role}
+                  comunicacoesIniciais={comunicacoes}
+                  onChange={setComunicacoes}
                 />
               )}
 

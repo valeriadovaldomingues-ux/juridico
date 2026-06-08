@@ -62,6 +62,7 @@ export default async function PortalProcessoDetailPage({
     { data: audiencias },
     { data: prazos },
     { data: documentos },
+    { data: comunicacoesEscritorio },
   ] = await Promise.all([
     // EXCLUÍDOS: documento (CPF/CNPJ — LGPD), observacoes (notas internas)
     supabase.from('partes_processo')
@@ -102,13 +103,21 @@ export default async function PortalProcessoDetailPage({
       .eq('liberado_cliente', true)
       .order('created_at', { ascending: false })
       .limit(5),
+
+    // Comunicações enviadas pelo escritório e visíveis ao cliente
+    supabase.from('portal_mensagens')
+      .select('id, conteudo, tipo, created_at')
+      .eq('processo_id', id)
+      .eq('autor_tipo', 'escritorio')
+      .order('created_at', { ascending: true })
+      .limit(10),
   ])
 
   // Monta timeline em linguagem amigável, sem juridiquês
   type TLEntry = {
     id:    string
     data:  string | null
-    tipo:  'audiencia' | 'prazo' | 'publicacao' | 'documento' | 'distribuicao'
+    tipo:  'audiencia' | 'prazo' | 'publicacao' | 'documento' | 'distribuicao' | 'mensagem'
     texto: string
     sub?:  string
     alerta: boolean
@@ -184,6 +193,18 @@ export default async function PortalProcessoDetailPage({
       data:   d.created_at,
       tipo:   'documento',
       texto:  `Documento disponibilizado: ${d.titulo}`,
+      alerta: false,
+    })
+  })
+
+  // Mensagens do escritório
+  ;(comunicacoesEscritorio ?? []).forEach(msg => {
+    tlEntries.push({
+      id:     msg.id,
+      data:   msg.created_at,
+      tipo:   'mensagem',
+      texto:  msg.conteudo?.split('\n').find(Boolean) ?? 'Nova comunicação do escritório.',
+      sub:    'Comunicação do escritório',
       alerta: false,
     })
   })
