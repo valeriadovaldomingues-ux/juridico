@@ -3,9 +3,13 @@ import { notFound } from 'next/navigation'
 import ClienteForm from '../ClienteForm'
 import ClienteDetail from './ClienteDetail'
 import { Users } from 'lucide-react'
+import { requireRole } from '@/lib/auth/guards'
+import { canEditClienteContatos } from '@/lib/cliente-contatos'
+import { listClienteContatos } from '@/lib/cliente-contatos'
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const session = await requireRole(['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio'])
   const supabase = await createClient()
 
   if (id === 'novo') {
@@ -54,6 +58,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     { data: interactions },
     { data: tarefas },
     { data: agenda },
+    contatos,
   ] = await Promise.all([
     supabase
       .from('contact_interactions')
@@ -77,6 +82,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       .eq('cliente_id', id)
       .order('data_inicio', { ascending: false })
       .limit(20),
+
+    listClienteContatos(id),
   ])
 
   return (
@@ -87,6 +94,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         interactions={interactions ?? []}
         tarefas={tarefas ?? []}
         agenda={agenda ?? []}
+        contatos={contatos ?? []}
+        canEditContatos={canEditClienteContatos(session.profile.role)}
       />
     </div>
   )

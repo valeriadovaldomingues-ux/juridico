@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Scale, Phone, Mail, MessageCircle, MapPin,
   Clock, Plus, Trash2, User, Building2, Calendar, CheckSquare,
-  Tag, Briefcase,
+  Tag, Briefcase, Users,
 } from 'lucide-react'
-import type { Cliente, Processo, ContactInteraction, TipoContato, TipoInteracao } from '@/types'
+import type { Cliente, Processo, ContactInteraction, ClienteContato, TipoContato, TipoInteracao } from '@/types'
 import ClienteForm from '../ClienteForm'
+import ContatosEmpresaTab from './ContatosEmpresaTab'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -317,7 +318,16 @@ function AgendaTab({ agenda }: { agenda: any[] }) {
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 
-type Tab = 'processos' | 'tarefas' | 'agenda' | 'historico'
+type Tab = 'processos' | 'tarefas' | 'agenda' | 'historico' | 'contatos'
+type ClienteDetailProps = {
+  cliente: Cliente
+  processos: Partial<Processo>[]
+  interactions: ContactInteraction[]
+  tarefas: any[]
+  agenda: any[]
+  contatos: ClienteContato[]
+  canEditContatos: boolean
+}
 
 export default function ClienteDetail({
   cliente,
@@ -325,13 +335,9 @@ export default function ClienteDetail({
   interactions,
   tarefas,
   agenda,
-}: {
-  cliente: Cliente
-  processos: Partial<Processo>[]
-  interactions: ContactInteraction[]
-  tarefas: any[]
-  agenda: any[]
-}) {
+  contatos,
+  canEditContatos,
+}: ClienteDetailProps) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<Tab>('historico')
   const router = useRouter()
@@ -535,6 +541,9 @@ export default function ClienteDetail({
             <TabBtn active={tab === 'historico'} onClick={() => setTab('historico')} count={interactions.length}>
               <Clock size={13} /> Histórico
             </TabBtn>
+            <TabBtn active={tab === 'contatos'} onClick={() => setTab('contatos')} count={contatos.length}>
+              <Users size={13} /> Contatos
+            </TabBtn>
             <TabBtn active={tab === 'processos'} onClick={() => setTab('processos')} count={processos.length}>
               <Scale size={13} /> Processos
             </TabBtn>
@@ -550,6 +559,15 @@ export default function ClienteDetail({
           <div className="p-5 overflow-y-auto max-h-[calc(100vh-280px)]">
             {tab === 'historico' && (
               <InteracoesTab clienteId={cliente.id} initial={interactions} />
+            )}
+            {tab === 'contatos' && (
+              <ContatosEmpresaTab
+                clienteId={cliente.id}
+                clienteNome={cliente.nome}
+                pessoaJuridica={cliente.tipo_pessoa === 'juridica'}
+                canEdit={canEditContatos}
+                initialContatos={contatos}
+              />
             )}
             {tab === 'processos' && <ProcessosTab processos={processos} />}
             {tab === 'tarefas'   && <TarefasTab tarefas={tarefas} />}

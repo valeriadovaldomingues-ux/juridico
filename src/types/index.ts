@@ -86,6 +86,30 @@ export interface ContactInteraction {
   usuario?: Profile
 }
 
+export interface ClienteContato {
+  id: string
+  cliente_id: string
+  nome: string
+  cargo: string | null
+  area_responsavel: string | null
+  celular: string | null
+  email: string | null
+  observacoes: string | null
+  contato_principal: boolean
+  ativo: boolean
+  recebe_juridico: boolean
+  recebe_financeiro: boolean
+  recebe_documentos: boolean
+  recebe_comunicados: boolean
+  criado_por: string
+  atualizado_por: string | null
+  created_at: string
+  updated_at: string
+  cliente?: { id: string; nome: string } | null
+  criado_por_profile?: { id: string; nome: string; role: UserRole } | null
+  atualizado_por_profile?: { id: string; nome: string; role: UserRole } | null
+}
+
 // ─── Timesheet / Horas trabalhadas ───────────────────────────────────────────
 
 export type AgendaTimeEntryBillingStatus = 'pendente' | 'faturado' | 'nao_faturavel'
@@ -163,7 +187,11 @@ export interface Processo {
    */
   advogado_responsavel_id: string | null
   tribunal: string | null
+  comarca?: string | null
   vara: string | null
+  classe_processual?: string | null
+  assunto?: string | null
+  segredo_justica?: boolean | null
   valor_causa: number | null
   data_distribuicao: string | null
   observacoes: string | null
