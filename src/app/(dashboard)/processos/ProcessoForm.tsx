@@ -2,10 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
 import { createClient } from '@/lib/supabase/client'
 import type { ParteProcesso } from '@/types'
 import { buildClienteLookupDescription } from '@/lib/processos/search'
+import ProcessoImportarDocumento from './ProcessoImportarDocumento'
+import {
+  buildObservacoesImportacao,
+  escolherValorImportado,
+  type ProcessoImportacaoDados,
+  type ProcessoImportacaoModoAplicacao,
+} from '@/lib/processos/importar-documento'
 
 type TipoParte = 'autor' | 'reu' | 'terceiro' | 'outro'
 
@@ -41,16 +48,34 @@ interface ParteContrariaForm {
   documento: string
 }
 
+function buildClienteOptionFromProcessoCliente(cliente?: {
+  id: string
+  nome: string
+  cpf_cnpj?: string | null
+  telefone?: string | null
+  celular?: string | null
+  email?: string | null
+} | null): SearchableComboboxOption | null {
+  if (!cliente?.id) return null
+  return {
+    value: cliente.id,
+    label: cliente.nome,
+    description: buildClienteLookupDescription(cliente),
+  }
+}
+
 export default function ProcessoForm({
   processo,
   parteContraria,
   onSuccess,
+  allowImportDocumento = true,
 }: {
   processo?: any
   /** Parte contrária pré-carregada (na edição). Apenas a primeira é exibida aqui;
    *  as demais são gerenciadas na tela de detalhes do processo. */
   parteContraria?: ParteProcesso | null
   onSuccess?: () => void
+  allowImportDocumento?: boolean
 }) {
   const router = useRouter()
   const isEditing = !!processo
@@ -67,7 +92,15 @@ export default function ProcessoForm({
     valor_causa: processo?.valor_causa ?? '',
     data_distribuicao: processo?.data_distribuicao ?? '',
     observacoes: processo?.observacoes ?? '',
+    comarca: processo?.comarca ?? '',
+    classe_processual: processo?.classe_processual ?? '',
+    assunto: processo?.assunto ?? '',
+    segredo_justica: processo?.segredo_justica === true ? 'true' : processo?.segredo_justica === false ? 'false' : '',
   })
+
+  const [clienteSelecionado, setClienteSelecionado] = useState<SearchableComboboxOption | null>(
+    buildClienteOptionFromProcessoCliente(processo?.cliente ?? null)
+  )
 
   const [parteForm, setParteForm] = useState<ParteContrariaForm>({
     id: parteContraria?.id,
@@ -83,6 +116,70 @@ export default function ProcessoForm({
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  async function resolverClienteImportado(dados: ProcessoImportacaoDados) {
+    const termos = [dados.cliente.cpfCnpj, dados.cliente.nome].map(item => item.trim()).filter(Boolean)
+    for (const termo of termos) {
+      const params = new URLSearchParams({ q: termo, limit: '10' })
+      const res = await fetch(`/api/clientes/busca?${params.toString()}`)
+      if (!res.ok) continue
+      const lista = await res.json().catch(() => [])
+      const cliente = Array.isArray(lista)
+        ? lista.find((item: any) => {
+            const cpf = String(item?.cpf_cnpj ?? '').replace(/\D/g, '')
+            const termoCpf = termo.replace(/\D/g, '')
+            const nome = String(item?.nome ?? '').trim().toLowerCase()
+            return (termoCpf && cpf === termoCpf) || (termo && nome === termo.toLowerCase())
+          })
+        : null
+      if (cliente) {
+        return {
+          value: String(cliente.id),
+          label: String(cliente.nome ?? ''),
+          description: buildClienteLookupDescription(cliente),
+        } as SearchableComboboxOption
+      }
+    }
+    return null
+  }
+
+  async function aplicarImportacaoAoFormulario(dados: ProcessoImportacaoDados, modo: ProcessoImportacaoModoAplicacao) {
+    const observacoesImportadas = buildObservacoesImportacao(dados)
+    const tituloImportado = dados.cliente.nome && dados.parteContraria.nome
+      ? `${dados.cliente.nome} x ${dados.parteContraria.nome}`
+      : dados.processo.numero || ''
+
+    setForm(prev => ({
+      ...prev,
+      titulo: escolherValorImportado(prev.titulo, tituloImportado || prev.titulo, modo),
+      numero_processo: escolherValorImportado(prev.numero_processo, dados.processo.numero, modo),
+      fase: escolherValorImportado(prev.fase, dados.processo.fase, modo),
+      tribunal: escolherValorImportado(prev.tribunal, dados.processo.tribunal, modo),
+      comarca: escolherValorImportado(prev.comarca, dados.processo.comarca, modo),
+      classe_processual: escolherValorImportado(prev.classe_processual, dados.processo.classe, modo),
+      assunto: escolherValorImportado(prev.assunto, dados.processo.assunto, modo),
+      segredo_justica: escolherValorImportado(prev.segredo_justica, dados.processo.segredoJustica === null ? '' : dados.processo.segredoJustica ? 'true' : 'false', modo),
+      vara: escolherValorImportado(prev.vara, dados.processo.vara, modo),
+      valor_causa: escolherValorImportado(prev.valor_causa, dados.processo.valorCausa, modo),
+      data_distribuicao: escolherValorImportado(prev.data_distribuicao, dados.processo.dataDistribuicao, modo),
+      observacoes: escolherValorImportado(prev.observacoes, observacoesImportadas, modo),
+    }))
+
+    setParteForm(prev => ({
+      ...prev,
+      nome: escolherValorImportado(prev.nome, dados.parteContraria.nome, modo),
+      documento: escolherValorImportado(prev.documento, dados.parteContraria.cpfCnpj, modo),
+    }))
+
+    const clienteImportado = await resolverClienteImportado(dados).catch(() => null)
+    if (clienteImportado) {
+      setForm(prev => ({
+        ...prev,
+        cliente_id: escolherValorImportado(prev.cliente_id, clienteImportado.value, modo),
+      }))
+      setClienteSelecionado(prev => (modo === 'preencher_vazios' && prev?.value ? prev : clienteImportado))
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -96,6 +193,10 @@ export default function ProcessoForm({
       fase: form.fase || null,
       cliente_id: form.cliente_id || null,
       tribunal: form.tribunal || null,
+      comarca: form.comarca || null,
+      classe_processual: form.classe_processual || null,
+      assunto: form.assunto || null,
+      segredo_justica: form.segredo_justica === '' ? null : form.segredo_justica === 'true',
       vara: form.vara || null,
       valor_causa: form.valor_causa ? parseFloat(form.valor_causa.toString()) : null,
       data_distribuicao: form.data_distribuicao || null,
@@ -169,6 +270,13 @@ export default function ProcessoForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+
+      {allowImportDocumento && (
+        <ProcessoImportarDocumento
+          enabled={allowImportDocumento}
+          onApply={aplicarImportacaoAoFormulario}
+        />
+      )}
 
       {/* ── Identificação ──────────────────────────────────────────────────── */}
       <div className={sectionClass}>
@@ -250,12 +358,11 @@ export default function ProcessoForm({
             </p>
             <SearchableCombobox
               value={form.cliente_id}
-              selectedOption={processo?.cliente?.id ? {
-                value: processo.cliente.id,
-                label: processo.cliente.nome,
-                description: buildClienteLookupDescription(processo.cliente),
-              } : null}
-              onChange={(value) => handleChange('cliente_id', value)}
+              selectedOption={clienteSelecionado}
+              onChange={(value, option) => {
+                handleChange('cliente_id', value)
+                setClienteSelecionado(option)
+              }}
               loadOptions={async (query) => {
                 const params = new URLSearchParams({ q: query, limit: '10' })
                 const res = await fetch(`/api/clientes/busca?${params.toString()}`)
@@ -368,6 +475,51 @@ export default function ProcessoForm({
               placeholder="0,00"
               className={inputClass}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className={sectionClass}>
+        <h2 className={sectionTitleClass}>Informações processuais</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Comarca</label>
+            <input
+              value={form.comarca}
+              onChange={(e) => handleChange('comarca', e.target.value)}
+              placeholder="Ex: São Paulo"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Classe processual</label>
+            <input
+              value={form.classe_processual}
+              onChange={(e) => handleChange('classe_processual', e.target.value)}
+              placeholder="Ex: Procedimento Comum"
+              className={inputClass}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className={labelClass}>Assunto</label>
+            <input
+              value={form.assunto}
+              onChange={(e) => handleChange('assunto', e.target.value)}
+              placeholder="Ex: Cobrança contratual"
+              className={inputClass}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className={labelClass}>Segredo de justiça</label>
+            <select
+              value={form.segredo_justica}
+              onChange={(e) => handleChange('segredo_justica', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Não informado</option>
+              <option value="true">Sim</option>
+              <option value="false">Não</option>
+            </select>
           </div>
         </div>
       </div>
