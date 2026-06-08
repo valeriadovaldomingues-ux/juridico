@@ -1,13 +1,5 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond } from 'next/font/google'
 import ContactForm from './ContactForm'
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  display: 'swap',
-  variable: '--font-serif',
-})
 
 export const metadata: Metadata = {
   title: 'NR-1 sem Risco — Pessoa e do Val Advocacia',
@@ -158,7 +150,7 @@ function Tag({ label }: { label: string }) {
 
 export default function NR1SemRiscoPage() {
   return (
-    <div className={`${cormorant.variable} min-h-screen bg-[#F3F1EE] text-[#111827]`}>
+    <div className="min-h-screen bg-[#F3F1EE] text-[#111827]">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-[#0D2235] border-b border-[#B8784A]/20 shadow-[0_8px_30px_rgba(17,24,39,0.12)]">

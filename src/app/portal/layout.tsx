@@ -1,20 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect }      from 'next/navigation'
 import Link              from 'next/link'
-import { Cormorant_Garamond } from 'next/font/google'
 import LogoutButton from './LogoutButton'
 import PortalNav    from './PortalNav'
 
 export const metadata = { title: 'Portal do Cliente — Pessoa e do Val Advocacia' }
-
-// Fonte serif da identidade Pessoa e do Val
-const cormorant = Cormorant_Garamond({
-  subsets:  ['latin'],
-  weight:   ['300', '400', '600', '700'],
-  style:    ['normal', 'italic'],
-  display:  'swap',
-  variable: '--font-serif',
-})
 
 export default async function PortalLayout({
   children,
@@ -44,7 +34,7 @@ export default async function PortalLayout({
   }
 
   return (
-    <div className={`${cormorant.variable} min-h-screen bg-[#F5F0E8]`}>
+    <div className="min-h-screen bg-[#F5F0E8]">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="bg-[#0C1B2A] border-b border-[#C49557]/20">

@@ -1,12 +1,3 @@
-import { Cormorant_Garamond } from 'next/font/google'
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  display: 'swap',
-  variable: '--font-serif',
-})
-
 const WA =
   'https://wa.me/5531971766583?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Diagnóstico%20NR-1'
 
@@ -21,7 +12,7 @@ interface Props {
 
 export default function ArticleLayout({ categoria, titulo, subtitulo, dataPublicacao, autor, children }: Props) {
   return (
-    <div className={`${cormorant.variable} min-h-screen bg-[#F3F1EE] text-[#111827]`}>
+    <div className="min-h-screen bg-[#F3F1EE] text-[#111827]">
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0D2235] border-b border-[#B8784A]/20 shadow-[0_8px_30px_rgba(17,24,39,0.12)]">

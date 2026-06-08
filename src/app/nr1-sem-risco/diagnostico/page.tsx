@@ -1,13 +1,5 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond } from 'next/font/google'
 import DiagnosticoNR1 from './DiagnosticoNR1'
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  display: 'swap',
-  variable: '--font-serif',
-})
 
 export const metadata: Metadata = {
   title: 'Diagnóstico de Riscos Psicossociais NR-1 — Pessoa e do Val Advocacia',
@@ -17,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function DiagnosticoPage() {
   return (
-    <div className={cormorant.variable}>
+    <div>
       <DiagnosticoNR1 />
     </div>
   )
