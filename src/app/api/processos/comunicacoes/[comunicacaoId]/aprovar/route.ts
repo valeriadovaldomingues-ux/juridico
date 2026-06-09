@@ -44,7 +44,7 @@ export async function POST(
     return NextResponse.json({ error: 'Comunicação não encontrada' }, { status: 404 })
   }
 
-  if (current.status === 'enviada' || current.status === 'descartada') {
+  if (current.status === 'enviada' || current.status === 'enviada_manual_whatsapp' || current.status === 'descartada') {
     return NextResponse.json({ error: 'Comunicação não pode ser aprovada neste estado' }, { status: 409 })
   }
 

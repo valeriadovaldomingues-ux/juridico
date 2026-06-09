@@ -10,7 +10,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
 
   const { data: processo } = await supabase
     .from('processos')
-    .select('*, cliente:clientes(id, nome, email, celular)')
+    .select('*, cliente:clientes(id, nome, email, celular, telefone)')
     .eq('id', id)
     .single()
 
@@ -79,6 +79,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
           documentos={(documentos ?? []) as any}
           auroraClienteHistorico={(auroraClienteHistorico ?? []) as any}
           role={auth.profile.role}
+          cliente={processo.cliente ?? null}
         />
     </div>
   )

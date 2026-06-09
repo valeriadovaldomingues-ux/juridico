@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import type { Cliente } from '@/types'
 import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
 import { fetchUsuarioOptions } from '@/lib/search/remote'
 import {
@@ -190,6 +191,7 @@ export default function ProcessoDetail({
   documentos = [],
   auroraClienteHistorico: auroraClienteHistoricoIniciais = [],
   role,
+  cliente,
 }: {
   processo: any
   partes: ParteProcesso[]
@@ -201,6 +203,7 @@ export default function ProcessoDetail({
   documentos?: DocumentoProcessoSimple[]
   auroraClienteHistorico?: PortalAiConversation[]
   role: UserRole
+  cliente?: Pick<Cliente, 'id' | 'nome' | 'celular' | 'telefone'> | null
 }) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<TabAtiva>('dados')
@@ -367,13 +370,14 @@ export default function ProcessoDetail({
               )}
 
               {tab === 'comunicacoes' && role !== 'estagiario' && (
-                <ComunicacoesTab
-                  processoId={processo.id}
-                  processoTitulo={processo.titulo}
-                  role={role}
-                  comunicacoesIniciais={comunicacoes}
-                  onChange={setComunicacoes}
-                />
+          <ComunicacoesTab
+            processoId={processo.id}
+            processoTitulo={processo.titulo}
+            role={role}
+            cliente={cliente ?? processo.cliente ?? null}
+            comunicacoesIniciais={comunicacoes}
+            onChange={setComunicacoes}
+          />
               )}
 
               {tab === 'relatorios' && canViewRelatorio(role) && (

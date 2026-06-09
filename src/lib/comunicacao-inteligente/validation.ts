@@ -7,7 +7,14 @@ import type {
 
 export const COMUNICACAO_TIPOS: ComunicacaoInteligenteTipo[] = ['relatorio', 'mensagem', 'atualizacao']
 export const COMUNICACAO_CANAIS: ComunicacaoInteligenteCanal[] = ['portal', 'email', 'whatsapp']
-export const COMUNICACAO_STATUS: ComunicacaoInteligenteStatus[] = ['pendente_aprovacao', 'em_edicao', 'aprovada', 'enviada', 'descartada']
+export const COMUNICACAO_STATUS: ComunicacaoInteligenteStatus[] = [
+  'pendente_aprovacao',
+  'em_edicao',
+  'aprovada',
+  'enviada',
+  'enviada_manual_whatsapp',
+  'descartada',
+]
 
 export function normalizeComunicaoTipo(value?: string | null): ComunicacaoInteligenteTipo {
   const normalized = (value ?? '').trim().toLowerCase()
@@ -73,4 +80,3 @@ export function buildComunicaoTexto(conteudo: ComunicacaoInteligenteConteudo, ti
 
   return blocos.join('\n\n').trim()
 }
-

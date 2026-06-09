@@ -2,8 +2,22 @@ import type { UserRole } from '@/types'
 
 export type ComunicacaoInteligenteTipo = 'relatorio' | 'mensagem' | 'atualizacao'
 export type ComunicacaoInteligenteCanal = 'portal' | 'email' | 'whatsapp'
-export type ComunicacaoInteligenteStatus = 'pendente_aprovacao' | 'em_edicao' | 'aprovada' | 'enviada' | 'descartada'
-export type ComunicacaoInteligenteAcaoLog = 'gerada' | 'editada' | 'aprovada' | 'enviada' | 'descartada'
+export type ComunicacaoInteligenteStatus =
+  | 'pendente_aprovacao'
+  | 'em_edicao'
+  | 'aprovada'
+  | 'enviada'
+  | 'enviada_manual_whatsapp'
+  | 'descartada'
+export type ComunicacaoInteligenteAcaoLog =
+  | 'gerada'
+  | 'editada'
+  | 'aprovada'
+  | 'enviada'
+  | 'enviada_manual_whatsapp'
+  | 'whatsapp_iniciado'
+  | 'whatsapp_confirmado'
+  | 'descartada'
 
 export interface ComunicacaoInteligenteConteudo {
   resumoExecutivo: string
@@ -60,4 +74,3 @@ export interface ComunicacaoInteligenteConsulta {
   canalDestino: ComunicacaoInteligenteCanal
   andamentoIds: string[]
 }
-

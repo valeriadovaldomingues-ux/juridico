@@ -1,13 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Check, Loader2, Mail, MessageSquare, Pencil, Send, Sparkles, Trash2, X } from 'lucide-react'
-import type { UserRole } from '@/types'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Loader2, MessageSquare, Pencil, Send, Sparkles, Trash2, X } from 'lucide-react'
+import type { Cliente, UserRole } from '@/types'
 import type {
   ComunicacaoInteligenteCanal,
   ComunicacaoInteligenteDraft,
   ComunicacaoInteligenteStatus,
   ComunicacaoInteligenteTipo,
+} from '@/lib/comunicacao-inteligente'
+import {
+  buildWhatsAppMensagem,
+  buildWhatsAppUrl,
+  normalizeWhatsAppTelefone,
 } from '@/lib/comunicacao-inteligente'
 import { normalizeComunicaoCanal, normalizeComunicaoTipo } from '@/lib/comunicacao-inteligente/validation'
 
@@ -18,6 +23,7 @@ const STATUS_LABELS: Record<ComunicacaoInteligenteStatus, string> = {
   em_edicao: 'Em edição',
   aprovada: 'Aprovada',
   enviada: 'Enviada',
+  enviada_manual_whatsapp: 'Enviada via WhatsApp',
   descartada: 'Descartada',
 }
 
@@ -26,6 +32,7 @@ const STATUS_CLASSES: Record<ComunicacaoInteligenteStatus, string> = {
   em_edicao: 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
   aprovada: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   enviada: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+  enviada_manual_whatsapp: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   descartada: 'bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200',
 }
 
@@ -33,6 +40,7 @@ interface Props {
   processoId: string
   processoTitulo: string
   role: UserRole
+  cliente: Pick<Cliente, 'id' | 'nome' | 'celular' | 'telefone'> | null
   comunicacoesIniciais: ComunicacaoInteligenteDraft[]
   onChange: (items: ComunicacaoInteligenteDraft[]) => void
 }
@@ -50,6 +58,13 @@ interface FormState {
   observacoesInternas: string
   camposNaoEncontrados: string
   inconsistencias: string
+}
+
+interface WhatsAppDestinatario {
+  id: string
+  nome: string
+  telefone: string
+  origem: 'cliente' | 'contato'
 }
 
 function toListText(value: unknown) {
@@ -104,24 +119,48 @@ function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
 
+function normalizeRecipientPhone(phone: string) {
+  return normalizeWhatsAppTelefone(phone)
+}
+
+function buildRecipientLabel(destinatario: WhatsAppDestinatario) {
+  const suffix = destinatario.origem === 'contato' ? 'Contato' : 'Cliente'
+  return `${destinatario.nome} • ${suffix} • ${destinatario.telefone}`
+}
+
 export default function ComunicacoesTab({
   processoId,
   processoTitulo,
   role,
+  cliente,
   comunicacoesIniciais,
   onChange,
 }: Props) {
   const [items, setItems] = useState(comunicacoesIniciais)
   const [selected, setSelected] = useState<ComunicacaoInteligenteDraft | null>(null)
   const [form, setForm] = useState<FormState | null>(null)
+  const [whatsappSelected, setWhatsappSelected] = useState<ComunicacaoInteligenteDraft | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [whatsappOpen, setWhatsappOpen] = useState(false)
+  const [whatsappBusy, setWhatsappBusy] = useState(false)
+  const [whatsappLoadingRecipients, setWhatsappLoadingRecipients] = useState(false)
+  const [whatsappError, setWhatsappError] = useState('')
+  const [whatsappDestinatarios, setWhatsappDestinatarios] = useState<WhatsAppDestinatario[]>([])
+  const [whatsappDestinatarioId, setWhatsappDestinatarioId] = useState('')
+  const [whatsappStage, setWhatsappStage] = useState<'selecionar' | 'aguardando_confirmacao'>('selecionar')
+  const [whatsappMensagemPreview, setWhatsappMensagemPreview] = useState('')
   const canManage = ALLOWED_ROLES.includes(role)
 
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
     [items],
+  )
+
+  const whatsappDestinatarioSelecionado = useMemo(
+    () => whatsappDestinatarios.find(item => item.id === whatsappDestinatarioId) ?? null,
+    [whatsappDestinatarios, whatsappDestinatarioId],
   )
 
   function syncItems(next: ComunicacaoInteligenteDraft[]) {
@@ -140,6 +179,107 @@ export default function ComunicacoesTab({
     setForm(null)
     setError('')
   }
+
+  function openWhatsAppModal(item: ComunicacaoInteligenteDraft) {
+    if (item.status !== 'aprovada') {
+      setError('A comunicação precisa estar aprovada antes do envio via WhatsApp.')
+      return
+    }
+
+    setWhatsappSelected(item)
+    setWhatsappOpen(true)
+    setWhatsappStage('selecionar')
+    setWhatsappError('')
+    setWhatsappBusy(false)
+    setWhatsappDestinatarios([])
+    setWhatsappDestinatarioId('')
+    setWhatsappMensagemPreview('')
+  }
+
+  function closeWhatsAppModal() {
+    setWhatsappOpen(false)
+    setWhatsappError('')
+    setWhatsappBusy(false)
+    setWhatsappStage('selecionar')
+    setWhatsappDestinatarios([])
+    setWhatsappDestinatarioId('')
+    setWhatsappMensagemPreview('')
+    setWhatsappSelected(null)
+  }
+
+  async function carregarDestinatariosWhatsApp() {
+    if (!cliente?.id || !cliente?.nome) {
+      setWhatsappDestinatarios([])
+      return
+    }
+
+    setWhatsappLoadingRecipients(true)
+    setWhatsappError('')
+
+    try {
+      const recipients: WhatsAppDestinatario[] = []
+      const seenPhones = new Set<string>()
+
+      const addRecipient = (destinatario: WhatsAppDestinatario) => {
+        const phone = normalizeRecipientPhone(destinatario.telefone)
+        if (!phone || seenPhones.has(phone)) return
+        seenPhones.add(phone)
+        recipients.push({
+          ...destinatario,
+          telefone: phone,
+        })
+      }
+
+      if (cliente.celular) {
+        addRecipient({
+          id: 'cliente-celular',
+          nome: `${cliente.nome} (celular principal)`,
+          telefone: cliente.celular,
+          origem: 'cliente',
+        })
+      }
+
+      if (cliente.telefone) {
+        addRecipient({
+          id: 'cliente-telefone',
+          nome: `${cliente.nome} (telefone principal)`,
+          telefone: cliente.telefone,
+          origem: 'cliente',
+        })
+      }
+
+      const response = await fetch(`/api/clientes/${cliente.id}/contatos`)
+      if (response.ok) {
+        const payload = await response.json().catch(() => null)
+        const contatos = Array.isArray(payload?.items) ? payload.items : []
+
+        contatos
+          .filter((contato: { ativo?: boolean; celular?: string | null }) => contato?.ativo && contato.celular)
+          .forEach((contato: { id: string; nome: string; celular: string }) => {
+            addRecipient({
+              id: contato.id,
+              nome: contato.nome,
+              telefone: contato.celular,
+              origem: 'contato',
+            })
+          })
+      }
+
+      setWhatsappDestinatarios(recipients)
+      setWhatsappDestinatarioId(current => current || recipients[0]?.id || '')
+    } catch (loadError) {
+      setWhatsappError(loadError instanceof Error ? loadError.message : 'Falha ao carregar destinatários.')
+      setWhatsappDestinatarios([])
+    } finally {
+      setWhatsappLoadingRecipients(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!whatsappOpen || !whatsappSelected) return
+    void carregarDestinatariosWhatsApp()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatsappOpen, whatsappSelected?.id, cliente?.id])
 
   async function gerarNovaComunicacao() {
     setLoading(true)
@@ -215,7 +355,7 @@ export default function ComunicacoesTab({
     setForm(buildForm(updated))
   }
 
-  async function enviar() {
+  async function enviarPortal() {
     if (!selected) return
     if (selected.status !== 'aprovada') {
       setError('A comunicação precisa estar aprovada antes do envio.')
@@ -242,6 +382,104 @@ export default function ComunicacoesTab({
     syncItems(items.map(item => item.id === updated.id ? updated : item))
     setSelected(updated)
     setForm(buildForm(updated))
+  }
+
+  async function iniciarWhatsApp() {
+    if (!whatsappSelected || whatsappSelected.status !== 'aprovada') {
+      setWhatsappError('A comunicação precisa estar aprovada antes do envio via WhatsApp.')
+      return
+    }
+    if (!whatsappDestinatarioSelecionado) {
+      setWhatsappError('Selecione um destinatário válido.')
+      return
+    }
+
+    const popup = window.open('', '_blank')
+    const telefone = normalizeRecipientPhone(whatsappDestinatarioSelecionado.telefone)
+    if (!telefone) {
+      setWhatsappError('Telefone inválido.')
+      popup?.close()
+      return
+    }
+
+    setWhatsappBusy(true)
+    setWhatsappError('')
+
+    const mensagemPreview = buildWhatsAppMensagem(whatsappSelected)
+
+    const res = await fetch(`/api/processos/comunicacoes/${whatsappSelected.id}/whatsapp/iniciar`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        destinatario_tipo: whatsappDestinatarioSelecionado.origem,
+        contato_id: whatsappDestinatarioSelecionado.origem === 'contato' ? whatsappDestinatarioSelecionado.id : null,
+        telefone,
+      }),
+    })
+
+    setWhatsappBusy(false)
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      setWhatsappError(body.error ?? 'Falha ao abrir o WhatsApp')
+      popup?.close()
+      return
+    }
+
+    const body = await res.json().catch(() => null)
+    const url = typeof body?.url === 'string' ? body.url : buildWhatsAppUrl(telefone, mensagemPreview)
+    if (!url) {
+      setWhatsappError('Não foi possível montar o link do WhatsApp.')
+      popup?.close()
+      return
+    }
+
+    if (popup) {
+      popup.location.href = url
+      popup.focus?.()
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+
+    setWhatsappStage('aguardando_confirmacao')
+  }
+
+  async function confirmarWhatsApp() {
+    if (!whatsappSelected || whatsappSelected.status !== 'aprovada') {
+      setWhatsappError('A comunicação precisa estar aprovada antes da confirmação.')
+      return
+    }
+    if (!whatsappDestinatarioSelecionado) {
+      setWhatsappError('Selecione um destinatário válido.')
+      return
+    }
+
+    setWhatsappBusy(true)
+    setWhatsappError('')
+
+    const res = await fetch(`/api/processos/comunicacoes/${whatsappSelected.id}/whatsapp/confirmar`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        destinatario_tipo: whatsappDestinatarioSelecionado.origem,
+        contato_id: whatsappDestinatarioSelecionado.origem === 'contato' ? whatsappDestinatarioSelecionado.id : null,
+        telefone: normalizeRecipientPhone(whatsappDestinatarioSelecionado.telefone),
+      }),
+    })
+
+    setWhatsappBusy(false)
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      setWhatsappError(body.error ?? 'Falha ao confirmar envio')
+      return
+    }
+
+    const updated = await res.json() as ComunicacaoInteligenteDraft
+    syncItems(items.map(item => item.id === updated.id ? updated : item))
+    setWhatsappSelected(updated)
+    setWhatsappMensagemPreview(buildWhatsAppMensagem(updated))
+    closeWhatsAppModal()
   }
 
   async function descartar(item: ComunicacaoInteligenteDraft) {
@@ -333,6 +571,15 @@ export default function ComunicacoesTab({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                  {item.status === 'aprovada' && (
+                    <button
+                      onClick={() => openWhatsAppModal(item)}
+                      className="rounded-lg p-2 text-[#6b7280] hover:bg-[#e8f2f2] hover:text-[#145A5B] transition-colors"
+                      title="Enviar via WhatsApp"
+                    >
+                      <MessageSquare size={14} />
+                    </button>
+                  )}
                   <button
                     onClick={() => openEditor(item)}
                     className="rounded-lg p-2 text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#1a1d23] transition-colors"
@@ -422,7 +669,7 @@ export default function ComunicacoesTab({
                   Aprovar
                 </button>
                 <button
-                  onClick={enviar}
+                  onClick={enviarPortal}
                   disabled={saving || selected.status !== 'aprovada'}
                   className="inline-flex items-center gap-2 rounded-lg bg-[#0C1B2A] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#12283f] disabled:opacity-60"
                 >
@@ -431,6 +678,112 @@ export default function ComunicacoesTab({
                 </button>
                 <button
                   onClick={closeEditor}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium text-[#6b7280] hover:bg-[#f3f4f6]"
+                >
+                  <X size={13} />
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {whatsappOpen && whatsappSelected && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] px-5 py-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Enviar via WhatsApp</p>
+                <h4 className="text-sm font-semibold text-[#1a1d23] mt-1">{processoTitulo}</h4>
+              </div>
+              <button onClick={closeWhatsAppModal} className="rounded-full p-2 text-[#6b7280] hover:bg-[#f3f4f6]">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-5">
+              <p className="text-[13px] text-[#374151]">
+                O WhatsApp será aberto em nova aba. Confirme depois se a mensagem foi enviada.
+              </p>
+
+              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-medium uppercase tracking-wider text-[#9ca3af]">
+                      Destinatário
+                    </label>
+                    <select
+                      value={whatsappDestinatarioId}
+                      onChange={e => setWhatsappDestinatarioId(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#145A5B]"
+                    >
+                      {whatsappLoadingRecipients && <option value="">Carregando contatos...</option>}
+                      {!whatsappLoadingRecipients && whatsappDestinatarios.length === 0 && (
+                        <option value="">Nenhum telefone disponível</option>
+                      )}
+                      {whatsappDestinatarios.map(destinatario => (
+                        <option key={destinatario.id} value={destinatario.id}>
+                          {buildRecipientLabel(destinatario)}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[12px] text-[#6b7280]">
+                      Use o celular principal do cliente ou um contato vinculado ativo.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-[#9ca3af]">Mensagem preparada</p>
+                    <div className="mt-2 max-h-60 overflow-y-auto whitespace-pre-line rounded-lg bg-white p-3 text-[13px] leading-relaxed text-[#1a1d23] border border-[#e5e7eb]">
+                      {whatsappMensagemPreview || buildWhatsAppMensagem(whatsappSelected!)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[#e5e7eb] bg-white p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-[#9ca3af]">Confirmação</p>
+                    <p className="mt-2 text-[13px] text-[#374151]">
+                      {whatsappStage === 'selecionar'
+                        ? 'Selecione o destinatário e abra o WhatsApp.'
+                        : 'Volte ao PEDV depois de enviar e confirme manualmente.'}
+                    </p>
+                    {whatsappDestinatarioSelecionado && (
+                      <div className="mt-3 rounded-lg bg-[#f9fafb] p-3 text-[13px] text-[#1a1d23]">
+                        <p className="font-medium">{whatsappDestinatarioSelecionado.nome}</p>
+                        <p className="text-[#6b7280]">{whatsappDestinatarioSelecionado.telefone}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {whatsappError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-700">
+                      {whatsappError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 border-t border-[#e5e7eb] pt-4">
+                <button
+                  onClick={iniciarWhatsApp}
+                  disabled={whatsappBusy || whatsappLoadingRecipients || whatsappDestinatarios.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#145A5B] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#1B6E70] disabled:opacity-60"
+                >
+                  {whatsappBusy ? <Loader2 size={13} className="animate-spin" /> : <MessageSquare size={13} />}
+                  Abrir WhatsApp
+                </button>
+                <button
+                  onClick={confirmarWhatsApp}
+                  disabled={whatsappBusy || whatsappStage !== 'aguardando_confirmacao' || whatsappDestinatarios.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0C1B2A] px-3 py-2 text-[12px] font-medium text-white hover:bg-[#12283f] disabled:opacity-60"
+                >
+                  <Check size={13} />
+                  Confirmar envio
+                </button>
+                <button
+                  onClick={closeWhatsAppModal}
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium text-[#6b7280] hover:bg-[#f3f4f6]"
                 >
                   <X size={13} />

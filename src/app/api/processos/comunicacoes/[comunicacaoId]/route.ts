@@ -10,7 +10,7 @@ const ALLOWED_ROLES: UserRole[] = ['administrativo', 'advogado', 'gerente', 'soc
 async function registrarLog(
   supabase: Awaited<ReturnType<typeof createClient>>,
   comunicacaoId: string,
-  acao: 'gerada' | 'editada' | 'aprovada' | 'enviada' | 'descartada',
+  acao: 'gerada' | 'editada' | 'aprovada' | 'enviada' | 'enviada_manual_whatsapp' | 'whatsapp_iniciado' | 'whatsapp_confirmado' | 'descartada',
   realizadoPor: string,
   detalhes: Record<string, unknown>,
 ) {
@@ -43,6 +43,10 @@ export async function PATCH(
 
   if (findError || !current) {
     return NextResponse.json({ error: 'Comunicação não encontrada' }, { status: 404 })
+  }
+
+  if (current.status === 'enviada' || current.status === 'enviada_manual_whatsapp' || current.status === 'descartada') {
+    return NextResponse.json({ error: 'Comunicação já finalizada não pode ser editada' }, { status: 409 })
   }
 
   const body = await request.json().catch(() => null)
@@ -138,7 +142,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Comunicação não encontrada' }, { status: 404 })
   }
 
-  if (current.status === 'enviada') {
+  if (current.status === 'enviada' || current.status === 'enviada_manual_whatsapp') {
     return NextResponse.json({ error: 'Comunicação já enviada não pode ser descartada' }, { status: 409 })
   }
 
