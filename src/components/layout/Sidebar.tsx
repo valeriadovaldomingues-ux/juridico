@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Scale, CalendarDays,
-  DollarSign, FileText, Bot, Settings, BarChart2,
+  DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap, FileSearch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -41,6 +41,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/publicacoes', label: 'Publicações', icon: Newspaper  },
       { href: '/comercial',   label: 'Comercial',   icon: Handshake  },
       { href: '/financeiro',  label: 'Financeiro',  icon: DollarSign },
+      { href: '/financeiro/cobrancas', label: 'Cobrancas', icon: Banknote },
       { href: '/documentos',  label: 'Documentos',  icon: FileText   },
       { href: '/relatorios',  label: 'Relatórios',  icon: BarChart2  },
       { href: '/importar',                    label: 'Importar',         icon: Upload     },

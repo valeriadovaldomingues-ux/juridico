@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Mais específicas primeiro (ex: /configuracoes/usuarios antes de /configuracoes).
 // Deve estar sincronizado com RESTRICTED_ROUTES em src/lib/permissions.ts.
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
-  { prefix: '/financeiro',             roles: ['socio'] },
+  { prefix: '/financeiro',             roles: ['administrativo', 'gerente', 'socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
   { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
   { prefix: '/configuracoes/usuarios', roles: ['gerente', 'socio'] },

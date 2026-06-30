@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "test": "node --test --experimental-strip-types \"tests/**/*.test.mts\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "check": "tsc --noEmit && next lint"
+    "check": "tsc --noEmit && eslint ."
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
