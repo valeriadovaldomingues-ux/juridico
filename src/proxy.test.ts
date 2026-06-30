@@ -440,10 +440,10 @@ describe('role insuficiente para rota restrita', () => {
     expectRedirect(res, '/dashboard')
   })
 
-  it('gerente em /financeiro (requer socio) → redirect para /dashboard', async () => {
+  it('gerente em /financeiro → passa através', async () => {
     asUser('gerente')
     const res = await proxy(req('/financeiro'))
-    expectRedirect(res, '/dashboard')
+    expectPassThru(res)
   })
 
   it('socio em /financeiro → passa através', async () => {
@@ -791,10 +791,10 @@ describe('matriz proxy — /financeiro', () => {
     expectPassThru(res)
   })
 
-  it('gerente em /financeiro → redirect /dashboard (proxy RESTRICTED)', async () => {
+  it('gerente acessa /financeiro', async () => {
     asUser('gerente')
     const res = await proxy(req('/financeiro'))
-    expectRedirect(res, '/dashboard')
+    expectPassThru(res)
   })
 
   it('advogado em /financeiro → redirect /dashboard', async () => {
@@ -1286,22 +1286,22 @@ describe('nova matriz — /configuracoes/usuarios (socio exclusivo)', () => {
   })
 })
 
-describe('nova matriz — /financeiro (socio exclusivo)', () => {
+describe('nova matriz — /financeiro', () => {
   it('socio acessa /financeiro', async () => {
     asUser('socio')
     expectPassThru(await proxy(req('/financeiro')))
   })
-  it('gerente em /financeiro → /dashboard', async () => {
+  it('gerente acessa /financeiro', async () => {
     asUser('gerente')
-    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+    expectPassThru(await proxy(req('/financeiro')))
   })
   it('advogado em /financeiro → /dashboard', async () => {
     asUser('advogado')
     expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
-  it('administrativo em /financeiro → /dashboard', async () => {
+  it('administrativo acessa /financeiro', async () => {
     asUser('administrativo')
-    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+    expectPassThru(await proxy(req('/financeiro')))
   })
   it('comercial em /financeiro → /dashboard', async () => {
     asUser('comercial')

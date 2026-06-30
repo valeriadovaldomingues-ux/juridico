@@ -97,6 +97,22 @@ Em **Settings → Environment Variables**, adicione:
 | `CRON_SECRET` | `(gere com: openssl rand -hex 32)` | Production |
 | `NEXT_PUBLIC_APP_URL` | `https://app.seuescritorio.com.br` | Production |
 
+#### 2.3.1 Banco Inter (Financeiro / Cobranças)
+
+| Nome | Valor sugerido | Environments |
+|------|----------------|-------------|
+| `INTER_CERT_BASE64` | Base64 do certificado cliente mTLS | Production, Preview, Development |
+| `INTER_KEY_BASE64` | Base64 da chave privada mTLS | Production, Preview, Development |
+| `INTER_WEBHOOK_CA_BASE64` | Base64 do CA usado nas conexões com o Inter | Production, Preview, Development |
+| `INTER_CLIENT_ID` | Client ID do app no portal Inter | Production, Preview, Development |
+| `INTER_CLIENT_SECRET` | Client Secret do app no portal Inter | Production, Preview, Development |
+| `INTER_WEBHOOK_ENABLED` | `false` nesta primeira versão; futuro toggle do webhook via proxy/gateway mTLS | Production, Preview, Development |
+| `INTER_WEBHOOK_SECRET` | Opcional, apenas para o webhook futuro via proxy/gateway mTLS | Production, Preview |
+| `INTER_BASE_URL` | URL da API do Inter. Em staging/preview use homologação; a produção é bloqueada nesse ambiente. | Production, Preview, Development |
+
+> Em desenvolvimento local, `INTER_CERT_PATH`, `INTER_KEY_PATH` e `INTER_WEBHOOK_CA_PATH` continuam aceitos como compatibilidade opcional.
+> Enquanto `INTER_WEBHOOK_ENABLED=false`, o PEDV opera por sincronização ativa e o endpoint de webhook responde como desativado.
+
 #### 2.4 Domínio personalizado
 
 1. Vercel → Settings → Domains
@@ -192,6 +208,19 @@ OPENAI_MODEL=gpt-4o-mini
 CRON_SECRET=SEU_SEGREDO_AQUI
 NEXT_PUBLIC_APP_URL=https://app.seuescritorio.com.br
 NODE_ENV=production
+INTER_CERT_BASE64=...
+INTER_KEY_BASE64=...
+INTER_WEBHOOK_CA_BASE64=...
+INTER_CLIENT_ID=...
+INTER_CLIENT_SECRET=...
+INTER_WEBHOOK_ENABLED=false
+# INTER_WEBHOOK_SECRET=...  # apenas para um futuro proxy/gateway mTLS
+INTER_BASE_URL=https://cdpj.partners.bancointer.com.br
+
+# Compatibilidade opcional apenas em desenvolvimento local:
+# INTER_CERT_PATH=/caminho/inter-certificado.crt
+# INTER_KEY_PATH=/caminho/inter-chave.key
+# INTER_WEBHOOK_CA_PATH=/caminho/inter-ca.crt
 ```
 
 #### 3.4 Build e start
@@ -330,6 +359,11 @@ Use [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs) em `vercel.json`:
 Configure o header via [Vercel Cron Secret](https://vercel.com/docs/cron-jobs/manage-cron-jobs):
 - A Vercel envia automaticamente `Authorization: Bearer <CRON_SECRET>`
 
+Para o módulo financeiro/cobranças, use o cron interno em lote:
+- `POST /api/financeiro/cobrancas/sincronizar-lote`
+- Proteja com `Authorization: Bearer <CRON_SECRET>`
+- O endpoint usa trava interna para evitar execuções concorrentes e processa apenas o lote limitado configurado no servidor
+
 ### No VPS
 ```bash
 # Editar crontab
@@ -366,6 +400,7 @@ crontab -e
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` configurada (apenas backend)
 - [ ] `OPENAI_API_KEY` configurada (se usar IA)
 - [ ] `CRON_SECRET` configurada com valor aleatório longo
+- [ ] `INTER_WEBHOOK_ENABLED=false` enquanto o webhook não estiver por proxy/gateway mTLS
 - [ ] `NEXT_PUBLIC_APP_URL` configurada com URL de produção
 
 ### Funcionalidades (teste após deploy)

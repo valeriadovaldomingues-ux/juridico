@@ -119,6 +119,7 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     documentos:   ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
+    financeiro:   ['view', 'create', 'edit'],
     comercial:    ['view'],
     ferramentasPdf: ['view'],
     tv: ['view'],
@@ -154,6 +155,7 @@ const PERMISSIONS: PermMatrix = {
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
     importacao:   ['view', 'create'],
+    financeiro:   ['view', 'create', 'edit'],
     relatorios:   ['view'],
     monitoramento: ['view'],
     ferramentasPdf: ['view'],
@@ -248,6 +250,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/ferramentas-pdf',
     '/importar',
     '/comercial',
+    '/financeiro/cobrancas',
     '/tv/painel-diario',
   ],
   advogado: [
@@ -272,6 +275,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
+    '/financeiro/cobrancas',
     '/relatorios',
     '/importar',
     '/automacoes',
@@ -288,6 +292,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/financeiro',
+    '/financeiro/cobrancas',
     '/documentos',
     '/ferramentas-pdf',
     '/comercial',
@@ -320,7 +325,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
-  { prefix: '/financeiro',            roles: ['socio'] },
+  { prefix: '/financeiro',            roles: ['administrativo', 'gerente', 'socio'] },
 
   // ── Automação e integrações ───────────────────────────────────────────────────
   { prefix: '/automacoes',            roles: ['gerente', 'socio'] },
