@@ -7,6 +7,7 @@ import {
   WEBHOOK_MAX_BYTES,
   createRecurringCobrancasAction,
   createSingleCobrancaAction,
+  deleteCobrancaAction,
   emitInterCobrancaAction,
   handleInterWebhookAction,
   syncInterCobrancaAction,
@@ -58,6 +59,7 @@ function createTestStore(seed: {
   const processos = new Map((seed.processos ?? []).map(p => [p.id, p]))
   const events: Record<string, unknown>[] = []
   const logs: Record<string, unknown>[] = []
+  const operations: string[] = []
   const webhookEventsById = new Map<string, Record<string, unknown>>()
   const webhookEventsByEventId = new Map<string, string>()
 
@@ -101,10 +103,18 @@ function createTestStore(seed: {
       charges[index] = { ...charges[index], ...patch, updated_at: NOW }
       return charges[index]
     },
+    async deleteCharge(id) {
+      operations.push('delete')
+      const index = charges.findIndex(c => c.id === id)
+      if (index === -1) return false
+      charges.splice(index, 1)
+      return true
+    },
     async insertEvent(row) {
       events.push(row)
     },
     async insertLog(row) {
+      operations.push('log')
       logs.push(row)
     },
     async insertWebhookEvent(row) {
@@ -132,6 +142,7 @@ function createTestStore(seed: {
     charges,
     events,
     logs,
+    operations,
     webhookEventsById,
     webhookEventsByEventId,
   }
@@ -671,4 +682,131 @@ test('manual sync keeps paid charges paid even if Inter returns a lower status',
   const cobranca = assertOk<Cobranca>(result)
   assert.equal(cobranca.status, 'paga')
   assert.equal(inter.state.lastGetId, 'inter-sync')
+})
+
+test('socio can delete an open charge without Inter emission', async () => {
+  const store = createTestStore({
+    charges: [
+      {
+        id: 'charge-delete',
+        cliente_id: 'cliente-1',
+        cliente: { id: 'cliente-1', nome: 'Cliente Teste' },
+        status: 'pendente',
+        valor: 1500,
+        data_vencimento: '2099-01-10',
+        descricao: 'Honorarios para exclusao',
+      },
+    ],
+  })
+
+  const result = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-delete',
+    motivo: 'Lancada em duplicidade',
+    now: NOW,
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.status, 200)
+  assert.equal(store.charges.length, 0)
+  assert.equal(store.logs.length, 1)
+  assert.equal(store.logs[0].acao, 'exclusao_cobranca')
+  assert.equal(store.logs[0].usuario_id, 'socio-1')
+  assert.equal(store.logs[0].cobranca_id, 'charge-delete')
+  const payload = store.logs[0].payload as {
+    cobranca: { cliente_nome: string | null; valor: number; status_anterior: string }
+  }
+  assert.equal(payload.cobranca.cliente_nome, 'Cliente Teste')
+  assert.equal(payload.cobranca.valor, 1500)
+  assert.equal(payload.cobranca.status_anterior, 'pendente')
+})
+
+test('non-socio cannot delete a charge', async () => {
+  const store = createTestStore({ charges: [{ id: 'charge-delete', status: 'pendente' }] })
+
+  const result = await deleteCobrancaAction({
+    role: 'gerente',
+    userId: 'gerente-1',
+    store: store.store,
+    id: 'charge-delete',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 403)
+  assert.equal(store.charges.length, 1)
+  assert.equal(store.logs.length, 0)
+})
+
+test('issued charge cannot be physically deleted', async () => {
+  const store = createTestStore({ charges: [{ id: 'charge-issued', status: 'emitida' }] })
+
+  const result = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-issued',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 409)
+  assert.match(result.error ?? '', /status/i)
+  assert.equal(store.charges.length, 1)
+  assert.equal(store.logs.length, 0)
+})
+
+test('charge with Inter identifier cannot be deleted', async () => {
+  const store = createTestStore({
+    charges: [{ id: 'charge-inter', status: 'pendente', inter_cobranca_id: 'inter-1' }],
+  })
+
+  const result = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-inter',
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 409)
+  assert.match(result.error ?? '', /Banco Inter/i)
+  assert.equal(store.charges.length, 1)
+  assert.equal(store.logs.length, 0)
+})
+
+test('delete log is created before the charge is deleted', async () => {
+  const store = createTestStore({ charges: [{ id: 'charge-order', status: 'rascunho' }] })
+
+  const result = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-order',
+  })
+
+  assert.equal(result.ok, true)
+  assert.deepEqual(store.operations, ['log', 'delete'])
+})
+
+test('duplicate delete attempt returns 404 after first deletion', async () => {
+  const store = createTestStore({ charges: [{ id: 'charge-duplicate-delete', status: 'pendente' }] })
+
+  const first = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-duplicate-delete',
+  })
+  const second = await deleteCobrancaAction({
+    role: 'socio',
+    userId: 'socio-1',
+    store: store.store,
+    id: 'charge-duplicate-delete',
+  })
+
+  assert.equal(first.ok, true)
+  assert.equal(second.ok, false)
+  assert.equal(second.status, 404)
+  assert.equal(store.logs.length, 1)
 })

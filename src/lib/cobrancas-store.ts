@@ -10,6 +10,7 @@ export interface CobrancasStore {
   createCharge(input: CobrancaInsertRow): Promise<Cobranca>
   createCharges(inputs: CobrancaInsertRow[]): Promise<Cobranca[]>
   updateCharge(id: string, patch: CobrancaUpdateRow): Promise<Cobranca | null>
+  deleteCharge(id: string): Promise<boolean>
   insertEvent(row: Record<string, unknown>): Promise<void>
   insertLog(row: Record<string, unknown>): Promise<void>
   insertWebhookEvent(row: Record<string, unknown>): Promise<{ id: string; duplicate?: boolean }>
@@ -94,6 +95,15 @@ export function createSupabaseCobrancasStore(supabase: SupabaseClient): Cobranca
         .maybeSingle()
       if (error) throw new Error(error.message)
       return data ?? null
+    },
+
+    async deleteCharge(id) {
+      const { error, count } = await supabase
+        .from('cobrancas')
+        .delete({ count: 'exact' })
+        .eq('id', id)
+      if (error) throw new Error(error.message)
+      return (count ?? 0) > 0
     },
 
     async insertEvent(row) {

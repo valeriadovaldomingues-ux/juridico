@@ -54,11 +54,24 @@ Checklist manual para validar o modulo `Financeiro > Cobrancas` do PEDV em ambie
 - [ ] Conferir que o status mudou para `cancelada`.
 - [ ] Tentar cancelar uma cobranca paga e validar bloqueio.
 
+### Exclusao fisica
+
+- [ ] Confirmar que apenas `socio` ve o botao `Excluir cobrança` nos detalhes da cobranca.
+- [ ] Excluir uma cobranca `rascunho`, `pendente`/em aberto ou `erro_emissao` sem identificadores do Inter.
+- [ ] Confirmar que o modal exibe cliente, descricao, valor, vencimento e aviso de irreversibilidade.
+- [ ] Confirmar que a exclusao exige digitar `EXCLUIR`.
+- [ ] Informar um motivo opcional e confirmar que ele aparece em `cobranca_logs`.
+- [ ] Conferir que a cobranca sai da lista imediatamente e que os indicadores sao recalculados.
+- [ ] Tentar excluir cobrancas `processando`, `emitida`, `paga`, `vencida` e `cancelada`; todas devem ser bloqueadas.
+- [ ] Tentar excluir cobranca com `inter_cobranca_id`, `nosso_numero`, linha digitavel, codigo de barras, Pix ou payload de emissao; o sistema deve orientar cancelamento em vez de exclusao.
+- [ ] Conferir que `cobranca_logs.payload` preserva dados essenciais da cobranca antes do `ON DELETE SET NULL`.
+- [ ] Repetir a mesma exclusao e validar resposta 404 ou comportamento idempotente adequado.
+
 ### Permissoes por perfil
 
 - [ ] `administrativo` consegue ver, criar, emitir, sincronizar e cancelar cobrancas permitidas.
 - [ ] `gerente` consegue ver, criar, emitir e sincronizar cobrancas permitidas.
-- [ ] `socio` consegue ver, criar, emitir e sincronizar cobrancas permitidas.
+- [ ] `socio` consegue ver, criar, emitir, sincronizar e excluir fisicamente somente cobrancas permitidas.
 - [ ] `advogado` nao acessa o menu nem os endpoints do modulo.
 - [ ] Usuario deslogado e conta inativa nao acessam o modulo.
 
@@ -78,7 +91,7 @@ Checklist manual para validar o modulo `Financeiro > Cobrancas` do PEDV em ambie
 - [ ] Confirmar que chamadas sem `CRON_SECRET` sao rejeitadas.
 - [ ] Confirmar que execucoes concorrentes do lote sao bloqueadas.
 - [ ] Confirmar que o lote respeita limite de quantidade por execucao.
-- [ ] Revalidar cancelamento, vencimento e permissao por perfil.
+- [ ] Revalidar cancelamento, exclusao, vencimento e permissao por perfil.
 - [ ] Confirmar que nenhum dado de producao foi consultado ou alterado.
 
 ## Observacoes para a futura integracao por webhook

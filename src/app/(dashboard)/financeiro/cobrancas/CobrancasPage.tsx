@@ -13,6 +13,7 @@ import {
   Search,
   Send,
   ExternalLink,
+  Trash2,
   X,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
@@ -94,8 +95,13 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Cobranca | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   const podeCriar = can(role, 'financeiro', 'create') || ['administrativo', 'gerente', 'socio'].includes(role)
+  const podeExcluir = role === 'socio'
   const selected = cobrancas.find(c => c.id === selectedId) ?? cobrancas[0] ?? null
 
   const filtradas = useMemo(() => {
@@ -208,6 +214,45 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   function copy(text: string) {
     navigator.clipboard.writeText(text)
   }
+
+  function openDeleteModal(cobranca: Cobranca) {
+    setDeleteTarget(cobranca)
+    setDeleteConfirm('')
+    setDeleteReason('')
+    setError(null)
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return
+    setDeleteTarget(null)
+    setDeleteConfirm('')
+    setDeleteReason('')
+  }
+
+  async function excluirCobranca() {
+    if (!deleteTarget || deleteConfirm !== 'EXCLUIR') return
+    setDeleting(true)
+    setError(null)
+    const res = await fetch(`/api/financeiro/cobrancas/${deleteTarget.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo: deleteReason.trim() || null }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setDeleting(false)
+
+    if (!res.ok) {
+      setError(data.error ?? 'Nao foi possivel excluir a cobranca.')
+      return
+    }
+
+    const nextCobrancas = cobrancas.filter(c => c.id !== deleteTarget.id)
+    setCobrancas(nextCobrancas)
+    setSelectedId(current => current === deleteTarget.id ? nextCobrancas[0]?.id ?? '' : current)
+    closeDeleteModal()
+  }
+
+  const deleteBlockReason = selected ? getDeleteBlockReason(selected) : null
 
   return (
     <div className="space-y-5 max-w-7xl">
@@ -366,6 +411,21 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
                   <Send size={15} />
                   Copiar mensagem WhatsApp
                 </button>
+                {podeExcluir && (
+                  <div className="pt-2 border-t border-[#eef2f5]">
+                    <button
+                      onClick={() => openDeleteModal(selected)}
+                      disabled={Boolean(deleteBlockReason) || busyId === selected.id}
+                      className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg border border-rose-200 text-rose-700 text-[13px] font-medium hover:bg-rose-50 disabled:opacity-60 disabled:hover:bg-white"
+                    >
+                      <Trash2 size={15} />
+                      Excluir cobrança
+                    </button>
+                    {deleteBlockReason && (
+                      <p className="mt-2 text-[12px] text-[#7a8899]">{deleteBlockReason}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -407,8 +467,70 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
           </div>
         </div>
       )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl border border-[#e8edf2]">
+            <div className="px-5 py-4 border-b border-[#eef2f5] flex items-center justify-between">
+              <h2 className="text-[16px] font-semibold text-[#0f1923]">Excluir cobrança</h2>
+              <button onClick={closeDeleteModal} disabled={deleting}><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
+                Esta ação não poderá ser desfeita. A cobrança será removida fisicamente após o registro do log de auditoria.
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-[13px]">
+                <Info label="Cliente" value={deleteTarget.cliente?.nome ?? 'Cliente'} />
+                <Info label="Valor" value={formatCurrency(Number(deleteTarget.valor))} />
+                <Info label="Vencimento" value={formatDate(deleteTarget.data_vencimento)} />
+                <Info label="Status" value={statusCfg[deleteTarget.status]?.label ?? deleteTarget.status} />
+              </div>
+              <div>
+                <p className="text-[12px] font-medium text-[#7a8899] mb-1">Descrição</p>
+                <p className="text-[13px] text-[#34495e]">{deleteTarget.descricao}</p>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Motivo da exclusão (opcional)</span>
+                <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Digite EXCLUIR para confirmar</span>
+                <input value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+              </label>
+            </div>
+            <div className="px-5 py-4 border-t border-[#eef2f5] flex justify-end gap-2">
+              <button onClick={closeDeleteModal} disabled={deleting} className="px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]">Cancelar</button>
+              <button onClick={excluirCobranca} disabled={deleting || deleteConfirm !== 'EXCLUIR'} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-700 text-white text-[13px] font-medium disabled:opacity-60">
+                {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                Excluir cobrança
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function getDeleteBlockReason(cobranca: Cobranca) {
+  if (!['rascunho', 'pendente', 'erro_emissao'].includes(cobranca.status)) {
+    return 'Esta cobrança não pode ser excluída neste status.'
+  }
+  if (
+    cobranca.inter_cobranca_id ||
+    cobranca.nosso_numero ||
+    cobranca.linha_digitavel ||
+    cobranca.codigo_barras ||
+    cobranca.pix_qrcode ||
+    cobranca.pix_copia_cola ||
+    cobranca.boleto_pdf_url ||
+    cobranca.inter_status ||
+    cobranca.payload_criacao ||
+    cobranca.payload_ultimo_status
+  ) {
+    return 'Esta cobrança possui indícios de emissão no Banco Inter. Cancele a cobrança em vez de excluir.'
+  }
+  return null
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

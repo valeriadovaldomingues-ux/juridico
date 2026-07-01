@@ -11,6 +11,7 @@ const INTER_SYNC_RETRYABLE_STATUS_CODES = new Set([404, 409, 425, 429, 503])
 const DEFAULT_INTER_SYNC_ATTEMPTS = 1
 const DEFAULT_INTER_SYNC_RETRY_DELAY_MS = 350
 const DEFAULT_INTER_EMISSION_ATTEMPTS = 3
+const DELETABLE_STATUS = new Set(['rascunho', 'pendente', 'em_aberto', 'erro_emissao'])
 
 export interface InterGateway {
   createInterCharge(input: {
@@ -42,6 +43,21 @@ function fail(error: string, status = 400): ActionResult<never> {
 
 function canAccess(role: UserRole) {
   return COBRANCAS_ALLOWED_ROLES.includes(role as (typeof COBRANCAS_ALLOWED_ROLES)[number])
+}
+
+function hasInterEmissionEvidence(cobranca: Cobranca) {
+  return Boolean(
+    cobranca.inter_cobranca_id ||
+    cobranca.nosso_numero ||
+    cobranca.linha_digitavel ||
+    cobranca.codigo_barras ||
+    cobranca.pix_qrcode ||
+    cobranca.pix_copia_cola ||
+    cobranca.boleto_pdf_url ||
+    cobranca.inter_status ||
+    cobranca.payload_criacao ||
+    cobranca.payload_ultimo_status
+  )
 }
 
 function duplicateKeyFor(input: Pick<CobrancaDuplicateKey, 'cliente_id' | 'processo_id' | 'valor' | 'data_vencimento' | 'parcela_numero' | 'parcela_total'>) {
@@ -525,6 +541,65 @@ export async function syncInterCobrancaAction(input: {
     })
     return fail(message, 502)
   }
+}
+
+export async function deleteCobrancaAction(input: {
+  role: UserRole
+  userId: string
+  store: CobrancasStore
+  id: string
+  motivo?: string | null
+  now?: string
+}): Promise<ActionResult<{ id: string }>> {
+  if (input.role !== 'socio') return fail('Apenas socios podem excluir cobrancas.', 403)
+
+  const cobranca = await input.store.findCobrancaById(input.id)
+  if (!cobranca) return fail('Cobranca nao encontrada.', 404)
+
+  if (!DELETABLE_STATUS.has(cobranca.status)) {
+    return fail('Esta cobranca nao pode ser excluida fisicamente neste status.', 409)
+  }
+
+  if (hasInterEmissionEvidence(cobranca)) {
+    return fail('Esta cobranca possui indicios de emissao no Banco Inter. Cancele a cobranca em vez de excluir.', 409)
+  }
+
+  const deletedAt = input.now ?? new Date().toISOString()
+  const motivo = input.motivo?.trim() || null
+  const payload = {
+    deleted_at: deletedAt,
+    motivo,
+    cobranca: {
+      id: cobranca.id,
+      cliente_id: cobranca.cliente_id,
+      cliente_nome: cobranca.cliente?.nome ?? null,
+      contrato_id: cobranca.contrato_id,
+      processo_id: cobranca.processo_id,
+      valor: Number(cobranca.valor),
+      data_vencimento: cobranca.data_vencimento,
+      descricao: cobranca.descricao,
+      parcela_numero: cobranca.parcela_numero,
+      parcela_total: cobranca.parcela_total,
+      status_anterior: cobranca.status,
+      inter_cobranca_id: cobranca.inter_cobranca_id,
+      nosso_numero: cobranca.nosso_numero,
+      linha_digitavel: cobranca.linha_digitavel,
+      codigo_barras: cobranca.codigo_barras,
+    },
+  }
+
+  await input.store.insertLog({
+    cobranca_id: cobranca.id,
+    acao: 'exclusao_cobranca',
+    detalhe: motivo,
+    payload,
+    usuario_id: input.userId,
+  })
+
+  const deleted = await input.store.deleteCharge(cobranca.id)
+  if (!deleted) return fail('Cobranca nao encontrada.', 404)
+
+  return ok(200, { id: cobranca.id })
 }
 
 export async function handleInterWebhookAction(input: {

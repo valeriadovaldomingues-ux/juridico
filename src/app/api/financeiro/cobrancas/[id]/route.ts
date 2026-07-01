@@ -3,6 +3,8 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { COBRANCAS_SELECT, addCobrancaEvento, assertProcessoBelongsToCliente, logCobranca, normalizeCobrancaInput, statusForDueDate } from '@/lib/cobrancas'
+import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
+import { deleteCobrancaAction } from '@/lib/cobrancas-workflow'
 
 const ALLOWED = ['administrativo', 'gerente', 'socio'] as const
 
@@ -83,4 +85,27 @@ export async function PUT(
   })
 
   return NextResponse.json(data)
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await apiGuard(['socio'])
+  if (auth instanceof NextResponse) return auth
+
+  const { id } = await params
+  const supabase = createServiceClient()
+  const store = createSupabaseCobrancasStore(supabase)
+  const body = await req.json().catch(() => ({}))
+  const result = await deleteCobrancaAction({
+    role: auth.role,
+    userId: auth.userId,
+    store,
+    id,
+    motivo: typeof body.motivo === 'string' ? body.motivo : null,
+  })
+
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json(result.data, { status: result.status })
 }
