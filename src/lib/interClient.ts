@@ -54,10 +54,34 @@ function readRequiredEnv(env: NodeJS.ProcessEnv, name: string) {
   return value
 }
 
+function stripWrappingQuotes(value: string) {
+  let normalized = value.trim()
+  const pairs: Array<[string, string]> = [
+    ['"', '"'],
+    ["'", "'"],
+    ['`', '`'],
+    ['“', '”'],
+    ['‘', '’'],
+  ]
+
+  for (const [open, close] of pairs) {
+    if (normalized.startsWith(open) && normalized.endsWith(close)) {
+      normalized = normalized.slice(open.length, -close.length).trim()
+      break
+    }
+  }
+
+  return normalized
+}
+
 function decodeBase64Material(value: string, label: string) {
-  const normalized = value.replace(/\s+/g, '')
+  const normalized = stripWrappingQuotes(value).replace(/\s+/g, '')
   if (!normalized) {
     throw new Error(`Configure ${label} no ambiente server-side.`)
+  }
+
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized) || normalized.length % 4 === 1) {
+    throw new Error(`Valor Base64 invalido para ${label}.`)
   }
 
   const decoded = Buffer.from(normalized, 'base64')
@@ -96,6 +120,10 @@ function loadPrivateKey(material: Buffer) {
   const text = material.toString('utf8')
 
   if (text.includes('-----BEGIN')) {
+    if (!/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(text)) {
+      throw new Error('Chave privada do Banco Inter invalida.')
+    }
+
     try {
       return createPrivateKey(text)
     } catch {

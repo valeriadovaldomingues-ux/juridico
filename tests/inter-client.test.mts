@@ -32,8 +32,10 @@ function wrapPem(label: string, base64Body: string) {
 
 const TEST_CERT_PEM = wrapPem('CERTIFICATE', TEST_CERT_DER_BASE64)
 const TEST_KEY_PEM = createPrivateKey({ key: TEST_RSA_JWK, format: 'jwk' }).export({ type: 'pkcs8', format: 'pem' }).toString()
+const TEST_RSA_KEY_PEM = createPrivateKey({ key: TEST_RSA_JWK, format: 'jwk' }).export({ type: 'pkcs1', format: 'pem' }).toString()
 const TEST_CERT_BASE64 = Buffer.from(TEST_CERT_PEM).toString('base64')
 const TEST_KEY_BASE64 = Buffer.from(TEST_KEY_PEM).toString('base64')
+const TEST_RSA_KEY_BASE64 = Buffer.from(TEST_RSA_KEY_PEM).toString('base64')
 const TEST_CA_BASE64 = TEST_CERT_BASE64
 
 function baseEnv() {
@@ -60,6 +62,25 @@ test('buildInterConfig loads base64 secrets and validates the pair in memory', (
   assert.equal(config.ca.toString('utf8').includes('BEGIN CERTIFICATE'), true)
 })
 
+test('buildInterConfig accepts quoted and multiline base64 material', () => {
+  const multilineKey = TEST_KEY_BASE64.match(/.{1,76}/g)?.join('\n') ?? TEST_KEY_BASE64
+  const config = buildInterConfig({
+    ...baseEnv(),
+    INTER_KEY_BASE64: `"${multilineKey}"`,
+  })
+
+  assert.equal(config.key.toString('utf8').includes('BEGIN PRIVATE KEY'), true)
+})
+
+test('buildInterConfig accepts RSA private key PEM material', () => {
+  const config = buildInterConfig({
+    ...baseEnv(),
+    INTER_KEY_BASE64: TEST_RSA_KEY_BASE64,
+  })
+
+  assert.equal(config.key.toString('utf8').includes('BEGIN RSA PRIVATE KEY'), true)
+})
+
 test('buildInterConfig rejects a missing certificate or key', () => {
   assert.throws(
     () => buildInterConfig({ ...baseEnv(), INTER_CERT_BASE64: '' }),
@@ -69,6 +90,34 @@ test('buildInterConfig rejects a missing certificate or key', () => {
   assert.throws(
     () => buildInterConfig({ ...baseEnv(), INTER_KEY_BASE64: '' }),
     /INTER_KEY_BASE64/i,
+  )
+})
+
+test('buildInterConfig differentiates invalid base64 from invalid private key', () => {
+  assert.throws(
+    () => buildInterConfig({ ...baseEnv(), INTER_KEY_BASE64: 'not valid base64!' }),
+    /Base64 invalido.*INTER_KEY_BASE64/i,
+  )
+
+  const validBase64InvalidKey = Buffer.from('not a private key').toString('base64')
+  assert.throws(
+    () => buildInterConfig({ ...baseEnv(), INTER_KEY_BASE64: validBase64InvalidKey }),
+    /Chave privada do Banco Inter invalida/i,
+  )
+})
+
+test('private key validation errors do not expose key material', () => {
+  const invalidPem = '-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----\n'
+  assert.throws(
+    () => buildInterConfig({ ...baseEnv(), INTER_KEY_BASE64: Buffer.from(invalidPem).toString('base64') }),
+    (error) => {
+      assert.equal(error instanceof Error, true)
+      const message = error instanceof Error ? error.message : String(error)
+      assert.equal(message.includes('not-a-real-key'), false)
+      assert.equal(message.includes('BEGIN PRIVATE KEY'), false)
+      assert.match(message, /Chave privada do Banco Inter invalida/i)
+      return true
+    },
   )
 })
 
