@@ -59,7 +59,45 @@ test('buildInterConfig loads base64 secrets and validates the pair in memory', (
   assert.equal(config.baseUrl, 'https://sandbox.inter.example/')
   assert.equal(config.cert.toString('utf8').includes('BEGIN CERTIFICATE'), true)
   assert.equal(config.key.toString('utf8').includes('BEGIN PRIVATE KEY'), true)
-  assert.equal(config.ca.toString('utf8').includes('BEGIN CERTIFICATE'), true)
+  assert.equal(config.ca, undefined)
+})
+
+test('buildInterConfig does not require webhook CA when webhook is disabled', () => {
+  const env: NodeJS.ProcessEnv = { ...baseEnv() }
+  delete env.INTER_WEBHOOK_CA_BASE64
+  delete env.INTER_WEBHOOK_SECRET
+  const config = buildInterConfig({
+    ...env,
+    INTER_WEBHOOK_ENABLED: 'false',
+  })
+
+  assert.equal(config.ca, undefined)
+})
+
+test('buildInterConfig validates webhook CA and secret only when webhook is enabled', () => {
+  const enabled = buildInterConfig({
+    ...baseEnv(),
+    INTER_WEBHOOK_ENABLED: 'true',
+  })
+  assert.equal(enabled.ca?.toString('utf8').includes('BEGIN CERTIFICATE'), true)
+
+  assert.throws(
+    () => buildInterConfig({
+      ...baseEnv(),
+      INTER_WEBHOOK_ENABLED: 'true',
+      INTER_WEBHOOK_SECRET: '',
+    }),
+    /INTER_WEBHOOK_SECRET/i,
+  )
+
+  assert.throws(
+    () => buildInterConfig({
+      ...baseEnv(),
+      INTER_WEBHOOK_ENABLED: 'true',
+      INTER_WEBHOOK_CA_BASE64: '',
+    }),
+    /INTER_WEBHOOK_CA_BASE64/i,
+  )
 })
 
 test('buildInterConfig accepts quoted and multiline base64 material', () => {
@@ -155,7 +193,7 @@ test('buildInterConfig keeps local path compatibility in development only', () =
 
     assert.equal(config.cert.toString('utf8').includes('BEGIN CERTIFICATE'), true)
     assert.equal(config.key.toString('utf8').includes('BEGIN PRIVATE KEY'), true)
-    assert.equal(config.ca.toString('utf8').includes('BEGIN CERTIFICATE'), true)
+    assert.equal(config.ca, undefined)
   } finally {
     rmSync(tempDir, { recursive: true, force: true })
   }

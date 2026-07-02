@@ -11,7 +11,7 @@ interface InterConfig {
   baseUrl: string
   cert: Buffer
   key: Buffer
-  ca: Buffer
+  ca?: Buffer
 }
 
 interface InterChargeInput {
@@ -44,6 +44,10 @@ const INTER_PRODUCTION_HOST = 'cdpj.partners.bancointer.com.br'
 
 function getConfig(): InterConfig {
   return buildInterConfig(process.env)
+}
+
+function isInterWebhookEnabled(env: NodeJS.ProcessEnv) {
+  return env.INTER_WEBHOOK_ENABLED === 'true'
 }
 
 function readRequiredEnv(env: NodeJS.ProcessEnv, name: string) {
@@ -213,11 +217,16 @@ export function buildInterConfig(env: NodeJS.ProcessEnv = process.env): InterCon
   const allowLocalPaths = env.NODE_ENV === 'development'
   const cert = loadInterMaterial(env, 'INTER_CERT_BASE64', 'INTER_CERT_PATH', allowLocalPaths)
   const key = loadInterMaterial(env, 'INTER_KEY_BASE64', 'INTER_KEY_PATH', allowLocalPaths)
-  const ca = loadInterMaterial(env, 'INTER_WEBHOOK_CA_BASE64', 'INTER_WEBHOOK_CA_PATH', allowLocalPaths)
 
   validateCertificatePair(cert, key)
-  validateCertificateAuthority(ca)
   const parsedBaseUrl = parseBaseUrl(baseUrl)
+  let ca: Buffer | undefined
+
+  if (isInterWebhookEnabled(env)) {
+    readRequiredEnv(env, 'INTER_WEBHOOK_SECRET')
+    ca = loadInterMaterial(env, 'INTER_WEBHOOK_CA_BASE64', 'INTER_WEBHOOK_CA_PATH', allowLocalPaths)
+    validateCertificateAuthority(ca)
+  }
 
   return {
     clientId,
