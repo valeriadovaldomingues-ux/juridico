@@ -8,24 +8,30 @@
 --   que possui sessão Supabase e a anon key (pública) — pode ler/gravar/apagar
 --   todos os registros via PostgREST direto, ignorando as rotas de API.
 --
---   Causa provável: a migration `portal_rls_migration.sql` (e a policy correta
---   de `trello_integration_migration.sql`) NÃO foi aplicada neste banco, embora
---   `rls_hardening_prioridade_alta.sql` tenha sido. Este arquivo fecha APENAS os
---   4 alvos críticos + credenciais do Trello. As demais tabelas `USING(true)`
---   (leads, propostas_comerciais, kanban_tasks, pessoas, monitoramento_*, etc.)
---   ficam para uma segunda rodada.
+--   Causa provável: a migration `portal_rls_migration.sql` NÃO foi aplicada neste
+--   banco, embora `rls_hardening_prioridade_alta.sql` tenha sido. Este arquivo:
+--     (a) fecha os 4 alvos críticos ABERTOS (clientes, processos, partes, prazos);
+--     (b) corrige o BUG DO PORTAL: adiciona a policy de leitura do cliente em
+--         documentos/doc_gerados. Essas duas já foram endurecidas para staff
+--         (rls_hardening), mas a policy do cliente nunca foi criada → hoje o
+--         portal mostra ZERO documentos ao cliente. Aqui a adição é NÃO-destrutiva
+--         (não tocamos nas policies de staff já aplicadas).
+--   As demais tabelas `USING(true)` (leads, propostas_comerciais, kanban_tasks,
+--   pessoas, monitoramento_*, etc.) ficam para uma segunda rodada.
 --
 --   Padrão idêntico ao já usado no repositório:
 --     • staff: current_user_role() IN (...roles internos...)   — FOR ALL
 --     • portal: role 'cliente' + vínculo em portal_clientes    — FOR SELECT
---   Flags de visibilidade (visivel_cliente) têm DEFAULT false → nada é exposto
---   ao cliente até o escritório liberar explicitamente.
+--   Flags de visibilidade (visivel_cliente / liberado_cliente) têm DEFAULT false
+--   → nada é exposto ao cliente até o escritório liberar explicitamente.
 --
 --   Idempotente (DROP POLICY IF EXISTS antes de cada CREATE). NÃO altera dados.
 --   Requer a função public.current_user_role() (auth_setup.sql / profiles_rls).
 --
---   >>> ANTES DE APLICAR: rotacione o api_key/api_token do Trello, pois eles
---   >>> estiveram legíveis por qualquer autenticado enquanto o RLS esteve aberto.
+--   >>> ANTES DE APLICAR: teste em staging. As policies dependem de
+--   >>> current_user_role()/auth.uid(); confirme que o staff continua vendo tudo
+--   >>> e que o cliente vê apenas o próprio escopo (valida o comportamento do
+--   >>> @supabase/ssr propagando o JWT ao PostgREST).
 -- ============================================================================
 
 BEGIN;
@@ -149,6 +155,43 @@ CREATE POLICY "portal_cliente_clientes"
     )
   );
 
+-- ─── 5. documentos + doc_gerados — BUG DO PORTAL (adição NÃO-destrutiva) ─────
+-- Estas tabelas JÁ têm policies de staff aplicadas (rls_hardening, por operação,
+-- roles administrativo/advogado/gerente/socio). NÃO as tocamos aqui. Apenas
+-- adicionamos a policy de LEITURA do cliente que faltou — sem ela, a rota
+-- /api/portal/documentos (que lê com a sessão do cliente, sujeita a RLS) retorna
+-- ZERO linhas mesmo com liberado_cliente = true.
+
+DROP POLICY IF EXISTS "portal_cliente_documentos" ON public.documentos;
+CREATE POLICY "portal_cliente_documentos"
+  ON public.documentos FOR SELECT TO authenticated
+  USING (
+    current_user_role() = 'cliente'
+    AND liberado_cliente  = true
+    AND EXISTS (
+      SELECT 1 FROM public.portal_clientes pc
+      WHERE pc.auth_user_id = auth.uid()
+        AND pc.cliente_id   = documentos.cliente_id
+        AND pc.ativo        = true
+    )
+  );
+
+DROP POLICY IF EXISTS "portal_cliente_doc_gerados" ON public.doc_gerados;
+CREATE POLICY "portal_cliente_doc_gerados"
+  ON public.doc_gerados FOR SELECT TO authenticated
+  USING (
+    current_user_role() = 'cliente'
+    AND liberado_cliente  = true
+    AND EXISTS (
+      SELECT 1 FROM public.processos p
+      INNER JOIN public.portal_clientes pc ON pc.cliente_id = p.cliente_id
+      WHERE p.id              = doc_gerados.processo_id
+        AND p.visivel_cliente = true
+        AND pc.auth_user_id   = auth.uid()
+        AND pc.ativo          = true
+    )
+  );
+
 COMMIT;
 
 -- ============================================================================
@@ -166,4 +209,10 @@ COMMIT;
 -- WHERE schemaname = 'public'
 --   AND tablename IN ('clientes','processos','partes_processo','prazos')
 -- ORDER BY tablename, policyname;
+--
+-- Bug do portal: confirmar que as policies de leitura do cliente existem
+-- (deve retornar 2 linhas):
+-- SELECT tablename, policyname FROM pg_policies
+-- WHERE schemaname = 'public'
+--   AND policyname IN ('portal_cliente_documentos','portal_cliente_doc_gerados');
 -- ============================================================================
