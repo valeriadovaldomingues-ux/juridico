@@ -277,7 +277,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/automacoes',
     '/monitoramento',
     '/ia-juridica',
-    '/integracoes/trello',
     '/tv/painel-diario',
   ],
   socio: [
@@ -296,7 +295,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/automacoes',
     '/monitoramento',
     '/ia-juridica',
-    '/integracoes/trello',
     '/integracoes/gmail',
     '/configuracoes/usuarios',
     '/configuracoes',
@@ -312,11 +310,8 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
 // Paths mais específicos devem vir antes dos mais genéricos.
 // Esta lista é inlined em proxy.ts por compatibilidade com edge runtime.
 
-// Paths mais específicos DEVEM vir antes dos genéricos (ex: /ia-juridica/aurora antes de /ia-juridica).
+// Paths mais específicos DEVEM vir antes dos genéricos (ex: /configuracoes/usuarios antes de /configuracoes).
 export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
-  // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
-  { prefix: '/aurora-mobile',          roles: ['socio'] },
-  { prefix: '/ia-juridica/aurora',    roles: ['socio'] },
   { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
@@ -339,7 +334,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   // ── Importar (administrativo, gerente, sócio) ─────────────────────────────────
   { prefix: '/importar',             roles: ['administrativo', 'gerente', 'socio'] },
 
-  // ── IA Jurídica (/aurora já tratado acima) ────────────────────────────────────
+  // ── IA Jurídica ───────────────────────────────────────────────────────────────
   { prefix: '/ia-juridica',           roles: ['advogado', 'gerente', 'socio'] },
 
   // ── Configurações (/usuarios mais específico antes) ───────────────────────────

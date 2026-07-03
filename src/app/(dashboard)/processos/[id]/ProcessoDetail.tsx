@@ -7,7 +7,7 @@ import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
-  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -26,7 +26,6 @@ import {
 } from '@/lib/processos/andamentos'
 import { canViewRelatorio } from '@/lib/relatorios-inteligentes/permissions'
 import type { RelatorioClienteDraft } from '@/lib/relatorios-inteligentes'
-import type { PortalAiConversation } from '@/types'
 import type {
   AndamentoOrigem,
   AndamentoTipo,
@@ -38,7 +37,6 @@ import type {
 import ProcessoForm from '../ProcessoForm'
 import ComunicacoesTab from './ComunicacoesTab'
 import RelatoriosTab from './RelatoriosTab'
-import AuroraClienteTab from './AuroraClienteTab'
 
 // ─── Labels e cores ───────────────────────────────────────────────────────────
 
@@ -141,14 +139,13 @@ interface DocumentoProcessoSimple {
   } | null
 }
 
-type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'relatorios' | 'aurora_cliente' | 'documentos' | 'prazos' | 'observacoes'
+type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'relatorios' | 'documentos' | 'prazos' | 'observacoes'
 
 const TAB_OPTIONS: Array<{ id: TabAtiva; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
   { id: 'dados', label: 'Dados gerais', icon: ListChecks },
   { id: 'andamentos', label: 'Andamentos', icon: Clock3 },
   { id: 'comunicacoes', label: 'Comunicação', icon: MessageSquare },
   { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
-  { id: 'aurora_cliente', label: 'Aurora Cliente', icon: Sparkles },
   { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'prazos', label: 'Prazos', icon: CalendarRange },
   { id: 'observacoes', label: 'Observações', icon: Paperclip },
@@ -189,7 +186,6 @@ export default function ProcessoDetail({
   comunicacoes: comunicacoesIniciais = [],
   relatorios: relatoriosIniciais = [],
   documentos = [],
-  auroraClienteHistorico: auroraClienteHistoricoIniciais = [],
   role,
   cliente,
 }: {
@@ -201,7 +197,6 @@ export default function ProcessoDetail({
   comunicacoes?: any[]
   relatorios?: RelatorioClienteDraft[]
   documentos?: DocumentoProcessoSimple[]
-  auroraClienteHistorico?: PortalAiConversation[]
   role: UserRole
   cliente?: Pick<Cliente, 'id' | 'nome' | 'celular' | 'telefone'> | null
 }) {
@@ -210,7 +205,6 @@ export default function ProcessoDetail({
   const [andamentos, setAndamentos] = useState(andamentosIniciais)
   const [comunicacoes, setComunicacoes] = useState(comunicacoesIniciais)
   const relatorios = relatoriosIniciais ?? []
-  const auroraClienteHistorico = useMemo(() => auroraClienteHistoricoIniciais ?? [], [auroraClienteHistoricoIniciais])
   const router = useRouter()
   const latestAndamento = andamentos[0] ?? null
   const nextPrazo = prazos[0] ?? null
@@ -219,7 +213,6 @@ export default function ProcessoDetail({
     andamentos: andamentos.length,
     comunicacoes: comunicacoes.length,
     relatorios: canViewRelatorio(role) ? relatorios.length : 0,
-    aurora_cliente: auroraClienteHistorico.length,
     documentos: documentos.length,
     prazos: prazos.length,
     observacoes: processo.observacoes ? 1 : 0,
@@ -388,10 +381,6 @@ export default function ProcessoDetail({
                   role={role}
                   relatoriosIniciais={relatorios}
                 />
-              )}
-
-              {tab === 'aurora_cliente' && (
-                <AuroraClienteTab historico={auroraClienteHistorico} />
               )}
 
               {tab === 'documentos' && (

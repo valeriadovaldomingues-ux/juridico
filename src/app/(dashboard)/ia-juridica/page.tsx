@@ -1,27 +1,9 @@
 import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
-import { FileText, Newspaper, Bot, ArrowRight, Sparkles, FolderArchive } from 'lucide-react'
+import { FileText, Newspaper, Bot, ArrowRight, Sparkles } from 'lucide-react'
 import TestePublicacaoIA from './TestePublicacaoIA'
 
 const modulos = [
-  {
-    href:   '/ia-juridica/aurora',
-    icon:   Sparkles,
-    cor:    { bg: 'bg-[#0B1C2D]', icon: 'text-[#C49557]', btn: 'text-[#A07840]', hover: 'hover:border-[#C49557] hover:shadow-[0_4px_20px_rgba(196,149,87,0.16)]' },
-    titulo: 'Aurora',
-    desc:   'Assistente executiva jurídica dos sócios, voltada a análise estratégica, priorização de urgências, riscos e planos de ação.',
-    tags:   ['Exclusivo sócios', 'Estratégia', 'Riscos', 'Providências'],
-    socioOnly: true,
-  },
-  {
-    href:   '/dashboard/central-arquivos',
-    icon:   FolderArchive,
-    cor:    { bg: 'bg-slate-50', icon: 'text-slate-700', btn: 'text-slate-700', hover: 'hover:border-slate-300 hover:shadow-[0_4px_20px_rgba(15,23,42,0.08)]' },
-    titulo: 'Dossiê Aurora',
-    desc:   'Junte documentos, fotos, áudios, prints, certidões, contratos e demais arquivos para que a Aurora analise o caso com base no material enviado.',
-    tags:   ['Arquivos', 'Análise futura', 'Sócios', 'Contexto jurídico'],
-    socioOnly: true,
-  },
   {
     href:   '/ia-juridica/peca',
     icon:   FileText,
