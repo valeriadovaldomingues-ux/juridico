@@ -53,12 +53,14 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     .order('created_at', { ascending: false })
 
   const processoIds = (processos ?? []).map(p => p.id)
+  const podeFinanceiro = session.profile.role === 'socio'
 
   const [
     { data: interactions },
     { data: tarefas },
     { data: agenda },
     contatos,
+    { data: financeiro },
   ] = await Promise.all([
     supabase
       .from('contact_interactions')
@@ -84,6 +86,15 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       .limit(20),
 
     listClienteContatos(id),
+
+    podeFinanceiro
+      ? supabase
+          .from('honorarios_mensais')
+          .select('*, cliente:clientes(id, nome), responsavel:profiles!responsavel_lancamento_id(id, nome)')
+          .eq('cliente_id', id)
+          .order('competencia', { ascending: false })
+          .limit(24)
+      : Promise.resolve({ data: [] }),
   ])
 
   return (
@@ -95,6 +106,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         tarefas={tarefas ?? []}
         agenda={agenda ?? []}
         contatos={contatos ?? []}
+        financeiro={(financeiro ?? []) as any}
+        podeFinanceiro={podeFinanceiro}
         canEditContatos={canEditClienteContatos(session.profile.role)}
       />
     </div>

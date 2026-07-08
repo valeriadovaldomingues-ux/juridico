@@ -287,6 +287,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/financeiro',
+    '/financeiro/honorarios',
     '/documentos',
     '/ferramentas-pdf',
     '/comercial',

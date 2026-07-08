@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, Zap,
-  Mail, Scissors, Tv2,
+  Mail, Scissors, Tv2, Receipt,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -33,6 +33,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/publicacoes', label: 'Publicações', icon: Newspaper  },
       { href: '/comercial',   label: 'Comercial',   icon: Handshake  },
       { href: '/financeiro',  label: 'Financeiro',  icon: DollarSign },
+      { href: '/financeiro/honorarios', label: 'Honorários', icon: Receipt },
       { href: '/documentos',  label: 'Documentos',  icon: FileText   },
       { href: '/relatorios',  label: 'Relatórios',  icon: BarChart2  },
       { href: '/importar',    label: 'Importar',    icon: Upload     },

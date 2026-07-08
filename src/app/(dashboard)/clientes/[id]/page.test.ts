@@ -49,6 +49,7 @@ describe('clientes/[id] page', () => {
     const interactionsQuery = makeQueryResult({ data: [], error: null })
     const tarefasQuery = makeQueryResult({ data: [], error: null })
     const agendaQuery = makeQueryResult({ data: [], error: null })
+    const honorariosQuery = makeQueryResult({ data: [], error: null })
 
     const from = vi.fn((table: string) => {
       if (table === 'clientes') return clienteQuery
@@ -56,6 +57,7 @@ describe('clientes/[id] page', () => {
       if (table === 'contact_interactions') return interactionsQuery
       if (table === 'kanban_tasks') return tarefasQuery
       if (table === 'agenda_items') return agendaQuery
+      if (table === 'honorarios_mensais') return honorariosQuery
       throw new Error(`Tabela inesperada: ${table}`)
     })
 

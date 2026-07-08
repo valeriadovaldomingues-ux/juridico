@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Scale, Phone, Mail, MessageCircle, MapPin,
   Clock, Plus, Trash2, User, Building2, Calendar, CheckSquare,
-  Tag, Briefcase, Users,
+  Tag, Briefcase, Users, DollarSign,
 } from 'lucide-react'
 import type { Cliente, Processo, ContactInteraction, ClienteContato, TipoContato, TipoInteracao } from '@/types'
+import type { HonorarioMensal } from '@/lib/honorarios/types'
 import ClienteForm from '../ClienteForm'
 import ContatosEmpresaTab from './ContatosEmpresaTab'
+import FinanceiroClienteTab from './FinanceiroClienteTab'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -318,7 +320,7 @@ function AgendaTab({ agenda }: { agenda: any[] }) {
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 
-type Tab = 'processos' | 'tarefas' | 'agenda' | 'historico' | 'contatos'
+type Tab = 'processos' | 'tarefas' | 'agenda' | 'historico' | 'contatos' | 'financeiro'
 type ClienteDetailProps = {
   cliente: Cliente
   processos: Partial<Processo>[]
@@ -326,6 +328,8 @@ type ClienteDetailProps = {
   tarefas: any[]
   agenda: any[]
   contatos: ClienteContato[]
+  financeiro: HonorarioMensal[]
+  podeFinanceiro: boolean
   canEditContatos: boolean
 }
 
@@ -336,6 +340,8 @@ export default function ClienteDetail({
   tarefas,
   agenda,
   contatos,
+  financeiro,
+  podeFinanceiro,
   canEditContatos,
 }: ClienteDetailProps) {
   const [editing, setEditing] = useState(false)
@@ -553,6 +559,11 @@ export default function ClienteDetail({
             <TabBtn active={tab === 'agenda'} onClick={() => setTab('agenda')} count={agenda.length}>
               <Calendar size={13} /> Agenda
             </TabBtn>
+            {podeFinanceiro && (
+              <TabBtn active={tab === 'financeiro'} onClick={() => setTab('financeiro')} count={financeiro.length}>
+                <DollarSign size={13} /> Financeiro
+              </TabBtn>
+            )}
           </div>
 
           {/* Conteúdo da tab */}
@@ -572,6 +583,9 @@ export default function ClienteDetail({
             {tab === 'processos' && <ProcessosTab processos={processos} />}
             {tab === 'tarefas'   && <TarefasTab tarefas={tarefas} />}
             {tab === 'agenda'    && <AgendaTab agenda={agenda} />}
+            {tab === 'financeiro' && podeFinanceiro && (
+              <FinanceiroClienteTab clienteId={cliente.id} clienteNome={cliente.nome} registros={financeiro} />
+            )}
           </div>
         </div>
       </div>
