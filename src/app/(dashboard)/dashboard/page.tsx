@@ -220,10 +220,11 @@ export default async function DashboardPage() {
       .eq('tipo', 'audiencia').eq('status', 'pendente').gt('data_inicio', todayStr).lte('data_inicio', sevenDaysLaterStr),
     supabase.from('clientes').select('id, nome, data_nascimento')
       .eq('ativo', true).eq('ignore_birthday', false).not('data_nascimento', 'is', null),
-    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'critico'),
-    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'atencao'),
-    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'normal'),
-    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').is('sla_level', null),
+    // arquivado=false: reflete o mesmo recorte que o board do Kanban mostra
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('arquivado', false).eq('sla_level', 'critico'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('arquivado', false).eq('sla_level', 'atencao'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('arquivado', false).eq('sla_level', 'normal'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('arquivado', false).is('sla_level', null),
     verFinanceiro
       ? supabase.from('financeiro_lancamentos').select('tipo, valor, status, vencimento').eq('tipo', 'receita').in('status', ['pendente', 'vencido'])
       : Promise.resolve({ data: null }),

@@ -190,6 +190,7 @@ export async function GET() {
         processo:processos(numero_processo, area_direito),
         responsavel:profiles!responsavel_id(nome)
       `)
+      .eq('arquivado', false)
       .in('status', ['a_fazer', 'fazendo', 'com_pendencia'])
       .in('prioridade', ['urgente', 'alta', 'media'])
       .order('prioridade', { ascending: true })

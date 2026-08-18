@@ -42,13 +42,13 @@ export async function GET() {
   ] = await Promise.all([
     // Contadores de status
     supabase.from('kanban_tasks').select('*', { count: 'exact', head: true })
-      .in('status', ['a_fazer', 'fazendo', 'com_pendencia']),
+      .eq('arquivado', false).in('status', ['a_fazer', 'fazendo', 'com_pendencia']),
 
     supabase.from('kanban_tasks').select('*', { count: 'exact', head: true })
-      .neq('status', 'concluido').lt('data', todayStr).not('data', 'is', null),
+      .eq('arquivado', false).neq('status', 'concluido').lt('data', todayStr).not('data', 'is', null),
 
     supabase.from('kanban_tasks').select('*', { count: 'exact', head: true })
-      .neq('status', 'concluido').eq('data', todayStr),
+      .eq('arquivado', false).neq('status', 'concluido').eq('data', todayStr),
 
     supabase.from('kanban_tasks').select('*', { count: 'exact', head: true })
       .eq('status', 'fazendo'),
@@ -65,6 +65,7 @@ export async function GET() {
     // Tarefas abertas com responsavel (para rankings de atraso e sobrecarga)
     supabase.from('kanban_tasks')
       .select('status, data, responsavel:profiles!responsavel_id(id, nome)')
+      .eq('arquivado', false)
       .in('status', ['a_fazer', 'fazendo', 'com_pendencia'])
       .not('responsavel_id', 'is', null),
 

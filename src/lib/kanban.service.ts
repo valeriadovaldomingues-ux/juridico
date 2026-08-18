@@ -111,9 +111,22 @@ export async function getOfficeColumnsFromDB(): Promise<OfficeColumn[]> {
 
 // ─── API calls ────────────────────────────────────────────────────────────────
 
-export async function getKanbanTasks(): Promise<KanbanTask[]> {
-  const res = await fetch('/api/kanban-tasks', { cache: 'no-store' })
+/** Por padrão retorna só as tarefas ativas (não arquivadas). */
+export async function getKanbanTasks(opts?: { arquivadas?: boolean }): Promise<KanbanTask[]> {
+  const qs = opts?.arquivadas ? '?arquivadas=true' : ''
+  const res = await fetch(`/api/kanban-tasks${qs}`, { cache: 'no-store' })
   if (!res.ok) throw new Error('Erro ao buscar tarefas')
+  return res.json()
+}
+
+/** Arquiva ou restaura uma tarefa (some do board sem apagar o histórico). */
+export async function setTaskArquivado(id: string, arquivado: boolean): Promise<KanbanTask> {
+  const res = await fetch(`/api/kanban-tasks/${id}`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ arquivado }),
+  })
+  if (!res.ok) throw new Error('Erro ao arquivar/restaurar tarefa')
   return res.json()
 }
 

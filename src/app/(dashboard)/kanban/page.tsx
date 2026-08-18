@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import nextDynamic from 'next/dynamic'
-import { Upload } from 'lucide-react'
+import { Archive, Upload } from 'lucide-react'
 import TrelloCsvImportModal from '@/components/kanban/TrelloCsvImportModal'
+import ArquivadasModal from '@/components/kanban/ArquivadasModal'
 
 // KanbanBoard usa DnD Kit — evitar mismatch de hidratação no SSR
 const KanbanBoard = nextDynamic(
@@ -12,8 +13,9 @@ const KanbanBoard = nextDynamic(
 )
 
 export default function KanbanPage() {
-  const [showImport,  setShowImport]  = useState(false)
-  const [refreshKey,  setRefreshKey]  = useState(0)
+  const [showImport,     setShowImport]     = useState(false)
+  const [showArquivadas, setShowArquivadas] = useState(false)
+  const [refreshKey,     setRefreshKey]     = useState(0)
 
   const handleImportDone = useCallback(async () => {
     // Força remount dos dois boards para recarregar dados frescos
@@ -41,8 +43,16 @@ export default function KanbanPage() {
               </p>
             </div>
 
-            {/* Botão fixo de importação */}
-            <div className="shrink-0 pt-2">
+            {/* Botões fixos */}
+            <div className="shrink-0 pt-2 flex items-center gap-2">
+              <button
+                onClick={() => setShowArquivadas(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[var(--color-border)] text-[var(--color-ink-2)] text-[13px] font-semibold rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors"
+                title="Ver tarefas antigas retiradas do quadro (sem prazo/SLA definido)"
+              >
+                <Archive size={14} />
+                Ver arquivadas
+              </button>
               <button
                 onClick={() => setShowImport(true)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-sidebar)] border border-[var(--color-sidebar)] text-white text-[13px] font-semibold rounded-xl hover:bg-[var(--color-petrol)] transition-colors shadow-sm"
@@ -85,6 +95,14 @@ export default function KanbanPage() {
         <TrelloCsvImportModal
           onClose={() => setShowImport(false)}
           onImportDone={handleImportDone}
+        />
+      )}
+
+      {/* Modal de tarefas arquivadas */}
+      {showArquivadas && (
+        <ArquivadasModal
+          onClose={() => setShowArquivadas(false)}
+          onRestored={handleImportDone}
         />
       )}
     </main>

@@ -22,7 +22,7 @@ export async function PATCH(
   // Busca estado atual para registrar histórico e recalcular SLA
   const { data: current } = await supabase
     .from('kanban_tasks')
-    .select('status, responsavel_id, tipo, origem, data, prioridade, sla_due_at, created_at')
+    .select('status, responsavel_id, tipo, origem, data, prioridade, sla_due_at, created_at, arquivado')
     .eq('id', id)
     .single()
 
@@ -31,10 +31,17 @@ export async function PATCH(
   const allowedFields = [
     'titulo', 'descricao', 'tipo', 'status', 'prioridade', 'responsavel_id',
     'processo_id', 'numero_processo', 'partes_resumidas', 'area_juridica',
-    'pendencia_motivo', 'publicacao_id', 'origem', 'data', 'ordem',
+    'pendencia_motivo', 'publicacao_id', 'origem', 'data', 'ordem', 'arquivado',
   ]
   for (const f of allowedFields) {
     if (f in body) updates[f] = body[f]
+  }
+
+  // Arquivar/restaurar: mantém arquivado_em/arquivado_por consistentes
+  const arquivadoMudou = 'arquivado' in body && current?.arquivado !== body.arquivado
+  if (arquivadoMudou) {
+    updates.arquivado_em = body.arquivado ? new Date().toISOString() : null
+    updates.arquivado_por = body.arquivado ? auth.userId : null
   }
 
   // Se concluindo, registra timestamp
@@ -78,7 +85,8 @@ export async function PATCH(
   const camposEdicao = ['titulo', 'descricao', 'prioridade', 'data', 'area_juridica', 'pendencia_motivo']
   const outrosCamposMudaram = camposEdicao.some(f => f in body)
 
-  const acao = statusMudou && responsavelMudou ? 'status_responsavel'
+  const acao = arquivadoMudou                  ? (body.arquivado ? 'arquivamento' : 'restauracao')
+             : statusMudou && responsavelMudou ? 'status_responsavel'
              : statusMudou                     ? 'status'
              : responsavelMudou                ? 'responsavel'
              : outrosCamposMudaram             ? 'edicao'

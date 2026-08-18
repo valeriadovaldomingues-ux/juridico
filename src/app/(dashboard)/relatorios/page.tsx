@@ -45,6 +45,7 @@ export default async function RelatoriosRoute() {
     supabase
       .from('kanban_tasks')
       .select('id, titulo, status, tipo, created_at')
+      .eq('arquivado', false)
       .order('created_at', { ascending: false }),
     supabase
       .from('profiles')
