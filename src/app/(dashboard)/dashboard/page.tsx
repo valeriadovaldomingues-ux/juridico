@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import AtividadesBlock from './_components/AtividadesBlock'
 import ProdutividadeColaboradores from './_components/ProdutividadeColaboradores'
+import PainelAlertas, { type AlertasResumo, type AniversarianteResumo } from './_components/PainelAlertas'
 import { formatCurrency } from '@/lib/utils'
 
 // ─── Funil comercial ─────────────────────────────────────────────────────────
@@ -172,6 +173,16 @@ export default async function DashboardPage() {
     finResult,
     leadsResult,
     ultimosLeadsResult,
+    { count: prazosHojeCount },
+    { count: prazos7DiasCount },
+    { count: audienciasHojeCount },
+    { count: audiencias7DiasCount },
+    { data: aniversariantesData },
+    { count: tarefasCriticoCount },
+    { count: tarefasAtencaoCount },
+    { count: tarefasNormalCount },
+    { count: tarefasSemSlaCount },
+    financeiroHojeResult,
   ] = await Promise.all([
     supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('ativo', true),
     supabase.from('processos').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
@@ -195,6 +206,26 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: null }),
     verComercial
       ? supabase.from('leads').select('id, nome, status, origem, created_at, responsavel:profiles!responsavel_id(nome)').order('created_at', { ascending: false }).limit(6)
+      : Promise.resolve({ data: null }),
+    // ── Painel de Alertas ──────────────────────────────────────────────────
+    // Fonte real: agenda_items/kanban_tasks (a tabela `prazos` está sem uso
+    // em produção — ver /publicacoes e /agenda, que gravam nessas tabelas).
+    supabase.from('agenda_items').select('*', { count: 'exact', head: true })
+      .eq('tipo', 'prazo').eq('status', 'pendente').eq('prazo_final', todayStr),
+    supabase.from('agenda_items').select('*', { count: 'exact', head: true })
+      .eq('tipo', 'prazo').eq('status', 'pendente').gt('prazo_final', todayStr).lte('prazo_final', sevenDaysLaterStr),
+    supabase.from('agenda_items').select('*', { count: 'exact', head: true })
+      .eq('tipo', 'audiencia').eq('status', 'pendente').eq('data_inicio', todayStr),
+    supabase.from('agenda_items').select('*', { count: 'exact', head: true })
+      .eq('tipo', 'audiencia').eq('status', 'pendente').gt('data_inicio', todayStr).lte('data_inicio', sevenDaysLaterStr),
+    supabase.from('clientes').select('id, nome, data_nascimento')
+      .eq('ativo', true).eq('ignore_birthday', false).not('data_nascimento', 'is', null),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'critico'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'atencao'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').eq('sla_level', 'normal'),
+    supabase.from('kanban_tasks').select('*', { count: 'exact', head: true }).eq('status', 'a_fazer').is('sla_level', null),
+    verFinanceiro
+      ? supabase.from('financeiro_lancamentos').select('tipo, valor, status, vencimento').eq('tipo', 'receita').in('status', ['pendente', 'vencido'])
       : Promise.resolve({ data: null }),
   ])
 
@@ -241,6 +272,49 @@ export default async function DashboardPage() {
   const maxAreaCount    = areaEntries[0]?.[1]   ?? 1
   const maxStatusCount  = statusEntries[0]?.[1] ?? 1
 
+  // ── Painel de Alertas: aniversariantes (mês/dia, ignorando o ano) ────────
+  const janelaAniversario = Array.from({ length: 8 }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i)
+    return { offset: i, mes: d.getMonth(), dia: d.getDate() }
+  })
+  const aniversariosHoje: AniversarianteResumo[] = []
+  const aniversarios7Dias: AniversarianteResumo[] = []
+  for (const cliente of (aniversariantesData ?? []) as Array<{ id: string; nome: string; data_nascimento: string }>) {
+    const [, mesStr, diaStr] = cliente.data_nascimento.split('-')
+    const mes = Number(mesStr) - 1
+    const dia = Number(diaStr)
+    const match = janelaAniversario.find(j => j.mes === mes && j.dia === dia)
+    if (!match) continue
+    const resumo: AniversarianteResumo = { id: cliente.id, nome: cliente.nome }
+    if (match.offset === 0) aniversariosHoje.push(resumo)
+    else aniversarios7Dias.push(resumo)
+  }
+
+  // ── Painel de Alertas: financeiro do dia (sócio) ─────────────────────────
+  const finHojeLancamentos = (financeiroHojeResult as any)?.data ?? []
+  const aReceberHoje = finHojeLancamentos
+    .filter((l: any) => l.status === 'pendente' && l.vencimento === todayStr)
+    .reduce((s: number, l: any) => s + l.valor, 0)
+  const vencidoTotalAlerta = finHojeLancamentos
+    .filter((l: any) => l.status === 'vencido')
+    .reduce((s: number, l: any) => s + l.valor, 0)
+
+  const alertas: AlertasResumo = {
+    prazosHoje: prazosHojeCount ?? 0,
+    prazos7Dias: prazos7DiasCount ?? 0,
+    audienciasHoje: audienciasHojeCount ?? 0,
+    audiencias7Dias: audiencias7DiasCount ?? 0,
+    aniversariosHoje,
+    aniversarios7Dias,
+    tarefas: {
+      critico: tarefasCriticoCount ?? 0,
+      atencao: tarefasAtencaoCount ?? 0,
+      normal: tarefasNormalCount ?? 0,
+      semSla: tarefasSemSlaCount ?? 0,
+    },
+    financeiro: verFinanceiro ? { aReceberHoje, vencidoTotal: vencidoTotalAlerta } : null,
+  }
+
   // Movimentações
   const processosComMovimentacao  = new Set((prazosRecentes ?? []).map((p: any) => p.processo_id)).size
   const processosSemMovimentacao  = Math.max(0, (totalProcessosAtivos ?? 0) - processosComMovimentacao)
@@ -274,6 +348,9 @@ export default async function DashboardPage() {
         </Link>
         </div>
       </div>
+
+      {/* ── Painel de Alertas ────────────────────────────────────────────────── */}
+      <PainelAlertas alertas={alertas} />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">

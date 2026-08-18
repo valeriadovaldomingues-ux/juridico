@@ -5,10 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import {
   RefreshCw, Play, Clock, Users, CheckCircle2, AlertTriangle,
   Gavel, Search, ChevronDown, ChevronLeft, ChevronRight,
-  X, Eye, Filter, BarChart2, FileText, ExternalLink,
+  X, Eye, Filter, BarChart2, FileText, ExternalLink, Radar, ShieldAlert,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { capturarDJENPeloNavegador } from '@/lib/monitoramento/djen/browser-capture'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,11 +117,45 @@ const TIPO_CFG: Record<string, { label: string; bg: string; text: string }> = {
 }
 
 const ORIGEM_CFG: Record<string, { label: string; color: string }> = {
+  djen:              { label: 'DJEN',          color: 'text-teal-700'    },
+  superior_djen:     { label: 'DJEN',          color: 'text-teal-700'    },
+  trf_djen:          { label: 'DJEN',          color: 'text-teal-700'    },
+  tj_djen:           { label: 'DJEN',          color: 'text-teal-700'    },
+  tjsp_djen:         { label: 'DJEN',          color: 'text-teal-700'    },
+  trt_djen:          { label: 'DJEN',          color: 'text-teal-700'    },
+  trt3_djen:         { label: 'DJEN',          color: 'text-teal-700'    },
+  trt3_dejt:         { label: 'DEJT',          color: 'text-cyan-700'    },
   datajud_oab:       { label: 'Por OAB',       color: 'text-emerald-600' },
   datajud_nome:      { label: 'Por nome',      color: 'text-blue-600'    },
   datajud_processo:  { label: 'Por processo',  color: 'text-indigo-600'  },
   datajud_combinado: { label: 'Combinado',     color: 'text-violet-600'  },
   manual:            { label: 'Manual',        color: 'text-slate-500'   },
+}
+
+type SaudeIntegracao = 'operacional' | 'operacional_alertas' | 'atrasada' | 'indisponivel' | 'nao_configurada'
+
+const SAUDE_CFG: Record<SaudeIntegracao, { label: string; bg: string; text: string; border: string }> = {
+  operacional:          { label: 'Operacional',             bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  operacional_alertas:  { label: 'Operacional com alertas',  bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
+  atrasada:             { label: 'Atrasada',                 bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200'  },
+  indisponivel:         { label: 'Indisponível',              bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200'     },
+  nao_configurada:      { label: 'Não configurada',           bg: 'bg-slate-100',  text: 'text-slate-600',   border: 'border-slate-200'   },
+}
+
+function calcularSaudeDJEN(fonte: FonteMonitoramentoResumo | undefined, ultimoLogDJEN: Log | undefined): SaudeIntegracao {
+  if (!fonte) return 'nao_configurada'
+  if (fonte.status === 'requer_credencial') return 'nao_configurada'
+  if (!ultimoLogDJEN) return fonte.status === 'ativo' ? 'operacional' : 'indisponivel'
+
+  const horasDesde = (Date.now() - new Date(ultimoLogDJEN.executado_em).getTime()) / 36e5
+  const houveFalha = !!ultimoLogDJEN.erro || (ultimoLogDJEN.detalhes_json?.total_falhas ?? 0) > 0
+  const bloqueadoPorWaf = JSON.stringify(ultimoLogDJEN.detalhes_json ?? {}).includes('403')
+
+  if (bloqueadoPorWaf && ultimoLogDJEN.total_novas === 0) return 'operacional_alertas'
+  if (horasDesde > 48) return 'atrasada'
+  if (houveFalha && ultimoLogDJEN.total_novas === 0) return 'indisponivel'
+  if (houveFalha) return 'operacional_alertas'
+  return 'operacional'
 }
 
 const FONTE_STATUS_CFG: Record<FonteMonitoramentoResumo['status'], { label: string; bg: string; text: string; border: string }> = {
@@ -349,6 +384,8 @@ export default function MonitoramentoPage({
   const [expanded,    setExpanded]    = useState<PublicacaoMonitorada | null>(null)
   const [searching,   start]          = useTransition()
   const [lastMsg,     setLastMsg]     = useState<LastMessage | null>(null)
+  const [capturandoDJEN, setCapturandoDJEN] = useState(false)
+  const [progressoDJEN,  setProgressoDJEN]  = useState<{ atual: number; total: number } | null>(null)
 
   // ── Advogados management ──────────────────────────────────────────────────
   const [adding,   setAdding]  = useState(false)
@@ -484,6 +521,90 @@ export default function MonitoramentoPage({
     })
   }
 
+  async function consultarDJENAgora() {
+    if (capturandoDJEN) return
+    setCapturandoDJEN(true)
+    setProgressoDJEN(null)
+    setLastMsg(null)
+
+    try {
+      const fim = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+      const inicioDate = new Date()
+      inicioDate.setDate(inicioDate.getDate() - 3)
+      const inicio = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(inicioDate)
+
+      const advogadosAtivos = advogados.filter(a => a.ativo).map(a => ({
+        id: a.id,
+        nome_completo: a.nome_completo,
+        oab_numero: a.oab_numero,
+        oab_uf: a.oab_uf,
+      }))
+
+      if (advogadosAtivos.length === 0) {
+        setLastMsg({ ok: false, text: 'Nenhum advogado ativo cadastrado para monitorar.' })
+        return
+      }
+
+      const captura = await capturarDJENPeloNavegador({
+        advogados: advogadosAtivos,
+        periodo: { inicio, fim },
+        onProgresso: p => setProgressoDJEN({ atual: p.consultaAtual, total: p.totalConsultas }),
+      })
+
+      const res = await fetch('/api/monitoramento/djen/importar', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          periodo: captura.periodo,
+          resultados: captura.resultados.map(item => ({
+            consulta: {
+              tipo: item.consulta.tipo,
+              termo: item.consulta.termo,
+              advogado_monitorado_id: item.consulta.advogado_monitorado_id,
+              siglaTribunal: item.consulta.siglaTribunal,
+            },
+            items: item.items,
+          })),
+          erros: captura.erros,
+        }),
+      })
+      const data = await res.json()
+
+      if (res.ok && data.sucesso) {
+        setLastMsg({
+          ok: true,
+          text: `DJEN: ${data.total_novas} nova(s) salva(s) em /publicacoes · ${data.total_encontradas} encontrada(s) · ${(data.duracao_ms / 1000).toFixed(1)}s`,
+        })
+        const { data: freshLogs } = await supabase
+          .from('monitoramento_logs')
+          .select('*')
+          .order('executado_em', { ascending: false })
+          .limit(10)
+        if (freshLogs) setLogs(freshLogs as Log[])
+        if (data.total_novas > 0) {
+          const { data: freshPubs } = await supabase
+            .from('publicacoes')
+            .select('*, processo:processos(id,titulo,numero_processo)')
+            .order('created_at', { ascending: false })
+            .limit(500)
+          if (freshPubs) setPubs(freshPubs as PublicacaoMonitorada[])
+        }
+      } else {
+        setLastMsg({ ok: false, text: data.erro ?? 'Erro ao importar publicações do DJEN.' })
+      }
+    } catch (error) {
+      setLastMsg({ ok: false, text: `Erro ao consultar o DJEN pelo navegador: ${error instanceof Error ? error.message : 'falha desconhecida'}` })
+    } finally {
+      setCapturandoDJEN(false)
+      setProgressoDJEN(null)
+    }
+  }
+
+  const fonteDJEN = fontes.find(f => f.id === 'djen')
+  const ultimoLogDJEN = logs.find(log => (log as Log & { fonte?: string }).fonte === 'djen')
+  const saudeDJEN = calcularSaudeDJEN(fonteDJEN, ultimoLogDJEN)
+  const saudeDJENCfg = SAUDE_CFG[saudeDJEN]
+
   const inputCls = 'rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors w-full'
 
   return (
@@ -498,13 +619,26 @@ export default function MonitoramentoPage({
           <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none">Monitoramento</h1>
           <p className="text-[13px] text-[var(--color-ink-3)] mt-2">Publicações, intimações e prazos monitorados automaticamente</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <span className={cn('flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl border', saudeDJENCfg.bg, saudeDJENCfg.text, saudeDJENCfg.border)}>
+            <Radar size={12} /> DJEN: {saudeDJENCfg.label}
+          </span>
           <Link
             href="/publicacoes"
             className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-petrol)] bg-white border border-[var(--color-border)] px-3 py-2 rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors"
           >
             <ExternalLink size={12} /> Publicações gerais
           </Link>
+          <button
+            onClick={consultarDJENAgora}
+            disabled={capturandoDJEN || searching}
+            title="Consulta o DJEN diretamente pelo seu navegador — contorna o bloqueio de IP de servidor do CNJ"
+            className="flex items-center gap-2 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+          >
+            {capturandoDJEN
+              ? <><RefreshCw size={13} className="animate-spin" /> {progressoDJEN ? `Consultando ${progressoDJEN.atual}/${progressoDJEN.total}…` : 'Consultando DJEN…'}</>
+              : <><Radar size={13} /> Consultar DJEN agora</>}
+          </button>
           <button
             onClick={() => triggerSearch({ fontes: FONTES_PRINCIPAIS, modo: 'rapido' })}
             disabled={searching}
