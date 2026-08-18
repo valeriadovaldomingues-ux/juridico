@@ -108,6 +108,7 @@ describe('fontes de monitoramento', () => {
     const fontes = selecionarFontesMonitoramento()
 
     expect(fontes.map(fonte => fonte.id)).toEqual([
+      'djen',
       'tjmg-dje',
       'trt1',
       'trt2',
