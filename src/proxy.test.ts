@@ -935,76 +935,10 @@ describe('matriz proxy — /monitoramento e /ia-juridica', () => {
   })
 })
 
-describe('matriz proxy — /ia-juridica/aurora exclusiva para socio', () => {
-  it('socio acessa /ia-juridica/aurora', async () => {
-    asUser('socio')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectPassThru(res)
-  })
-
-  it('advogado não acessa /ia-juridica/aurora', async () => {
-    asUser('advogado')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/dashboard')
-  })
-
-  it('gerente não acessa /ia-juridica/aurora', async () => {
-    asUser('gerente')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/dashboard')
-  })
-
-  it('administrativo não acessa /ia-juridica/aurora', async () => {
-    asUser('administrativo')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/dashboard')
-  })
-
-  it('comercial não acessa /ia-juridica/aurora', async () => {
-    asUser('comercial')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/dashboard')
-  })
-
-  it('estagiario não acessa /ia-juridica/aurora', async () => {
-    asUser('estagiario')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/dashboard')
-  })
-
-  it('cliente em /ia-juridica/aurora → redirect para /portal', async () => {
-    asUser('cliente')
-    const res = await proxy(req('/ia-juridica/aurora'))
-    expectRedirect(res, '/portal')
-  })
-
-  it('sem sessão em /ia-juridica/aurora → redirect para /login', async () => {
-    noSession()
-    const res = await proxy(req('/ia-juridica/aurora'))
-    const dest = expectRedirect(res, '/login')
-    expect(dest.searchParams.get('next')).toBe('/ia-juridica/aurora')
-  })
-
-  it('demais rotas de IA Jurídica continuam passando no proxy para gerente', async () => {
-    const rotas = [
-      '/ia-juridica',
-      '/ia-juridica/peca',
-      '/ia-juridica/publicacao',
-      '/ia-juridica/assistente',
-    ]
-
-    for (const rota of rotas) {
-      asUser('gerente')
-      const res = await proxy(req(rota))
-      expectPassThru(res)
-    }
-  })
-})
-
 describe('segregação cliente ↔ sistema interno — todas as rotas', () => {
   const rotasInternas = [
     '/comercial', '/financeiro', '/documentos', '/relatorios',
-    '/automacoes', '/monitoramento', '/ia-juridica', '/ia-juridica/aurora',
+    '/automacoes', '/monitoramento', '/ia-juridica',
     '/configuracoes',
   ]
 
@@ -1051,7 +985,6 @@ describe('socio — acesso irrestrito a todas as rotas internas (proxy)', () => 
     '/automacoes',
     '/monitoramento',
     '/ia-juridica',
-    '/ia-juridica/aurora',
     '/ia-juridica/peca',
     '/ia-juridica/publicacao',
     '/ia-juridica/assistente',
@@ -1187,45 +1120,6 @@ describe('nova matriz — /ia-juridica (advogado+gerente+socio)', () => {
   it('estagiario em /ia-juridica → /dashboard', async () => {
     asUser('estagiario')
     expectRedirect(await proxy(req('/ia-juridica')), '/dashboard')
-  })
-})
-
-describe('nova matriz — Aurora (socio exclusivo)', () => {
-  it('socio acessa /ia-juridica/aurora', async () => {
-    asUser('socio')
-    expectPassThru(await proxy(req('/ia-juridica/aurora')))
-  })
-  it('socio acessa /aurora-mobile', async () => {
-    asUser('socio')
-    expectPassThru(await proxy(req('/aurora-mobile')))
-  })
-  it('gerente em /ia-juridica/aurora → /dashboard', async () => {
-    asUser('gerente')
-    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
-  })
-  it('gerente em /aurora-mobile → /dashboard', async () => {
-    asUser('gerente')
-    expectRedirect(await proxy(req('/aurora-mobile')), '/dashboard')
-  })
-  it('advogado em /ia-juridica/aurora → /dashboard', async () => {
-    asUser('advogado')
-    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
-  })
-  it('comercial em /ia-juridica/aurora → /dashboard', async () => {
-    asUser('comercial')
-    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
-  })
-  it('administrativo em /ia-juridica/aurora → /dashboard', async () => {
-    asUser('administrativo')
-    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
-  })
-  it('estagiario em /ia-juridica/aurora → /dashboard', async () => {
-    asUser('estagiario')
-    expectRedirect(await proxy(req('/ia-juridica/aurora')), '/dashboard')
-  })
-  it('/ia-juridica sem /aurora → advogado passa (aurora mais específico)', async () => {
-    asUser('advogado')
-    expectPassThru(await proxy(req('/ia-juridica/peca')))
   })
 })
 

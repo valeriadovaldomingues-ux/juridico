@@ -200,7 +200,7 @@ describe('gmail cleanup preview', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ addLabelIds: ['SPAM'] })
   })
 
-  it('cria/aplica label Triado pela Aurora quando necessário', async () => {
+  it('cria/aplica label Triado pelo Sistema quando necessário', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'

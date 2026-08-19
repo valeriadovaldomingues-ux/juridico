@@ -156,13 +156,13 @@ function dedupeIds(ids: string[]): string[] {
 
 async function getOrCreateTriagedLabelId(accessToken: string): Promise<string> {
   const list = await gmailFetch<GmailLabelListResponse>(accessToken, '/users/me/labels')
-  const existing = list.labels?.find(label => label.name === 'Triado pela Aurora')
+  const existing = list.labels?.find(label => label.name === 'Triado pelo Sistema')
   if (existing?.id) return existing.id
 
   const created = await gmailFetch<GmailLabelCreateResponse>(accessToken, '/users/me/labels', {
     method: 'POST',
     body: JSON.stringify({
-      name: 'Triado pela Aurora',
+      name: 'Triado pelo Sistema',
       labelListVisibility: 'labelShow',
       messageListVisibility: 'show',
     }),

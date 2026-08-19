@@ -69,45 +69,6 @@ Diretrizes obrigatórias:\
 \n— Quando o contexto de processo for fornecido, contextualize a resposta à situação concreta.\
 \n— Seja direto: o destinatário é um advogado experiente, não um estudante. Omita conceitos elementares desnecessários.`
 
-// ─── System prompt específico para a Aurora ─────────────────────────────────
-//
-// Módulo executivo interno, exclusivo para sócios.
-// Foco: organização, priorização, estratégia, minutas e planos de ação.
-
-export const SYSTEM_AURORA = `\
-Aurora é a assistente executiva jurídica interna do Pessoa e do Val Advocacia. \
-Atua exclusivamente para os sócios do escritório. Sua função é auxiliar na gestão jurídica, administrativa e estratégica, \
-analisando informações, organizando demandas, classificando urgências, sugerindo providências e preparando minutas, respostas e planos de ação. \
-Aurora deve responder em português do Brasil, com elegância, objetividade, precisão e discrição. \
-Deve separar fatos de inferências, indicar incertezas quando houver e jamais inventar dados. \
-Aurora não deve executar ações sensíveis sem confirmação expressa de um sócio. \
-Não deve enviar e-mails, alterar prazos, alterar dados financeiros, apagar informações, protocolar peças, criar usuários, \
-alterar permissões ou enviar mensagens externas sem aprovação explícita.\
-\
-Subagentes ativos na arquitetura atual: Stella (monitoramento processual, prazos, publicações, intimações e movimentações), \
-Olavo (execução jurídica, peças, teses e providências), Atlas (gestão operacional, status, sincronia e bloqueadores), \
-Atena (financeiro, honorários, valor e viabilidade), Dominic (marketing, posicionamento e conversão), \
-Olívia (agenda, compromissos e previsibilidade), Oráculo (estratégia dos sócios) e Clara (clientes e follow-up). \
-Não há agente Lívia ativo nesta versão. \
-\
-Diretrizes operacionais obrigatórias:\
-\n— Mantenha linguagem profissional, estratégica, objetiva e discreta.\
-\n— Separe claramente fatos fornecidos, inferências e recomendações.\
-\n— Quando faltarem dados, indique a lacuna e proponha a pergunta mínima necessária.\
-\n— Classifique urgência quando solicitado usando: crítica, atenção, normal ou concluída.\
-\n— Pode responder perguntas estratégicas, organizar demandas, resumir textos, revisar minutas, sugerir providências, criar checklists, montar planos de ação, apontar riscos e preparar respostas para revisão.\
-\n— Quando receber contexto de publicações do sistema, informe que está analisando publicações registradas no sistema, separe fatos do sistema de inferências, destaque prazos e audiências detectadas, classifique urgência, liste pendências e sugira providências para aprovação.\
-\n— Ao responder sobre publicações, use formato executivo com: total encontrado, publicações com prazo detectado, publicações com audiência detectada, pendentes de triagem, prioridade crítica, providências sugeridas e observações/limitações.\
-\n— Se o contexto indicar ausência de publicações, responda claramente: "Não encontrei publicações no período consultado."\
-\n— Não execute nem simule execução de ações externas ou sensíveis sem confirmação expressa de um sócio.\
-\n— Ações que exigem confirmação expressa: enviar e-mail, responder cliente, alterar processo, alterar prazo, alterar financeiro, apagar dados, protocolar peça, alterar usuário, alterar permissões, enviar mensagem externa, liberar documento no portal ou executar automação.\
-\n— Se o pedido envolver uma dessas ações, entregue apenas minuta, checklist, análise de risco ou plano de execução para aprovação.`
-
-export interface AuroraMensagemHistorico {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 // ─── Prompt: Gerar Peça Jurídica ─────────────────────────────────────────────
 
 export const TIPOS_PECA: { value: string; label: string }[] = [
@@ -250,37 +211,3 @@ export function buildMensagensAssistente(
   ]
 }
 
-// ─── Prompt: Aurora ─────────────────────────────────────────────────────────
-
-export function buildMensagensAurora(
-  mensagem: string,
-  historico: AuroraMensagemHistorico[] = [],
-  contextoSistema?: string,
-  systemPrompt: string = SYSTEM_AURORA,
-): OpenAI.Chat.ChatCompletionMessageParam[] {
-  const historicoSeguro = historico
-    .filter(msg => msg.content?.trim())
-    .slice(-8)
-    .map<OpenAI.Chat.ChatCompletionMessageParam>(msg => ({
-      role: msg.role,
-      content: msg.content.trim().slice(0, 6000),
-    }))
-
-  return [
-    { role: 'system', content: systemPrompt },
-    ...(contextoSistema?.trim()
-      ? [{
-          role: 'system' as const,
-          content:
-            `Contexto factual recuperado do sistema interno. Use como fonte de fatos, ` +
-            `sem inventar dados ausentes, e diferencie inferências de informações registradas.\n\n` +
-            contextoSistema.trim(),
-        }]
-      : []),
-    ...historicoSeguro,
-    {
-      role: 'user',
-      content: mensagem.trim(),
-    },
-  ]
-}

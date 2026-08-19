@@ -44,7 +44,6 @@ export type Module =
   | 'kanban'
   | 'publicacoes'
   | 'documentos'
-  | 'centralArquivos'
   | 'importacao'
   | 'financeiro'
   | 'comercial'
@@ -174,7 +173,6 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     publicacoes:  ['view', 'create', 'edit', 'delete'],
     documentos:   ['view', 'create', 'edit', 'delete'],
-    centralArquivos: ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
     financeiro:   ['view', 'create', 'edit', 'delete'],
     comercial:    ['view', 'create', 'edit', 'delete'],
@@ -317,11 +315,8 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
 // Paths mais específicos devem vir antes dos mais genéricos.
 // Esta lista é inlined em proxy.ts por compatibilidade com edge runtime.
 
-// Paths mais específicos DEVEM vir antes dos genéricos (ex: /ia-juridica/aurora antes de /ia-juridica).
+// Paths mais específicos DEVEM vir antes dos genéricos.
 export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
-  // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
-  { prefix: '/aurora-mobile',          roles: ['socio'] },
-  { prefix: '/ia-juridica/aurora',    roles: ['socio'] },
   { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
@@ -344,7 +339,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   // ── Importar (administrativo, gerente, sócio) ─────────────────────────────────
   { prefix: '/importar',             roles: ['administrativo', 'gerente', 'socio'] },
 
-  // ── IA Jurídica (/aurora já tratado acima) ────────────────────────────────────
+  // ── IA Jurídica ────────────────────────────────────────────────────────────────
   { prefix: '/ia-juridica',           roles: ['advogado', 'gerente', 'socio'] },
 
   // ── Configurações (/usuarios mais específico antes) ───────────────────────────
