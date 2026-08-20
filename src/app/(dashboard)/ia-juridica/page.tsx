@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
-import { FileText, Newspaper, Bot, ArrowRight, Sparkles } from 'lucide-react'
+import { FileText, Newspaper, ArrowRight, Sparkles } from 'lucide-react'
 import TestePublicacaoIA from './TestePublicacaoIA'
 
 const modulos = [
@@ -20,15 +20,6 @@ const modulos = [
     titulo: 'Analisar Publicação',
     desc:   'Selecione uma publicação do DJe. A IA extrai o resumo, identifica prazos e sugere a próxima ação processual com avaliação de urgência.',
     tags:   ['Resumo', 'Prazo', 'Urgência', 'Ação sugerida'],
-    socioOnly: false,
-  },
-  {
-    href:   '/ia-juridica/assistente',
-    icon:   Bot,
-    cor:    { bg: 'bg-amber-50', icon: 'text-amber-600', btn: 'text-amber-600', hover: 'hover:border-amber-300 hover:shadow-[0_4px_20px_rgba(217,119,6,0.08)]' },
-    titulo: 'Assistente Jurídico',
-    desc:   'Faça perguntas jurídicas em linguagem natural. Vincule opcionalmente a um processo para respostas contextualizadas com os dados do caso.',
-    tags:   ['Consulta livre', 'Contexto de processo', 'Doutrina', 'Jurisprudência'],
     socioOnly: false,
   },
 ]

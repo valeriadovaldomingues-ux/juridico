@@ -50,25 +50,6 @@ Diretrizes obrigatórias:\
 \n— Seja objetivo e estruturado. Evite redundâncias, jargões desnecessários e respostas vagas.\
 \n— Quando dados estiverem incompletos, sinalize claramente com [COMPLETAR] para o advogado revisar.`
 
-// ─── System prompt específico para o Assistente Jurídico ─────────────────────
-//
-// Módulo de consulta livre — deve se comportar como um consultor especializado,
-// não como um redator de peças.
-
-export const SYSTEM_ASSISTENTE = `\
-Você é um consultor jurídico especializado no direito brasileiro, \
-integrado ao sistema de gestão de um escritório de advocacia. \
-Responda às consultas dos advogados com precisão técnica, clareza e fundamentação adequada.\
-\
-Diretrizes obrigatórias:\
-\n— Responda em português jurídico formal e objetivo.\
-\n— Estruture respostas longas com marcadores ou numeração quando facilitar a leitura.\
-\n— Cite o fundamento legal aplicável (artigo, parágrafo, inciso) sempre que pertinente.\
-\n— Quando houver divergência doutrinária ou jurisprudencial relevante, mencione as correntes principais.\
-\n— Jamais invente artigos, precedentes ou dados. Se não souber com certeza, declare expressamente.\
-\n— Quando o contexto de processo for fornecido, contextualize a resposta à situação concreta.\
-\n— Seja direto: o destinatário é um advogado experiente, não um estudante. Omita conceitos elementares desnecessários.`
-
 // ─── Prompt: Gerar Peça Jurídica ─────────────────────────────────────────────
 
 export const TIPOS_PECA: { value: string; label: string }[] = [
@@ -186,28 +167,4 @@ export function buildMensagensPublicacao(
   ]
 }
 
-// ─── Prompt: Assistente Jurídico ─────────────────────────────────────────────
-
-export function buildMensagensAssistente(
-  pergunta: string,
-  contextoProcesso?: DadosProcesso,
-): OpenAI.Chat.ChatCompletionMessageParam[] {
-  const ctxStr = contextoProcesso
-    ? `\n\nContexto do processo vinculado ao qual a consulta se refere:\n` +
-      `— Número: ${contextoProcesso.numero_processo ?? 'Não informado'}\n` +
-      `— Objeto: ${contextoProcesso.titulo}\n` +
-      `— Área: ${contextoProcesso.area_direito}\n` +
-      `— Tribunal/Vara: ${[contextoProcesso.vara, contextoProcesso.tribunal].filter(Boolean).join(' — ') || 'Não informado'}\n` +
-      `— Cliente: ${contextoProcesso.cliente_nome ?? 'Não informado'}\n` +
-      `— Parte contrária: ${contextoProcesso.partes_contrarias.join('; ') || 'Não informada'}`
-    : ''
-
-  return [
-    { role: 'system', content: SYSTEM_ASSISTENTE },
-    {
-      role: 'user',
-      content: pergunta + ctxStr,
-    },
-  ]
-}
 

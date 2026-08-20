@@ -987,7 +987,6 @@ describe('socio — acesso irrestrito a todas as rotas internas (proxy)', () => 
     '/ia-juridica',
     '/ia-juridica/peca',
     '/ia-juridica/publicacao',
-    '/ia-juridica/assistente',
     '/integracoes',
     '/integracoes/trello',
     '/integracoes/gmail',
