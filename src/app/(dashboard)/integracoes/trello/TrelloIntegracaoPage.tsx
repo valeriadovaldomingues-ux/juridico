@@ -74,8 +74,9 @@ export default function TrelloIntegracaoPage({
   const [dataErr,       setDataErr]       = useState('')
 
   // ── Mapeamentos locais ──
-  const [listMap,   setListMap]   = useState<Record<string, string>>({})   // trello_list_id → kanban_status
-  const [memberMap, setMemberMap] = useState<Record<string, string>>({})   // trello_member_id → profile_id
+  const [listMap,       setListMap]       = useState<Record<string, string>>({})   // trello_list_id → kanban_status
+  const [listPersonMap, setListPersonMap] = useState<Record<string, string>>({})   // trello_list_id → profile_id (padrão "lista = pessoa")
+  const [memberMap,     setMemberMap]     = useState<Record<string, string>>({})   // trello_member_id → profile_id
   const [savingMap, setSavingMap] = useState(false)
   const [mapMsg,    setMapMsg]    = useState('')
 
@@ -87,8 +88,13 @@ export default function TrelloIntegracaoPage({
   // ── Inicializar mapeamentos a partir dos dados do servidor ──
   useEffect(() => {
     const lm: Record<string, string> = {}
-    for (const m of initialListMappings) lm[m.trello_list_id] = m.kanban_status
+    const lpm: Record<string, string> = {}
+    for (const m of initialListMappings) {
+      lm[m.trello_list_id] = m.kanban_status
+      if (m.profile_id) lpm[m.trello_list_id] = m.profile_id
+    }
     setListMap(lm)
+    setListPersonMap(lpm)
 
     const mm: Record<string, string> = {}
     for (const m of initialMemberMappings) mm[m.trello_member_id] = m.profile_id ?? ''
@@ -163,6 +169,7 @@ export default function TrelloIntegracaoPage({
       trello_list_id:   l.id,
       trello_list_name: l.name,
       kanban_status:    listMap[l.id] ?? 'ignorar',
+      profile_id:       listPersonMap[l.id] || null,
     }))
 
     const members = trelloMembers.map(m => ({
@@ -362,13 +369,17 @@ export default function TrelloIntegracaoPage({
 
             {trelloLists.length > 0 && (
               <div className="space-y-2">
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wide px-1 mb-3">
+                <p className="text-[11px] text-[#9ca3af] px-1 mb-2 leading-relaxed">
+                  Se a lista representa uma pessoa (padrão "lista = pessoa", quando o board não usa atribuição de membro do Trello), vincule quem é — os cards dessa lista recebem esse responsável automaticamente. Deixe em branco pra listas de status/uso geral (ex: prazos, concluídos).
+                </p>
+                <div className="grid grid-cols-[1fr_auto_1fr_1fr] gap-3 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wide px-1 mb-3">
                   <span>Lista no Trello</span>
                   <span />
                   <span>Status no Kanban</span>
+                  <span>Pessoa (opcional)</span>
                 </div>
                 {trelloLists.map(list => (
-                  <div key={list.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <div key={list.id} className="grid grid-cols-[1fr_auto_1fr_1fr] items-center gap-3">
                     <div className="px-3 py-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl text-[13px] text-[#374151] truncate">
                       {list.name}
                     </div>
@@ -380,6 +391,22 @@ export default function TrelloIntegracaoPage({
                     >
                       {STATUS_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
                     </select>
+                    <SearchableCombobox
+                      value={listPersonMap[list.id] ?? ''}
+                      onChange={(value) => setListPersonMap(prev => ({ ...prev, [list.id]: value }))}
+                      loadOptions={async (query) => fetchUsuarioOptions(query, 10)}
+                      selectedOption={profiles.find(p => p.id === (listPersonMap[list.id] ?? '')) ? {
+                        value: listPersonMap[list.id] ?? '',
+                        label: profiles.find(p => p.id === (listPersonMap[list.id] ?? ''))?.nome ?? '',
+                        description: profiles.find(p => p.id === (listPersonMap[list.id] ?? ''))?.role ?? null,
+                      } : null}
+                      placeholder="— Não é pessoa —"
+                      searchPlaceholder="Buscar usuário por nome, e-mail ou função"
+                      helperText="Digite ao menos 2 caracteres."
+                      emptyText="Digite para buscar usuários."
+                      noResultsText="Nenhum resultado encontrado."
+                      allowClear
+                    />
                   </div>
                 ))}
               </div>

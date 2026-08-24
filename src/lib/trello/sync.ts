@@ -71,7 +71,7 @@ export async function syncTrelloBoard(
       supabase.from('trello_member_mappings').select('*').eq('integration_id', integrationId),
     ])
 
-    type ListMappingRow = { trello_list_id: string; kanban_status: string }
+    type ListMappingRow = { trello_list_id: string; kanban_status: string; profile_id?: string | null }
     type MemberMappingRow = {
       trello_member_id: string
       profile_id: string | null
@@ -84,6 +84,15 @@ export async function syncTrelloBoard(
     // Map: trello_list_id → kanban_status
     const listStatusMap = new Map<string, string>(
       listMappingsTyped.map(m => [m.trello_list_id, m.kanban_status])
+    )
+
+    // Map: trello_list_id → profile_id, para boards no padrão "lista = pessoa"
+    // (a lista já identifica quem é o responsável, sem depender de atribuição
+    // de membro do próprio Trello). Tem prioridade sobre o membro do card.
+    const listProfileMap = new Map<string, string>(
+      listMappingsTyped
+        .filter((m): m is ListMappingRow & { profile_id: string } => m.profile_id != null)
+        .map(m => [m.trello_list_id, m.profile_id])
     )
 
     // Map: trello_member_id → profile_id (nunca nulo — ausência = sem mapping)
@@ -127,12 +136,14 @@ export async function syncTrelloBoard(
       const kanbanStatus = listStatusMap.get(card.idList) as KanbanStatus | 'ignorar' | undefined
       if (!kanbanStatus || kanbanStatus === 'ignorar') { ignorados++; continue }
 
-      // Responsável: usar apenas se houver mapping válido.
-      // Nunca usar ID fallback/placeholder — se não houver mapping, null.
+      // Responsável: a lista tem prioridade (padrão "lista = pessoa" — comum
+      // quando o board não usa a atribuição de membro do próprio Trello).
+      // Sem isso, cai para o membro atribuído no card. Nunca usa ID
+      // fallback/placeholder — sem mapping válido em nenhum dos dois, null.
       const firstMemberId = card.idMembers?.[0] ?? null
-      let responsavelId: string | null = null
+      let responsavelId: string | null = listProfileMap.get(card.idList) ?? null
 
-      if (firstMemberId) {
+      if (!responsavelId && firstMemberId) {
         const mapped = memberProfMap.get(firstMemberId)
         if (mapped) {
           responsavelId = mapped

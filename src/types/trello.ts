@@ -54,6 +54,13 @@ export interface TrelloListMapping {
   trello_list_id: string
   trello_list_name: string | null
   kanban_status: 'a_fazer' | 'fazendo' | 'com_pendencia' | 'concluido' | 'ignorar'
+  /**
+   * Preenchido quando a lista representa uma pessoa (padrão "lista = pessoa",
+   * comum quando o board não usa a atribuição de membro do próprio Trello).
+   * Cards dessa lista recebem este responsável, com prioridade sobre o
+   * membro atribuído no card.
+   */
+  profile_id: string | null
 }
 
 export interface TrelloMemberMapping {
