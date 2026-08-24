@@ -34,9 +34,12 @@ export async function GET() {
  * POST /api/trello/mappings — salva (substitui) todos os mapeamentos da integração ativa
  *
  * Body: {
- *   lists:   { trello_list_id, trello_list_name, kanban_status }[]
+ *   lists:   { trello_list_id, trello_list_name, kanban_status, profile_id? }[]
  *   members: { trello_member_id, trello_username, trello_full_name, profile_id }[]
  * }
+ *
+ * `profile_id` em lists é opcional — usado no padrão "lista = pessoa" (a lista
+ * já identifica o responsável, com prioridade sobre o membro atribuído no card).
  */
 export async function POST(req: NextRequest) {
   const auth = await apiGuard(ALLOWED)
@@ -67,11 +70,12 @@ export async function POST(req: NextRequest) {
   const [listRes, memberRes] = await Promise.all([
     lists.length > 0
       ? supabase.from('trello_list_mappings').insert(
-          lists.map((l: { trello_list_id: string; trello_list_name: string; kanban_status: string }) => ({
+          lists.map((l: { trello_list_id: string; trello_list_name: string; kanban_status: string; profile_id?: string | null }) => ({
             integration_id:   id,
             trello_list_id:   l.trello_list_id,
             trello_list_name: l.trello_list_name,
             kanban_status:    l.kanban_status,
+            profile_id:       l.profile_id || null,
           }))
         )
       : Promise.resolve({ error: null }),
