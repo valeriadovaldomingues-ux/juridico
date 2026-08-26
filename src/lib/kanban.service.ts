@@ -23,6 +23,17 @@ export interface OfficeColumn {
   tasks:   KanbanTask[]
 }
 
+/**
+ * Coluna derivada de uma lista do Trello que não representa uma pessoa
+ * (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) — mesmo tratamento visual de uma
+ * coluna de pessoa no Quadro do Escritório, sem exigir um profile real.
+ */
+export interface ListColumn {
+  key:   string   // trello_list_id
+  nome:  string   // trello_list_nome
+  tasks: KanbanTask[]
+}
+
 // ─── Agrupamento — funções puras (sem side-effects) ───────────────────────────
 
 /**
@@ -68,10 +79,38 @@ export function getOfficeColumns(
 }
 
 /**
- * Retorna tarefas sem responsável atribuído.
+ * Agrupa tarefas sem responsável que vieram de uma lista do Trello mapeada
+ * como categoria (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) em colunas próprias —
+ * mesmo padrão visual de uma coluna de pessoa, ordenadas por nome.
+ */
+export function getListColumns(tasks: KanbanTask[]): ListColumn[] {
+  const porLista = new Map<string, { nome: string; tasks: KanbanTask[] }>()
+
+  for (const t of tasks) {
+    if (t.responsavel_id || !t.trello_list_id || !t.trello_list_nome) continue
+    const entry = porLista.get(t.trello_list_id) ?? { nome: t.trello_list_nome, tasks: [] }
+    entry.tasks.push(t)
+    porLista.set(t.trello_list_id, entry)
+  }
+
+  return Array.from(porLista.entries())
+    .map(([key, { nome, tasks }]) => ({
+      key,
+      nome,
+      tasks: tasks.sort((a, b) => a.ordem - b.ordem),
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+}
+
+/**
+ * Retorna tarefas sem responsável atribuído e sem lista de origem mapeada
+ * (ex.: tarefas manuais criadas sem atribuição) — as vindas de uma lista
+ * do Trello mapeada como categoria já aparecem em getListColumns().
  */
 export function getUnassignedTasks(tasks: KanbanTask[]): KanbanTask[] {
-  return tasks.filter(t => !t.responsavel_id).sort((a, b) => a.ordem - b.ordem)
+  return tasks
+    .filter(t => !t.responsavel_id && !t.trello_list_nome)
+    .sort((a, b) => a.ordem - b.ordem)
 }
 
 // ─── Dados do escritório — banco real ─────────────────────────────────────────

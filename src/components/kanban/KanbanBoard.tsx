@@ -13,6 +13,7 @@ import {
   updateTask,
   deleteTask,
   getOfficeColumns,
+  getListColumns,
   getUnassignedTasks,
   type OfficeColumn,
 } from '@/lib/kanban.service'
@@ -320,12 +321,14 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // ── Quadro do Escritório ────────────────────────────────────────────────────
 
   const unassignedTasks = getUnassignedTasks(tasks)
-  const colVisiveis = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
+  const listCols        = getListColumns(tasks)
+  const colVisiveis     = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
+  const listColsVisiveis = ocultarVazios ? listCols.filter(col => col.tasks.length > 0) : listCols
   const mostrarUnassigned = unassignedTasks.length > 0 && (!ocultarVazios || unassignedTasks.length > 0)
 
   return (
     <>
-      {officeCols.length > 0 && (
+      {(officeCols.length > 0 || listCols.length > 0) && (
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-2)] cursor-pointer select-none">
             <input
@@ -398,6 +401,58 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                           status={status}
                           tasks={col.tasks.filter(t => t.status === status)}
                           userColor={userColor}
+                          colorMap={colorMap}
+                          showResponsavel={false}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Colunas de lista — listas do Trello que não representam uma pessoa
+                (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) mas ganham coluna própria,
+                igual a uma pessoa, em vez de caírem em "Sem responsável". */}
+            {listColsVisiveis.map((col, i) => {
+              const listColor = getUserColor({ id: col.key, nome: col.nome, cor_kanban: null, role: '' }, officeCols.length + i)
+              const recolhido = colapsados.has(col.key)
+
+              return (
+                <div key={col.key} className="flex flex-col gap-3 min-w-0">
+                  <button
+                    onClick={() => alternarColapso(col.key)}
+                    className="flex items-center gap-2.5 text-left group"
+                    title={recolhido ? 'Expandir' : 'Recolher'}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-[0_8px_18px_rgba(13,34,53,0.14)]"
+                      style={{ background: listColor }}
+                    >
+                      {col.nome.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-[var(--color-ink)] truncate">{col.nome}</p>
+                      <p className="text-[11px] text-[var(--color-ink-3)]">
+                        {col.tasks.length} tarefa{col.tasks.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    {recolhido
+                      ? <ChevronRight size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />
+                      : <ChevronDown  size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />}
+                  </button>
+
+                  {!recolhido && (
+                    <div className="space-y-3">
+                      {STATUS_ORDER.map(status => (
+                        <KanbanColumn
+                          key={status}
+                          userId={`__list__${col.key}`}
+                          status={status}
+                          tasks={col.tasks.filter(t => t.status === status)}
+                          userColor={listColor}
                           colorMap={colorMap}
                           showResponsavel={false}
                           onEdit={handleEdit}

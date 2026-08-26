@@ -23,6 +23,8 @@ export interface KanbanTask {
   origem: KanbanOrigem
   origem_id?: string | null       // ID externo (ex: Trello card ID)
   trello_member_id?: string | null // Trello member ID do responsável (armazenado no sync)
+  trello_list_id?: string | null   // ID da lista de origem no Trello (armazenado no sync)
+  trello_list_nome?: string | null // Nome da lista de origem — usado para colunas de lista sem responsável
   escritorio_id?: string | null
   agenda_item_id?: string | null  // FK para agenda_items (quando origem = 'agenda')
   data?: string | null            // prazo (date ISO)

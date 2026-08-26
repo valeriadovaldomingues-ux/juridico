@@ -72,6 +72,15 @@ export async function syncTrelloBoard(
       (listMappings ?? []).map(m => [m.trello_list_id, m.kanban_status])
     )
 
+    // Map: trello_list_id → nome da lista, para exibir como coluna própria
+    // no quadro do escritório quando a lista não representa uma pessoa
+    // (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) — ver getListColumns em kanban.service.ts.
+    const listNameMap = new Map<string, string>(
+      (listMappings ?? [])
+        .filter((m): m is typeof m & { trello_list_name: string } => !!m.trello_list_name)
+        .map(m => [m.trello_list_id, m.trello_list_name])
+    )
+
     // Map: trello_list_id → profile_id, para boards no padrão "lista = pessoa"
     // (a lista já identifica quem é o responsável, sem depender de atribuição
     // de membro do próprio Trello). Tem prioridade sobre o membro do card.
@@ -145,8 +154,9 @@ export async function syncTrelloBoard(
         }
       }
 
-      const prioridade = derivePrioridade(card.labels ?? [])
-      const data       = card.due ? card.due.slice(0, 10) : null
+      const prioridade    = derivePrioridade(card.labels ?? [])
+      const data          = card.due ? card.due.slice(0, 10) : null
+      const listaNome     = listNameMap.get(card.idList) ?? null
 
       // Verificar se card já existe (upsert manual para contagem correta)
       const { data: existing } = await supabase
@@ -165,6 +175,8 @@ export async function syncTrelloBoard(
             status:           kanbanStatus,
             responsavel_id:   responsavelId,
             trello_member_id: firstMemberId,  // persiste o ID do membro para redistribuição futura
+            trello_list_id:   card.idList,
+            trello_list_nome: listaNome,
             prioridade,
             data,
             updated_at:       now,
@@ -192,6 +204,8 @@ export async function syncTrelloBoard(
           status:           kanbanStatus,
           responsavel_id:   responsavelId,    // null quando sem mapping — nunca fake
           trello_member_id: firstMemberId,    // persiste o ID do membro para redistribuição futura
+          trello_list_id:   card.idList,
+          trello_list_nome: listaNome,
           prioridade,
           data,
           origem:           'trello',

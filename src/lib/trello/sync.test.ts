@@ -151,6 +151,28 @@ describe('syncTrelloBoard — responsável: lista tem prioridade sobre membro', 
     expect(resultado.membros_nao_mapeados).toHaveLength(1)
   })
 
+  it('persiste trello_list_id e trello_list_nome no card, para colunas por lista sem responsável', async () => {
+    mockFetchOpenCards.mockResolvedValue([cartao({ idList: 'list-prazos-civeis', idMembers: [] })])
+    const supabase = supabaseFake({
+      listMappings: [{
+        trello_list_id:   'list-prazos-civeis',
+        trello_list_name: 'PRAZOS CÍVEIS',
+        kanban_status:    'a_fazer',
+        profile_id:       null,
+      }],
+      memberMappings: [],
+    })
+    mockCreateClient.mockResolvedValue(supabase)
+
+    await syncTrelloBoard('integ-1', 'user-1')
+
+    expect(supabase.inserts[0].payload).toMatchObject({
+      responsavel_id:   null,
+      trello_list_id:   'list-prazos-civeis',
+      trello_list_nome: 'PRAZOS CÍVEIS',
+    })
+  })
+
   it('lista ignorada não conta como sem responsável nem entra no board', async () => {
     mockFetchOpenCards.mockResolvedValue([cartao({ idList: 'list-planilha' })])
     const supabase = supabaseFake({
