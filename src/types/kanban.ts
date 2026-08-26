@@ -31,6 +31,8 @@ export interface KanbanTask {
   sla_level?:  SLALevel | null
   sla_due_at?: string | null
   concluido_em?: string | null
+  arquivado?: boolean
+  arquivado_em?: string | null
   created_at: string
   updated_at: string
   // Joins

@@ -5,10 +5,25 @@ import { calculateSimpleSLA } from '@/lib/kanban-sla'
 
 const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
 
-/** GET /api/kanban-tasks — lista todas as tarefas com perfis e processo */
-export async function GET() {
+// Teto de segurança: mesmo com o filtro de arquivadas, uma consulta sem
+// limite pode voltar a travar o board se o volume crescer sem controle.
+const LIMITE_PADRAO = 2000
+
+/**
+ * GET /api/kanban-tasks — lista tarefas com perfis e processo.
+ *
+ * Por padrão retorna apenas tarefas NÃO arquivadas (`arquivado = false`).
+ * Passe `?arquivadas=true` para listar somente as arquivadas (usado pelo
+ * painel "Ver arquivadas"). Tarefas com `status='a_fazer'` acumuladas sem
+ * SLA/prazo definido são candidatas a arquivamento — ver
+ * supabase/kanban_arquivamento_migration.sql.
+ */
+export async function GET(request: NextRequest) {
   const auth = await apiGuard(ALLOWED)
   if (auth instanceof NextResponse) return auth
+
+  const { searchParams } = new URL(request.url)
+  const arquivadas = searchParams.get('arquivadas') === 'true'
 
   const supabase = await createClient()
 
@@ -19,8 +34,10 @@ export async function GET() {
       responsavel:profiles!responsavel_id(id, nome, cor_kanban),
       processo:processos!processo_id(id, titulo, numero_processo)
     `)
+    .eq('arquivado', arquivadas)
     .order('ordem', { ascending: true })
     .order('created_at', { ascending: true })
+    .limit(LIMITE_PADRAO)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])

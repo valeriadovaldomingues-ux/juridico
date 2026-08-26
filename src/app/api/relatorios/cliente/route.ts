@@ -150,6 +150,7 @@ export async function GET(req: NextRequest) {
     const { data: tarefas } = await supabase
       .from('kanban_tasks')
       .select('id, titulo, status, tipo, created_at')
+      .eq('arquivado', false)
       .in('processo_id', processoIds)
       .order('created_at', { ascending: false })
       .limit(100)

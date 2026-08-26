@@ -71,6 +71,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       ? supabase
           .from('kanban_tasks')
           .select('id, titulo, status, data, tipo, processo_id')
+          .eq('arquivado', false)
           .in('processo_id', processoIds)
           .order('created_at', { ascending: false })
           .limit(20)
