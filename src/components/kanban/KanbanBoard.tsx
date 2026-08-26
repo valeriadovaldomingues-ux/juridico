@@ -5,6 +5,7 @@ import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core'
+import { ChevronDown, ChevronRight, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getKanbanTasks,
@@ -24,6 +25,36 @@ import { STATUS_ORDER, getUserColor } from '@/types/kanban'
 
 // Cor padrão quando o usuário não tem cor configurada
 const DEFAULT_USER_COLOR = '#145A5B'
+
+// Preferências de exibição do quadro do escritório — pessoais, por navegador
+// (não sincronizam entre dispositivos nem aparecem pra outros usuários).
+const LS_COLLAPSED_KEY  = 'pedv:kanban:colunas-recolhidas'
+const LS_HIDE_EMPTY_KEY = 'pedv:kanban:ocultar-vazios'
+
+function lerColapsadosSalvos(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LS_COLLAPSED_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function salvarColapsados(ids: Set<string>) {
+  try {
+    localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify([...ids]))
+  } catch {
+    // localStorage indisponível (modo privado, etc.) — preferência não persiste, sem quebrar a tela
+  }
+}
+
+function lerOcultarVazios(): boolean {
+  try {
+    return localStorage.getItem(LS_HIDE_EMPTY_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
 
 interface Processo { id: string; titulo: string; numero_processo?: string | null }
 
@@ -45,6 +76,33 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // ── Estado do DnD ───────────────────────────────────────────────────────────
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  // ── Preferências de exibição (quadro do escritório) — por navegador ────────
+  const [colapsados,    setColapsados]    = useState<Set<string>>(new Set())
+  const [ocultarVazios, setOcultarVazios] = useState(false)
+
+  useEffect(() => {
+    setColapsados(lerColapsadosSalvos())
+    setOcultarVazios(lerOcultarVazios())
+  }, [])
+
+  const alternarColapso = useCallback((id: string) => {
+    setColapsados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      salvarColapsados(next)
+      return next
+    })
+  }, [])
+
+  const alternarOcultarVazios = useCallback(() => {
+    setOcultarVazios(prev => {
+      const next = !prev
+      try { localStorage.setItem(LS_HIDE_EMPTY_KEY, String(next)) } catch { /* preferência não persiste */ }
+      return next
+    })
+  }, [])
 
   // ── Mapa de cores dos perfis (índice garante cor elegante quando null) ──────
   const colorMap: Record<string, string> = {}
@@ -261,8 +319,35 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
   // ── Quadro do Escritório ────────────────────────────────────────────────────
 
+  const unassignedTasks = getUnassignedTasks(tasks)
+  const colVisiveis = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
+  const mostrarUnassigned = unassignedTasks.length > 0 && (!ocultarVazios || unassignedTasks.length > 0)
+
   return (
     <>
+      {officeCols.length > 0 && (
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-2)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={ocultarVazios}
+              onChange={alternarOcultarVazios}
+              className="rounded border-[var(--color-border)]"
+            />
+            <EyeOff size={13} className="text-[var(--color-ink-3)]" />
+            Ocultar quem não tem tarefas
+          </label>
+          {colapsados.size > 0 && (
+            <button
+              onClick={() => { setColapsados(new Set()); salvarColapsados(new Set()) }}
+              className="text-[11px] text-[var(--color-copper)] font-semibold hover:underline"
+            >
+              Expandir todos ({colapsados.size} recolhido{colapsados.size !== 1 ? 's' : ''})
+            </button>
+          )}
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -275,79 +360,97 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
-            {officeCols.map((col, i) => {
-              const profile   = col.profile
-              const userColor = getUserColor(profile, i)
+            {colVisiveis.map((col, i) => {
+              const profile     = col.profile
+              const userColor   = getUserColor(profile, i)
+              const recolhido   = colapsados.has(profile.id)
 
               return (
                 <div key={profile.id} className="flex flex-col gap-3 min-w-0">
-                  <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => alternarColapso(profile.id)}
+                    className="flex items-center gap-2.5 text-left group"
+                    title={recolhido ? 'Expandir' : 'Recolher'}
+                  >
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-[0_8px_18px_rgba(13,34,53,0.14)]"
                       style={{ background: userColor }}
                     >
                       {profile.nome.slice(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-[var(--color-ink)]">{profile.nome}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-[var(--color-ink)] truncate">{profile.nome}</p>
                       <p className="text-[11px] text-[var(--color-ink-3)]">
                         {col.tasks.length} tarefa{col.tasks.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                  </div>
+                    {recolhido
+                      ? <ChevronRight size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />
+                      : <ChevronDown  size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />}
+                  </button>
 
-                  <div className="space-y-3">
-                    {STATUS_ORDER.map(status => (
-                      <KanbanColumn
-                        key={status}
-                        userId={profile.id}
-                        status={status}
-                        tasks={col.tasks.filter(t => t.status === status)}
-                        userColor={userColor}
-                        colorMap={colorMap}
-                        showResponsavel={false}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
+                  {!recolhido && (
+                    <div className="space-y-3">
+                      {STATUS_ORDER.map(status => (
+                        <KanbanColumn
+                          key={status}
+                          userId={profile.id}
+                          status={status}
+                          tasks={col.tasks.filter(t => t.status === status)}
+                          userColor={userColor}
+                          colorMap={colorMap}
+                          showResponsavel={false}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
 
             {/* Coluna "Sem responsável" — tarefas sem atribuição */}
-            {(() => {
-              const unassigned = getUnassignedTasks(tasks)
-              if (unassigned.length === 0) return null
+            {mostrarUnassigned && (() => {
               const unassignedColor = '#9ca3af'
+              const recolhido = colapsados.has('__unassigned__')
               return (
                 <div className="flex flex-col gap-3 min-w-0">
-                  <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => alternarColapso('__unassigned__')}
+                    className="flex items-center gap-2.5 text-left group"
+                    title={recolhido ? 'Expandir' : 'Recolher'}
+                  >
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0 bg-[var(--color-ink-3)] shadow-[0_8px_18px_rgba(13,34,53,0.14)]">
                       ?
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-bold text-[var(--color-ink)]">Sem responsável</p>
                       <p className="text-[11px] text-[var(--color-ink-3)]">
-                        {unassigned.length} tarefa{unassigned.length !== 1 ? 's' : ''}
+                        {unassignedTasks.length} tarefa{unassignedTasks.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                  </div>
-                  <div className="space-y-3">
-                    {STATUS_ORDER.map(status => (
-                      <KanbanColumn
-                        key={status}
-                        userId="__unassigned__"
-                        status={status}
-                        tasks={unassigned.filter(t => t.status === status)}
-                        userColor={unassignedColor}
-                        colorMap={colorMap}
-                        showResponsavel={false}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                  </div>
+                    {recolhido
+                      ? <ChevronRight size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />
+                      : <ChevronDown  size={16} className="text-[var(--color-ink-3)] group-hover:text-[var(--color-ink)] shrink-0" />}
+                  </button>
+                  {!recolhido && (
+                    <div className="space-y-3">
+                      {STATUS_ORDER.map(status => (
+                        <KanbanColumn
+                          key={status}
+                          userId="__unassigned__"
+                          status={status}
+                          tasks={unassignedTasks.filter(t => t.status === status)}
+                          userColor={unassignedColor}
+                          colorMap={colorMap}
+                          showResponsavel={false}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })()}
