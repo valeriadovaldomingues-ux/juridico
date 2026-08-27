@@ -13,6 +13,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
+// Modo restrito temporário (KANBAN_ONLY_MODE) é testado à parte em
+// proxy.kanban-only-mode.test.ts. Aqui a flag fica desligada para que esta
+// suíte continue validando a matriz de permissões "normal" por role — a que
+// volta a valer assim que o modo restrito for desativado em produção.
+vi.mock('@/lib/kanban-only-mode', () => ({ KANBAN_ONLY_MODE: false }))
+
 // ── Mock setup ─────────────────────────────────────────────────────────────────
 // vi.hoisted() runs before vi.mock(), so these refs are available inside the
 // factory and can be configured per-test.

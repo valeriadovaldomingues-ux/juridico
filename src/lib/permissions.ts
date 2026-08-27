@@ -1,4 +1,17 @@
 import type { UserRole } from '@/types'
+import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
+
+export { KANBAN_ONLY_MODE }
+
+// ─── Modo restrito temporário — só Kanban liberado para quem não é sócio ──────
+//
+// Enquanto KANBAN_ONLY_MODE (ver lib/kanban-only-mode.ts) for true: qualquer
+// perfil que não seja 'socio' (nem 'cliente', que já só acessa /portal) só
+// enxerga e só consegue acessar /kanban — sidebar, guards server-side e o
+// proxy (middleware) respeitam esta flag. A matriz de permissões e
+// ALLOWED_ROUTES abaixo continuam intactas; é só desligar a flag pra
+// restaurar o acesso normal de cada perfil sem reescrever nada.
+const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente']
 
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em
@@ -353,10 +366,23 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
  * para compatibilidade com edge runtime.
  */
 export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) {
+    return pathname.startsWith('/kanban')
+  }
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
     if (pathname.startsWith(prefix)) return roles.includes(role)
   }
   return true
+}
+
+/**
+ * Rotas efetivamente permitidas para um perfil na sidebar, já considerando
+ * o modo restrito temporário (KANBAN_ONLY_MODE). Prefira esta função a
+ * indexar ALLOWED_ROUTES diretamente.
+ */
+export function getAllowedRoutes(role: UserRole): string[] {
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban']
+  return ALLOWED_ROUTES[role]
 }
 
 // ─── Extensão futura: acesso por processo ────────────────────────────────────

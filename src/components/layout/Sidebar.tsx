@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
-import { ALLOWED_ROUTES } from '@/lib/permissions'
+import { getAllowedRoutes } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 
 interface NavItem  { href: string; label: string; icon: React.ElementType }
@@ -77,7 +77,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
 
 export default function Sidebar({ role, devMode = false }: { role: UserRole; devMode?: boolean }) {
   const pathname = usePathname()
-  const allowed  = ALLOWED_ROUTES[role]
+  const allowed  = getAllowedRoutes(role)
 
   const visibleGroups = ALL_NAV_GROUPS
     .map(group => ({

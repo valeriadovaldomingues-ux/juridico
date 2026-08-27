@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { ROLE_REDIRECT } from '@/lib/permissions'
+import { ROLE_REDIRECT, KANBAN_ONLY_MODE } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import Logo from '@/components/ui/Logo'
 import { sanitizeAuthError } from '@/lib/auth/password-reset'
@@ -45,7 +45,10 @@ export default function LoginPage() {
         .eq('id', authData.user.id)
         .single()
       if (profile?.role) {
-        redirect = ROLE_REDIRECT[profile.role as UserRole] ?? '/dashboard'
+        const role = profile.role as UserRole
+        redirect = KANBAN_ONLY_MODE && role !== 'socio' && role !== 'cliente'
+          ? '/kanban'
+          : ROLE_REDIRECT[role] ?? '/dashboard'
       }
     }
 

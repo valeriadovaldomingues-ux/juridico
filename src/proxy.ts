@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient }       from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
+import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 
 // ── Service client para leitura de profiles no middleware ─────────────────────
 //
@@ -173,6 +174,20 @@ export async function proxy(request: NextRequest) {
         userId:   user.id,
         detail:   profileError ? `query_error:${profileError.code}` : 'no_profile',
       })
+      return NextResponse.redirect(url)
+    }
+
+    // 3a-restrito. Modo restrito temporário: só sócio acessa além do Kanban.
+    // Vem antes das checagens abaixo porque cobre TODAS as rotas internas,
+    // não só as listadas em RESTRICTED (ex.: /processos, /clientes, /agenda,
+    // hoje sem gate nenhum) — ver KANBAN_ONLY_MODE acima.
+    if (
+      KANBAN_ONLY_MODE &&
+      role && role !== 'socio' && role !== 'cliente' &&
+      isInternalPath && !pathname.startsWith('/kanban')
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/kanban'
       return NextResponse.redirect(url)
     }
 
