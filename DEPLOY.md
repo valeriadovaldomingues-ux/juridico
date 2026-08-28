@@ -97,6 +97,22 @@ Em **Settings → Environment Variables**, adicione:
 | `CRON_SECRET` | `(gere com: openssl rand -hex 32)` | Production |
 | `NEXT_PUBLIC_APP_URL` | `https://app.seuescritorio.com.br` | Production |
 
+#### 2.3.1 Banco Inter (Financeiro / Cobrancas)
+
+| Nome | Valor sugerido | Environments |
+|------|----------------|-------------|
+| `INTER_CERT_BASE64` | Base64 do certificado cliente mTLS | Production, Preview, Development |
+| `INTER_KEY_BASE64` | Base64 da chave privada mTLS | Production, Preview, Development |
+| `INTER_WEBHOOK_CA_BASE64` | Base64 do CA usado nas conexoes com o Inter | Production, Preview, Development |
+| `INTER_CLIENT_ID` | Client ID do app no portal Inter | Production, Preview, Development |
+| `INTER_CLIENT_SECRET` | Client Secret do app no portal Inter | Production, Preview, Development |
+| `INTER_WEBHOOK_ENABLED` | `false` nesta primeira versao; futuro toggle do webhook via proxy/gateway mTLS | Production, Preview, Development |
+| `INTER_WEBHOOK_SECRET` | Opcional, apenas para o webhook futuro via proxy/gateway mTLS | Production, Preview |
+| `INTER_BASE_URL` | URL da API do Inter. Em staging/preview use homologacao; a producao e bloqueada nesse ambiente. | Production, Preview, Development |
+
+> Em desenvolvimento local, `INTER_CERT_PATH`, `INTER_KEY_PATH` e `INTER_WEBHOOK_CA_PATH` continuam aceitos como compatibilidade opcional.
+> Enquanto `INTER_WEBHOOK_ENABLED=false`, o PEDV opera por sincronizacao ativa e o endpoint de webhook responde como desativado.
+
 #### 2.4 Domínio personalizado
 
 1. Vercel → Settings → Domains
@@ -329,6 +345,12 @@ Use [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs) em `vercel.json`:
 
 Configure o header via [Vercel Cron Secret](https://vercel.com/docs/cron-jobs/manage-cron-jobs):
 - A Vercel envia automaticamente `Authorization: Bearer <CRON_SECRET>`
+
+Para o modulo financeiro/cobrancas, use o cron interno em lote:
+- `POST /api/financeiro/cobrancas/sincronizar-lote`
+- Proteja com `Authorization: Bearer <CRON_SECRET>`
+- O endpoint usa trava interna para evitar execucoes concorrentes e processa apenas o lote limitado configurado no servidor
+- Não está no `vercel.json` (Vercel Cron do plano Hobby só dispara 1x/dia por rota) — dispare por um agendador externo (ex.: cron-job.org, GitHub Actions) com a frequência que fizer sentido para conferir pagamentos
 
 ### No VPS
 ```bash

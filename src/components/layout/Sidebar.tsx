@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Scale, CalendarDays,
-  DollarSign, FileText, Bot, Settings, BarChart2,
+  DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
   Mail, Scissors, Tv2,
 } from 'lucide-react'
@@ -33,6 +33,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/publicacoes', label: 'Publicações', icon: Newspaper  },
       { href: '/comercial',   label: 'Comercial',   icon: Handshake  },
       { href: '/financeiro',  label: 'Financeiro',  icon: DollarSign },
+      { href: '/financeiro/cobrancas', label: 'Cobranças', icon: Banknote },
       { href: '/documentos',  label: 'Documentos',  icon: FileText   },
       { href: '/relatorios',  label: 'Relatórios',  icon: BarChart2  },
       { href: '/importar',    label: 'Importar',    icon: Upload     },
@@ -91,6 +92,7 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
   function isActive(href: string): boolean {
     if (href === '/dashboard')     return pathname === '/dashboard'
     if (href === '/configuracoes') return pathname === '/configuracoes'
+    if (href === '/financeiro')    return pathname === '/financeiro'
     return pathname.startsWith(href)
   }
 

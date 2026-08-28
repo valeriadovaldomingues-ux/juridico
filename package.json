@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "check": "tsc --noEmit && next lint",
     "test": "vitest run",
+    "test:cobrancas": "node --test --experimental-strip-types \"tests/**/*.test.mts\"",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

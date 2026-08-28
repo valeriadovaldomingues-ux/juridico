@@ -44,7 +44,7 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/aurora-mobile',           roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
   { prefix: '/dashboard/tv',           roles: ['socio'] },
-  { prefix: '/financeiro',             roles: ['socio'] },
+  { prefix: '/financeiro',             roles: ['administrativo', 'gerente', 'socio'] },
   { prefix: '/automacoes',             roles: ['gerente', 'socio'] },
   { prefix: '/integracoes/gmail',       roles: ['socio'] },
   { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
