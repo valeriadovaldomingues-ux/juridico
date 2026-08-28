@@ -5,7 +5,7 @@ import { ROLE_LABELS, ROLE_COLORS } from '@/lib/permissions'
 import type { Profile, UserRole } from '@/types'
 import {
   Plus, Pencil, Power, Mail, X, Check,
-  Loader2, Shield, ChevronDown,
+  Loader2, Shield, ChevronDown, KeyRound,
 } from 'lucide-react'
 
 const ROLES: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
@@ -46,6 +46,10 @@ export default function UsuariosPage({
   const [novoForm, setNovoForm]   = useState<NovoForm>(NOVO_VAZIO)
   const [saving, setSaving]       = useState(false)
   const [flash, setFlash]         = useState<{ msg: string; ok: boolean } | null>(null)
+  const [senhaModalUser, setSenhaModalUser] = useState<Profile | null>(null)
+  const [novaSenha, setNovaSenha]           = useState('')
+  const [senhaSaving, setSenhaSaving]       = useState(false)
+  const [senhaErro, setSenhaErro]           = useState('')
 
   const isSocio = currentUserRole === 'socio'
 
@@ -129,6 +133,35 @@ export default function UsuariosPage({
     const json = await res.json()
     if (!res.ok) toast(json.error ?? 'Erro ao enviar e-mail', false)
     else toast(`E-mail de redefinição enviado para ${email}`)
+  }
+
+  // ── Definir senha diretamente (sem e-mail) ──────────────────────────────────
+
+  function abrirDefinirSenha(u: Profile) {
+    setSenhaModalUser(u)
+    setNovaSenha('')
+    setSenhaErro('')
+  }
+
+  async function confirmarDefinirSenha(e: React.FormEvent) {
+    e.preventDefault()
+    if (!senhaModalUser) return
+    if (novaSenha.length < 6) { setSenhaErro('A senha deve ter pelo menos 6 caracteres'); return }
+
+    setSenhaSaving(true)
+    setSenhaErro('')
+    const res = await fetch(`/api/usuarios/${senhaModalUser.id}/definir-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha: novaSenha }),
+    })
+    const json = await res.json()
+    setSenhaSaving(false)
+
+    if (!res.ok) { setSenhaErro(json.error ?? 'Erro ao definir senha'); return }
+    toast(`Senha de ${senhaModalUser.nome} atualizada.`)
+    setSenhaModalUser(null)
+    setNovaSenha('')
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -317,6 +350,13 @@ export default function UsuariosPage({
                               >
                                 <Mail size={14} />
                               </button>
+                              <button
+                                onClick={() => abrirDefinirSenha(u)}
+                                className="p-1.5 rounded-lg text-[#9ca3af] hover:text-[#1D5F60] hover:bg-[#E8F2F2] transition-colors"
+                                title="Definir senha diretamente (sem e-mail)"
+                              >
+                                <KeyRound size={14} />
+                              </button>
                               {!isCurrentUser && (
                                 <button
                                   onClick={() => toggleAtivo(u)}
@@ -457,6 +497,82 @@ export default function UsuariosPage({
                 <button
                   type="button"
                   onClick={() => { setShowModal(false); setFlash(null) }}
+                  className="px-4 py-2.5 text-sm text-[#6b7280] hover:text-[#1a1d23] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de definir senha diretamente ─────────────────────────────────── */}
+      {senhaModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setSenhaModalUser(null)}
+          />
+
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#f3f4f6]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[#1a1d23]">Definir senha</h2>
+                <p className="text-[12px] text-[#9ca3af] mt-0.5">{senhaModalUser.nome} — {senhaModalUser.email}</p>
+              </div>
+              <button
+                onClick={() => setSenhaModalUser(null)}
+                className="p-1.5 rounded-lg hover:bg-[#f3f4f6] transition-colors"
+              >
+                <X size={16} className="text-[#9ca3af]" />
+              </button>
+            </div>
+
+            <form onSubmit={confirmarDefinirSenha} className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-1.5">
+                  Senha nova *
+                </label>
+                <input
+                  required
+                  autoFocus
+                  type="password"
+                  minLength={6}
+                  value={novaSenha}
+                  onChange={e => setNovaSenha(e.target.value)}
+                  placeholder="Mín. 6 caracteres"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#e5e7eb] rounded-xl outline-none focus:border-[#1D5F60] focus:ring-2 focus:ring-[#1D5F60]/10 bg-[#fafbfc] placeholder:text-[#d1d5db]"
+                />
+              </div>
+
+              <p className="text-[11px] text-[#9ca3af]">
+                A senha é trocada imediatamente, sem enviar e-mail. Avise a pessoa pelo canal que preferir.
+              </p>
+
+              {senhaErro && (
+                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-xl">
+                  <X size={13} /> {senhaErro}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={senhaSaving}
+                  className="flex-1 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                >
+                  {senhaSaving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={14} className="animate-spin" /> Salvando...
+                    </span>
+                  ) : (
+                    'Definir senha'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSenhaModalUser(null)}
                   className="px-4 py-2.5 text-sm text-[#6b7280] hover:text-[#1a1d23] transition-colors"
                 >
                   Cancelar
