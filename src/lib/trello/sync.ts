@@ -4,6 +4,9 @@ import { fetchOpenCards } from './api'
 import type { KanbanPrioridade, KanbanStatus } from '@/types/kanban'
 import type { TrelloLabel, SyncResult } from '@/types/trello'
 
+/** Client mínimo aceito (compatível com o client SSR de sessão e o de service role). */
+type DbClient = { from: (table: string) => any }
+
 // ─── Label → prioridade ───────────────────────────────────────────────────────
 
 const COLOR_MAP: Record<string, KanbanPrioridade> = {
@@ -25,9 +28,10 @@ function derivePrioridade(labels: TrelloLabel[]): KanbanPrioridade {
 
 export async function syncTrelloBoard(
   integrationId: string,
-  triggeredBy: string,
+  triggeredBy: string | null,
+  client?: DbClient,
 ): Promise<SyncResult> {
-  const supabase = await createClient()
+  const supabase = client ?? await createClient()
 
   // 1. Criar log "em andamento"
   const { data: logEntry, error: logErr } = await supabase
@@ -67,17 +71,32 @@ export async function syncTrelloBoard(
       supabase.from('trello_member_mappings').select('*').eq('integration_id', integrationId),
     ])
 
+    type ListMappingRow = {
+      trello_list_id: string
+      kanban_status: string
+      profile_id?: string | null
+      trello_list_name?: string | null
+    }
+    type MemberMappingRow = {
+      trello_member_id: string
+      profile_id: string | null
+      trello_full_name?: string | null
+      trello_username?: string | null
+    }
+    const listMappingsTyped   = (listMappings   ?? []) as ListMappingRow[]
+    const memberMappingsTyped = (memberMappings ?? []) as MemberMappingRow[]
+
     // Map: trello_list_id → kanban_status
     const listStatusMap = new Map(
-      (listMappings ?? []).map(m => [m.trello_list_id, m.kanban_status])
+      listMappingsTyped.map(m => [m.trello_list_id, m.kanban_status])
     )
 
     // Map: trello_list_id → nome da lista, para exibir como coluna própria
     // no quadro do escritório quando a lista não representa uma pessoa
     // (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) — ver getListColumns em kanban.service.ts.
     const listNameMap = new Map<string, string>(
-      (listMappings ?? [])
-        .filter((m): m is typeof m & { trello_list_name: string } => !!m.trello_list_name)
+      listMappingsTyped
+        .filter((m): m is ListMappingRow & { trello_list_name: string } => !!m.trello_list_name)
         .map(m => [m.trello_list_id, m.trello_list_name])
     )
 
@@ -85,23 +104,23 @@ export async function syncTrelloBoard(
     // (a lista já identifica quem é o responsável, sem depender de atribuição
     // de membro do próprio Trello). Tem prioridade sobre o membro do card.
     const listProfileMap = new Map<string, string>(
-      (listMappings ?? [])
-        .filter((m): m is typeof m & { profile_id: string } => m.profile_id != null)
+      listMappingsTyped
+        .filter((m): m is ListMappingRow & { profile_id: string } => m.profile_id != null)
         .map(m => [m.trello_list_id, m.profile_id])
     )
 
     // Map: trello_member_id → profile_id (nunca nulo — ausência = sem mapping)
     // Importante: só inclui membros COM profile_id definido e válido.
     // Membros sem mapping retornam undefined no .get() → responsavel_id = null.
-    const memberProfMap = new Map(
-      (memberMappings ?? [])
-        .filter(m => m.profile_id != null)
-        .map(m => [m.trello_member_id, m.profile_id as string])
+    const memberProfMap = new Map<string, string>(
+      memberMappingsTyped
+        .filter((m): m is MemberMappingRow & { profile_id: string } => m.profile_id != null)
+        .map(m => [m.trello_member_id, m.profile_id])
     )
 
     // Índice auxiliar para nome legível nos avisos de log
-    const memberNameMap = new Map(
-      (memberMappings ?? []).map(m => [
+    const memberNameMap = new Map<string, string>(
+      memberMappingsTyped.map(m => [
         m.trello_member_id,
         m.trello_full_name ?? m.trello_username ?? m.trello_member_id,
       ])
