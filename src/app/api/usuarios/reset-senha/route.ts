@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo ?? `${baseUrl}/reset-password`,
+      redirectTo: redirectTo ?? `${baseUrl}/redefinir-senha`,
     })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })

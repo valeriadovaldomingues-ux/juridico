@@ -124,7 +124,7 @@ export default function UsuariosPage({
     const res = await fetch('/api/usuarios/reset-senha', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, redirectTo: `${window.location.origin}/reset-password` }),
+      body: JSON.stringify({ email, redirectTo: `${window.location.origin}/redefinir-senha` }),
     })
     const json = await res.json()
     if (!res.ok) toast(json.error ?? 'Erro ao enviar e-mail', false)
