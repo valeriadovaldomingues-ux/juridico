@@ -401,8 +401,10 @@ function supabaseComAdvogados(options?: { existing?: boolean; insertError?: bool
           }),
           insert: vi.fn().mockImplementation((payload: unknown) => {
             insertCalls.push({ table, payload })
-            return Promise.resolve({
-              error: options?.insertError ? { message: 'insert falhou' } : null,
+            const error = options?.insertError ? { message: 'insert falhou' } : null
+            // O client real devolve um builder encadeável (.select().single()).
+            return Object.assign(Promise.resolve({ error }), {
+              select: () => ({ single: () => Promise.resolve({ data: error ? null : { id: 'pub-teste' }, error }) }),
             })
           }),
         }
@@ -412,7 +414,9 @@ function supabaseComAdvogados(options?: { existing?: boolean; insertError?: bool
         return {
           insert: vi.fn().mockImplementation((payload: unknown) => {
             insertCalls.push({ table, payload })
-            return Promise.resolve({ error: null })
+            return Object.assign(Promise.resolve({ error: null }), {
+              select: () => ({ single: () => Promise.resolve({ data: { id: 'pub-teste' }, error: null }) }),
+            })
           }),
         }
       }

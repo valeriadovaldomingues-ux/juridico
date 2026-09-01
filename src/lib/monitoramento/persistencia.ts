@@ -16,6 +16,7 @@ import {
   detectarTipoResultado,
 } from '@/lib/monitoramento/prazo-detector'
 import { somenteDigitos } from '@/lib/monitoramento/cnj'
+import { derivarTrabalhoDaPublicacao } from '@/lib/monitoramento/publicacao-para-trabalho'
 import type { PublicacaoCapturada } from '@/lib/monitoramento/fontes'
 
 /** Client mínimo aceito (compatível com o client SSR, service role e fakes de teste). */
@@ -155,7 +156,11 @@ export async function inserirPublicacao(
   if (pub.oab_pesquisada !== undefined) payload.oab_pesquisada = pub.oab_pesquisada
   if (pub.dados_brutos !== undefined) payload.dados_brutos = pub.dados_brutos
 
-  const { error } = await supabase.from('publicacoes').insert(payload)
+  const { data: inserida, error } = await supabase
+    .from('publicacoes')
+    .insert(payload)
+    .select('id')
+    .single()
 
   if (error) {
     // Corrida entre execuções: o índice único transforma o conflito em duplicada
@@ -168,6 +173,43 @@ export async function inserirPublicacao(
       erro: mensagem,
     })
     return 'falha'
+  }
+
+  // A publicação está gravada. Daqui para baixo é derivação — andamento no
+  // processo e tarefa no Kanban. Se falhar, a publicação NÃO é perdida: ela é o
+  // registro que importa juridicamente, e o trabalho pode ser recriado depois.
+  if (inserida?.id) {
+    const resultado = await derivarTrabalhoDaPublicacao(supabase, inserida.id, {
+      numero_processo: pub.numero_processo,
+      processo_id: vinculo.processo_id,
+      tribunal: pub.tribunal,
+      orgao: pub.orgao,
+      // As fontes DJEN colocam a data de DISPONIBILIZAÇÃO dentro de
+      // `data_publicacao` (ver trt3-djen.ts). Preferimos o campo explícito
+      // quando ele vem, e caímos nesse por ser o mesmo valor na prática.
+      data_disponibilizacao:
+        (payload.data_disponibilizacao as string | undefined) ?? pub.data_publicacao ?? null,
+      tipo_comunicacao: (payload.tipo_comunicacao as string | undefined) ?? null,
+      tipo_publicacao: tipo,
+      texto: pub.texto_publicacao,
+      url_oficial: (payload.url_oficial as string | undefined) ?? null,
+      partes: payload.partes ?? null,
+      prazo_detectado: deteccao.prazo_detectado,
+      prazo_data: deteccao.prazo_data ?? null,
+      prazo_dias: deteccao.prazo_dias ?? null,
+      prazo_descricao: deteccao.prazo_descricao ?? null,
+      audiencia_detectada: deteccao.audiencia_detectada,
+      audiencia_data: deteccao.audiencia_data ?? null,
+    })
+
+    if (resultado.erros.length > 0) {
+      console.warn('[monitoramento] Publicação gravada, mas a derivação teve problema:', {
+        publicacao_id: inserida.id,
+        andamento: resultado.andamento,
+        tarefa: resultado.tarefa,
+        erros: resultado.erros,
+      })
+    }
   }
 
   return 'inserida'
