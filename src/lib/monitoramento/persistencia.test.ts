@@ -91,7 +91,12 @@ function supabaseFake(options: { existente?: boolean; existentePorIdExterno?: bo
         }),
         insert: vi.fn().mockImplementation(payload => {
           insertCalls.push(payload)
-          return Promise.resolve({ error: options.insertError ? { message: 'insert falhou' } : null })
+          const error = options.insertError ? { message: 'insert falhou' } : null
+          // O client real devolve um builder: dá para await direto OU encadear
+          // .select().single(). O fake precisa modelar os dois.
+          return Object.assign(Promise.resolve({ error }), {
+            select: () => ({ single: () => Promise.resolve({ data: error ? null : { id: 'pub-teste' }, error }) }),
+          })
         }),
       }
     }),
