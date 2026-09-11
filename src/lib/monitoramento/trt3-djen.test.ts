@@ -22,6 +22,9 @@ describe('monitoramento TRT3 DJEN', () => {
       tribunal: 'TRT3',
       origem: 'trt3_djen',
       data_publicacao: '2026-05-19',
+      // Regressão: data_disponibilizacao tem que ir separada de data_publicacao —
+      // é a chave real de conferência (CNJ + disponibilização), não pode ficar NULL.
+      data_disponibilizacao: '2026-05-19',
       numero_processo: '0010000-00.2026.5.03.0001',
       termo_encontrado: 'ADVOGADO TESTE',
     })
