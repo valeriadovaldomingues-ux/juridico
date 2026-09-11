@@ -175,9 +175,9 @@ export async function inserirPublicacao(
     return 'falha'
   }
 
-  // A publicação está gravada. Daqui para baixo é derivação — andamento no
-  // processo e tarefa no Kanban. Se falhar, a publicação NÃO é perdida: ela é o
-  // registro que importa juridicamente, e o trabalho pode ser recriado depois.
+  // A publicação está gravada. Daqui para baixo é derivação — o andamento no
+  // processo. Se falhar, a publicação NÃO é perdida: ela é o registro que
+  // importa juridicamente, e o andamento pode ser recriado depois.
   if (inserida?.id) {
     const resultado = await derivarTrabalhoDaPublicacao(supabase, inserida.id, {
       numero_processo: pub.numero_processo,
@@ -206,7 +206,6 @@ export async function inserirPublicacao(
       console.warn('[monitoramento] Publicação gravada, mas a derivação teve problema:', {
         publicacao_id: inserida.id,
         andamento: resultado.andamento,
-        tarefa: resultado.tarefa,
         erros: resultado.erros,
       })
     }

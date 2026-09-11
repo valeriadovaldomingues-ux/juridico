@@ -1,24 +1,12 @@
-// ─── Publicação vira trabalho ────────────────────────────────────────────────
+// ─── Publicação vira andamento ───────────────────────────────────────────────
 //
 // Uma publicação capturada no DJEN é um fato: aconteceu, está no diário, e o
-// registro dela não muda mais. Trabalho é outra coisa — alguém precisa ler,
-// decidir e agir. Este módulo faz a ponte entre os dois, gerando a partir de
-// uma publicação recém-inserida:
-//
-//   1. um ANDAMENTO no processo  → a linha do tempo, que fica para sempre
-//   2. uma TAREFA no Kanban      → o trabalho, que alguém conclui e arquiva
-//
-// Por que os dois, e não só a tarefa: quando a tarefa for concluída e
-// arquivada, o andamento continua lá. É ele que prova, meses depois, que o
-// escritório foi intimado naquela data.
+// registro dela não muda mais. Este módulo grava esse fato na linha do tempo
+// do processo — um ANDAMENTO — a partir de uma publicação recém-inserida.
 //
 // Nada aqui pode derrubar a inserção da publicação. Se a derivação falhar, a
-// publicação continua gravada — ela é o registro que importa juridicamente, e a
-// tarefa pode ser recriada depois. Por isso toda função devolve o que deu
-// errado em vez de lançar exceção.
-
-import { calculateSimpleSLA } from '@/lib/kanban-sla'
-import type { KanbanPrioridade } from '@/types/kanban'
+// publicação continua gravada — ela é o registro que importa juridicamente.
+// Por isso a função devolve o que deu errado em vez de lançar exceção.
 
 /**
  * Client mínimo de que este módulo precisa: inserir numa tabela.
@@ -66,7 +54,6 @@ export interface DadosPublicacao {
 
 export interface ResultadoDerivacao {
   andamento: 'criado' | 'sem_processo' | 'sem_robo' | 'falha'
-  tarefa: 'criada' | 'duplicada' | 'falha'
   erros: string[]
 }
 
@@ -147,14 +134,6 @@ export function montarDescricao(pub: DadosPublicacao): string {
   return linhas.join('\n')
 }
 
-/** Prazo curto merece mais destaque na fila. */
-export function derivarPrioridade(pub: DadosPublicacao): KanbanPrioridade {
-  if (!pub.prazo_detectado) return 'media'
-  if (pub.prazo_dias !== null && pub.prazo_dias <= 5) return 'urgente'
-  if (pub.prazo_dias !== null && pub.prazo_dias <= 10) return 'alta'
-  return 'media'
-}
-
 // ─── Gravação ────────────────────────────────────────────────────────────────
 
 async function criarAndamento(
@@ -184,43 +163,8 @@ async function criarAndamento(
   return error ? 'falha' : 'criado'
 }
 
-async function criarTarefa(
-  supabase: DbClient,
-  publicacaoId: string,
-  pub: DadosPublicacao,
-): Promise<{ estado: ResultadoDerivacao['tarefa']; erro?: string }> {
-  const data = pub.prazo_data ?? null
-  const sla = calculateSimpleSLA({ data, status: 'a_fazer' })
-
-  const { error } = await supabase.from('kanban_tasks').insert({
-    titulo: montarTitulo(pub).slice(0, 300),
-    descricao: montarDescricao(pub),
-    tipo: pub.prazo_detectado ? 'prazo' : 'tarefa',
-    status: 'a_fazer',
-    prioridade: derivarPrioridade(pub),
-    numero_processo: pub.numero_processo,
-    partes_resumidas: resumirPartes(pub.partes),
-    processo_id: pub.processo_id,
-    publicacao_id: publicacaoId,
-    origem: 'publicacao',
-    data,
-    ordem: 0,
-    sla_level: sla.sla_level,
-    sla_due_at: sla.sla_due_at,
-  })
-
-  if (!error) return { estado: 'criada' }
-
-  // O índice único em publicacao_id transforma corrida entre execuções em
-  // conflito de chave — que é "já existe", não erro.
-  const mensagem = String(error?.message ?? '')
-  if (/duplicate key|unique/i.test(mensagem)) return { estado: 'duplicada' }
-
-  return { estado: 'falha', erro: mensagem }
-}
-
 /**
- * Deriva andamento e tarefa de uma publicação recém-gravada.
+ * Deriva o andamento de uma publicação recém-gravada.
  *
  * Nunca lança: quem chama não pode perder a publicação por causa daqui.
  */
@@ -239,14 +183,5 @@ export async function derivarTrabalhoDaPublicacao(
     erros.push(`andamento: ${e instanceof Error ? e.message : String(e)}`)
   }
 
-  let tarefa: ResultadoDerivacao['tarefa'] = 'falha'
-  try {
-    const r = await criarTarefa(supabase, publicacaoId, pub)
-    tarefa = r.estado
-    if (r.erro) erros.push(`tarefa: ${r.erro}`)
-  } catch (e) {
-    erros.push(`tarefa: ${e instanceof Error ? e.message : String(e)}`)
-  }
-
-  return { andamento, tarefa, erros }
+  return { andamento, erros }
 }

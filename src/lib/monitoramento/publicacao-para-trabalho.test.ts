@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
-  derivarPrioridade,
   derivarTrabalhoDaPublicacao,
   montarTitulo,
   resumirPartes,
@@ -118,30 +117,14 @@ describe('montarTitulo', () => {
   })
 })
 
-describe('derivarPrioridade', () => {
-  it('prazo curto é urgente', () => {
-    expect(derivarPrioridade(publicacao({ prazo_detectado: true, prazo_dias: 5 }))).toBe('urgente')
-  })
-  it('prazo médio é alta', () => {
-    expect(derivarPrioridade(publicacao({ prazo_detectado: true, prazo_dias: 10 }))).toBe('alta')
-  })
-  it('prazo longo é média', () => {
-    expect(derivarPrioridade(publicacao({ prazo_detectado: true, prazo_dias: 30 }))).toBe('media')
-  })
-  it('sem prazo detectado é média', () => {
-    expect(derivarPrioridade(publicacao())).toBe('media')
-  })
-})
-
 // ─── Gravação ────────────────────────────────────────────────────────────────
 
 describe('derivarTrabalhoDaPublicacao', () => {
-  it('cria andamento e tarefa quando há processo e Robô', async () => {
+  it('cria andamento quando há processo e Robô', async () => {
     const { db, inserts } = fakeDb()
     const r = await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao())
 
     expect(r.andamento).toBe('criado')
-    expect(r.tarefa).toBe('criada')
     expect(r.erros).toEqual([])
 
     const andamento = inserts.find(i => i.tabela === 'processo_andamentos')!
@@ -149,71 +132,33 @@ describe('derivarTrabalhoDaPublicacao', () => {
     expect(andamento.payload.origem).toBe('publicacao')
     expect(andamento.payload.criado_por).toBe('robo-uuid')
     expect(andamento.payload.processo_id).toBe('proc-1')
+    expect(andamento.payload.descricao).toContain('https://comunica.pje.jus.br/consulta?x=1')
 
-    const tarefa = inserts.find(i => i.tabela === 'kanban_tasks')!
-    expect(tarefa.payload.origem).toBe('publicacao')
-    expect(tarefa.payload.publicacao_id).toBe('pub-1')
-    expect(tarefa.payload.status).toBe('a_fazer')
-    expect(tarefa.payload.numero_processo).toBe('0010606-95.2026.5.03.0025')
+    expect(inserts.some(i => i.tabela === 'kanban_tasks')).toBe(false)
   })
 
-  it('sem processo vinculado, não inventa andamento — mas a tarefa sai', async () => {
+  it('sem processo vinculado, não inventa andamento', async () => {
     const { db, inserts } = fakeDb()
     const r = await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao({ processo_id: null }))
 
     expect(r.andamento).toBe('sem_processo')
-    expect(r.tarefa).toBe('criada')
     expect(inserts.some(i => i.tabela === 'processo_andamentos')).toBe(false)
   })
 
-  it('sem o Robô configurado, a tarefa continua sendo criada', async () => {
+  it('sem o Robô configurado, não cria andamento', async () => {
     delete process.env.ROBO_PROFILE_ID
     const { db, inserts } = fakeDb()
     const r = await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao())
 
     expect(r.andamento).toBe('sem_robo')
-    expect(r.tarefa).toBe('criada')
-    expect(inserts.some(i => i.tabela === 'kanban_tasks')).toBe(true)
-  })
-
-  it('conflito de chave única vira "duplicada", não erro', async () => {
-    const { db } = fakeDb({ kanban_tasks: 'duplicate key value violates unique constraint' })
-    const r = await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao())
-
-    expect(r.tarefa).toBe('duplicada')
-    expect(r.erros).toEqual([])
-  })
-
-  it('prazo detectado vira tipo "prazo", data e SLA na tarefa', async () => {
-    const { db, inserts } = fakeDb()
-    await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao({
-      prazo_detectado: true, prazo_dias: 5, prazo_data: '2026-08-25',
-      prazo_descricao: 'prazo de 5 dias',
-    }))
-
-    const tarefa = inserts.find(i => i.tabela === 'kanban_tasks')!
-    expect(tarefa.payload.tipo).toBe('prazo')
-    expect(tarefa.payload.prioridade).toBe('urgente')
-    expect(tarefa.payload.data).toBe('2026-08-25')
-    expect(tarefa.payload.sla_due_at).toBeTruthy()
-  })
-
-  it('a descrição leva o link da publicação', async () => {
-    const { db, inserts } = fakeDb()
-    await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao())
-    const tarefa = inserts.find(i => i.tabela === 'kanban_tasks')!
-    expect(tarefa.payload.descricao).toContain('https://comunica.pje.jus.br/consulta?x=1')
+    expect(inserts.some(i => i.tabela === 'processo_andamentos')).toBe(false)
   })
 
   it('falha de banco não lança — devolve o erro para quem chamou registrar', async () => {
-    const { db } = fakeDb({
-      processo_andamentos: 'permission denied',
-      kanban_tasks: 'permission denied',
-    })
+    const { db } = fakeDb({ processo_andamentos: 'permission denied' })
     const r = await derivarTrabalhoDaPublicacao(db, 'pub-1', publicacao())
 
     expect(r.andamento).toBe('falha')
-    expect(r.tarefa).toBe('falha')
     expect(r.erros.length).toBeGreaterThan(0)
   })
 })
