@@ -240,13 +240,21 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const isDropZone = String(over.id).includes('::')
-    if (!isDropZone) return
-
-    const parts     = String(over.id).split('::')
-    const destStatus = parts[parts.length - 1] as KanbanStatus
     const task = tasks.find(t => t.id === active.id)
-    if (!task || task.status === destStatus) return
+    if (!task) return
+
+    // Soltar na área vazia da coluna: over.id é o droppable ("userId::status").
+    // Soltar EM CIMA de outro card (o caso mais comum — colunas raramente
+    // estão vazias): over.id é o id de outra tarefa, então a coluna de
+    // destino é a status dessa tarefa. Antes só o primeiro caso mudava o
+    // status; soltar sobre um card não fazia nada.
+    const overIdStr  = String(over.id)
+    const isDropZone = overIdStr.includes('::')
+    const destStatus = isDropZone
+      ? (overIdStr.split('::').pop() as KanbanStatus)
+      : tasks.find(t => t.id === over.id)?.status
+
+    if (!destStatus || task.status === destStatus) return
 
     const concluido_em = destStatus === 'concluido' ? new Date().toISOString() : null
 

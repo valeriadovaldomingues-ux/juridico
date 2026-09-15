@@ -133,44 +133,57 @@ export default function PersonalBoard({
 
     if (!over || active.id === over.id) return
 
-    const isColumn = String(over.id).startsWith('personal::')
+    const draggedTask = tasks.find(t => t.id === active.id)
+    if (!draggedTask) return
 
-    if (isColumn) {
-      // Drop em coluna: muda status
-      const destStatus = String(over.id).replace('personal::', '') as KanbanStatus
-      const task = tasks.find(t => t.id === active.id)
-      if (!task || task.status === destStatus) return
+    const overIdStr = String(over.id)
+    const isColumn  = overIdStr.startsWith('personal::')
 
+    // Coluna de destino: se soltou na área vazia da coluna, vem do id do
+    // droppable ("personal::status"); se soltou EM CIMA de outro card
+    // (o caso mais comum, já que a maioria das colunas não está vazia),
+    // a coluna de destino é a do card sob o qual foi solto — antes isso
+    // só era tratado como "reordenar", então soltar sobre um card de
+    // outra coluna simplesmente não fazia nada.
+    const targetTask = isColumn ? null : tasks.find(t => t.id === over.id)
+    const destStatus = isColumn
+      ? (overIdStr.replace('personal::', '') as KanbanStatus)
+      : targetTask?.status
+
+    if (!destStatus) return
+
+    if (destStatus !== draggedTask.status) {
+      // Mudou de coluna: atualiza status
       onTasksChange(tasks.map(t =>
-        t.id === task.id
+        t.id === draggedTask.id
           ? { ...t, status: destStatus, concluido_em: destStatus === 'concluido' ? new Date().toISOString() : null }
           : t,
       ))
 
       if (patchQueue.current) clearTimeout(patchQueue.current)
       patchQueue.current = setTimeout(() => {
-        fetch(`/api/kanban-tasks/${task.id}`, {
+        fetch(`/api/kanban-tasks/${draggedTask.id}`, {
           method:  'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ status: destStatus }),
         })
       }, 300)
-    } else {
-      // Drop em card: reordenar dentro da mesma coluna
-      const draggedTask = tasks.find(t => t.id === active.id)
-      const targetTask  = tasks.find(t => t.id === over.id)
-      if (!draggedTask || !targetTask || draggedTask.status !== targetTask.status) return
-
-      const statusTasks = tasks.filter(t => t.status === draggedTask.status)
-      const oldIdx      = statusTasks.findIndex(t => t.id === draggedTask.id)
-      const newIdx      = statusTasks.findIndex(t => t.id === targetTask.id)
-      const reordered   = arrayMove(statusTasks, oldIdx, newIdx).map((t, i) => ({ ...t, ordem: i }))
-
-      onTasksChange(tasks.map(t => {
-        const r = reordered.find(rt => rt.id === t.id)
-        return r ?? t
-      }))
+      return
     }
+
+    // Mesma coluna: reordenar (só se soltou em cima de um card — soltar no
+    // container vazio da própria coluna não muda nada)
+    if (!targetTask) return
+
+    const statusTasks = tasks.filter(t => t.status === draggedTask.status)
+    const oldIdx      = statusTasks.findIndex(t => t.id === draggedTask.id)
+    const newIdx      = statusTasks.findIndex(t => t.id === targetTask.id)
+    const reordered   = arrayMove(statusTasks, oldIdx, newIdx).map((t, i) => ({ ...t, ordem: i }))
+
+    onTasksChange(tasks.map(t => {
+      const r = reordered.find(rt => rt.id === t.id)
+      return r ?? t
+    }))
   }
 
   return (
