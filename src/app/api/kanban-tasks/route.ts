@@ -86,7 +86,10 @@ export async function POST(req: NextRequest) {
     .insert({
       titulo:           titulo.trim(),
       descricao:        descricao?.trim()        ?? null,
-      tipo:             tipo                     ?? null,
+      // coluna é NOT NULL (default 'tarefa') — cair pra null aqui violava a
+      // constraint sempre que o form de "Nova tarefa" não mandava tipo
+      // (é o caso de toda criação manual no Kanban), quebrando a criação.
+      tipo:             tipo                     ?? 'tarefa',
       status,
       prioridade,
       responsavel_id:   responsavel_id           ?? null,
