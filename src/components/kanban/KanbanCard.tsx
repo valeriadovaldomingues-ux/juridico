@@ -45,9 +45,11 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
         'group relative bg-[var(--color-surface)] rounded-xl border border-l-4 select-none',
-        'transition-shadow duration-150',
+        'transition-shadow duration-150 cursor-grab active:cursor-grabbing',
         isDragging
           ? 'opacity-40 shadow-xl border-[var(--color-border)]'
           : 'shadow-[0_8px_24px_rgba(13,34,53,0.055)] hover:shadow-[0_14px_34px_rgba(13,34,53,0.09)] border-[var(--color-border)]',
@@ -61,12 +63,11 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
               : '',
       )}
     >
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-      >
+      {/* Indicador visual de que o card inteiro é arrastável (o card todo já
+          carrega os listeners de drag — antes só essa faixinha de 20px
+          respondia, e ficava invisível até passar o mouse, então quase
+          ninguém conseguia arrastar clicando no corpo do card). */}
+      <div className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical size={13} className="text-[var(--color-ink-3)]" />
       </div>
 
