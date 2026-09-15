@@ -17,20 +17,20 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
   if (!processo) notFound()
 
   const [
-    { data: partes },
-    { data: prazos },
-    { data: agendaItems },
-    { data: andamentos },
-    { data: relatorios },
-    { data: documentos },
-    { data: auroraClienteHistorico },
+    { data: partes, error: partesError },
+    { data: prazos, error: prazosError },
+    { data: agendaItems, error: agendaItemsError },
+    { data: andamentos, error: andamentosError },
+    { data: relatorios, error: relatoriosError },
+    { data: documentos, error: documentosError },
+    { data: auroraClienteHistorico, error: auroraClienteHistoricoError },
   ] = await Promise.all([
     supabase.from('partes_processo').select('*').eq('processo_id', id),
     supabase.from('prazos').select('*').eq('processo_id', id).order('data_final', { ascending: true }),
     supabase.from('agenda_items').select('*').eq('processo_id', id).order('data_inicio', { ascending: true }),
     supabase
       .from('processo_andamentos')
-      .select('*, responsavel:profiles(id, nome, email, role), criado_por_profile:profiles!criado_por(id, nome, email, role)')
+      .select('*, responsavel:profiles!responsavel_id(id, nome, email, role), criado_por_profile:profiles!criado_por(id, nome, email, role)')
       .eq('processo_id', id)
       .order('data_andamento', { ascending: false }),
     supabase
@@ -66,6 +66,20 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
       .order('created_at', { ascending: false })
       .limit(20),
   ])
+
+  for (const [nome, erro] of [
+    ['partes_processo', partesError],
+    ['prazos', prazosError],
+    ['agenda_items', agendaItemsError],
+    ['processo_andamentos', andamentosError],
+    ['client_reports', relatoriosError],
+    ['documentos', documentosError],
+    ['portal_ai_conversations', auroraClienteHistoricoError],
+  ] as const) {
+    if (erro) {
+      console.error(`[processos/${id}] erro ao buscar ${nome}:`, erro)
+    }
+  }
 
   return (
     <div className="internal-page max-w-7xl">

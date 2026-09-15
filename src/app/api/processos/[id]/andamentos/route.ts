@@ -33,7 +33,7 @@ export async function GET(
     .from('processo_andamentos')
     .select(`
       *,
-      responsavel:profiles(id, nome, email, role),
+      responsavel:profiles!responsavel_id(id, nome, email, role),
       criado_por_profile:profiles!criado_por(id, nome, email, role)
     `)
     .eq('processo_id', id)
@@ -93,7 +93,7 @@ export async function POST(
     })
     .select(`
       *,
-      responsavel:profiles(id, nome, email, role),
+      responsavel:profiles!responsavel_id(id, nome, email, role),
       criado_por_profile:profiles!criado_por(id, nome, email, role)
     `)
     .single()
