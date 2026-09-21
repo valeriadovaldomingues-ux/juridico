@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import type { UserRole } from '@/types'
 
-const ALLOWED: UserRole[] = ['administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: UserRole[] = ['comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 // POST /api/comercial/atendimentos
 export async function POST(req: NextRequest) {
