@@ -125,8 +125,9 @@ const PERMISSIONS: PermMatrix = {
   },
 
   // ── Administrativo ───────────────────────────────────────────────────────────
-  // Acesso operacional completo. Sem publicacoes, financeiro, relatórios,
-  // monitoramento, ia-juridica, automações, integrações ou configurações.
+  // Acesso operacional completo. Financeiro (incluindo Cobranças) é
+  // exclusivo de sócio. Sem publicacoes, relatórios, monitoramento,
+  // ia-juridica, automações, integrações ou configurações.
   administrativo: {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
@@ -160,7 +161,8 @@ const PERMISSIONS: PermMatrix = {
 
   // ── Gerente ──────────────────────────────────────────────────────────────────
   // Visão operacional completa, incluindo automações, monitoramento e relatórios.
-  // Sem financeiro, comercial (CRM interno) ou configurações.
+  // Financeiro (incluindo Cobranças) é exclusivo de sócio.
+  // Sem comercial (CRM interno) ou configurações.
   gerente: {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
@@ -305,6 +307,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/kanban',
     '/publicacoes',
     '/financeiro',
+    '/financeiro/cobrancas',
     '/documentos',
     '/ferramentas-pdf',
     '/comercial',

@@ -797,7 +797,7 @@ describe('matriz proxy — /financeiro', () => {
     expectPassThru(res)
   })
 
-  it('gerente em /financeiro → redirect /dashboard (proxy RESTRICTED)', async () => {
+  it('gerente em /financeiro → redirect /dashboard', async () => {
     asUser('gerente')
     const res = await proxy(req('/financeiro'))
     expectRedirect(res, '/dashboard')
@@ -1292,7 +1292,7 @@ describe('nova matriz — /configuracoes/usuarios (socio exclusivo)', () => {
   })
 })
 
-describe('nova matriz — /financeiro (socio exclusivo)', () => {
+describe('nova matriz — /financeiro', () => {
   it('socio acessa /financeiro', async () => {
     asUser('socio')
     expectPassThru(await proxy(req('/financeiro')))
