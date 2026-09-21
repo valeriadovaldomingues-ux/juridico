@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { calculateSimpleSLA } from '@/lib/kanban-sla'
 
-const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 /** PATCH /api/kanban-tasks/:id — atualiza status, responsável, ordem ou campos do card */
 export async function PATCH(

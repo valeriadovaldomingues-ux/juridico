@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { calculateSimpleSLA } from '@/lib/kanban-sla'
 
-const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 // Teto de segurança: mesmo com o filtro de arquivadas, uma consulta sem
 // limite pode voltar a travar o board se o volume crescer sem controle.
