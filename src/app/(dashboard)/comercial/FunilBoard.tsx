@@ -83,8 +83,9 @@ function LeadCard({ lead, onOpen, paletteAccent }: { lead: Lead; onOpen: (l: Lea
       ref={setNodeRef}
       style={{ ...style, borderLeft: `3px solid ${paletteAccent}` }}
       {...attributes}
+      {...listeners}
       onClick={() => onOpen(lead)}
-      className="group bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.11)] cursor-pointer transition-all duration-150 overflow-hidden"
+      className="group bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.07)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.11)] cursor-grab active:cursor-grabbing transition-all duration-150 overflow-hidden"
     >
       {/* Drag handle strip */}
       <div className="px-3 pt-3 pb-2.5">
@@ -143,21 +144,21 @@ function LeadCard({ lead, onOpen, paletteAccent }: { lead: Lead; onOpen: (l: Lea
         </div>
       </div>
 
-      {/* Grip handle — visível apenas no hover */}
-      <button
-        {...listeners}
-        onClick={e => e.stopPropagation()}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-300 hover:text-zinc-500 cursor-grab transition-opacity"
-        style={{ position: 'absolute' }}
-        aria-label="Arrastar"
+      {/* Indicador visual de que o card inteiro é arrastável (os listeners
+          de drag já estão no card todo — antes só esse ícone de 10px,
+          invisível até o hover, respondia ao arraste). Puramente
+          decorativo agora: pointer-events-none, sem stealer o clique do
+          card (que abre o lead). */}
+      <div
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-300 transition-opacity pointer-events-none"
+        aria-hidden="true"
       >
-        {/* Grip dots */}
         <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
           <circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/>
           <circle cx="2.5" cy="7" r="1.5"/><circle cx="7.5" cy="7" r="1.5"/>
           <circle cx="2.5" cy="11.5" r="1.5"/><circle cx="7.5" cy="11.5" r="1.5"/>
         </svg>
-      </button>
+      </div>
     </div>
   )
 }
@@ -263,8 +264,16 @@ export default function FunilBoard({ leads, onLeadUpdate, onOpen }: Props) {
     setActiveId(null)
     if (!over) return
 
-    const destStatus = over.id as LeadStatus
-    if (!FUNIL_COLUNAS.find(c => c.status === destStatus)) return
+    // Soltar na área vazia da coluna: over.id é o próprio status da coluna.
+    // Soltar EM CIMA de outro lead (o caso mais comum — colunas raramente
+    // estão vazias): over.id é o id de outro lead, não um status, então
+    // resolvemos a coluna de destino a partir do status desse lead.
+    const overComoStatus = FUNIL_COLUNAS.find(c => c.status === over.id)
+    const destStatus = overComoStatus
+      ? (over.id as LeadStatus)
+      : leads.find(l => l.id === over.id)?.status
+
+    if (!destStatus) return
 
     const lead = leads.find(l => l.id === active.id)
     if (!lead || lead.status === destStatus) return
