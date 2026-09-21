@@ -181,9 +181,11 @@ export async function proxy(request: NextRequest) {
     // Vem antes das checagens abaixo porque cobre TODAS as rotas internas,
     // não só as listadas em RESTRICTED (ex.: /processos, /clientes, /agenda,
     // hoje sem gate nenhum) — ver KANBAN_ONLY_MODE acima.
+    // 'comercial' isento (hoje só a Luciana) — espelha KANBAN_ONLY_EXEMPT_ROLES
+    // em src/lib/permissions.ts.
     if (
       KANBAN_ONLY_MODE &&
-      role && role !== 'socio' && role !== 'cliente' &&
+      role && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
       isInternalPath && !pathname.startsWith('/kanban')
     ) {
       const url = request.nextUrl.clone()
