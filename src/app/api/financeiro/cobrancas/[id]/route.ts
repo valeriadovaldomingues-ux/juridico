@@ -6,7 +6,7 @@ import { COBRANCAS_SELECT, addCobrancaEvento, assertProcessoBelongsToCliente, lo
 import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
 import { deleteCobrancaAction } from '@/lib/cobrancas-workflow'
 
-const ALLOWED = ['administrativo', 'gerente', 'socio'] as const
+const ALLOWED = ['socio'] as const
 
 export async function GET(
   _req: NextRequest,

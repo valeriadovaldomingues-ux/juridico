@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
 import { createRecurringCobrancasAction } from '@/lib/cobrancas-workflow'
 
-const ALLOWED = ['administrativo', 'gerente', 'socio'] as const
+const ALLOWED = ['socio'] as const
 
 export async function POST(req: NextRequest) {
   const auth = await apiGuard([...ALLOWED])

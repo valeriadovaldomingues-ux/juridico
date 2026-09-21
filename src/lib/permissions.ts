@@ -125,8 +125,8 @@ const PERMISSIONS: PermMatrix = {
   },
 
   // ── Administrativo ───────────────────────────────────────────────────────────
-  // Acesso operacional completo. Financeiro restrito ao módulo de Cobranças
-  // (sem excluir fisicamente). Sem publicacoes, relatórios, monitoramento,
+  // Acesso operacional completo. Financeiro (incluindo Cobranças) é
+  // exclusivo de sócio. Sem publicacoes, relatórios, monitoramento,
   // ia-juridica, automações, integrações ou configurações.
   administrativo: {
     dashboard:    ['view'],
@@ -137,7 +137,6 @@ const PERMISSIONS: PermMatrix = {
     kanban:       ['view', 'create', 'edit', 'delete'],
     documentos:   ['view', 'create', 'edit', 'delete'],
     importacao:   ['view', 'create'],
-    financeiro:   ['view', 'create', 'edit'],
     comercial:    ['view'],
     ferramentasPdf: ['view'],
     tv: ['view'],
@@ -162,7 +161,7 @@ const PERMISSIONS: PermMatrix = {
 
   // ── Gerente ──────────────────────────────────────────────────────────────────
   // Visão operacional completa, incluindo automações, monitoramento e relatórios.
-  // Financeiro restrito ao módulo de Cobranças (sem excluir fisicamente).
+  // Financeiro (incluindo Cobranças) é exclusivo de sócio.
   // Sem comercial (CRM interno) ou configurações.
   gerente: {
     dashboard:    ['view'],
@@ -174,7 +173,6 @@ const PERMISSIONS: PermMatrix = {
     publicacoes:  ['view', 'create', 'edit'],
     documentos:   ['view', 'create', 'edit'],
     importacao:   ['view', 'create'],
-    financeiro:   ['view', 'create', 'edit'],
     relatorios:   ['view'],
     monitoramento: ['view'],
     ferramentasPdf: ['view'],
@@ -269,7 +267,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/ferramentas-pdf',
     '/importar',
     '/comercial',
-    '/financeiro/cobrancas',
     '/tv/painel-diario',
   ],
   advogado: [
@@ -294,7 +291,6 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
-    '/financeiro/cobrancas',
     '/relatorios',
     '/importar',
     '/automacoes',
@@ -344,7 +340,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
-  { prefix: '/financeiro',            roles: ['administrativo', 'gerente', 'socio'] },
+  { prefix: '/financeiro',            roles: ['socio'] },
 
   // ── Automação e integrações ───────────────────────────────────────────────────
   { prefix: '/automacoes',            roles: ['gerente', 'socio'] },

@@ -18,7 +18,7 @@ interface ProcessoOpcao {
 }
 
 export default async function CobrancasRoute() {
-  const { profile } = await requireRole(['administrativo', 'gerente', 'socio'])
+  const { profile } = await requireRole(['socio'])
   const supabase = await createClient()
 
   const [{ data: cobrancas }, { data: clientes }, { data: processos }] = await Promise.all([

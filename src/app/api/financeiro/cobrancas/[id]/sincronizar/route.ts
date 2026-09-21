@@ -5,7 +5,7 @@ import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
 import { syncInterCobrancaAction } from '@/lib/cobrancas-workflow'
 import { getInterCharge } from '@/lib/interClient'
 
-const ALLOWED = ['administrativo', 'gerente', 'socio'] as const
+const ALLOWED = ['socio'] as const
 
 export async function POST(
   req: NextRequest,

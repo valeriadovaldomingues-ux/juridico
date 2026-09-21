@@ -6,7 +6,7 @@ import { COBRANCAS_SELECT, statusForDueDate } from '@/lib/cobrancas'
 import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
 import { createSingleCobrancaAction } from '@/lib/cobrancas-workflow'
 
-const ALLOWED = ['administrativo', 'gerente', 'socio'] as const
+const ALLOWED = ['socio'] as const
 
 export async function GET(req: NextRequest) {
   const auth = await apiGuard([...ALLOWED])

@@ -446,10 +446,10 @@ describe('role insuficiente para rota restrita', () => {
     expectRedirect(res, '/dashboard')
   })
 
-  it('gerente em /financeiro → passa através', async () => {
+  it('gerente em /financeiro (requer socio) → redirect para /dashboard', async () => {
     asUser('gerente')
     const res = await proxy(req('/financeiro'))
-    expectPassThru(res)
+    expectRedirect(res, '/dashboard')
   })
 
   it('socio em /financeiro → passa através', async () => {
@@ -797,10 +797,10 @@ describe('matriz proxy — /financeiro', () => {
     expectPassThru(res)
   })
 
-  it('gerente acessa /financeiro', async () => {
+  it('gerente em /financeiro → redirect /dashboard', async () => {
     asUser('gerente')
     const res = await proxy(req('/financeiro'))
-    expectPassThru(res)
+    expectRedirect(res, '/dashboard')
   })
 
   it('advogado em /financeiro → redirect /dashboard', async () => {
@@ -1297,17 +1297,17 @@ describe('nova matriz — /financeiro', () => {
     asUser('socio')
     expectPassThru(await proxy(req('/financeiro')))
   })
-  it('gerente acessa /financeiro', async () => {
+  it('gerente em /financeiro → /dashboard', async () => {
     asUser('gerente')
-    expectPassThru(await proxy(req('/financeiro')))
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
   it('advogado em /financeiro → /dashboard', async () => {
     asUser('advogado')
     expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
-  it('administrativo acessa /financeiro', async () => {
+  it('administrativo em /financeiro → /dashboard', async () => {
     asUser('administrativo')
-    expectPassThru(await proxy(req('/financeiro')))
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
   it('comercial em /financeiro → /dashboard', async () => {
     asUser('comercial')
