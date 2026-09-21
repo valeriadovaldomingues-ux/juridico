@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import type { UserRole } from '@/types'
 
-const ALLOWED: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 /** GET /api/kanban-tasks/:id/historico — histórico de movimentação de um card */
 export async function GET(

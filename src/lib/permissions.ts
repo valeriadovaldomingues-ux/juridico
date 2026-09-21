@@ -11,7 +11,11 @@ export { KANBAN_ONLY_MODE }
 // proxy (middleware) respeitam esta flag. A matriz de permissões e
 // ALLOWED_ROUTES abaixo continuam intactas; é só desligar a flag pra
 // restaurar o acesso normal de cada perfil sem reescrever nada.
-const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente']
+//
+// 'comercial' também é isento — hoje é só a Luciana, que precisa do acesso
+// normal a Comercial/Agenda/Clientes/Kanban combinado, calibrado à parte.
+// Espelhado em src/proxy.ts e src/app/login/page.tsx.
+const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente', 'comercial']
 
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em

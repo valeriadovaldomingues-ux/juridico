@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { calculateSimpleSLA } from '@/lib/kanban-sla'
 
-const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: import('@/types').UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 // Teto de segurança: mesmo com o filtro de arquivadas, uma consulta sem
 // limite pode voltar a travar o board se o volume crescer sem controle.
@@ -86,7 +86,10 @@ export async function POST(req: NextRequest) {
     .insert({
       titulo:           titulo.trim(),
       descricao:        descricao?.trim()        ?? null,
-      tipo:             tipo                     ?? null,
+      // coluna é NOT NULL (default 'tarefa') — cair pra null aqui violava a
+      // constraint sempre que o form de "Nova tarefa" não mandava tipo
+      // (é o caso de toda criação manual no Kanban), quebrando a criação.
+      tipo:             tipo                     ?? 'tarefa',
       status,
       prioridade,
       responsavel_id:   responsavel_id           ?? null,

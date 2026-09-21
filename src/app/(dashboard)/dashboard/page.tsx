@@ -176,7 +176,7 @@ export default async function DashboardPage() {
     supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('ativo', true),
     supabase.from('processos').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase.from('processos').select('*', { count: 'exact', head: true }).eq('status', 'encerrado'),
-    supabase.from('processos').select('area_direito, status'),
+    supabase.rpc('processos_distribuicao_counts'),
     supabase.from('prazos').select('id, status, data_final').neq('status', 'cancelado').order('data_final', { ascending: true }),
     supabase.from('prazos')
       .select('id, titulo, tipo, prioridade, data_final, processo:processos(id, titulo)')
@@ -227,15 +227,18 @@ export default async function DashboardPage() {
   const leadsConvertidos  = leadsPorStatus['fechado'] ?? 0
   const ultimosLeads   = (ultimosLeadsResult as any)?.data ?? []
 
-  // Aggregations
-  const areaCounts = (processosDistribuicao ?? []).reduce((acc: Record<string, number>, p: any) => {
-    acc[p.area_direito] = (acc[p.area_direito] ?? 0) + 1; return acc
-  }, {})
-  const statusCounts = (processosDistribuicao ?? []).reduce((acc: Record<string, number>, p: any) => {
-    acc[p.status] = (acc[p.status] ?? 0) + 1; return acc
-  }, {})
-
-  const totalProcessos  = processosDistribuicao?.length ?? 0
+  // Aggregations — vem já agregado do banco (processos_distribuicao_counts),
+  // então não depende de trazer a tabela inteira (o Supabase corta em 1000
+  // linhas por padrão, o que fazia o card "Total de Processos" mostrar 1000
+  // em vez do total real).
+  const areaCounts: Record<string, number> = {}
+  const statusCounts: Record<string, number> = {}
+  let totalProcessos = 0
+  for (const row of (processosDistribuicao ?? []) as { area_direito: string; status: string; total: number }[]) {
+    areaCounts[row.area_direito] = (areaCounts[row.area_direito] ?? 0) + row.total
+    statusCounts[row.status] = (statusCounts[row.status] ?? 0) + row.total
+    totalProcessos += row.total
+  }
   const areaEntries     = Object.entries(areaCounts).sort((a, b) => b[1] - a[1])
   const statusEntries   = Object.entries(statusCounts).sort((a, b) => b[1] - a[1])
   const maxAreaCount    = areaEntries[0]?.[1]   ?? 1

@@ -95,7 +95,7 @@ beforeEach(() => {
 })
 
 describe('KANBAN_ONLY_MODE — perfis não-sócio restritos ao Kanban', () => {
-  it.each(['advogado', 'gerente', 'administrativo', 'comercial', 'estagiario'])(
+  it.each(['advogado', 'gerente', 'administrativo', 'estagiario'])(
     '%s em /processos → redirect para /kanban',
     async (role) => {
       asUser(role)
@@ -103,7 +103,7 @@ describe('KANBAN_ONLY_MODE — perfis não-sócio restritos ao Kanban', () => {
     },
   )
 
-  it.each(['advogado', 'gerente', 'administrativo', 'comercial', 'estagiario'])(
+  it.each(['advogado', 'gerente', 'administrativo', 'estagiario'])(
     '%s em /dashboard → redirect para /kanban',
     async (role) => {
       asUser(role)
@@ -127,6 +127,33 @@ describe('KANBAN_ONLY_MODE — perfis não-sócio restritos ao Kanban', () => {
   it('advogado em /kanban/algumacoisa → passa através (prefixo)', async () => {
     asUser('advogado')
     expectPassThru(await proxy(req('/kanban/algumacoisa')))
+  })
+})
+
+describe('KANBAN_ONLY_MODE — comercial isento (hoje só a Luciana)', () => {
+  it('comercial em /dashboard → passa através (não força /kanban)', async () => {
+    asUser('comercial')
+    expectPassThru(await proxy(req('/dashboard')))
+  })
+
+  it('comercial em /comercial → passa através normalmente', async () => {
+    asUser('comercial')
+    expectPassThru(await proxy(req('/comercial')))
+  })
+
+  it('comercial em /clientes → passa através normalmente', async () => {
+    asUser('comercial')
+    expectPassThru(await proxy(req('/clientes')))
+  })
+
+  it('comercial em /agenda → passa através normalmente', async () => {
+    asUser('comercial')
+    expectPassThru(await proxy(req('/agenda')))
+  })
+
+  it('comercial em /financeiro → redirect para /dashboard (RESTRICTED normal, não /kanban)', async () => {
+    asUser('comercial')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
 })
 
