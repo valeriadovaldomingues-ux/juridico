@@ -36,7 +36,20 @@ export interface Cobranca {
   created_by: string | null
   created_at: string
   updated_at: string
-  cliente?: { id: string; nome: string; cpf_cnpj?: string | null; email?: string | null } | null
+  cliente?: {
+    id: string
+    nome: string
+    cpf_cnpj?: string | null
+    email?: string | null
+    tipo_pessoa?: string | null
+    cep?: string | null
+    endereco?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    cidade?: string | null
+    uf?: string | null
+  } | null
   processo?: { id: string; numero_processo: string | null; titulo: string | null } | null
 }
 

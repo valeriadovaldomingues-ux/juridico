@@ -1,9 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CobrancaInput } from '../types/cobrancas'
 
+// A API de cobranças do Inter (boleto/Pix) exige o endereço completo do
+// pagador (cep, endereco, cidade, uf, tipoPessoa) — sem isso, a emissão
+// falha com "Dados inválidos". Esses campos já existem em `clientes`,
+// só precisavam ser selecionados aqui pra chegar até createInterCharge.
 export const COBRANCAS_SELECT = `
   *,
-  cliente:clientes(id, nome, cpf_cnpj, email),
+  cliente:clientes(id, nome, cpf_cnpj, email, tipo_pessoa, cep, endereco, numero, complemento, bairro, cidade, uf),
   processo:processos(id, numero_processo, titulo)
 `
 
@@ -19,7 +23,9 @@ export function normalizeCobrancaInput(body: Partial<CobrancaInput>) {
   const parcelaTotal = Number(body.parcela_total ?? 1)
 
   if (!body.cliente_id) throw new Error('Cliente obrigatorio.')
-  if (!Number.isFinite(valor) || valor <= 0) throw new Error('Valor invalido.')
+  // R$2,50 é o mínimo aceito pela API de boleto/Pix do Inter — abaixo
+  // disso a emissão falha lá na frente com um erro bem menos claro.
+  if (!Number.isFinite(valor) || valor < 2.5) throw new Error('Valor deve ser de pelo menos R$ 2,50.')
   if (!body.data_vencimento) throw new Error('Data de vencimento obrigatoria.')
   if (!body.descricao?.trim()) throw new Error('Descricao obrigatoria.')
   if (parcelaNumero < 1 || parcelaTotal < 1 || parcelaNumero > parcelaTotal) {
