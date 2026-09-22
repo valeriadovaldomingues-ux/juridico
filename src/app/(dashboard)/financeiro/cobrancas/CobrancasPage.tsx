@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
+import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/types'
 import type { Cobranca, CobrancaStatus } from '@/types/cobrancas'
 import PagadorInterModal from './PagadorInterModal'
@@ -27,6 +28,14 @@ interface ClienteOpcao {
   nome: string
   cpf_cnpj: string | null
   email: string | null
+  tipo_pessoa: string | null
+  cep: string | null
+  endereco: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
 }
 
 interface ProcessoOpcao {
@@ -52,6 +61,37 @@ type ChargeFormValues = {
   data_vencimento_inicial?: string
   quantidade_parcelas?: string
   dia_vencimento?: string
+}
+
+type PagadorFormValues = {
+  cpf_cnpj:    string
+  tipo_pessoa: string
+  cep:         string
+  endereco:    string
+  numero:      string
+  complemento: string
+  bairro:      string
+  cidade:      string
+  uf:          string
+}
+
+const emptyPagador: PagadorFormValues = {
+  cpf_cnpj: '', tipo_pessoa: '', cep: '', endereco: '',
+  numero: '', complemento: '', bairro: '', cidade: '', uf: '',
+}
+
+function pagadorFromCliente(cliente: ClienteOpcao | undefined): PagadorFormValues {
+  return {
+    cpf_cnpj:    cliente?.cpf_cnpj    ?? '',
+    tipo_pessoa: cliente?.tipo_pessoa ?? '',
+    cep:         cliente?.cep         ?? '',
+    endereco:    cliente?.endereco    ?? '',
+    numero:      cliente?.numero      ?? '',
+    complemento: cliente?.complemento ?? '',
+    bairro:      cliente?.bairro      ?? '',
+    cidade:      cliente?.cidade      ?? '',
+    uf:          cliente?.uf          ?? '',
+  }
 }
 
 const statusCfg: Record<CobrancaStatus, { label: string; chip: string; dot: string }> = {
@@ -89,6 +129,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [modal, setModal] = useState<'unica' | 'recorrente' | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [recorrente, setRecorrente] = useState(emptyRecorrente)
+  const [pagadorForm, setPagadorForm] = useState<PagadorFormValues>(emptyPagador)
   const [status, setStatus] = useState('')
   const [clienteId, setClienteId] = useState('')
   const [mes, setMes] = useState('')
@@ -129,9 +170,32 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     return !cid || p.cliente_id === cid
   })
 
+  /** Salva os dados do pagador (CPF/CNPJ, endereço...) direto no cadastro
+   *  do cliente, se algo foi preenchido na tela de nova cobrança. Não
+   *  bloqueia a criação da cobrança se falhar — a tela de emissão
+   *  (PagadorInterModal) continua como conferência final antes do Inter. */
+  async function salvarDadosPagador(clienteId: string) {
+    if (!clienteId) return
+    const preenchido = Object.values(pagadorForm).some(v => v.trim())
+    if (!preenchido) return
+    const supabase = createClient()
+    await supabase.from('clientes').update({
+      cpf_cnpj:    pagadorForm.cpf_cnpj.trim()    || null,
+      tipo_pessoa: pagadorForm.tipo_pessoa         || null,
+      cep:         pagadorForm.cep.trim()         || null,
+      endereco:    pagadorForm.endereco.trim()    || null,
+      numero:      pagadorForm.numero.trim()      || null,
+      complemento: pagadorForm.complemento.trim() || null,
+      bairro:      pagadorForm.bairro.trim()      || null,
+      cidade:      pagadorForm.cidade.trim()      || null,
+      uf:          pagadorForm.uf.trim().toUpperCase() || null,
+    }).eq('id', clienteId)
+  }
+
   async function createSingle() {
     setSaving(true)
     setError(null)
+    await salvarDadosPagador(form.cliente_id)
     const payload = {
       ...form,
       valor: Number(form.valor.replace(',', '.')),
@@ -151,12 +215,14 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setCobrancas(prev => [data, ...prev])
     setSelectedId(data.id)
     setForm(emptyForm)
+    setPagadorForm(emptyPagador)
     setModal(null)
   }
 
   async function createRecurring() {
     setSaving(true)
     setError(null)
+    await salvarDadosPagador(recorrente.cliente_id)
     const payload = {
       ...recorrente,
       valor: Number(recorrente.valor.replace(',', '.')),
@@ -178,6 +244,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setCobrancas(prev => [...data, ...prev])
     setSelectedId(data[0]?.id ?? selectedId)
     setRecorrente(emptyRecorrente)
+    setPagadorForm(emptyPagador)
     setModal(null)
   }
 
@@ -440,6 +507,8 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
                 clientes={clientes}
                 processos={processosDoCliente}
                 recorrente={modal === 'recorrente'}
+                pagadorForm={pagadorForm}
+                setPagadorForm={setPagadorForm}
               />
               <div className="rounded-lg bg-[#F7F9F9] border border-[#e8edf2] p-3 text-[12px] text-[#5b6776]">
                 Revise cliente, valor, vencimento e descricao antes de salvar. Nesta versao, a emissao no Inter e a confirmacao de boleto/Pix acontecem de forma ativa apos a criacao.
@@ -577,23 +646,84 @@ function ChargeForm({
   clientes,
   processos,
   recorrente,
+  pagadorForm,
+  setPagadorForm,
 }: {
   form: ChargeFormValues
   setForm: React.Dispatch<React.SetStateAction<ChargeFormValues>>
   clientes: ClienteOpcao[]
   processos: ProcessoOpcao[]
   recorrente: boolean
+  pagadorForm: PagadorFormValues
+  setPagadorForm: React.Dispatch<React.SetStateAction<PagadorFormValues>>
 }) {
   const set = (key: keyof ChargeFormValues, value: string) => setForm(prev => ({ ...prev, [key]: value }))
+  const setPagador = (key: keyof PagadorFormValues, value: string) => setPagadorForm(prev => ({ ...prev, [key]: value }))
+
+  function selecionarCliente(id: string) {
+    set('cliente_id', id)
+    setPagadorForm(pagadorFromCliente(clientes.find(c => c.id === id)))
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <label className="space-y-1 md:col-span-2">
         <span className="text-[12px] font-medium text-[#34495e]">Cliente</span>
-        <select value={form.cliente_id} onChange={e => set('cliente_id', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+        <select value={form.cliente_id} onChange={e => selecionarCliente(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
           <option value="">Selecione</option>
           {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </select>
       </label>
+
+      {form.cliente_id && (
+        <div className="md:col-span-2 rounded-lg border border-[#e8edf2] bg-[#F7F9F9] p-3 space-y-3">
+          <p className="text-[12px] font-semibold text-[#34495e]">
+            Dados do pagador <span className="font-normal text-[#7a8899]">— necessários pra emitir boleto/Pix no Inter; confira ou complete</span>
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">CPF/CNPJ</span>
+              <input value={pagadorForm.cpf_cnpj} onChange={e => setPagador('cpf_cnpj', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Tipo de pessoa</span>
+              <select value={pagadorForm.tipo_pessoa} onChange={e => setPagador('tipo_pessoa', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+                <option value="">— Selecione —</option>
+                <option value="fisica">Física</option>
+                <option value="juridica">Jurídica</option>
+              </select>
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">CEP</span>
+              <input value={pagadorForm.cep} onChange={e => setPagador('cep', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">UF</span>
+              <input value={pagadorForm.uf} onChange={e => setPagador('uf', e.target.value.toUpperCase())} maxLength={2} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div className="col-span-2">
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Endereço</span>
+              <input value={pagadorForm.endereco} onChange={e => setPagador('endereco', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Número</span>
+              <input value={pagadorForm.numero} onChange={e => setPagador('numero', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Complemento</span>
+              <input value={pagadorForm.complemento} onChange={e => setPagador('complemento', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Bairro</span>
+              <input value={pagadorForm.bairro} onChange={e => setPagador('bairro', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+            <div>
+              <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Cidade</span>
+              <input value={pagadorForm.cidade} onChange={e => setPagador('cidade', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            </div>
+          </div>
+        </div>
+      )}
       <label className="space-y-1 md:col-span-2">
         <span className="text-[12px] font-medium text-[#34495e]">Processo vinculado</span>
         <select value={form.processo_id} onChange={e => set('processo_id', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
