@@ -8,6 +8,14 @@ interface ClienteOpcao {
   nome: string
   cpf_cnpj: string | null
   email: string | null
+  tipo_pessoa: string | null
+  cep: string | null
+  endereco: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
 }
 
 interface ProcessoOpcao {
@@ -29,7 +37,7 @@ export default async function CobrancasRoute() {
       .limit(500),
     supabase
       .from('clientes')
-      .select('id, nome, cpf_cnpj, email')
+      .select('id, nome, cpf_cnpj, email, tipo_pessoa, cep, endereco, numero, complemento, bairro, cidade, uf')
       .eq('ativo', true)
       .order('nome'),
     supabase
