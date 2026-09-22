@@ -41,6 +41,8 @@ function makeCobranca(partial: Partial<Cobranca> = {}): Cobranca {
     payload_criacao: null,
     payload_ultimo_status: null,
     erro_emissao: null,
+    tipo_caso: null,
+    percentual_exito: null,
     idempotency_key: randomUUID(),
     created_by: 'user-1',
     created_at: NOW,
@@ -379,6 +381,137 @@ test('blocks duplicate recurring parcel generation', async () => {
 
   assert.equal(result.ok, false)
   assert.equal(result.status, 409)
+})
+
+test('recurring charge below the R$2,50 Inter minimum is rejected', async () => {
+  const store = createTestStore()
+
+  const result = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      valor: 2,
+      data_vencimento_inicial: '2099-01-10',
+      quantidade_parcelas: 2,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+    },
+  })
+
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 400)
+})
+
+test('recurring charge persists tipo_caso and percentual_exito for acao isolada', async () => {
+  const store = createTestStore()
+
+  const result = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      valor: 1200,
+      data_vencimento_inicial: '2099-01-10',
+      quantidade_parcelas: 2,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+      tipo_caso: 'isolado',
+      percentual_exito: '20%',
+    },
+  })
+
+  const charges = assertOk<Cobranca[]>(result)
+  assert.ok(charges.every(c => c.tipo_caso === 'isolado'))
+  assert.ok(charges.every(c => c.percentual_exito === '20%'))
+})
+
+test('advocacia de partido doubles the December installment when requested', async () => {
+  const store = createTestStore()
+
+  const result = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      valor: 1000,
+      data_vencimento_inicial: '2099-11-10',
+      quantidade_parcelas: 3,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+      tipo_caso: 'partido',
+      parcela_extra_dezembro: true,
+    },
+  })
+
+  const charges = assertOk<Cobranca[]>(result)
+  assert.deepEqual(charges.map(c => c.data_vencimento), ['2099-11-10', '2099-12-10', '2100-01-10'])
+  assert.deepEqual(charges.map(c => c.valor), [1000, 2000, 1000])
+  assert.ok(charges.every(c => c.tipo_caso === 'partido'))
+  assert.ok(charges.every(c => c.percentual_exito === null))
+})
+
+test('advocacia de partido accepts a custom value per installment', async () => {
+  const store = createTestStore()
+
+  const result = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      data_vencimento_inicial: '2099-01-10',
+      quantidade_parcelas: 3,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+      tipo_caso: 'partido',
+      valores_mensais: [1000, 1100, '1200'],
+    },
+  })
+
+  const charges = assertOk<Cobranca[]>(result)
+  assert.deepEqual(charges.map(c => c.valor), [1000, 1100, 1200])
+})
+
+test('custom installment values must match the parcel count and the R$2,50 minimum', async () => {
+  const store = createTestStore()
+
+  const wrongLength = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      data_vencimento_inicial: '2099-01-10',
+      quantidade_parcelas: 3,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+      tipo_caso: 'partido',
+      valores_mensais: [1000, 1100],
+    },
+  })
+  assert.equal(wrongLength.ok, false)
+  assert.equal(wrongLength.status, 400)
+
+  const belowMinimum = await createRecurringCobrancasAction({
+    role: 'gerente',
+    userId: 'user-1',
+    store: store.store,
+    body: {
+      cliente_id: 'cliente-1',
+      data_vencimento_inicial: '2099-01-10',
+      quantidade_parcelas: 2,
+      dia_vencimento: 10,
+      descricao: 'Honorarios recorrentes',
+      tipo_caso: 'partido',
+      valores_mensais: [1000, 1],
+    },
+  })
+  assert.equal(belowMinimum.ok, false)
+  assert.equal(belowMinimum.status, 400)
 })
 
 test('emits charge to Inter and finalizes after active consultation retries', async () => {
