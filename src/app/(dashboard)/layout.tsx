@@ -1,8 +1,7 @@
 import { createClient }               from '@/lib/supabase/server'
 import { createClient as svcClient }  from '@supabase/supabase-js'
 import { redirect }                   from 'next/navigation'
-import Sidebar                        from '@/components/layout/Sidebar'
-import Header                         from '@/components/layout/Header'
+import DashboardShell                 from '@/components/layout/DashboardShell'
 import type { Profile, UserRole }     from '@/types'
 
 // Service client singleton — contorna bug JWT do @supabase/ssr v0.9.0
@@ -41,14 +40,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isDev = process.env.NODE_ENV === 'development'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F3F1EE]">
-      <Sidebar role={role} devMode={isDev} />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6 internal-page">
-          {children}
-        </main>
-      </div>
-    </div>
+    <DashboardShell role={role} devMode={isDev} profile={profile}>
+      {children}
+    </DashboardShell>
   )
 }
