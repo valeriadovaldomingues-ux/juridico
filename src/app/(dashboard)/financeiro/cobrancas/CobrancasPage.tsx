@@ -20,6 +20,7 @@ import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import type { Cobranca, CobrancaStatus } from '@/types/cobrancas'
+import PagadorInterModal from './PagadorInterModal'
 
 interface ClienteOpcao {
   id: string
@@ -95,6 +96,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pagadorModalCobranca, setPagadorModalCobranca] = useState<Cobranca | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cobranca | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteReason, setDeleteReason] = useState('')
@@ -177,20 +179,6 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setSelectedId(data[0]?.id ?? selectedId)
     setRecorrente(emptyRecorrente)
     setModal(null)
-  }
-
-  async function emitirInter(cobranca: Cobranca) {
-    setBusyId(cobranca.id)
-    setError(null)
-    const res = await fetch(`/api/financeiro/cobrancas/${cobranca.id}/emitir-inter`, { method: 'POST' })
-    const data = await res.json().catch(() => ({}))
-    setBusyId(null)
-    if (!res.ok) {
-      setError(data.error ?? 'Erro ao emitir no Inter.')
-      if (data.id) setCobrancas(prev => prev.map(c => c.id === data.id ? data : c))
-      return
-    }
-    setCobrancas(prev => prev.map(c => c.id === data.id ? data : c))
   }
 
   async function sincronizar(cobranca: Cobranca) {
@@ -399,7 +387,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
               )}
 
               <div className="grid grid-cols-1 gap-2">
-                <button onClick={() => emitirInter(selected)} disabled={busyId === selected.id || selected.status === 'paga'} className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0F3D3E] text-white text-[13px] font-medium disabled:opacity-60">
+                <button onClick={() => setPagadorModalCobranca(selected)} disabled={busyId === selected.id || selected.status === 'paga'} className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0F3D3E] text-white text-[13px] font-medium disabled:opacity-60">
                   {busyId === selected.id ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
                   Gerar boleto/Pix no Inter
                 </button>
@@ -466,6 +454,14 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
             </div>
           </div>
         </div>
+      )}
+
+      {pagadorModalCobranca && (
+        <PagadorInterModal
+          cobranca={pagadorModalCobranca}
+          onClose={() => setPagadorModalCobranca(null)}
+          onEmitted={(updated) => setCobrancas(prev => prev.map(c => c.id === updated.id ? updated : c))}
+        />
       )}
 
       {deleteTarget && (
