@@ -452,6 +452,25 @@ export async function getInterChargePdf(interCobrancaId: string) {
   })
 }
 
+/** O endpoint de PDF do Inter devolve o arquivo como base64 dentro do JSON
+ *  (não uma URL) — daí extractPdfUrl (usada na criação/consulta normal da
+ *  cobrança) nunca encontrar nada de verdade. Essa função extrai
+ *  especificamente o base64 desse endpoint dedicado. */
+export function extractPdfBase64(payload: Json): string | null {
+  const nested = (payload.cobranca as Json | undefined) ?? payload
+  const boleto = (payload.boleto as Json | undefined) ?? (nested.boleto as Json | undefined)
+  return firstString(
+    payload.pdf,
+    payload.arquivoPdf,
+    payload.arquivo,
+    payload.base64,
+    boleto?.pdf,
+    nested.pdf,
+    nested.arquivoPdf,
+    nested.base64,
+  )
+}
+
 export async function cancelInterCharge(interCobrancaId: string, motivo = 'Cancelado pelo PEDV') {
   const token = await getInterAccessToken()
   const template = process.env.INTER_CANCEL_CHARGE_PATH ?? '/cobranca/v3/cobrancas/{id}/cancelar'

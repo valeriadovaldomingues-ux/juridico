@@ -429,9 +429,9 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
               <CopyBox label="Linha digitavel" value={selected.linha_digitavel} onCopy={copy} />
               <CopyBox label="Pix copia e cola" value={selected.pix_copia_cola} onCopy={copy} />
 
-              {selected.boleto_pdf_url && (
+              {selected.inter_cobranca_id && (
                 <a
-                  href={selected.boleto_pdf_url}
+                  href={`/api/financeiro/cobrancas/${selected.id}/pdf`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[#34495e] text-[13px] font-medium hover:bg-[#F7F9F9]"
