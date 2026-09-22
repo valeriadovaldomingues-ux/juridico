@@ -52,6 +52,8 @@ interface Props {
   role: UserRole
 }
 
+type TipoCaso = '' | 'isolado' | 'partido'
+
 type ChargeFormValues = {
   cliente_id: string
   processo_id: string
@@ -61,6 +63,12 @@ type ChargeFormValues = {
   data_vencimento_inicial?: string
   quantidade_parcelas?: string
   dia_vencimento?: string
+  // Só usados no modo "recorrente" (Gerar contrato):
+  tipo_caso?: TipoCaso
+  percentual_exito?: string
+  parcela_extra_dezembro?: boolean
+  valor_variavel?: boolean
+  valores_mensais?: string[]
 }
 
 type PagadorFormValues = {
@@ -113,7 +121,7 @@ const emptyForm = {
   descricao: '',
 }
 
-const emptyRecorrente = {
+const emptyRecorrente: ChargeFormValues = {
   cliente_id: '',
   processo_id: '',
   valor: '',
@@ -121,6 +129,11 @@ const emptyRecorrente = {
   quantidade_parcelas: '12',
   dia_vencimento: String(new Date().getDate()),
   descricao: '',
+  tipo_caso: '',
+  percentual_exito: '',
+  parcela_extra_dezembro: false,
+  valor_variavel: false,
+  valores_mensais: [],
 }
 
 export default function CobrancasPage({ initialCobrancas, clientes, processos, role }: Props) {
@@ -223,12 +236,21 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setSaving(true)
     setError(null)
     await salvarDadosPagador(recorrente.cliente_id)
+    const quantidade = Number(recorrente.quantidade_parcelas)
+    const valorVariavel = recorrente.tipo_caso === 'partido' && !!recorrente.valor_variavel
     const payload = {
       ...recorrente,
       valor: Number(recorrente.valor.replace(',', '.')),
-      quantidade_parcelas: Number(recorrente.quantidade_parcelas),
+      quantidade_parcelas: quantidade,
       dia_vencimento: Number(recorrente.dia_vencimento),
       processo_id: recorrente.processo_id || null,
+      tipo_caso: recorrente.tipo_caso || undefined,
+      percentual_exito: recorrente.tipo_caso === 'isolado' ? (recorrente.percentual_exito || undefined) : undefined,
+      parcela_extra_dezembro: recorrente.tipo_caso === 'partido' && !valorVariavel ? !!recorrente.parcela_extra_dezembro : undefined,
+      valores_mensais: valorVariavel
+        ? Array.from({ length: quantidade }, (_, i) => Number((recorrente.valores_mensais?.[i] ?? '0').replace(',', '.')))
+        : undefined,
+      valor_variavel: undefined,
     }
     const res = await fetch('/api/financeiro/cobrancas/gerar-recorrentes', {
       method: 'POST',
@@ -733,7 +755,16 @@ function ChargeForm({
       </label>
       <label className="space-y-1">
         <span className="text-[12px] font-medium text-[#34495e]">Valor (mínimo R$ 2,50)</span>
-        <input value={form.valor} onChange={e => set('valor', e.target.value)} placeholder="1500,00" className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+        <input
+          value={form.valor}
+          onChange={e => set('valor', e.target.value)}
+          placeholder="1500,00"
+          disabled={recorrente && form.tipo_caso === 'partido' && !!form.valor_variavel}
+          className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] disabled:bg-[#F7F9F9] disabled:text-[#9aa5b1]"
+        />
+        {recorrente && form.tipo_caso === 'partido' && form.valor_variavel && (
+          <span className="block text-[11px] text-[#7a8899]">Ignorado — use os valores por parcela abaixo.</span>
+        )}
       </label>
       <label className="space-y-1">
         <span className="text-[12px] font-medium text-[#34495e]">{recorrente ? 'Vencimento inicial' : 'Vencimento'}</span>
@@ -749,6 +780,81 @@ function ChargeForm({
             <span className="text-[12px] font-medium text-[#34495e]">Dia de vencimento</span>
             <input type="number" min="1" max="31" value={form.dia_vencimento} onChange={e => set('dia_vencimento', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
           </label>
+
+          <label className="space-y-1 md:col-span-2">
+            <span className="text-[12px] font-medium text-[#34495e]">Tipo de contrato</span>
+            <select
+              value={form.tipo_caso ?? ''}
+              onChange={e => setForm(prev => ({ ...prev, tipo_caso: e.target.value as TipoCaso }))}
+              className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white"
+            >
+              <option value="">— Selecione —</option>
+              <option value="isolado">Ação isolada</option>
+              <option value="partido">Advocacia de partido</option>
+            </select>
+          </label>
+
+          {form.tipo_caso === 'isolado' && (
+            <label className="space-y-1 md:col-span-2">
+              <span className="text-[12px] font-medium text-[#34495e]">% de êxito</span>
+              <input
+                value={form.percentual_exito ?? ''}
+                onChange={e => set('percentual_exito', e.target.value)}
+                placeholder="Ex.: 20%"
+                className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]"
+              />
+            </label>
+          )}
+
+          {form.tipo_caso === 'partido' && (
+            <div className="md:col-span-2 rounded-lg border border-[#e8edf2] bg-[#F7F9F9] p-3 space-y-3">
+              {!form.valor_variavel && (
+                <label className="flex items-center gap-2 text-[13px] text-[#34495e]">
+                  <input
+                    type="checkbox"
+                    checked={!!form.parcela_extra_dezembro}
+                    onChange={e => setForm(prev => ({ ...prev, parcela_extra_dezembro: e.target.checked }))}
+                  />
+                  Mensalidade em dobro em dezembro
+                </label>
+              )}
+
+              <label className="space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Valores ao longo do contrato</span>
+                <select
+                  value={form.valor_variavel ? 'variam' : 'fixo'}
+                  onChange={e => setForm(prev => ({ ...prev, valor_variavel: e.target.value === 'variam' }))}
+                  className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white"
+                >
+                  <option value="fixo">Valor fixo em todos os meses{form.parcela_extra_dezembro ? ' (exceto dezembro)' : ''}</option>
+                  <option value="variam">Valores variam ao longo do contrato</option>
+                </select>
+              </label>
+
+              {form.valor_variavel && (
+                <div>
+                  <p className="text-[11px] text-[#7a8899] mb-2">Informe o valor de cada uma das {form.quantidade_parcelas || 0} parcelas.</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from({ length: Number(form.quantidade_parcelas) || 0 }).map((_, i) => (
+                      <div key={i}>
+                        <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Parcela {i + 1}</span>
+                        <input
+                          value={form.valores_mensais?.[i] ?? ''}
+                          onChange={e => {
+                            const next = [...(form.valores_mensais ?? [])]
+                            next[i] = e.target.value
+                            setForm(prev => ({ ...prev, valores_mensais: next }))
+                          }}
+                          placeholder="0,00"
+                          className="w-full px-2 py-1.5 rounded-lg border border-[#d8dee8] text-[13px]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
       <label className="space-y-1 md:col-span-2">

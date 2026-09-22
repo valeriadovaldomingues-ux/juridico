@@ -218,6 +218,8 @@ function buildInsertRow(base: {
   parcela_total: number
   created_by: string
   status: CobrancaInsertRow['status']
+  tipo_caso?: CobrancaInsertRow['tipo_caso']
+  percentual_exito?: string | null
 }): CobrancaInsertRow {
   return {
     cliente_id: base.cliente_id,
@@ -229,6 +231,8 @@ function buildInsertRow(base: {
     parcela_numero: base.parcela_numero,
     parcela_total: base.parcela_total,
     status: base.status,
+    tipo_caso: base.tipo_caso ?? null,
+    percentual_exito: base.percentual_exito ?? null,
     inter_status: null,
     inter_cobranca_id: null,
     nosso_numero: null,
@@ -314,6 +318,16 @@ export async function createRecurringCobrancasAction(input: {
     quantidade_parcelas?: number | string
     dia_vencimento?: number | string
     descricao?: string
+    // Advocacia de partido vs. ação isolada (ver src/lib/documentos/schema.ts
+    // pro mesmo conceito no gerador de documentos).
+    tipo_caso?: string
+    percentual_exito?: string
+    // Só relevante pra 'partido': mensalidade em dobro em dezembro.
+    parcela_extra_dezembro?: boolean
+    // Alternativa a `valor` fixo: um valor por parcela (mesmo tamanho de
+    // quantidade_parcelas), pra contratos de partido cujo valor muda ao
+    // longo da vigência.
+    valores_mensais?: Array<number | string>
   }
 }): Promise<ActionResult<Cobranca[]>> {
   if (!canAccess(input.role)) return fail('Sem permissao para esta operacao.', 403)
@@ -326,12 +340,31 @@ export async function createRecurringCobrancasAction(input: {
   const diaVencimento = Number(input.body.dia_vencimento)
   const processoId = input.body.processo_id?.trim() || null
   const contratoId = input.body.contrato_id?.trim() || null
+  const tipoCaso = input.body.tipo_caso === 'isolado' || input.body.tipo_caso === 'partido' ? input.body.tipo_caso : null
+  const percentualExito = input.body.percentual_exito?.trim() || null
+  const parcelaExtraDezembro = tipoCaso === 'partido' && input.body.parcela_extra_dezembro === true
+  const valoresMensaisRaw = tipoCaso === 'partido' ? input.body.valores_mensais : undefined
 
   if (!clienteId || !descricao || !vencimentoInicial) {
     return fail('Cliente, vencimento inicial e descricao sao obrigatorios.', 400)
   }
-  if (!Number.isFinite(valor) || valor <= 0 || !Number.isInteger(quantidade) || quantidade < 1 || quantidade > 120 || !Number.isInteger(diaVencimento) || diaVencimento < 1 || diaVencimento > 31) {
-    return fail('Valor, parcelas ou dia de vencimento invalidos.', 400)
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 120 || !Number.isInteger(diaVencimento) || diaVencimento < 1 || diaVencimento > 31) {
+    return fail('Parcelas ou dia de vencimento invalidos.', 400)
+  }
+
+  // R$2,50 é o mínimo aceito pela API de boleto/Pix do Inter — mesma regra
+  // de normalizeCobrancaInput, aplicada aqui pros valores mensais/fixo.
+  let valoresMensais: number[] | null = null
+  if (valoresMensaisRaw) {
+    if (!Array.isArray(valoresMensaisRaw) || valoresMensaisRaw.length !== quantidade) {
+      return fail('Informe um valor para cada uma das parcelas.', 400)
+    }
+    valoresMensais = valoresMensaisRaw.map(Number)
+    if (valoresMensais.some(v => !Number.isFinite(v) || v < 2.5)) {
+      return fail('Cada parcela deve ter valor de pelo menos R$ 2,50.', 400)
+    }
+  } else if (!Number.isFinite(valor) || valor < 2.5) {
+    return fail('Valor deve ser de pelo menos R$ 2,50.', 400)
   }
 
   const relationError = await validateProcessLink(input.store, clienteId, processoId)
@@ -342,10 +375,14 @@ export async function createRecurringCobrancasAction(input: {
 
   for (let index = 0; index < quantidade; index += 1) {
     const dataVencimento = addMonthsKeepingDay(vencimentoInicial, index, diaVencimento)
+    const ehDezembro = dataVencimento.slice(5, 7) === '12'
+    const valorParcela = valoresMensais
+      ? valoresMensais[index]
+      : (parcelaExtraDezembro && ehDezembro ? valor * 2 : valor)
     const baseKey: CobrancaDuplicateKey = {
       cliente_id: clienteId,
       processo_id: processoId,
-      valor,
+      valor: valorParcela,
       data_vencimento: dataVencimento,
       parcela_numero: index + 1,
       parcela_total: quantidade,
@@ -362,13 +399,15 @@ export async function createRecurringCobrancasAction(input: {
       cliente_id: clienteId,
       contrato_id: contratoId,
       processo_id: processoId,
-      valor,
+      valor: valorParcela,
       data_vencimento: dataVencimento,
       descricao,
       parcela_numero: index + 1,
       parcela_total: quantidade,
       created_by: input.userId,
       status: statusForDueDate('pendente', dataVencimento) as CobrancaInsertRow['status'],
+      tipo_caso: tipoCaso,
+      percentual_exito: tipoCaso === 'isolado' ? percentualExito : null,
     }))
   }
 
