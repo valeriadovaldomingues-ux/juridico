@@ -606,7 +606,7 @@ function ChargeForm({
         </select>
       </label>
       <label className="space-y-1">
-        <span className="text-[12px] font-medium text-[#34495e]">Valor</span>
+        <span className="text-[12px] font-medium text-[#34495e]">Valor (mínimo R$ 2,50)</span>
         <input value={form.valor} onChange={e => set('valor', e.target.value)} placeholder="1500,00" className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
       </label>
       <label className="space-y-1">

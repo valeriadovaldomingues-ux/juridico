@@ -24,6 +24,14 @@ interface InterChargeInput {
     nome?: string | null
     cpf_cnpj?: string | null
     email?: string | null
+    tipo_pessoa?: string | null
+    cep?: string | null
+    endereco?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    cidade?: string | null
+    uf?: string | null
   } | null
 }
 
@@ -304,19 +312,42 @@ export async function getInterAccessToken(): Promise<string> {
   return data.access_token
 }
 
+/** A API de boleto/Pix do Inter rejeita a cobrança inteira ("Dados
+ *  inválidos") se o pagador não tiver cpfCnpj, tipoPessoa, endereco,
+ *  cidade, uf e cep — não bastam nome/e-mail. Deriva tipoPessoa do
+ *  próprio cadastro do cliente, com fallback pelo tamanho do documento
+ *  (11 dígitos = CPF/pessoa física, 14 = CNPJ/pessoa jurídica). */
+function inferTipoPessoa(tipoPessoaCliente: string | null | undefined, cpfCnpj: string): 'FISICA' | 'JURIDICA' {
+  const normalizado = (tipoPessoaCliente ?? '').trim().toLowerCase()
+  if (normalizado === 'juridica' || normalizado === 'pj') return 'JURIDICA'
+  if (normalizado === 'fisica'   || normalizado === 'pf') return 'FISICA'
+  return cpfCnpj.length > 11 ? 'JURIDICA' : 'FISICA'
+}
+
 export async function createInterCharge(input: InterChargeInput) {
   const token = await getInterAccessToken()
   const endpoint = process.env.INTER_CREATE_CHARGE_PATH ?? '/cobranca/v3/cobrancas'
-  const cpfCnpj = input.cliente?.cpf_cnpj?.replace(/\D/g, '')
+  const cliente = input.cliente
+  const cpfCnpj = cliente?.cpf_cnpj?.replace(/\D/g, '') ?? ''
+  const cep = cliente?.cep?.replace(/\D/g, '')
+
   const payload: Json = {
     seuNumero: input.id.slice(0, 15),
     valorNominal: Number(input.valor.toFixed(2)),
     dataVencimento: input.data_vencimento,
     numDiasAgenda: Number(process.env.INTER_NUM_DIAS_AGENDA ?? 60),
     pagador: {
-      nome: input.cliente?.nome ?? 'Cliente PEDV',
+      nome: cliente?.nome ?? 'Cliente PEDV',
       cpfCnpj: cpfCnpj || undefined,
-      email: input.cliente?.email || undefined,
+      tipoPessoa: cpfCnpj ? inferTipoPessoa(cliente?.tipo_pessoa, cpfCnpj) : undefined,
+      email: cliente?.email || undefined,
+      cep: cep || undefined,
+      endereco: cliente?.endereco || undefined,
+      numero: cliente?.numero || undefined,
+      complemento: cliente?.complemento || undefined,
+      bairro: cliente?.bairro || undefined,
+      cidade: cliente?.cidade || undefined,
+      uf: cliente?.uf || undefined,
     },
     mensagem: {
       linha1: input.descricao.slice(0, 78),
