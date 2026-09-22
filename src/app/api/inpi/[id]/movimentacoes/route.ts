@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
+import { notificarMovimentacaoInpiNoTrello } from '@/lib/inpi/trello-notify'
 import type { UserRole } from '@/types'
 
 const EDIT_ALLOWED: UserRole[] = ['administrativo', 'advogado', 'gerente', 'socio']
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: processo, error: errProcesso } = await supabase
     .from('inpi_processos')
-    .select('id')
+    .select('id, numero_processo, titulo, cliente:clientes!cliente_id(nome)')
     .eq('id', id)
     .single()
   if (errProcesso || !processo) return NextResponse.json({ error: 'Processo INPI não encontrado.' }, { status: 404 })
@@ -51,6 +52,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (pareceConcessao) {
     await supabase.from('inpi_processos').update({ status: 'concedido', data_concessao: rpi_data }).eq('id', id)
   }
+
+  // Best-effort (a função em si nunca lança) — aguarda pra não perder a
+  // chamada quando a função serverless congela logo após a resposta.
+  await notificarMovimentacaoInpiNoTrello(supabase, {
+    processo: { numero_processo: processo.numero_processo, titulo: processo.titulo, cliente: processo.cliente },
+    movimentacao: { descricao: data.descricao, rpi_data: data.rpi_data, codigo_despacho: data.codigo_despacho, origem: 'manual' },
+  })
 
   return NextResponse.json(data, { status: 201 })
 }

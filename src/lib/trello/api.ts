@@ -2,11 +2,11 @@ import type { TrelloBoard, TrelloCard, TrelloList, TrelloMember } from '@/types/
 
 const BASE = 'https://api.trello.com/1'
 
-async function trelloFetch<T>(endpoint: string, key: string, token: string): Promise<T> {
+async function trelloFetch<T>(endpoint: string, key: string, token: string, method: 'GET' | 'POST' = 'GET'): Promise<T> {
   const sep = endpoint.includes('?') ? '&' : '?'
   const url = `${BASE}${endpoint}${sep}key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`
 
-  const res = await fetch(url, { next: { revalidate: 0 } })
+  const res = await fetch(url, { method, next: { revalidate: 0 } })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`Trello ${res.status}: ${body || res.statusText}`)
@@ -34,4 +34,19 @@ export function fetchOpenCards(boardId: string, key: string, token: string): Pro
     `/boards/${boardId}/cards?filter=open&fields=id,name,desc,idList,idMembers,due,labels,closed`,
     key, token,
   )
+}
+
+/** Cria um card novo numa lista. idMembers vira o parâmetro `idMembers`
+ *  aceito pelo POST /1/cards do Trello (mesma chamada já atribui os
+ *  membros — o Trello notifica cada um por e-mail sozinho). */
+export function createCard(
+  listId: string,
+  card: { name: string; desc?: string; idMembers?: string[] },
+  key: string,
+  token: string,
+): Promise<TrelloCard> {
+  const params = new URLSearchParams({ idList: listId, name: card.name })
+  if (card.desc) params.set('desc', card.desc)
+  if (card.idMembers?.length) params.set('idMembers', card.idMembers.join(','))
+  return trelloFetch<TrelloCard>(`/cards?${params.toString()}`, key, token, 'POST')
 }

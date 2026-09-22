@@ -15,6 +15,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { descobrirUltimaEdicaoDisponivel, processarEdicaoRpiMarcas } from './rpi-client'
+import { notificarMovimentacaoInpiNoTrello } from './trello-notify'
 
 const MAX_EDICOES_POR_EXECUCAO = 6
 
@@ -28,15 +29,22 @@ export interface ResultadoSincronizacaoRpi {
 export async function sincronizarRpi(supabase: SupabaseClient): Promise<ResultadoSincronizacaoRpi> {
   const { data: processos, error: errProcessos } = await supabase
     .from('inpi_processos')
-    .select('id, numero_processo')
+    .select('id, numero_processo, titulo, cliente:clientes!cliente_id(nome)')
     .eq('tipo', 'marca')
 
   if (errProcessos) {
     return { ok: false, edicoesProcessadas: 0, movimentacoesInseridas: 0, erro: errProcessos.message }
   }
 
-  const numeroParaId = new Map((processos ?? []).map(p => [p.numero_processo as string, p.id as string]))
-  const numerosRastreados = new Set(numeroParaId.keys())
+  type ProcessoRastreado = { id: string; titulo: string; cliente: { nome: string } | { nome: string }[] | null }
+  const numeroParaProcesso = new Map<string, ProcessoRastreado>(
+    (processos ?? []).map(p => [p.numero_processo as string, {
+      id: p.id as string,
+      titulo: p.titulo as string,
+      cliente: p.cliente as ProcessoRastreado['cliente'],
+    }]),
+  )
+  const numerosRastreados = new Set(numeroParaProcesso.keys())
 
   const { data: state } = await supabase
     .from('inpi_sync_state')
@@ -65,12 +73,12 @@ export async function sincronizarRpi(supabase: SupabaseClient): Promise<Resultad
         const edicao = await processarEdicaoRpiMarcas(numeroAtual, numerosRastreados)
 
         for (const [numeroProcesso, despachos] of edicao.movimentacoesPorProcesso) {
-          const processoId = numeroParaId.get(numeroProcesso)
-          if (!processoId) continue
+          const processo = numeroParaProcesso.get(numeroProcesso)
+          if (!processo) continue
 
           for (const d of despachos) {
             const { error: insErr } = await supabase.from('inpi_movimentacoes').insert({
-              inpi_processo_id: processoId,
+              inpi_processo_id: processo.id,
               rpi_numero: edicao.rpiNumero,
               rpi_data: edicao.rpiData,
               codigo_despacho: d.codigo,
@@ -83,10 +91,15 @@ export async function sincronizarRpi(supabase: SupabaseClient): Promise<Resultad
               if (d.codigo === 'IPAS158') {
                 await supabase.from('inpi_processos')
                   .update({ status: 'concedido', data_concessao: edicao.rpiData })
-                  .eq('id', processoId)
+                  .eq('id', processo.id)
               } else if (d.codigo === 'IPAS161') {
-                await supabase.from('inpi_processos').update({ status: 'extinto' }).eq('id', processoId)
+                await supabase.from('inpi_processos').update({ status: 'extinto' }).eq('id', processo.id)
               }
+
+              await notificarMovimentacaoInpiNoTrello(supabase, {
+                processo: { numero_processo: numeroProcesso, titulo: processo.titulo, cliente: processo.cliente },
+                movimentacao: { descricao: d.descricao, rpi_data: edicao.rpiData, codigo_despacho: d.codigo, origem: 'rpi_auto' },
+              })
             } else if (insErr.code !== '23505') {
               // 23505 = já processamos essa movimentação antes (dedup pelo índice
               // único parcial) — qualquer outro erro interrompe a execução.
