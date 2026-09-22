@@ -17,6 +17,12 @@ export { KANBAN_ONLY_MODE }
 // Espelhado em src/proxy.ts e src/app/login/page.tsx.
 const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente', 'comercial']
 
+// Isenção por ROTA (diferente da isenção por papel acima): liberada pra
+// TODOS os papéis mesmo com o modo restrito ligado, sem abrir o resto do
+// sistema. Hoje só o INPI, a pedido da Valéria em 22/09/2026 — "todo mundo
+// vê INPI". Espelhado em src/proxy.ts.
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi']
+
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em
 // seletores de criação/edição de usuários do escritório.
@@ -385,7 +391,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
  */
 export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
   if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) {
-    return pathname.startsWith('/kanban')
+    return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
   }
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
     if (pathname.startsWith(prefix)) return roles.includes(role)
@@ -399,7 +405,7 @@ export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
  * indexar ALLOWED_ROUTES diretamente.
  */
 export function getAllowedRoutes(role: UserRole): string[] {
-  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban']
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES]
   return ALLOWED_ROUTES[role]
 }
 
