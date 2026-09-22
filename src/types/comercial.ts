@@ -6,6 +6,8 @@ export type LeadStatus =
   | 'aguardando_retorno'
   | 'reuniao_agendada'
   | 'proposta_enviada'
+  | 'diagnostico'
+  | 'diagnostico_finalizado'
   | 'negociacao'
   | 'fechado'
   | 'perdido'
@@ -95,6 +97,8 @@ export const FUNIL_COLUNAS: FunilColuna[] = [
   { status: 'aguardando_retorno',  label: 'Aguardando Retorno',  cor: 'bg-amber-50',   corBorda: 'border-amber-300',  terminal: false },
   { status: 'reuniao_agendada',    label: 'Reunião Agendada',    cor: 'bg-purple-50',  corBorda: 'border-purple-300', terminal: false },
   { status: 'proposta_enviada',    label: 'Proposta Enviada',    cor: 'bg-indigo-50',  corBorda: 'border-indigo-300', terminal: false },
+  { status: 'diagnostico',              label: 'Diagnóstico',              cor: 'bg-cyan-50',    corBorda: 'border-cyan-300',   terminal: false },
+  { status: 'diagnostico_finalizado',   label: 'Diagnóstico Finalizado',   cor: 'bg-teal-50',    corBorda: 'border-teal-300',   terminal: false },
   { status: 'negociacao',          label: 'Em Negociação',       cor: 'bg-orange-50',  corBorda: 'border-orange-300', terminal: false },
   { status: 'fechado',             label: 'Fechado',             cor: 'bg-emerald-50', corBorda: 'border-emerald-400', terminal: true },
   { status: 'perdido',             label: 'Perdido',             cor: 'bg-red-50',     corBorda: 'border-red-300',    terminal: true },
@@ -106,6 +110,8 @@ export const STATUS_LABEL: Record<LeadStatus, string> = {
   aguardando_retorno: 'Aguardando Retorno',
   reuniao_agendada:   'Reunião Agendada',
   proposta_enviada:   'Proposta Enviada',
+  diagnostico:            'Diagnóstico',
+  diagnostico_finalizado: 'Diagnóstico Finalizado',
   negociacao:         'Em Negociação',
   fechado:            'Fechado',
   perdido:            'Perdido',

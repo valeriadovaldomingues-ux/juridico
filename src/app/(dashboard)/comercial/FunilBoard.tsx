@@ -18,6 +18,8 @@ const STAGE_PALETTE: Record<LeadStatus, { accent: string; bg: string; headerBg: 
   aguardando_retorno: { accent: '#f59e0b', bg: '#fffbeb', headerBg: '#fef3c7', text: '#b45309' },
   reuniao_agendada:   { accent: '#8b5cf6', bg: '#f5f3ff', headerBg: '#ede9fe', text: '#6d28d9' },
   proposta_enviada:   { accent: '#6366f1', bg: '#eef2ff', headerBg: '#e0e7ff', text: '#4338ca' },
+  diagnostico:              { accent: '#06b6d4', bg: '#ecfeff', headerBg: '#cffafe', text: '#0e7490' },
+  diagnostico_finalizado:   { accent: '#0d9488', bg: '#f0fdfa', headerBg: '#ccfbf1', text: '#0f766e' },
   negociacao:         { accent: '#f97316', bg: '#fff7ed', headerBg: '#ffedd5', text: '#c2410c' },
   fechado:            { accent: '#059669', bg: '#ecfdf5', headerBg: '#d1fae5', text: '#047857' },
   perdido:            { accent: '#ef4444', bg: '#fef2f2', headerBg: '#fee2e2', text: '#b91c1c' },

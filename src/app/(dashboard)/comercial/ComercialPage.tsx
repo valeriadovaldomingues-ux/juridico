@@ -127,6 +127,8 @@ const STATUS_PILL: Record<LeadStatus, string> = {
   aguardando_retorno: 'bg-amber-50 text-amber-700',
   reuniao_agendada:   'bg-violet-50 text-violet-700',
   proposta_enviada:   'bg-indigo-50 text-indigo-700',
+  diagnostico:              'bg-cyan-50 text-cyan-700',
+  diagnostico_finalizado:   'bg-teal-50 text-teal-700',
   negociacao:         'bg-orange-50 text-orange-700',
   fechado:            'bg-emerald-50 text-emerald-700',
   perdido:            'bg-red-50 text-red-600',
