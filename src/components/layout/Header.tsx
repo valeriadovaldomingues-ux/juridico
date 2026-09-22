@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, ChevronRight } from 'lucide-react'
+import { LogOut, ChevronRight, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/permissions'
 import type { Profile } from '@/types'
@@ -48,7 +48,7 @@ function getInitials(nome: string): string {
   return nome.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('')
 }
 
-export default function Header({ profile }: { profile: Profile | null }) {
+export default function Header({ profile, onMenuClick }: { profile: Profile | null; onMenuClick?: () => void }) {
   const router   = useRouter()
   const pathname = usePathname()
   const crumbs   = getBreadcrumb(pathname)
@@ -66,8 +66,16 @@ export default function Header({ profile }: { profile: Profile | null }) {
   return (
     <header className="h-[52px] bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center justify-between px-5 flex-shrink-0 shadow-[0_1px_0_rgba(20,32,51,0.02)]">
 
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5">
+      {/* Breadcrumb (+ botão de menu, só no celular) */}
+      <div className="flex items-center gap-2.5">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden w-8 h-8 -ml-1.5 flex items-center justify-center rounded-lg text-[var(--color-ink-2)] hover:bg-[var(--color-surface-warm)] transition-colors flex-shrink-0"
+          aria-label="Abrir menu"
+        >
+          <Menu size={18} />
+        </button>
+        <div className="flex items-center gap-1.5 min-w-0">
         {crumbs.map((crumb, i) => (
           <span key={i} className="flex items-center gap-1.5">
             {i > 0 && <ChevronRight size={12} className="text-[var(--color-border-mid)]" />}
@@ -80,6 +88,7 @@ export default function Header({ profile }: { profile: Profile | null }) {
             </span>
           </span>
         ))}
+        </div>
       </div>
 
       {/* Perfil e ações */}

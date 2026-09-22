@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
-  Mail, Scissors, Tv2,
+  Mail, Scissors, Tv2, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -76,7 +76,16 @@ const ALL_NAV_GROUPS: NavGroup[] = [
   },
 ]
 
-export default function Sidebar({ role, devMode = false }: { role: UserRole; devMode?: boolean }) {
+interface SidebarProps {
+  role:     UserRole
+  devMode?: boolean
+  /** Estado do menu-gaveta no celular. No desktop (md:) a Sidebar ignora
+   *  esses dois e fica sempre visível. */
+  isOpen?:  boolean
+  onClose?: () => void
+}
+
+export default function Sidebar({ role, devMode = false, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const allowed  = getAllowedRoutes(role)
 
@@ -97,11 +106,27 @@ export default function Sidebar({ role, devMode = false }: { role: UserRole; dev
   }
 
   return (
-    <aside className="w-[216px] flex-shrink-0 flex flex-col bg-[var(--color-sidebar)] select-none shadow-[8px_0_30px_rgba(8,23,36,0.08)]">
+    <aside
+      className={cn(
+        'w-[216px] flex-shrink-0 flex flex-col bg-[var(--color-sidebar)] select-none shadow-[8px_0_30px_rgba(8,23,36,0.08)]',
+        // Celular: gaveta fixa que desliza da esquerda. Desktop (md:): volta
+        // a fazer parte do layout normal, sempre visível, ignorando isOpen.
+        'fixed inset-y-0 left-0 z-40 transform transition-transform duration-200 ease-out',
+        'md:relative md:inset-auto md:z-auto md:translate-x-0',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+      )}
+    >
 
-      {/* Logo */}
-      <div className="px-4 pt-5 pb-4">
+      {/* Logo + fechar (fechar só aparece no celular) */}
+      <div className="px-4 pt-5 pb-4 flex items-center justify-between">
         <Logo variant="sidebar" />
+        <button
+          onClick={onClose}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Fechar menu"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {/* Divider dourado sutil */}
