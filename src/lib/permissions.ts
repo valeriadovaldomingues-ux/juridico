@@ -57,6 +57,7 @@ export type Module =
   | 'clientes'
   | 'processos'
   | 'partes'        // partes do processo (vinculado ao módulo processos)
+  | 'inpi'          // marcas/patentes junto ao INPI — separado de processos judiciais
   | 'agenda'
   | 'kanban'
   | 'publicacoes'
@@ -104,6 +105,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:   ['view'],
     clientes:    ['view'],
     processos:   ['view'],
+    inpi:        ['view'],
     partes:      ['view'],
     agenda:      ['view', 'create', 'edit'],
     kanban:      ['view', 'create', 'edit'],
@@ -132,6 +134,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -149,6 +152,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -167,6 +171,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -186,6 +191,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit', 'delete'],
     processos:    ['view', 'create', 'edit', 'delete'],
+    inpi:         ['view', 'create', 'edit', 'delete'],
     partes:       ['view', 'create', 'edit', 'delete'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -243,6 +249,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -261,6 +268,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/documentos',
@@ -273,6 +281,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -286,6 +295,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -303,6 +313,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
