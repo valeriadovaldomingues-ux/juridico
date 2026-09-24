@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
-  Mail, Scissors, Tv2, X,
+  Mail, Scissors, Tv2, X, Stamp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -23,6 +23,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard },
       { href: '/clientes',   label: 'Clientes',  icon: Users },
       { href: '/processos',  label: 'Processos', icon: Scale },
+      { href: '/inpi',       label: 'INPI',      icon: Stamp },
       { href: '/agenda',     label: 'Agenda',    icon: CalendarDays },
     ],
   },

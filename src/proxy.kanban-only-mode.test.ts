@@ -157,6 +157,26 @@ describe('KANBAN_ONLY_MODE — comercial isento (hoje só a Luciana)', () => {
   })
 })
 
+describe('KANBAN_ONLY_MODE — /inpi isento por ROTA (todo mundo vê, 22/09/2026)', () => {
+  it.each(['advogado', 'gerente', 'administrativo', 'estagiario'])(
+    '%s em /inpi → passa através (isenção por rota, não é sócio)',
+    async (role) => {
+      asUser(role)
+      expectPassThru(await proxy(req('/inpi')))
+    },
+  )
+
+  it('advogado em /inpi/algumacoisa → passa através (prefixo)', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/inpi/algumacoisa')))
+  })
+
+  it('advogado em /processos continua redirecionando pro /kanban (isenção é só do /inpi)', async () => {
+    asUser('advogado')
+    expectRedirect(await proxy(req('/processos')), '/kanban')
+  })
+})
+
 describe('KANBAN_ONLY_MODE — sócio e cliente não são afetados', () => {
   it('socio em /processos → passa através normalmente', async () => {
     asUser('socio')

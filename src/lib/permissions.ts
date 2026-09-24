@@ -17,6 +17,12 @@ export { KANBAN_ONLY_MODE }
 // Espelhado em src/proxy.ts e src/app/login/page.tsx.
 const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente', 'comercial']
 
+// Isenção por ROTA (diferente da isenção por papel acima): liberada pra
+// TODOS os papéis mesmo com o modo restrito ligado, sem abrir o resto do
+// sistema. Hoje só o INPI, a pedido da Valéria em 22/09/2026 — "todo mundo
+// vê INPI". Espelhado em src/proxy.ts.
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi']
+
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em
 // seletores de criação/edição de usuários do escritório.
@@ -57,6 +63,7 @@ export type Module =
   | 'clientes'
   | 'processos'
   | 'partes'        // partes do processo (vinculado ao módulo processos)
+  | 'inpi'          // marcas/patentes junto ao INPI — separado de processos judiciais
   | 'agenda'
   | 'kanban'
   | 'publicacoes'
@@ -104,6 +111,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:   ['view'],
     clientes:    ['view'],
     processos:   ['view'],
+    inpi:        ['view'],
     partes:      ['view'],
     agenda:      ['view', 'create', 'edit'],
     kanban:      ['view', 'create', 'edit'],
@@ -132,6 +140,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -149,6 +158,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -167,6 +177,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit'],
     processos:    ['view', 'create', 'edit'],
+    inpi:         ['view', 'create', 'edit'],
     partes:       ['view', 'create', 'edit'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -186,6 +197,7 @@ const PERMISSIONS: PermMatrix = {
     dashboard:    ['view'],
     clientes:     ['view', 'create', 'edit', 'delete'],
     processos:    ['view', 'create', 'edit', 'delete'],
+    inpi:         ['view', 'create', 'edit', 'delete'],
     partes:       ['view', 'create', 'edit', 'delete'],
     agenda:       ['view', 'create', 'edit', 'delete'],
     kanban:       ['view', 'create', 'edit', 'delete'],
@@ -243,6 +255,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -261,6 +274,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/documentos',
@@ -273,6 +287,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -286,6 +301,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -303,6 +319,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/processos',
+    '/inpi',
     '/agenda',
     '/kanban',
     '/publicacoes',
@@ -374,7 +391,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
  */
 export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
   if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) {
-    return pathname.startsWith('/kanban')
+    return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
   }
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
     if (pathname.startsWith(prefix)) return roles.includes(role)
@@ -388,7 +405,7 @@ export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
  * indexar ALLOWED_ROUTES diretamente.
  */
 export function getAllowedRoutes(role: UserRole): string[] {
-  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban']
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES]
   return ALLOWED_ROUTES[role]
 }
 

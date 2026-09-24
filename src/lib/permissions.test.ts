@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALLOWED_ROUTES, can } from './permissions'
+import { ALLOWED_ROUTES, can, getAllowedRoutes } from './permissions'
 import { canAnalyzeWithAurora } from './central-arquivos'
 
 describe('Ferramentas PDF permissioning', () => {
@@ -43,5 +43,36 @@ describe('Central de Arquivos permissioning', () => {
     expect(canAnalyzeWithAurora('socio')).toBe(true)
     expect(canAnalyzeWithAurora('gerente')).toBe(false)
     expect(canAnalyzeWithAurora('cliente')).toBe(false)
+  })
+})
+
+describe('INPI permissioning', () => {
+  it('exibe INPI pra todos os perfis internos, mesmo os do módulo processos', () => {
+    expect(ALLOWED_ROUTES.socio).toContain('/inpi')
+    expect(ALLOWED_ROUTES.gerente).toContain('/inpi')
+    expect(ALLOWED_ROUTES.advogado).toContain('/inpi')
+    expect(ALLOWED_ROUTES.administrativo).toContain('/inpi')
+    expect(ALLOWED_ROUTES.estagiario).toContain('/inpi')
+    expect(ALLOWED_ROUTES.cliente).not.toContain('/inpi')
+  })
+
+  it('marca o módulo como visível pra todos internos, sem criar/editar pro estagiário', () => {
+    expect(can('advogado', 'inpi', 'view')).toBe(true)
+    expect(can('advogado', 'inpi', 'create')).toBe(true)
+    expect(can('estagiario', 'inpi', 'view')).toBe(true)
+    expect(can('estagiario', 'inpi', 'create')).toBe(false)
+    expect(can('cliente', 'inpi', 'view')).toBe(false)
+  })
+
+  it('KANBAN_ONLY_MODE: /inpi é isento por rota — todo mundo vê mesmo restrito ao Kanban', () => {
+    // Isenção por ROTA (KANBAN_ONLY_EXTRA_ROUTES), diferente da isenção por
+    // papel (KANBAN_ONLY_EXEMPT_ROLES) — pedido da Valéria em 22/09/2026.
+    expect(getAllowedRoutes('advogado')).toContain('/inpi')
+    expect(getAllowedRoutes('gerente')).toContain('/inpi')
+    expect(getAllowedRoutes('administrativo')).toContain('/inpi')
+    expect(getAllowedRoutes('estagiario')).toContain('/inpi')
+    // Mas o resto continua restrito ao Kanban — a isenção não abriu geral.
+    expect(getAllowedRoutes('advogado')).not.toContain('/processos')
+    expect(getAllowedRoutes('advogado')).toContain('/kanban')
   })
 })

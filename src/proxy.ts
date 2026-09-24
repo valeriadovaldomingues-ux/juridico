@@ -58,11 +58,16 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
 ]
 
 const INTERNAL_PREFIXES = [
-  '/dashboard', '/clientes', '/processos', '/agenda', '/kanban',
+  '/dashboard', '/clientes', '/processos', '/inpi', '/agenda', '/kanban',
   '/publicacoes', '/documentos', '/financeiro', '/comercial', '/relatorios',
   '/importar', '/automacoes', '/monitoramento', '/ia-juridica',
   '/integracoes', '/configuracoes', '/tv',
 ]
+
+// Isenção por ROTA do modo restrito (diferente da isenção por papel logo
+// abaixo) — liberada pra todos os papéis mesmo com KANBAN_ONLY_MODE ligado.
+// Espelha KANBAN_ONLY_EXTRA_ROUTES em src/lib/permissions.ts.
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi']
 
 function routeAllowed(role: string, pathname: string): boolean {
   for (const r of RESTRICTED) {
@@ -186,7 +191,8 @@ export async function proxy(request: NextRequest) {
     if (
       KANBAN_ONLY_MODE &&
       role && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
-      isInternalPath && !pathname.startsWith('/kanban')
+      isInternalPath && !pathname.startsWith('/kanban') &&
+      !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
