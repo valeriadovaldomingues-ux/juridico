@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
+import { TIPO_TEM_PRAZO } from '@/app/(dashboard)/agenda/agenda-types'
 import type { UserRole } from '@/types'
 
 const ALLOWED: UserRole[] = ['advogado', 'gerente', 'socio']
@@ -138,7 +139,7 @@ export async function GET(req: NextRequest) {
     const { data: prazos } = await supabase
       .from('agenda_items')
       .select('id, titulo, tipo, status, data_inicio, prazo_final, prioridade, processo_id')
-      .in('tipo', ['prazo', 'audiencia'])
+      .in('tipo', Array.from(TIPO_TEM_PRAZO))
       .in('processo_id', processoIds)
       .order('prazo_final', { ascending: true })
     prazosData = (prazos ?? []) as RelatorioClienteData['prazos']

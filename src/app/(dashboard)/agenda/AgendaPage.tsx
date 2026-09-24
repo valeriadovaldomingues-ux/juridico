@@ -9,7 +9,7 @@ import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchProcessoOptions } from '@/lib/search/remote'
 import {
   AgendaItem, AgendaForm, ViewMode,
-  toLocalISODate, emptyForm, getWeekStart,
+  toLocalISODate, emptyForm, getWeekStart, TIPO_OPCOES, TIPO_CFG,
 } from './agenda-types'
 import AgendaModal from './AgendaModal'
 import ListView  from './views/ListView'
@@ -152,6 +152,7 @@ export default function AgendaPage({
       prioridade:  item.prioridade,
       processo_id: item.processo_id ?? '',
       cliente_id:  item.cliente_id ?? '',
+      parte_contraria: item.opposing_party_name ?? '',
       responsavel: item.responsavel ?? '',
     })
     setModalOpen(true)
@@ -174,6 +175,7 @@ export default function AgendaPage({
       prioridade:  form.prioridade,
       processo_id: form.processo_id || null,
       cliente_id:  form.cliente_id  || null,
+      opposing_party_name: form.parte_contraria || null,
       responsavel: form.responsavel || null,
     }
 
@@ -314,6 +316,7 @@ export default function AgendaPage({
       prioridade:  original.prioridade,
       processo_id: original.processo_id  ?? null,
       cliente_id:  original.cliente_id   ?? null,
+      opposing_party_name: original.opposing_party_name ?? null,
       responsavel: original.responsavel  ?? null,
     }
 
@@ -515,10 +518,11 @@ export default function AgendaPage({
             className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] text-[var(--color-ink-2)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 transition-colors"
           >
             <option value="todos">Todos os tipos</option>
-            <option value="tarefa">Tarefa</option>
             <option value="evento">Evento</option>
             <option value="prazo">Prazo</option>
-            <option value="audiencia">Audiência</option>
+            {TIPO_OPCOES.map(k => (
+              <option key={k} value={k}>{TIPO_CFG[k].label}</option>
+            ))}
           </select>
 
           {/* Status */}

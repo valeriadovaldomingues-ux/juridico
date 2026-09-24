@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import {
   Scale, Clock, Newspaper, Users, DollarSign, BarChart3,
   Download, AlertCircle, CheckCircle2, TrendingUp, TrendingDown, ArrowUpRight,
-  Building2,
+  Building2, Clock3,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
@@ -12,6 +12,7 @@ import type { UserRole } from '@/types'
 import ClienteBuscaInput from '@/components/relatorios/ClienteBuscaInput'
 import RelatorioCliente from '@/components/relatorios/RelatorioCliente'
 import type { ClienteBuscaResult } from '@/app/api/clientes/busca/route'
+import { calculateEffectiveMinutes, formatCurrencyBRL, formatDurationMinutes } from '@/lib/agenda-time-entries'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,20 @@ interface Lancamento {
   vencimento:string
 }
 
+interface TimeEntry {
+  id:                        string
+  cliente_id:                string | null
+  processo_id:               string | null
+  inicio_em:                 string
+  duracao_calculada_minutos: number | null
+  duracao_manual_minutos:    number | null
+  usa_duracao_manual:        boolean
+  cobravel:                  boolean
+  valor_total:               number | null
+  status_cobranca:           string
+  cliente:                   { nome: string } | null
+}
+
 interface Props {
   processos:   Processo[]
   agendaItems: AgendaItem[]
@@ -71,6 +86,7 @@ interface Props {
   kanbanTasks: KanbanTask[]
   profiles:    ProfileItem[]
   lancamentos: Lancamento[] | null
+  timeEntries: TimeEntry[] | null
   role:        UserRole
 }
 
@@ -111,7 +127,7 @@ function downloadCSV(dados: any[], campos: { key: string; label: string }[], nom
   document.body.removeChild(a); URL.revokeObjectURL(url)
 }
 
-type Aba = 'processos' | 'prazos' | 'publicacoes' | 'produtividade' | 'financeiro' | 'cliente'
+type Aba = 'processos' | 'prazos' | 'publicacoes' | 'produtividade' | 'financeiro' | 'cliente' | 'horas'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType; roles?: UserRole[] }[] = [
   { id: 'processos',    label: 'Processos',    icon: Scale      },
@@ -120,11 +136,12 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType; roles?: UserRole[
   { id: 'produtividade',label: 'Produtividade',icon: Users      },
   { id: 'financeiro',   label: 'Financeiro',   icon: DollarSign, roles: ['gerente', 'socio'] },
   { id: 'cliente',      label: 'Por Cliente',  icon: Building2  },
+  { id: 'horas',        label: 'Horas',        icon: Clock3, roles: ['gerente', 'socio'] },
 ]
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function RelatoriosPage({ processos, agendaItems, publicacoes, kanbanTasks, profiles, lancamentos, role }: Props) {
+export default function RelatoriosPage({ processos, agendaItems, publicacoes, kanbanTasks, profiles, lancamentos, timeEntries, role }: Props) {
   const hoje = new Date().toISOString().slice(0, 10)
   const verFinanceiro = ['gerente', 'socio'].includes(role)
 
@@ -132,6 +149,9 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
   const [periodo,        setPeriodo]        = useState('todos')
   const [areaFiltro,     setAreaFiltro]     = useState('')
   const [responsavelFiltro, setResponsavelFiltro] = useState('')
+
+  // ── Aba Horas ───────────────────────────────────────────────────────────────
+  const [clienteHorasBusca, setClienteHorasBusca] = useState('')
 
   // ── Aba Cliente ─────────────────────────────────────────────────────────────
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteBuscaResult | null>(null)
@@ -208,6 +228,41 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
     const vencidos = lancamentos.filter(l => l.status === 'vencido').reduce((s, l) => s + l.valor, 0)
     return { recebido, despPago, aReceber, vencidos, saldo: recebido - despPago }
   }, [lancamentos])
+
+  // ── Horas por cliente ────────────────────────────────────────────────────────
+
+  const horasFiltradas = useMemo(() => {
+    if (!timeEntries) return []
+    return timeEntries.filter(e => {
+      if (!filtrarPorPeriodo(e.inicio_em, periodo)) return false
+      if (clienteHorasBusca && !(e.cliente?.nome ?? 'Sem cliente').toLowerCase().includes(clienteHorasBusca.toLowerCase())) return false
+      return true
+    })
+  }, [timeEntries, periodo, clienteHorasBusca])
+
+  const porClienteHoras = useMemo(() => {
+    const acc: Record<string, {
+      nome: string; lancamentos: number; minutosTotal: number; minutosCobravel: number; valorTotal: number
+    }> = {}
+    horasFiltradas.forEach(e => {
+      const key = e.cliente_id ?? '__sem_cliente__'
+      const nome = e.cliente?.nome ?? 'Sem cliente'
+      const minutos = calculateEffectiveMinutes(e) ?? 0
+      const cobravel = e.cobravel && e.status_cobranca !== 'nao_faturavel'
+      if (!acc[key]) acc[key] = { nome, lancamentos: 0, minutosTotal: 0, minutosCobravel: 0, valorTotal: 0 }
+      acc[key].lancamentos += 1
+      acc[key].minutosTotal += minutos
+      if (cobravel) acc[key].minutosCobravel += minutos
+      acc[key].valorTotal += e.valor_total ?? 0
+    })
+    return Object.values(acc).sort((a, b) => b.minutosTotal - a.minutosTotal)
+  }, [horasFiltradas])
+
+  const horasResumo = useMemo(() => ({
+    minutosTotal:    horasFiltradas.reduce((s, e) => s + (calculateEffectiveMinutes(e) ?? 0), 0),
+    minutosCobravel: horasFiltradas.reduce((s, e) => s + (e.cobravel && e.status_cobranca !== 'nao_faturavel' ? (calculateEffectiveMinutes(e) ?? 0) : 0), 0),
+    valorTotal:      horasFiltradas.reduce((s, e) => s + (e.valor_total ?? 0), 0),
+  }), [horasFiltradas])
 
   const maxStatus = Math.max(...porStatus.map(([, n]) => n), 1)
   const maxArea   = Math.max(...porArea.map(([, n]) => n), 1)
@@ -715,6 +770,83 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
               <Link href="/financeiro" className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#1D5F60] border border-[#145A5B]/30 rounded-xl hover:bg-[#E8F2F2] transition-colors">
                 Ver módulo financeiro completo <ArrowUpRight size={14} />
               </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ── Aba Horas (gerente/socio) ────────────────────────────────────── */}
+        {aba === 'horas' && verFinanceiro && (
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-[#f9fafb] rounded-xl p-4 border border-[#f3f4f6] text-center">
+                <p className="text-[24px] font-bold tabular-nums text-[#0f1923]">{formatDurationMinutes(horasResumo.minutosTotal)}</p>
+                <p className="text-[11px] text-[#9ca3af] mt-1">Horas no período</p>
+              </div>
+              <div className="bg-[#f9fafb] rounded-xl p-4 border border-[#f3f4f6] text-center">
+                <p className="text-[24px] font-bold tabular-nums text-emerald-600">{formatDurationMinutes(horasResumo.minutosCobravel)}</p>
+                <p className="text-[11px] text-[#9ca3af] mt-1">Horas cobráveis</p>
+              </div>
+              <div className="bg-[#f9fafb] rounded-xl p-4 border border-[#f3f4f6] text-center">
+                <p className="text-[24px] font-bold tabular-nums text-[#0f1923]">{formatCurrencyBRL(horasResumo.valorTotal)}</p>
+                <p className="text-[11px] text-[#9ca3af] mt-1">Valor estimado</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <input
+                value={clienteHorasBusca}
+                onChange={e => setClienteHorasBusca(e.target.value)}
+                placeholder="Buscar por cliente…"
+                className="w-64 px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]"
+              />
+              <button
+                onClick={() => downloadCSV(
+                  porClienteHoras.map(c => ({
+                    cliente: c.nome,
+                    lancamentos: c.lancamentos,
+                    horas_totais: formatDurationMinutes(c.minutosTotal),
+                    horas_cobraveis: formatDurationMinutes(c.minutosCobravel),
+                    valor_estimado: c.valorTotal.toFixed(2),
+                  })),
+                  [
+                    { key: 'cliente',         label: 'Cliente'         },
+                    { key: 'lancamentos',     label: 'Lançamentos'     },
+                    { key: 'horas_totais',    label: 'Horas Totais'    },
+                    { key: 'horas_cobraveis', label: 'Horas Cobráveis' },
+                    { key: 'valor_estimado',  label: 'Valor Estimado'  },
+                  ],
+                  'horas-por-cliente.csv',
+                )}
+                className="flex items-center gap-1.5 text-[11px] text-[#9ca3af] hover:text-[#374151] transition-colors"
+              >
+                <Download size={12} /> Exportar CSV
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-[#f3f4f6] overflow-hidden">
+              <table className="w-full">
+                <thead><tr className="bg-[#f9fafb] border-b border-[#f3f4f6]">
+                  <th className="text-left text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Cliente</th>
+                  <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Lançamentos</th>
+                  <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Horas Totais</th>
+                  <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Horas Cobráveis</th>
+                  <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Valor Estimado</th>
+                </tr></thead>
+                <tbody>
+                  {porClienteHoras.map(c => (
+                    <tr key={c.nome} className="border-b border-[#f9fafb] last:border-0">
+                      <td className="px-4 py-3 text-[13px] text-[#374151]">{c.nome}</td>
+                      <td className="px-4 py-3 text-right text-[13px] text-[#374151] tabular-nums">{c.lancamentos}</td>
+                      <td className="px-4 py-3 text-right text-[13px] font-bold text-[#0f1923] tabular-nums">{formatDurationMinutes(c.minutosTotal)}</td>
+                      <td className="px-4 py-3 text-right text-[13px] text-emerald-600 tabular-nums">{formatDurationMinutes(c.minutosCobravel)}</td>
+                      <td className="px-4 py-3 text-right text-[13px] font-semibold text-[#0f1923] tabular-nums">{formatCurrencyBRL(c.valorTotal)}</td>
+                    </tr>
+                  ))}
+                  {porClienteHoras.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-[12px] text-[#9ca3af]">Sem lançamentos de horas no período</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
