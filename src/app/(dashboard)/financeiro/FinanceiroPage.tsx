@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import {
   Plus, TrendingUp, TrendingDown, Clock, AlertCircle,
   Pencil, Trash2, CheckCircle2, ChevronDown, Search,
-  Wallet, BarChart3, ListFilter,
+  Wallet, BarChart3, ListFilter, Banknote,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
@@ -12,6 +12,7 @@ import type { UserRole } from '@/types'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
+import SalariosView, { type Funcionario } from './SalariosView'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -36,8 +37,9 @@ interface Lancamento {
 }
 
 interface Props {
-  lancamentos: Lancamento[]
-  role:        UserRole
+  lancamentos:  Lancamento[]
+  funcionarios: Funcionario[]
+  role:         UserRole
 }
 
 // ─── Config de status ────────────────────────────────────────────────────────
@@ -49,12 +51,13 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'receber' | 'pagar' | 'relatorios'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'receber' | 'pagar' | 'relatorios'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'lancamentos', label: 'Lançamentos',  icon: ListFilter  },
   { id: 'receitas',    label: 'Receitas',     icon: TrendingUp  },
   { id: 'despesas',    label: 'Despesas',     icon: TrendingDown },
+  { id: 'salarios',    label: 'Salários',     icon: Banknote    },
   { id: 'receber',     label: 'A Receber',    icon: Clock       },
   { id: 'pagar',       label: 'A Pagar',      icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',   icon: BarChart3   },
@@ -95,7 +98,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, role }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const [aba,         setAba]         = useState<Aba>('lancamentos')
   const [modalAberto, setModalAberto] = useState(false)
@@ -346,6 +349,8 @@ export default function FinanceiroPage({ lancamentos: inicial, role }: Props) {
         {/* Conteúdo das abas */}
         {aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
+        ) : aba === 'salarios' ? (
+          <SalariosView funcionarios={funcionarios} />
         ) : (
           <>
             {/* Filtros */}
