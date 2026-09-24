@@ -27,6 +27,11 @@ export default async function FinanceiroRoute() {
       .select('profile_id, valor_salario, dia_pagamento, forma_pagamento, observacoes, updated_at'),
   ])
 
+  const { data: gradePagamento } = await supabase
+    .from('grade_pagamento_clientes')
+    .select('id, cliente_id, valor_mensal, forma_pagamento, status, observacoes, updated_at, cliente:clientes(id, nome)')
+    .order('cliente(nome)')
+
   const salarioPorProfile = new Map((salarios ?? []).map(s => [s.profile_id, s]))
   const funcionarios = (profilesFuncionarios ?? []).map(p => {
     const s = salarioPorProfile.get(p.id)
@@ -48,6 +53,7 @@ export default async function FinanceiroRoute() {
       <FinanceiroPage
         lancamentos={(lancamentos ?? []) as any}
         funcionarios={funcionarios as any}
+        gradePagamento={(gradePagamento ?? []) as any}
         role={profile.role}
       />
     </div>

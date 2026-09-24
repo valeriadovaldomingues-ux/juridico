@@ -13,6 +13,7 @@ import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
 import SalariosView, { type Funcionario } from './SalariosView'
+import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ interface Lancamento {
 interface Props {
   lancamentos:  Lancamento[]
   funcionarios: Funcionario[]
+  gradePagamento: ItemGrade[]
   role:         UserRole
 }
 
@@ -51,13 +53,14 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'receber' | 'pagar' | 'relatorios'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'lancamentos', label: 'Lançamentos',  icon: ListFilter  },
   { id: 'receitas',    label: 'Receitas',     icon: TrendingUp  },
   { id: 'despesas',    label: 'Despesas',     icon: TrendingDown },
   { id: 'salarios',    label: 'Salários',     icon: Banknote    },
+  { id: 'grade',       label: 'Grade de Pagamento', icon: Wallet },
   { id: 'receber',     label: 'A Receber',    icon: Clock       },
   { id: 'pagar',       label: 'A Pagar',      icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',   icon: BarChart3   },
@@ -98,7 +101,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, gradePagamento, role }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const [aba,         setAba]         = useState<Aba>('lancamentos')
   const [modalAberto, setModalAberto] = useState(false)
@@ -351,6 +354,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, rol
           <RelatoriosView metricas={metricas} />
         ) : aba === 'salarios' ? (
           <SalariosView funcionarios={funcionarios} />
+        ) : aba === 'grade' ? (
+          <GradePagamentoView itens={gradePagamento} podeExcluir={podeExcluir} />
         ) : (
           <>
             {/* Filtros */}
