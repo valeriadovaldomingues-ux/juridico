@@ -7,7 +7,7 @@ import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions, fetchProcessoOptions, fetchUsuarioOptions } from '@/lib/search/remote'
 import {
   AgendaForm, AgendaItem, Processo, Cliente,
-  TIPO_CFG, PRIO_CFG, Tipo, Status, Prioridade,
+  TIPO_CFG, PRIO_CFG, TIPO_OPCOES, TIPO_TEM_PRAZO, Status, Prioridade,
 } from './agenda-types'
 import type { AgendaTimeEntry, UserRole } from '@/types'
 import AgendaTimeEntriesSection from './components/AgendaTimeEntriesSection'
@@ -52,8 +52,7 @@ export default function AgendaModal({
 
   const set = (patch: Partial<AgendaForm>) => setForm({ ...form, ...patch })
 
-  const hasTime  = form.tipo === 'evento' || form.tipo === 'audiencia'
-  const hasPrazo = form.tipo === 'prazo'  || form.tipo === 'audiencia'
+  const hasPrazo = TIPO_TEM_PRAZO.has(form.tipo)
 
   const inputCls = [
     'w-full rounded-xl border border-[var(--color-border)] bg-white',
@@ -91,6 +90,33 @@ export default function AgendaModal({
         </div>
 
         <div className="px-6 py-5 space-y-4">
+          {/* Cliente + Parte Contrária */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Cliente</label>
+              <SearchableCombobox
+                value={form.cliente_id}
+                onChange={value => set({ cliente_id: value })}
+                loadOptions={async (query) => fetchClienteOptions(query, 10)}
+                placeholder="— Nenhum —"
+                searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
+                helperText="Digite ao menos 2 caracteres."
+                emptyText="Digite para buscar clientes."
+                noResultsText="Nenhum resultado encontrado."
+                allowClear
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Parte Contrária</label>
+              <input
+                className={inputCls}
+                placeholder="Nome da parte contrária"
+                value={form.parte_contraria}
+                onChange={e => set({ parte_contraria: e.target.value })}
+              />
+            </div>
+          </div>
+
           {/* Título */}
           <div>
             <label className={labelCls}>Título *</label>
@@ -106,23 +132,15 @@ export default function AgendaModal({
           {/* Tipo */}
           <div>
             <label className={labelCls}>Tipo</label>
-            <div className="grid grid-cols-4 gap-2">
-              {(Object.entries(TIPO_CFG) as [Tipo, typeof TIPO_CFG[Tipo]][]).map(([k, v]) => (
-                <button
-                  key={k}
-                  onClick={() => set({ tipo: k })}
-                  className={cn(
-                    'flex flex-col items-center gap-1.5 py-2.5 rounded-xl border-2 text-[11px] font-semibold transition-all',
-                    form.tipo === k
-                      ? `${v.bg} ${v.text} ${v.border} border-opacity-100`
-                      : 'border-[var(--color-border)] text-[var(--color-ink-3)] hover:border-[var(--color-copper)]/50'
-                  )}
-                >
-                  <span className={cn('w-2.5 h-2.5 rounded-full', v.dot)} />
-                  {v.label}
-                </button>
+            <select
+              className={inputCls}
+              value={form.tipo}
+              onChange={e => set({ tipo: e.target.value as AgendaForm['tipo'] })}
+            >
+              {TIPO_OPCOES.map(k => (
+                <option key={k} value={k}>{TIPO_CFG[k].label}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Prioridade */}
@@ -153,24 +171,22 @@ export default function AgendaModal({
               <input type="date" className={inputCls} value={form.data_inicio} onChange={e => set({ data_inicio: e.target.value })} />
             </div>
             <div>
-              <label className={labelCls}>{hasTime ? 'Hora início' : 'Hora (opcional)'}</label>
+              <label className={labelCls}>Hora início (opcional)</label>
               <input type="time" className={inputCls} value={form.hora_inicio} onChange={e => set({ hora_inicio: e.target.value })} />
             </div>
           </div>
 
-          {/* Data fim + hora fim (eventos e audiências) */}
-          {hasTime && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Data fim</label>
-                <input type="date" className={inputCls} value={form.data_fim} onChange={e => set({ data_fim: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelCls}>Hora fim</label>
-                <input type="time" className={inputCls} value={form.hora_fim} onChange={e => set({ hora_fim: e.target.value })} />
-              </div>
+          {/* Data fim + hora fim */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Data fim</label>
+              <input type="date" className={inputCls} value={form.data_fim} onChange={e => set({ data_fim: e.target.value })} />
             </div>
-          )}
+            <div>
+              <label className={labelCls}>Hora fim</label>
+              <input type="time" className={inputCls} value={form.hora_fim} onChange={e => set({ hora_fim: e.target.value })} />
+            </div>
+          </div>
 
           {/* Prazo fatal (prazos e audiências) */}
           {hasPrazo && (
@@ -190,36 +206,20 @@ export default function AgendaModal({
             </select>
           </div>
 
-          {/* Processo + Cliente */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Processo</label>
-              <SearchableCombobox
-                value={form.processo_id}
-                onChange={value => set({ processo_id: value })}
-                loadOptions={async (query) => fetchProcessoOptions(query, 10)}
-                placeholder="— Nenhum —"
-                searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
-                helperText="Digite ao menos 2 caracteres."
-                emptyText="Digite para buscar processos."
-                noResultsText="Nenhum resultado encontrado."
-                allowClear
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Cliente</label>
-              <SearchableCombobox
-                value={form.cliente_id}
-                onChange={value => set({ cliente_id: value })}
-                loadOptions={async (query) => fetchClienteOptions(query, 10)}
-                placeholder="— Nenhum —"
-                searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
-                helperText="Digite ao menos 2 caracteres."
-                emptyText="Digite para buscar clientes."
-                noResultsText="Nenhum resultado encontrado."
-                allowClear
-              />
-            </div>
+          {/* Processo */}
+          <div>
+            <label className={labelCls}>Processo</label>
+            <SearchableCombobox
+              value={form.processo_id}
+              onChange={value => set({ processo_id: value })}
+              loadOptions={async (query) => fetchProcessoOptions(query, 10)}
+              placeholder="— Nenhum —"
+              searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
+              helperText="Digite ao menos 2 caracteres."
+              emptyText="Digite para buscar processos."
+              noResultsText="Nenhum resultado encontrado."
+              allowClear
+            />
           </div>
 
           {/* Responsável */}

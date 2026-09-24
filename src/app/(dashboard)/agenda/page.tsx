@@ -8,7 +8,13 @@ const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.agenda_items (
   titulo      text        NOT NULL,
   descricao   text,
   tipo        text        NOT NULL DEFAULT 'tarefa'
-                          CHECK (tipo IN ('tarefa', 'evento', 'prazo', 'audiencia')),
+                          CHECK (tipo IN (
+                            'tarefa', 'evento', 'prazo', 'audiencia',
+                            'atendimento', 'auditoria', 'compromisso_particular', 'compromisso_privado',
+                            'consultoria', 'diligencia', 'eventos_e_cursos', 'ligacao', 'outros',
+                            'pericia', 'prazo_processual', 'reuniao', 'sessao_julgamento', 'solicitar_demanda',
+                            'viagem'
+                          )),
   status      text        NOT NULL DEFAULT 'pendente'
                           CHECK (status IN ('pendente', 'concluido', 'cancelado')),
   data_inicio date        NOT NULL,

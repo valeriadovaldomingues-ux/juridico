@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
+import { TIPO_TEM_PRAZO } from '../agenda/agenda-types'
 import { createClient as svcClient }  from '@supabase/supabase-js'
 
 let _svc: ReturnType<typeof svcClient> | null = null
@@ -35,7 +36,7 @@ export default async function RelatoriosRoute() {
     supabase
       .from('agenda_items')
       .select('id, titulo, tipo, status, data_inicio, prazo_final, prioridade, processo_id, processo:processos(titulo, numero_processo)')
-      .in('tipo', ['prazo', 'audiencia'])
+      .in('tipo', Array.from(TIPO_TEM_PRAZO))
       .order('data_inicio'),
     supabase
       .from('publicacoes')
@@ -57,6 +58,13 @@ export default async function RelatoriosRoute() {
       : Promise.resolve({ data: null }),
   ])
 
+  const { data: timeEntries } = verFinanceiro
+    ? await supabase
+        .from('agenda_time_entries')
+        .select('id, cliente_id, processo_id, inicio_em, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual, cobravel, valor_total, status_cobranca, cliente:clientes(nome)')
+        .order('inicio_em', { ascending: false })
+    : { data: null }
+
   return (
     <div className="internal-page">
       <RelatoriosPage
@@ -66,6 +74,7 @@ export default async function RelatoriosRoute() {
         kanbanTasks={(kanbanTasks ?? []) as any}
         profiles={(profiles ?? []) as any}
         lancamentos={verFinanceiro ? ((finResult as any)?.data ?? null) : null}
+        timeEntries={(timeEntries ?? null) as any}
         role={profile.role}
       />
     </div>
