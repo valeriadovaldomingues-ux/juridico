@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
 import { getAllowedRoutes } from '@/lib/permissions'
+import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
 import type { UserRole } from '@/types'
 
 interface NavItem  { href: string; label: string; icon: React.ElementType }
@@ -79,6 +80,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
 
 interface SidebarProps {
   role:     UserRole
+  userId?:  string
   devMode?: boolean
   /** Estado do menu-gaveta no celular. No desktop (md:) a Sidebar ignora
    *  esses dois e fica sempre visível. */
@@ -86,9 +88,13 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-export default function Sidebar({ role, devMode = false, isOpen = false, onClose }: SidebarProps) {
+export default function Sidebar({ role, userId, devMode = false, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const allowed  = getAllowedRoutes(role)
+
+  // Exceção pontual por usuário (não por papel) — ver src/lib/auth/despesas-acesso.ts.
+  // Sócio já enxerga /financeiro inteiro, então não precisa do atalho extra.
+  const temAcessoExtraDespesas = role !== 'socio' && !!userId && DESPESAS_EXTRA_USER_IDS.includes(userId)
 
   const visibleGroups = ALL_NAV_GROUPS
     .map(group => ({
@@ -97,6 +103,10 @@ export default function Sidebar({ role, devMode = false, isOpen = false, onClose
         ? group.items
         : group.items.filter(item => allowed.includes(item.href)),
     }))
+    .map(group => {
+      if (group.label !== 'Gestão' || !temAcessoExtraDespesas) return group
+      return { ...group, items: [...group.items, { href: '/financeiro/despesas', label: 'Despesas', icon: Banknote }] }
+    })
     .filter(group => group.items.length > 0)
 
   function isActive(href: string): boolean {

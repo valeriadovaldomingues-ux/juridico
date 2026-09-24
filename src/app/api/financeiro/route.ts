@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
+import { podeGerenciarLancamentoDespesa } from '@/lib/auth/despesas-acesso'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
 
   const supabase = await createClient()
   const body = await req.json()
+
+  if (!podeGerenciarLancamentoDespesa(auth.userId, auth.role, body.tipo)) {
+    return NextResponse.json({ error: 'Sem permissão para esta operação' }, { status: 403 })
+  }
 
   const { data, error } = await supabase
     .from('financeiro_lancamentos')

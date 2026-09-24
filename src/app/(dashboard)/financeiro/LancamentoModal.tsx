@@ -43,10 +43,12 @@ interface Props {
   }) | null
   onSalvar:    (data: LancamentoForm) => Promise<string | null>
   onFechar:    () => void
+  /** Trava o tipo (esconde o seletor) — usado em telas dedicadas, ex: /financeiro/despesas. */
+  tipoFixo?:   'receita' | 'despesa'
 }
 
-export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Props) {
-  const [form,    setForm]    = useState<LancamentoForm>(FORM_VAZIO)
+export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFixo }: Props) {
+  const [form,    setForm]    = useState<LancamentoForm>(tipoFixo ? { ...FORM_VAZIO, tipo: tipoFixo } : FORM_VAZIO)
   const [loading, setLoading] = useState(false)
   const [erro,    setErro]    = useState('')
 
@@ -57,6 +59,7 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Prop
       setForm({
         ...FORM_VAZIO,
         ...lancamento,
+        tipo:         tipoFixo ?? lancamento.tipo ?? FORM_VAZIO.tipo,
         valor:        lancamento.valor?.toString() ?? '',
         pagamento_em: lancamento.pagamento_em ?? '',
         cliente_id:   lancamento.cliente_id   ?? '',
@@ -65,10 +68,10 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Prop
         categoria:    lancamento.categoria    ?? '',
       })
     } else {
-      setForm(FORM_VAZIO)
+      setForm(tipoFixo ? { ...FORM_VAZIO, tipo: tipoFixo } : FORM_VAZIO)
     }
     setErro('')
-  }, [lancamento])
+  }, [lancamento, tipoFixo])
 
   function set<K extends keyof LancamentoForm>(k: K, v: LancamentoForm[K]) {
     setForm(prev => ({ ...prev, [k]: v }))
@@ -109,6 +112,7 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Prop
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
 
           {/* Tipo */}
+          {!tipoFixo && (
           <div>
             <p className={labelCls}>Tipo <span className="text-red-500 normal-case font-normal">*</span></p>
             <div className="flex gap-2">
@@ -131,6 +135,7 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar }: Prop
               ))}
             </div>
           </div>
+          )}
 
           {/* Descrição */}
           <div>

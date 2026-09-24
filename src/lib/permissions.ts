@@ -357,6 +357,8 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
   { prefix: '/dashboard/tv',          roles: ['socio'] },
 
   // ── Financeiro ────────────────────────────────────────────────────────────────
+  // /financeiro/despesas tem uma exceção pontual POR USUÁRIO (não por papel),
+  // aplicada em proxy.ts — ver src/lib/auth/despesas-acesso.ts.
   { prefix: '/financeiro',            roles: ['socio'] },
 
   // ── Automação e integrações ───────────────────────────────────────────────────

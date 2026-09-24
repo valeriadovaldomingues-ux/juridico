@@ -49,10 +49,12 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receber' | 'pagar' | 'relatorios'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'receber' | 'pagar' | 'relatorios'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'lancamentos', label: 'Lançamentos',  icon: ListFilter  },
+  { id: 'receitas',    label: 'Receitas',     icon: TrendingUp  },
+  { id: 'despesas',    label: 'Despesas',     icon: TrendingDown },
   { id: 'receber',     label: 'A Receber',    icon: Clock       },
   { id: 'pagar',       label: 'A Pagar',      icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',   icon: BarChart3   },
@@ -115,6 +117,8 @@ export default function FinanceiroPage({ lancamentos: inicial, role }: Props) {
   const filtrados = useMemo(() => {
     return lancamentos.filter(l => {
       // Filtro por aba
+      if (aba === 'receitas' && l.tipo !== 'receita') return false
+      if (aba === 'despesas' && l.tipo !== 'despesa') return false
       if (aba === 'receber' && !(l.tipo === 'receita' && ['pendente', 'vencido'].includes(l.status))) return false
       if (aba === 'pagar'   && !(l.tipo === 'despesa' && ['pendente', 'vencido'].includes(l.status))) return false
 
@@ -363,7 +367,7 @@ export default function FinanceiroPage({ lancamentos: inicial, role }: Props) {
                 options={PERIODOS}
               />
 
-              {aba === 'lancamentos' && (
+              {(aba === 'lancamentos' || aba === 'receitas' || aba === 'despesas') && (
                 <SelectFiltro
                   value={filtStatus}
                   onChange={setFiltStatus}

@@ -30,6 +30,7 @@ export default function DashboardShell({
     <div className="flex h-screen overflow-hidden bg-[#F3F1EE]">
       <Sidebar
         role={role}
+        userId={profile?.id}
         devMode={devMode}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
