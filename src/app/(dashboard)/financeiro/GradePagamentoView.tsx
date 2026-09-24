@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { Plus, Search, Trash2, Loader2 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 
@@ -51,7 +52,11 @@ export default function GradePagamentoView({ itens: inicial, podeExcluir }: Prop
   const [busca, setBusca] = useState('')
   const [salvandoId, setSalvandoId] = useState<string | null>(null)
   const [adicionando, setAdicionando] = useState(false)
+  const [modoAdicao, setModoAdicao] = useState<'existente' | 'novo'>('existente')
   const [novoClienteId, setNovoClienteId] = useState('')
+  const [novoNome, setNovoNome] = useState('')
+  const [criando, setCriando] = useState(false)
+  const [erroNovo, setErroNovo] = useState('')
 
   const filtrados = useMemo(() => {
     if (!busca) return itens
@@ -91,6 +96,14 @@ export default function GradePagamentoView({ itens: inicial, podeExcluir }: Prop
     if (res.ok) setItens(prev => prev.filter(i => i.id !== item.id))
   }
 
+  function fecharAdicao() {
+    setAdicionando(false)
+    setModoAdicao('existente')
+    setNovoClienteId('')
+    setNovoNome('')
+    setErroNovo('')
+  }
+
   async function adicionarCliente() {
     if (!novoClienteId) return
     const res = await fetch('/api/financeiro/grade-pagamento', {
@@ -101,8 +114,42 @@ export default function GradePagamentoView({ itens: inicial, podeExcluir }: Prop
     if (res.ok) {
       const novo = await res.json()
       setItens(prev => [...prev, novo])
-      setNovoClienteId('')
-      setAdicionando(false)
+      fecharAdicao()
+    }
+  }
+
+  async function criarECliente() {
+    const nome = novoNome.trim()
+    if (!nome) return
+    setCriando(true)
+    setErroNovo('')
+
+    const supabase = createClient()
+    const { data: cliente, error } = await supabase
+      .from('clientes')
+      .insert({ nome, tipo_pessoa: 'juridica', ativo: true })
+      .select('id, nome')
+      .single()
+
+    if (error || !cliente) {
+      setErroNovo(error?.message ?? 'Erro ao criar cliente')
+      setCriando(false)
+      return
+    }
+
+    const res = await fetch('/api/financeiro/grade-pagamento', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ cliente_id: cliente.id }),
+    })
+    setCriando(false)
+    if (res.ok) {
+      const novo = await res.json()
+      setItens(prev => [...prev, novo])
+      fecharAdicao()
+    } else {
+      const body = await res.json().catch(() => ({}))
+      setErroNovo(body.error ?? 'Cliente criado, mas houve erro ao adicionar na grade')
     }
   }
 
@@ -146,35 +193,85 @@ export default function GradePagamentoView({ itens: inicial, podeExcluir }: Prop
           />
         </div>
         <span className="text-[11px] text-[#9ca3af]">{filtrados.length} clientes</span>
-        <div className="ml-auto flex items-center gap-2">
-          {adicionando && (
-            <div className="w-72">
-              <SearchableCombobox
-                value={novoClienteId}
-                onChange={value => setNovoClienteId(value)}
-                loadOptions={async (query) => fetchClienteOptions(query, 10)}
-                placeholder="Buscar cliente…"
-                searchPlaceholder="Buscar cliente por nome"
-                helperText="Digite ao menos 2 caracteres."
-                emptyText="Digite para buscar clientes."
-                noResultsText="Nenhum resultado encontrado."
-                allowClear
+        {!adicionando && (
+          <button
+            onClick={() => setAdicionando(true)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-[#1D5F60] border border-[#145A5B]/30 rounded-lg hover:bg-[#E8F2F2] transition-colors"
+          >
+            <Plus size={13} /> Adicionar cliente
+          </button>
+        )}
+      </div>
+
+      {/* Painel de adição */}
+      {adicionando && (
+        <div className="bg-[#f9fafb] rounded-xl border border-[#f3f4f6] p-4 space-y-3">
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-[#e5e7eb] p-0.5 w-fit">
+            <button
+              onClick={() => setModoAdicao('existente')}
+              className={cn('px-3 py-1 text-[12px] font-medium rounded-md transition-colors',
+                modoAdicao === 'existente' ? 'bg-[#1D5F60] text-white' : 'text-[#6b7280] hover:text-[#374151]')}
+            >
+              Cliente existente
+            </button>
+            <button
+              onClick={() => setModoAdicao('novo')}
+              className={cn('px-3 py-1 text-[12px] font-medium rounded-md transition-colors',
+                modoAdicao === 'novo' ? 'bg-[#1D5F60] text-white' : 'text-[#6b7280] hover:text-[#374151]')}
+            >
+              Criar novo cliente
+            </button>
+          </div>
+
+          {modoAdicao === 'existente' ? (
+            <div className="flex items-center gap-2">
+              <div className="w-80">
+                <SearchableCombobox
+                  value={novoClienteId}
+                  onChange={value => setNovoClienteId(value)}
+                  loadOptions={async (query) => fetchClienteOptions(query, 10)}
+                  placeholder="Buscar cliente…"
+                  searchPlaceholder="Buscar cliente por nome"
+                  helperText="Digite ao menos 2 caracteres."
+                  emptyText="Digite para buscar clientes."
+                  noResultsText="Nenhum resultado encontrado."
+                  allowClear
+                />
+              </div>
+              {novoClienteId && (
+                <button onClick={adicionarCliente} className="px-3 py-1.5 text-[12px] font-semibold bg-[#1D5F60] hover:bg-[#27777A] text-white rounded-lg transition-colors shrink-0">
+                  Adicionar
+                </button>
+              )}
+              <button onClick={fecharAdicao} className="text-[12px] text-[#9ca3af] hover:text-[#374151]">Cancelar</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                value={novoNome}
+                onChange={e => setNovoNome(e.target.value)}
+                placeholder="Nome do cliente novo"
+                className="w-80 px-3 py-1.5 text-[13px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#1a1d23] placeholder:text-[#c5cdd8]"
               />
+              <button
+                onClick={criarECliente}
+                disabled={!novoNome.trim() || criando}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold bg-[#1D5F60] hover:bg-[#27777A] text-white rounded-lg transition-colors shrink-0 disabled:opacity-50"
+              >
+                {criando && <Loader2 size={12} className="animate-spin" />}
+                Criar e adicionar
+              </button>
+              <button onClick={fecharAdicao} className="text-[12px] text-[#9ca3af] hover:text-[#374151]">Cancelar</button>
             </div>
           )}
-          {adicionando && novoClienteId && (
-            <button onClick={adicionarCliente} className="px-3 py-1.5 text-[12px] font-semibold bg-[#1D5F60] hover:bg-[#27777A] text-white rounded-lg transition-colors">
-              Adicionar
-            </button>
+          {erroNovo && <p className="text-[12px] text-red-600">{erroNovo}</p>}
+          {modoAdicao === 'novo' && (
+            <p className="text-[11px] text-[#9ca3af]">
+              Cria um cadastro mínimo (só o nome) — complete os dados depois na tela de Clientes.
+            </p>
           )}
-          <button
-            onClick={() => setAdicionando(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-[#1D5F60] border border-[#145A5B]/30 rounded-lg hover:bg-[#E8F2F2] transition-colors"
-          >
-            <Plus size={13} /> {adicionando ? 'Cancelar' : 'Adicionar cliente'}
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Grade */}
       <div className="rounded-xl border border-[#f3f4f6] overflow-hidden">
