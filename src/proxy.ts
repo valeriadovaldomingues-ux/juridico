@@ -3,6 +3,7 @@ import { createClient }       from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
+import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
 
 // ── Service client para leitura de profiles no middleware ─────────────────────
 //
@@ -74,6 +75,12 @@ function routeAllowed(role: string, pathname: string): boolean {
     if (pathname.startsWith(r.prefix)) return r.roles.includes(role)
   }
   return true
+}
+
+// Isenção pontual por USUÁRIO (não por papel): /financeiro/despesas é liberado
+// pra pessoas específicas mesmo sem serem 'socio' — ver src/lib/auth/despesas-acesso.ts.
+function isRotaDespesasLiberadaPorUsuario(pathname: string, userId: string): boolean {
+  return pathname.startsWith('/financeiro/despesas') && DESPESAS_EXTRA_USER_IDS.includes(userId)
 }
 
 
@@ -192,7 +199,8 @@ export async function proxy(request: NextRequest) {
       KANBAN_ONLY_MODE &&
       role && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
       isInternalPath && !pathname.startsWith('/kanban') &&
-      !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
+      !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) &&
+      !isRotaDespesasLiberadaPorUsuario(pathname, user.id)
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
@@ -222,7 +230,7 @@ export async function proxy(request: NextRequest) {
 
     // 3d. Rotas restritas: verifica papel e conta ativa
     if (isSensitive && role !== 'cliente') {
-      if (!role || !ativo || !routeAllowed(role, pathname)) {
+      if (!role || !ativo || (!routeAllowed(role, pathname) && !isRotaDespesasLiberadaPorUsuario(pathname, user.id))) {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard'
         return NextResponse.redirect(url)
