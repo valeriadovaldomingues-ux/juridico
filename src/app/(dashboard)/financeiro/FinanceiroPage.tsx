@@ -12,7 +12,7 @@ import type { UserRole } from '@/types'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
-import SalariosView, { type Funcionario } from './SalariosView'
+import SalariosView, { type FuncionarioFolha } from './SalariosView'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -39,7 +39,8 @@ interface Lancamento {
 
 interface Props {
   lancamentos:  Lancamento[]
-  funcionarios: Funcionario[]
+  funcionarios: FuncionarioFolha[]
+  mesFolhaAtual: string
   gradePagamento: ItemGrade[]
   role:         UserRole
 }
@@ -101,7 +102,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, gradePagamento, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const [aba,         setAba]         = useState<Aba>('lancamentos')
   const [modalAberto, setModalAberto] = useState(false)
@@ -353,7 +354,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, gra
         {aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
         ) : aba === 'salarios' ? (
-          <SalariosView funcionarios={funcionarios} />
+          <SalariosView mesInicial={mesFolhaAtual} funcionariosIniciais={funcionarios} />
         ) : aba === 'grade' ? (
           <GradePagamentoView itens={gradePagamento} podeExcluir={podeExcluir} />
         ) : (
