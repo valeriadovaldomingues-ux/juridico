@@ -42,14 +42,16 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
 }
 
 const PERIODOS = [
-  { value: 'todos',        label: 'Todo o período'  },
-  { value: 'este-mes',     label: 'Este mês'        },
-  { value: 'mes-anterior', label: 'Mês anterior'    },
-  { value: 'trimestre',    label: 'Últimos 3 meses' },
-  { value: 'ano',          label: 'Este ano'        },
+  { value: 'todos',         label: 'Todo o período'  },
+  { value: 'este-mes',      label: 'Este mês'        },
+  { value: 'mes-anterior',  label: 'Mês anterior'    },
+  { value: 'trimestre',     label: 'Últimos 3 meses' },
+  { value: 'ano',           label: 'Este ano'        },
+  { value: 'ano-especifico',label: 'Ano específico'  },
+  { value: 'mes-especifico',label: 'Mês específico'  },
 ]
 
-function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
+function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: string, anoEspecifico: string): boolean {
   const hoje = new Date()
   const data  = new Date(vencimento + 'T12:00:00')
   switch (periodo) {
@@ -65,6 +67,10 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
       corte.setMonth(hoje.getMonth() - 3)
       return data >= corte
     }
+    case 'ano-especifico':
+      return !!anoEspecifico && data.getFullYear() === Number(anoEspecifico)
+    case 'mes-especifico':
+      return !!mesEspecifico && vencimento.slice(0, 7) === mesEspecifico
     case 'ano':
       return data.getFullYear() === hoje.getFullYear()
     default: return true
@@ -79,10 +85,12 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
   const [editando,    setEditando]    = useState<Despesa | null>(null)
   const [excluindo,   setExcluindo]   = useState<string | null>(null)
 
-  const [busca,       setBusca]       = useState('')
-  const [periodo,     setPeriodo]     = useState('este-mes')
-  const [filtStatus,  setFiltStatus]  = useState('')
-  const [filtCliente, setFiltCliente] = useState('')
+  const [busca,         setBusca]         = useState('')
+  const [periodo,       setPeriodo]       = useState('este-mes')
+  const [mesEspecifico, setMesEspecifico] = useState(() => new Date().toISOString().slice(0, 7))
+  const [anoEspecifico, setAnoEspecifico] = useState(() => String(new Date().getFullYear()))
+  const [filtStatus,    setFiltStatus]    = useState('')
+  const [filtCliente,   setFiltCliente]   = useState('')
 
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
@@ -100,10 +108,10 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
       if (filtStatus  && d.status !== filtStatus)      return false
       if (filtCliente && d.cliente_id !== filtCliente) return false
       if (busca && !d.descricao.toLowerCase().includes(busca.toLowerCase()) && !(d.categoria ?? '').toLowerCase().includes(busca.toLowerCase())) return false
-      if (!filtrarPorPeriodo(d.vencimento, periodo)) return false
+      if (!filtrarPorPeriodo(d.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
       return true
     })
-  }, [despesas, filtStatus, filtCliente, busca, periodo])
+  }, [despesas, filtStatus, filtCliente, busca, periodo, mesEspecifico, anoEspecifico])
 
   const metricas = useMemo(() => {
     const total    = despesas.reduce((s, d) => s + d.valor, 0)
@@ -269,6 +277,14 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
             />
           </div>
           <SelectFiltro value={periodo} onChange={setPeriodo} options={PERIODOS} />
+          {periodo === 'mes-especifico' && (
+            <input type="month" value={mesEspecifico} onChange={e => setMesEspecifico(e.target.value)}
+              className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]" />
+          )}
+          {periodo === 'ano-especifico' && (
+            <input type="number" value={anoEspecifico} onChange={e => setAnoEspecifico(e.target.value)} placeholder="Ano"
+              className="w-20 px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]" />
+          )}
           <SelectFiltro value={filtStatus} onChange={setFiltStatus} options={[
             { value: '', label: 'Todos os status' },
             { value: 'pendente',  label: 'Pendente'  },

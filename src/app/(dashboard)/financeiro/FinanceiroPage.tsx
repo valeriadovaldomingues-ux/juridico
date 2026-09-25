@@ -61,7 +61,7 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'receitas',    label: 'Receitas',     icon: TrendingUp  },
   { id: 'despesas',    label: 'Despesas',     icon: TrendingDown },
   { id: 'salarios',    label: 'Salários',     icon: Banknote    },
-  { id: 'grade',       label: 'Grade de Pagamento', icon: Wallet },
+  { id: 'grade',       label: 'Receita Partido', icon: Wallet },
   { id: 'receber',     label: 'A Receber',    icon: Clock       },
   { id: 'pagar',       label: 'A Pagar',      icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',   icon: BarChart3   },
@@ -73,11 +73,13 @@ const PERIODOS = [
   { value: 'mes-anterior',  label: 'Mês anterior'   },
   { value: 'trimestre',     label: 'Últimos 3 meses' },
   { value: 'ano',           label: 'Este ano'       },
+  { value: 'ano-especifico',label: 'Ano específico' },
+  { value: 'mes-especifico',label: 'Mês específico' },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
+function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: string, anoEspecifico: string): boolean {
   const hoje = new Date()
   const data  = new Date(vencimento + 'T12:00:00')
 
@@ -96,6 +98,10 @@ function filtrarPorPeriodo(vencimento: string, periodo: string): boolean {
     }
     case 'ano':
       return data.getFullYear() === hoje.getFullYear()
+    case 'ano-especifico':
+      return !!anoEspecifico && data.getFullYear() === Number(anoEspecifico)
+    case 'mes-especifico':
+      return !!mesEspecifico && vencimento.slice(0, 7) === mesEspecifico
     default: return true
   }
 }
@@ -110,10 +116,12 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
   const [excluindo,   setExcluindo]   = useState<string | null>(null)
 
   // Filtros
-  const [busca,      setBusca]      = useState('')
-  const [periodo,    setPeriodo]    = useState('este-mes')
-  const [filtStatus, setFiltStatus] = useState('')
-  const [filtCliente,setFiltCliente]= useState('')
+  const [busca,         setBusca]         = useState('')
+  const [periodo,       setPeriodo]       = useState('este-mes')
+  const [mesEspecifico, setMesEspecifico] = useState(() => new Date().toISOString().slice(0, 7))
+  const [anoEspecifico, setAnoEspecifico] = useState(() => String(new Date().getFullYear()))
+  const [filtStatus,    setFiltStatus]    = useState('')
+  const [filtCliente,   setFiltCliente]   = useState('')
 
   const podeCriar  = can(role, 'financeiro', 'create')
   const podeEditar = can(role, 'financeiro', 'edit')
@@ -137,11 +145,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       // "A Receber"/"A Pagar" mostram tudo que está pendente, independente do mês —
       // o filtro de período só se aplica às demais abas (senão o contador da aba
       // (que soma sem filtro de período) fica inconsistente com a lista mostrada).
-      if (aba !== 'receber' && aba !== 'pagar' && !filtrarPorPeriodo(l.vencimento, periodo)) return false
+      if (aba !== 'receber' && aba !== 'pagar' && !filtrarPorPeriodo(l.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
 
       return true
     })
-  }, [lancamentos, aba, filtStatus, filtCliente, busca, periodo])
+  }, [lancamentos, aba, filtStatus, filtCliente, busca, periodo, mesEspecifico, anoEspecifico])
 
   // ── Métricas ────────────────────────────────────────────────────────────
 
@@ -377,11 +385,30 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
               </div>
 
               {aba !== 'receber' && aba !== 'pagar' && (
-                <SelectFiltro
-                  value={periodo}
-                  onChange={setPeriodo}
-                  options={PERIODOS}
-                />
+                <>
+                  <SelectFiltro
+                    value={periodo}
+                    onChange={setPeriodo}
+                    options={PERIODOS}
+                  />
+                  {periodo === 'mes-especifico' && (
+                    <input
+                      type="month"
+                      value={mesEspecifico}
+                      onChange={e => setMesEspecifico(e.target.value)}
+                      className="px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]"
+                    />
+                  )}
+                  {periodo === 'ano-especifico' && (
+                    <input
+                      type="number"
+                      value={anoEspecifico}
+                      onChange={e => setAnoEspecifico(e.target.value)}
+                      placeholder="Ano"
+                      className="w-20 px-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151]"
+                    />
+                  )}
+                </>
               )}
 
               {(aba === 'lancamentos' || aba === 'receitas' || aba === 'despesas') && (
