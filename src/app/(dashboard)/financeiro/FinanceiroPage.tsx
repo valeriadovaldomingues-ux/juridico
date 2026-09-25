@@ -133,7 +133,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       if (filtStatus  && l.status !== filtStatus)              return false
       if (filtCliente && l.cliente_id !== filtCliente)         return false
       if (busca       && !l.descricao.toLowerCase().includes(busca.toLowerCase()) && !(l.categoria ?? '').toLowerCase().includes(busca.toLowerCase())) return false
-      if (!filtrarPorPeriodo(l.vencimento, periodo))           return false
+
+      // "A Receber"/"A Pagar" mostram tudo que está pendente, independente do mês —
+      // o filtro de período só se aplica às demais abas (senão o contador da aba
+      // (que soma sem filtro de período) fica inconsistente com a lista mostrada).
+      if (aba !== 'receber' && aba !== 'pagar' && !filtrarPorPeriodo(l.vencimento, periodo)) return false
 
       return true
     })
@@ -372,11 +376,13 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 />
               </div>
 
-              <SelectFiltro
-                value={periodo}
-                onChange={setPeriodo}
-                options={PERIODOS}
-              />
+              {aba !== 'receber' && aba !== 'pagar' && (
+                <SelectFiltro
+                  value={periodo}
+                  onChange={setPeriodo}
+                  options={PERIODOS}
+                />
+              )}
 
               {(aba === 'lancamentos' || aba === 'receitas' || aba === 'despesas') && (
                 <SelectFiltro
