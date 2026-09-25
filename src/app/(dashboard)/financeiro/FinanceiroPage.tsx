@@ -57,7 +57,6 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
 type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
-  { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
   { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
   { id: 'receitas',    label: 'Receitas Extras',  icon: TrendingUp  },
   { id: 'despesas',    label: 'Despesas',        icon: TrendingDown },
@@ -65,6 +64,7 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'receber',     label: 'A Receber',       icon: Clock       },
   { id: 'pagar',       label: 'A Pagar',         icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
+  { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
 ]
 
 const PERIODOS = [
@@ -110,7 +110,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
 
 export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
-  const [aba,         setAba]         = useState<Aba>('lancamentos')
+  const [aba,         setAba]         = useState<Aba>('grade')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando,    setEditando]    = useState<Lancamento | null>(null)
   const [excluindo,   setExcluindo]   = useState<string | null>(null)
