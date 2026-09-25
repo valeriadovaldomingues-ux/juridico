@@ -57,14 +57,14 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
 type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
-  { id: 'lancamentos', label: 'Lançamentos',  icon: ListFilter  },
-  { id: 'receitas',    label: 'Receitas',     icon: TrendingUp  },
-  { id: 'despesas',    label: 'Despesas',     icon: TrendingDown },
-  { id: 'salarios',    label: 'Salários',     icon: Banknote    },
-  { id: 'grade',       label: 'Receita Partido', icon: Wallet },
-  { id: 'receber',     label: 'A Receber',    icon: Clock       },
-  { id: 'pagar',       label: 'A Pagar',      icon: TrendingDown },
-  { id: 'relatorios',  label: 'Relatórios',   icon: BarChart3   },
+  { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
+  { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
+  { id: 'receitas',    label: 'Receitas Extras',  icon: TrendingUp  },
+  { id: 'despesas',    label: 'Despesas',        icon: TrendingDown },
+  { id: 'salarios',    label: 'Salários',        icon: Banknote    },
+  { id: 'receber',     label: 'A Receber',       icon: Clock       },
+  { id: 'pagar',       label: 'A Pagar',         icon: TrendingDown },
+  { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
 ]
 
 const PERIODOS = [
