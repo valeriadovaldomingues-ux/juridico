@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, Users, X, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Users, X, Loader2, FileDown, AlertTriangle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -29,12 +29,16 @@ export interface Folha {
   total?:             number
 }
 
+export type TipoRecibo = 'advogado' | 'funcionario_unico' | 'estagiario' | 'funcionario_dividido'
+
 export interface FuncionarioFolha {
-  profile_id: string
-  nome:       string
-  email:      string
-  role:       string
-  folha:      Folha | null
+  profile_id:     string
+  nome:           string
+  email:          string
+  role:           string
+  folha:          Folha | null
+  tipoRecibo:     TipoRecibo | null
+  dadosCompletos: boolean
 }
 
 interface Props {
@@ -149,6 +153,7 @@ export default function SalariosView({ mesInicial, funcionariosIniciais }: Props
                 <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Benefícios</th>
                 <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Descontos</th>
                 <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Total</th>
+                <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Recibo</th>
                 <th className="w-10"></th>
               </tr></thead>
               <tbody>
@@ -175,6 +180,9 @@ export default function SalariosView({ mesInicial, funcionariosIniciais }: Props
                         {folha && (folha.desconto + folha.adiantamento) > 0 ? `- ${formatCurrency(folha.desconto + folha.adiantamento)}` : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-[13px] font-bold text-[#0f1923] tabular-nums">{formatCurrency(total)}</td>
+                      <td className="px-4 py-2.5">
+                        <BotoesRecibo funcionario={f} mes={mes} />
+                      </td>
                       <td className="px-2 py-2.5">
                         <button onClick={() => abrirEdicao(f)} title="Editar folha"
                           className="p-1.5 rounded-lg text-[#9ca3af] hover:text-[#1D5F60] hover:bg-[#f0f7f7] transition-colors">
@@ -369,4 +377,46 @@ function FolhaModal({ funcionario, mes, onFechar, onSalvo }: {
       </div>
     </div>
   )
+}
+
+// ─── Botões de recibo ────────────────────────────────────────────────────────
+
+function abrirRecibo(profileId: string, mes: string, parte?: string) {
+  const url = `/api/financeiro/folha-pagamento/${profileId}/recibo?mes=${mes}${parte ? `&parte=${parte}` : ''}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+function BotaoRecibo({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[#1D5F60] border border-[#145A5B]/25 rounded-lg hover:bg-[#E8F2F2] transition-colors"
+    >
+      <FileDown size={11} /> {children}
+    </button>
+  )
+}
+
+function BotoesRecibo({ funcionario, mes }: { funcionario: FuncionarioFolha; mes: string }) {
+  if (!funcionario.folha) return <span className="text-[11px] text-[#c5cdd8]">sem folha</span>
+
+  if (!funcionario.dadosCompletos) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-[#a93226]" title="Faltam CPF/endereço no cadastro">
+        <AlertTriangle size={11} /> Faltam dados
+      </span>
+    )
+  }
+
+  if (funcionario.tipoRecibo === 'funcionario_dividido') {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'transporte')}>Transporte</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'alimentacao')}>Alimentação</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Resto</BotaoRecibo>
+      </div>
+    )
+  }
+
+  return <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Recibo</BotaoRecibo>
 }
