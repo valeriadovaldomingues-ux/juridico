@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Loader2, Download, Trash2 } from 'lucide-react'
+import { X, Loader2, Download, Trash2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
@@ -15,9 +15,19 @@ interface ContratanteSelecionado {
   nome: string
 }
 
+interface FaixaValorForm {
+  mes:   string // "YYYY-MM"
+  valor: string // salários mínimos
+}
+
 function hojeISO() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function mesAtualYYYYMM() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 export default function ContratoPartidoModal({ onFechar }: Props) {
@@ -25,7 +35,9 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
   const [comboValue,   setComboValue]   = useState('')
   const [representante, setRepresentante] = useState('')
   const [dataInicio,    setDataInicio]    = useState(hojeISO())
+  const [escalonado,      setEscalonado]      = useState(false)
   const [salariosMinimos, setSalariosMinimos] = useState('')
+  const [faixasValor,     setFaixasValor]     = useState<FaixaValorForm[]>([{ mes: mesAtualYYYYMM(), valor: '' }])
   const [diaPagamento,    setDiaPagamento]    = useState('10')
   const [percentualExito, setPercentualExito] = useState('10')
   const [anoParcelaExtra, setAnoParcelaExtra] = useState('')
@@ -46,8 +58,21 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
     setContratantes(prev => prev.filter(c => c.id !== id))
   }
 
+  function adicionarFaixa() {
+    setFaixasValor(prev => [...prev, { mes: mesAtualYYYYMM(), valor: '' }])
+  }
+  function removerFaixa(i: number) {
+    setFaixasValor(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function atualizarFaixa(i: number, campo: keyof FaixaValorForm, valor: string) {
+    setFaixasValor(prev => prev.map((f, idx) => idx === i ? { ...f, [campo]: valor } : f))
+  }
+
+  const faixasCompletas = faixasValor.every(f => f.mes && f.valor.trim())
+  const valorPreenchido = escalonado ? (faixasValor.length > 0 && faixasCompletas) : !!salariosMinimos
+
   async function gerar() {
-    if (contratantes.length === 0 || !salariosMinimos) return
+    if (contratantes.length === 0 || !valorPreenchido) return
     setGerando(true)
     setErro('')
     setCamposFaltantesPorCliente(null)
@@ -55,10 +80,17 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
     const params = new URLSearchParams({
       cliente_ids: contratantes.map(c => c.id).join(','),
       data_inicio: dataInicio,
-      salarios_minimos: salariosMinimos.replace(',', '.'),
       dia_pagamento: diaPagamento || '10',
       percentual_exito: percentualExito || '10',
     })
+    if (escalonado) {
+      params.set('faixas_valor', JSON.stringify(faixasValor.map(f => ({
+        inicio: `${f.mes}-01`,
+        salariosMinimos: Number(f.valor.replace(',', '.')),
+      }))))
+    } else {
+      params.set('salarios_minimos', salariosMinimos.replace(',', '.'))
+    }
     if (plural && representante.trim()) params.set('representante', representante.trim())
     if (anoParcelaExtra.trim()) params.set('ano_parcela_extra', anoParcelaExtra.trim())
 
@@ -152,6 +184,39 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
               <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className={inputCls} />
             </div>
             <div>
+              <label className={labelCls}>Dia de pagamento</label>
+              <input value={diaPagamento} onChange={e => setDiaPagamento(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Valores escalonados?</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEscalonado(false)}
+                className={cn(
+                  'flex-1 py-2 text-[13px] font-medium rounded-xl border transition-colors',
+                  !escalonado ? 'bg-[#1D5F60] text-white border-[#1D5F60]' : 'bg-white text-[#6b7280] border-[#e5e7eb] hover:bg-[#f9fafb]',
+                )}
+              >
+                Não — valor fixo
+              </button>
+              <button
+                type="button"
+                onClick={() => setEscalonado(true)}
+                className={cn(
+                  'flex-1 py-2 text-[13px] font-medium rounded-xl border transition-colors',
+                  escalonado ? 'bg-[#1D5F60] text-white border-[#1D5F60]' : 'bg-white text-[#6b7280] border-[#e5e7eb] hover:bg-[#f9fafb]',
+                )}
+              >
+                Sim — sobe com o tempo
+              </button>
+            </div>
+          </div>
+
+          {!escalonado ? (
+            <div>
               <label className={labelCls}>Valor (em salários mínimos)</label>
               <input
                 value={salariosMinimos}
@@ -160,20 +225,55 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
                 className={inputCls}
               />
             </div>
+          ) : (
             <div>
-              <label className={labelCls}>Dia de pagamento</label>
-              <input value={diaPagamento} onChange={e => setDiaPagamento(e.target.value)} className={inputCls} />
+              <label className={labelCls}>A partir de quando, pra quanto sobe</label>
+              <div className="space-y-2">
+                {faixasValor.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="month"
+                      value={f.mes}
+                      onChange={e => atualizarFaixa(i, 'mes', e.target.value)}
+                      className={cn(inputCls, 'flex-1')}
+                    />
+                    <input
+                      value={f.valor}
+                      onChange={e => atualizarFaixa(i, 'valor', e.target.value)}
+                      placeholder="s.m."
+                      className={cn(inputCls, 'w-20')}
+                    />
+                    {faixasValor.length > 1 && (
+                      <button onClick={() => removerFaixa(i)} className="p-1.5 rounded-lg text-[#c5cdd8] hover:text-red-600 hover:bg-red-50 transition-colors shrink-0">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={adicionarFaixa}
+                className="mt-2 flex items-center gap-1 text-[12px] font-semibold text-[#1D5F60] hover:underline"
+              >
+                <Plus size={12} /> Adicionar faixa
+              </button>
+              <p className="text-[11px] text-[#9ca3af] mt-1.5">
+                Ex: 1 s.m. a partir de dez/2025, 2 s.m. a partir de jan/2026, 3 s.m. a partir de jan/2027 (se renovado — faixa após o fim da vigência de 1 ano).
+              </p>
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>% de êxito sobre condenação</label>
               <input value={percentualExito} onChange={e => setPercentualExito(e.target.value)} className={inputCls} />
             </div>
-            <div className="col-span-2">
-              <label className={labelCls}>Ano em que começa a parcela extra de dezembro (opcional)</label>
+            <div>
+              <label className={labelCls}>Ano da parcela extra de dezembro (opcional)</label>
               <input
                 value={anoParcelaExtra}
                 onChange={e => setAnoParcelaExtra(e.target.value)}
-                placeholder="Deixe em branco se já vale no 1º dezembro da vigência"
+                placeholder="Em branco = já vale no 1º dezembro"
                 className={inputCls}
               />
             </div>
@@ -196,7 +296,7 @@ export default function ContratoPartidoModal({ onFechar }: Props) {
             </button>
             <button
               onClick={gerar}
-              disabled={contratantes.length === 0 || !salariosMinimos || (plural && !representante.trim()) || gerando}
+              disabled={contratantes.length === 0 || !valorPreenchido || (plural && !representante.trim()) || gerando}
               className={cn(
                 'flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold rounded-xl transition-colors disabled:opacity-50',
                 'bg-[#1D5F60] hover:bg-[#27777A] text-white',

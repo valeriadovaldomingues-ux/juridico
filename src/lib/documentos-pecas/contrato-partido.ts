@@ -54,6 +54,54 @@ function extensoPercentual(pct: number): string {
   return `${pct}% (${palavra} por cento)`
 }
 
+/** "vigente" (1 s.m. inteiro) · "vigentes" (2+ s.m. inteiro) · "vigente(s)" (valor fracionado) —
+ *  segue o mesmo padrão real: valores fracionados usam a forma parentética genérica. */
+function vigenteConjugado(qtd: number): string {
+  if (!Number.isInteger(qtd)) return 'vigente(s)'
+  return qtd === 1 ? 'vigente' : 'vigentes'
+}
+
+function mesAno(d: Date): string {
+  return `${MESES[d.getMonth()]} de ${d.getFullYear()}`
+}
+
+export interface FaixaValor {
+  /** Mês/ano em que esta faixa passa a valer. */
+  inicio: Date
+  salariosMinimos: number
+}
+
+/** Monta o texto de valor escalonado por período (ex: contrato da Fachi: 1 s.m. no 1º mês,
+ *  2 s.m. no ano seguinte, 3 s.m. depois de renovado) — reconstrói a frase real por faixa. */
+function textoValorEscalonado(faixas: FaixaValor[], dataFimVigenciaOriginal: Date): string {
+  const ordenadas = [...faixas].sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
+
+  const frases = ordenadas.map((faixa, i) => {
+    const proxima = ordenadas[i + 1]
+    const fim = proxima ? new Date(proxima.inicio.getTime() - 86400000) : null
+    const renovacao = faixa.inicio.getTime() > dataFimVigenciaOriginal.getTime()
+    const extenso = extensoSalarios(faixa.salariosMinimos)
+    const vigente = vigenteConjugado(faixa.salariosMinimos)
+
+    if (renovacao) {
+      return `a partir de ${mesAno(faixa.inicio)}, caso o contrato seja renovado, ${extenso} ${vigente} à época do pagamento das prestações`
+    }
+    if (!fim) {
+      return `${extenso} ${vigente} à época do pagamento das prestações a partir de ${mesAno(faixa.inicio)}`
+    }
+    const mesmoMes = fim.getFullYear() === faixa.inicio.getFullYear() && fim.getMonth() === faixa.inicio.getMonth()
+    if (mesmoMes) {
+      return `${extenso} ${vigente} à época do pagamento da prestação no mês de ${mesAno(faixa.inicio)}`
+    }
+    const mesmoAno = fim.getFullYear() === faixa.inicio.getFullYear()
+    const inicioTxt = mesmoAno ? MESES[faixa.inicio.getMonth()] : mesAno(faixa.inicio)
+    return `${extenso} ${vigente} à época do pagamento das prestações de ${inicioTxt} a ${mesAno(fim)}`
+  })
+
+  if (frases.length === 1) return frases[0]
+  return `${frases.slice(0, -1).join('; ')}; e, ${frases[frases.length - 1]}`
+}
+
 export interface ContratanteQualificacao {
   nome:       string
   tipo_pessoa: 'pf' | 'pj' | string | null
@@ -131,7 +179,11 @@ export interface DadosContrato {
    *  (nos contratos reais, um dos próprios contratantes-PF representa todos os demais). */
   representante?:  string
   dataInicio:      Date
-  salariosMinimos: number
+  /** Valor fixo em salários mínimos (caso simples). Ignorado se `faixasValor` for informado. */
+  salariosMinimos?: number
+  /** Valor escalonado por período — ex: sobe de 1 p/ 2 s.m. no ano seguinte, e p/ 3 s.m. se renovado.
+   *  Quando informado (1+ faixas), tem prioridade sobre `salariosMinimos`. */
+  faixasValor?:    FaixaValor[]
   diaPagamento?:   number  // padrão 10
   percentualExito?: number // padrão 10
   /** Ano a partir do qual passa a valer a parcela extra de dezembro (13º).
@@ -165,6 +217,10 @@ export function corpoContratoPartido(dados: DadosContrato): ContratoPartidoResul
 
   const abertura = `${listaContratantes(contratantes)}, ${rodape}`
 
+  const valorTexto = dados.faixasValor && dados.faixasValor.length > 0
+    ? textoValorEscalonado(dados.faixasValor, dataFim)
+    : `${extensoSalarios(dados.salariosMinimos ?? 1)} ${vigenteConjugado(dados.salariosMinimos ?? 1)} à época do pagamento das prestações`
+
   const temPF = contratantes.some(c => c.tipo_pessoa === 'pf')
   const objeto1_1 = plural
     ? `1.1. O objeto deste contrato destina-se a realização de serviços jurídicos, na modalidade conhecida por advocacia de partido, em prol dos ${CONTRATANTE}${temPF ? ' pessoas jurídicas e as pessoas físicas para as questões estejam relacionadas às empresas CONTRATANTES' : ''}, em especial para prestação de assessoria jurídica através de formulação de pareceres, tentativa de acordos extrajudiciais em nome dos ${CONTRATANTE}, acompanhamento de processos judiciais e administrativos fiscais, e como causídicos perante o Poder Judiciário nas seguintes áreas: Direito Civil, Empresarial, Falimentar, Administrativo, Bancário, Consumerista, Aduaneiro, Tributário e Trabalhista.`
@@ -196,7 +252,7 @@ export function corpoContratoPartido(dados: DadosContrato): ContratoPartidoResul
       titulo: 'Cláusula quinta – DO PAGAMENTO',
       texto:
         '5.1. Acordam as partes que o pagamento será feito da seguinte forma:\n' +
-        `- Será pago, a título de honorários advocatícios, a importância de ${extensoSalarios(dados.salariosMinimos)} vigente(s) à época do pagamento das prestações.\n` +
+        `- Será pago, a título de honorários advocatícios, a importância de ${valorTexto}.\n` +
         `- As parcelas deverão ser pagas até o dia ${diaPagamento} de cada mês, devendo ser paga a primeira parcela até ${diaPagamento} de ${MESES[dataInicio.getMonth()]} de ${dataInicio.getFullYear()}.\n` +
         `- ${prefixoParcelaExtra}${prefixoParcelaExtra ? 'em' : 'Em'} dezembro de cada ano, é devida uma parcela extra, no mesmo valor dos honorários e a serem pagos juntamente com os mesmos, a título de 13º salário, com fulcro na resolução CFC 290/70.\n` +
         '- Os valores deverão ser quitados através de boleto bancário enviado pelo CONTRATADO.\n' +

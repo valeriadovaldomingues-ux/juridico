@@ -22,14 +22,36 @@ export async function GET(req: NextRequest) {
   const clienteIds = (params.get('cliente_ids') ?? '').split(',').map(s => s.trim()).filter(Boolean)
   const dataInicioStr = params.get('data_inicio')
   const salariosMinimosStr = params.get('salarios_minimos')
+  const faixasValorStr = params.get('faixas_valor') // JSON: [{ inicio: 'YYYY-MM-DD', salariosMinimos: number }, ...]
 
   if (clienteIds.length === 0) return NextResponse.json({ error: 'Selecione ao menos 1 cliente' }, { status: 400 })
   if (!dataInicioStr) return NextResponse.json({ error: 'data_inicio é obrigatório' }, { status: 400 })
-  if (!salariosMinimosStr) return NextResponse.json({ error: 'salarios_minimos é obrigatório' }, { status: 400 })
+  if (!salariosMinimosStr && !faixasValorStr) {
+    return NextResponse.json({ error: 'Informe salarios_minimos ou faixas_valor' }, { status: 400 })
+  }
 
-  const salariosMinimos = Number(salariosMinimosStr.replace(',', '.'))
-  if (!Number.isFinite(salariosMinimos) || salariosMinimos <= 0) {
-    return NextResponse.json({ error: 'salarios_minimos inválido' }, { status: 400 })
+  let salariosMinimos: number | undefined
+  let faixasValor: { inicio: Date; salariosMinimos: number }[] | undefined
+
+  if (faixasValorStr) {
+    let faixasRaw: { inicio: string; salariosMinimos: number }[]
+    try {
+      faixasRaw = JSON.parse(faixasValorStr)
+    } catch {
+      return NextResponse.json({ error: 'faixas_valor inválido' }, { status: 400 })
+    }
+    if (!Array.isArray(faixasRaw) || faixasRaw.length === 0) {
+      return NextResponse.json({ error: 'faixas_valor precisa ter ao menos 1 item' }, { status: 400 })
+    }
+    faixasValor = faixasRaw.map(f => ({ inicio: new Date(f.inicio + 'T00:00:00'), salariosMinimos: Number(f.salariosMinimos) }))
+    if (faixasValor.some(f => Number.isNaN(f.inicio.getTime()) || !Number.isFinite(f.salariosMinimos) || f.salariosMinimos <= 0)) {
+      return NextResponse.json({ error: 'faixas_valor contém um item inválido' }, { status: 400 })
+    }
+  } else {
+    salariosMinimos = Number(salariosMinimosStr!.replace(',', '.'))
+    if (!Number.isFinite(salariosMinimos) || salariosMinimos <= 0) {
+      return NextResponse.json({ error: 'salarios_minimos inválido' }, { status: 400 })
+    }
   }
 
   const representante = params.get('representante')?.trim() || undefined
@@ -72,6 +94,7 @@ export async function GET(req: NextRequest) {
     representante,
     dataInicio,
     salariosMinimos,
+    faixasValor,
     diaPagamento,
     percentualExito,
     anoParcelaExtra: anoParcelaExtra ?? null,
