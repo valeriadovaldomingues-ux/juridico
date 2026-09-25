@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   Plus, FileText, LayoutTemplate, Wand2, Pencil, Trash2,
-  Copy, Check, Scale, Clock,
+  Copy, Check, Scale, Clock, Stamp, ShieldOff,
 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import ModeloModal, { TIPOS_DOCUMENTO, AREAS_DIREITO } from './ModeloModal'
 import GeradorModal from './GeradorModal'
+import PecaAutomaticaModal from './PecaAutomaticaModal'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
 
   const [modeloModal, setModeloModal] = useState<{ open: boolean; editando: DocModelo | null }>({ open: false, editando: null })
   const [geradorModal,setGeradorModal]= useState<{ open: boolean; modeloId?: string }>({ open: false })
+  const [pecaModal,   setPecaModal]   = useState<'procuracao' | 'hipossuficiencia' | null>(null)
 
   const [excluindoModelo, setExcluindoModelo] = useState<string | null>(null)
   const [excluindoGerado, setExcluindoGerado] = useState<string | null>(null)
@@ -158,6 +160,24 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
           <p className="text-[13px] text-[#7a8899] mt-0.5">Modelos e geração automática de documentos jurídicos</p>
         </div>
         <div className="flex gap-2">
+          {podeCriarGerado && (
+            <button
+              onClick={() => setPecaModal('procuracao')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#f9fafb] text-[#374151] text-[13px] font-medium rounded-xl transition-colors border border-[#e5e7eb]"
+            >
+              <Stamp size={14} />
+              Procuração
+            </button>
+          )}
+          {podeCriarGerado && (
+            <button
+              onClick={() => setPecaModal('hipossuficiencia')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#f9fafb] text-[#374151] text-[13px] font-medium rounded-xl transition-colors border border-[#e5e7eb]"
+            >
+              <ShieldOff size={14} />
+              Hipossuficiência
+            </button>
+          )}
           {podeCriarGerado && (
             <Link
               href="/documentos/gerador"
@@ -393,6 +413,10 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
           onSalvar={salvarGerado}
           onFechar={() => setGeradorModal({ open: false })}
         />
+      )}
+
+      {pecaModal && (
+        <PecaAutomaticaModal tipo={pecaModal} onFechar={() => setPecaModal(null)} />
       )}
     </div>
   )
