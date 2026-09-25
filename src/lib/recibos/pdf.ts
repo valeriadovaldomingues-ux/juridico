@@ -17,6 +17,8 @@ const ESCRITORIO =
   'Seção do Estado de Minas Gerais, sob o nº 2.422, com escritório à rua Gonçalves Dias, nº 874, 8º andar, ' +
   'bairro Savassi – Belo Horizonte/MG'
 
+// RG só aparece nos recibos de advogado(a) — os demais modelos (funcionário,
+// estagiário, benefício) só citam CPF, mesmo quando o RG está cadastrado.
 function qualificacao(d: DadosPessoais, { comOab }: { comOab: boolean }): string {
   const partes = [
     d.nacionalidade ?? 'brasileiro(a)',
@@ -27,7 +29,7 @@ function qualificacao(d: DadosPessoais, { comOab }: { comOab: boolean }): string
     partes.push(`advogado(a) devidamente inscrito(a) na Ordem dos Advogados do Brasil, Seção Minas Gerais, sob o nº ${d.oabNumero}`)
   }
   if (d.cpf) partes.push(`portador(a) do CPF/MF nº ${d.cpf}`)
-  if (d.rg) partes.push(`da Carteira de Identidade nº ${d.rg}`)
+  if (comOab && d.rg) partes.push(`da Carteira de Identidade nº ${d.rg}`)
   if (d.endereco) partes.push(`residente e domiciliado(a) à ${d.endereco}`)
 
   return partes.join(', ')
