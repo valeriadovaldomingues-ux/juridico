@@ -11,7 +11,7 @@ export default async function FinanceiroRoute() {
   const hoje = new Date()
   const mesFolhaAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`
 
-  const [{ data: lancamentos }, { data: profilesFuncionarios }, { data: folhas }] = await Promise.all([
+  const [{ data: lancamentos }, { data: profilesFuncionarios }, { data: folhas }, { data: dadosPessoais }] = await Promise.all([
     supabase
       .from('financeiro_lancamentos')
       .select('*, cliente:clientes(id, nome), processo:processos(id, numero_processo, titulo)')
@@ -29,6 +29,9 @@ export default async function FinanceiroRoute() {
       .from('folha_pagamento')
       .select('*')
       .eq('mes_referencia', mesFolhaAtual),
+    supabase
+      .from('funcionarios_dados_pessoais')
+      .select('profile_id, tipo_recibo, cpf, endereco'),
   ])
 
   const { data: gradePagamento } = await supabase
@@ -37,13 +40,19 @@ export default async function FinanceiroRoute() {
     .order('cliente(nome)')
 
   const folhaPorProfile = new Map((folhas ?? []).map(f => [f.profile_id, f]))
-  const funcionarios = (profilesFuncionarios ?? []).map(p => ({
-    profile_id: p.id,
-    nome:       p.nome,
-    email:      p.email,
-    role:       p.role,
-    folha:      folhaPorProfile.get(p.id) ?? null,
-  }))
+  const dadosPorProfile = new Map((dadosPessoais ?? []).map(d => [d.profile_id, d]))
+  const funcionarios = (profilesFuncionarios ?? []).map(p => {
+    const dados = dadosPorProfile.get(p.id)
+    return {
+      profile_id:     p.id,
+      nome:           p.nome,
+      email:          p.email,
+      role:           p.role,
+      folha:          folhaPorProfile.get(p.id) ?? null,
+      tipoRecibo:     dados?.tipo_recibo ?? null,
+      dadosCompletos: !!(dados?.cpf && dados?.endereco),
+    }
+  })
 
   return (
     <div className="internal-page">

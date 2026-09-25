@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createClient()
 
-  const [{ data: profiles, error: profilesError }, { data: folhas, error: folhasError }] = await Promise.all([
+  const [{ data: profiles, error: profilesError }, { data: folhas, error: folhasError }, { data: dadosPessoais }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, nome, email, role')
@@ -25,20 +25,29 @@ export async function GET(req: NextRequest) {
       .from('folha_pagamento')
       .select('*')
       .eq('mes_referencia', mes),
+    supabase
+      .from('funcionarios_dados_pessoais')
+      .select('profile_id, tipo_recibo, cpf, endereco'),
   ])
 
   if (profilesError) return NextResponse.json({ error: profilesError.message }, { status: 400 })
   if (folhasError) return NextResponse.json({ error: folhasError.message }, { status: 400 })
 
   const folhaPorProfile = new Map((folhas ?? []).map(f => [f.profile_id, f]))
+  const dadosPorProfile = new Map((dadosPessoais ?? []).map(d => [d.profile_id, d]))
 
-  const data = (profiles ?? []).map(p => ({
-    profile_id: p.id,
-    nome:       p.nome,
-    email:      p.email,
-    role:       p.role,
-    folha:      folhaPorProfile.get(p.id) ?? null,
-  }))
+  const data = (profiles ?? []).map(p => {
+    const dados = dadosPorProfile.get(p.id)
+    return {
+      profile_id:     p.id,
+      nome:           p.nome,
+      email:          p.email,
+      role:           p.role,
+      folha:          folhaPorProfile.get(p.id) ?? null,
+      tipoRecibo:     dados?.tipo_recibo ?? null,
+      dadosCompletos: !!(dados?.cpf && dados?.endereco),
+    }
+  })
 
   return NextResponse.json(data)
 }
