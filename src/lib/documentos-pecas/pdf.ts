@@ -20,16 +20,20 @@ async function getLogoBytes() {
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean)
   const lines: string[] = []
-  let current = ''
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word
-    if (font.widthOfTextAtSize(next, size) <= maxWidth) { current = next; continue }
-    if (current) lines.push(current)
-    current = word
+  // "\n" é respeitado como quebra de linha forçada (ex: itens de cláusula em lista) —
+  // dentro de cada trecho o texto continua sendo quebrado normalmente por largura.
+  for (const trecho of text.split('\n')) {
+    const words = trecho.split(/\s+/).filter(Boolean)
+    let current = ''
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word
+      if (font.widthOfTextAtSize(next, size) <= maxWidth) { current = next; continue }
+      if (current) lines.push(current)
+      current = word
+    }
+    lines.push(current)
   }
-  if (current) lines.push(current)
   return lines
 }
 
@@ -38,15 +42,21 @@ export interface Assinante {
   linha2?: string // ex: "OAB/MG 88.465" ou "CPF/MF nº 000.000.000-00"
 }
 
+// Cada parágrafo pode ser texto simples, ou um bloco com título em negrito próprio
+// (ex: cabeçalho de cláusula "Cláusula primeira – DO OBJETO" seguido do corpo).
+export type PecaParagrafo = string | { titulo: string; texto: string }
+
 export interface PecaPdfParams {
-  titulo:      string   // ex: "PROCURAÇÃO" — vira espaçado (P R O C U R A Ç Ã O)
-  paragrafos:  string[] // cada item é um parágrafo (pode ter múltiplas linhas após wrap)
-  localData:   string   // ex: "Belo Horizonte, 15 de setembro de 2026."
-  assinantes:  Assinante[] // 1 (hipossuficiência/procuração) ou 2 (petição, lado a lado)
+  titulo:      string          // ex: "PROCURAÇÃO"
+  tituloEspacado?: boolean      // true (padrão): "P R O C U R A Ç Ã O". false: texto normal.
+  paragrafos:  PecaParagrafo[] // cada item é um parágrafo (pode ter múltiplas linhas após wrap)
+  localData:   string          // ex: "Belo Horizonte, 15 de setembro de 2026."
+  assinantes:  Assinante[]     // 1 (hipossuficiência/procuração) ou 2 (petição/contrato, lado a lado)
+  testemunhas?: boolean         // true: adiciona 2ª linha de assinaturas "TESTEMUNHA / TESTEMUNHA"
 }
 
 export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Array> {
-  const { titulo, paragrafos, localData, assinantes } = params
+  const { titulo, tituloEspacado = true, paragrafos, localData, assinantes, testemunhas = false } = params
 
   const pdf = await PDFDocument.create()
   const font     = await pdf.embedFont(StandardFonts.TimesRoman)
@@ -91,16 +101,22 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
     })
   }
 
-  // Título espaçado, centralizado
-  const tituloEspacado = titulo.split('').join(' ')
-  desenharLinha(tituloEspacado, {
+  // Título centralizado — espaçado (P R O C U R A Ç Ã O) por padrão, ou normal se tituloEspacado=false
+  const tituloTexto = tituloEspacado ? titulo.split('').join(' ') : titulo
+  desenharLinha(tituloTexto, {
     size: 14, font: fontBold,
-    x: (PAGE_WIDTH - fontBold.widthOfTextAtSize(tituloEspacado, 14)) / 2,
+    x: (PAGE_WIDTH - fontBold.widthOfTextAtSize(tituloTexto, 14)) / 2,
   })
   y -= LINE_HEIGHT
 
   paragrafos.forEach((paragrafo, i) => {
-    desenharParagrafo(paragrafo)
+    if (typeof paragrafo === 'string') {
+      desenharParagrafo(paragrafo)
+    } else {
+      desenharParagrafo(paragrafo.titulo, { font: fontBold })
+      y -= LINE_HEIGHT * 0.3
+      desenharParagrafo(paragrafo.texto)
+    }
     if (i < paragrafos.length - 1) y -= LINE_HEIGHT * 0.6
   })
 
@@ -121,11 +137,11 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
       desenharLinha(a.linha2, { size: 11, x: (PAGE_WIDTH - font.widthOfTextAtSize(a.linha2, 11)) / 2 })
     }
   } else {
-    // duas assinaturas lado a lado (petição — sócios)
+    // duas assinaturas lado a lado (petição/contrato)
     const colWidth = CONTENT_WIDTH / 2
     const linhaW = 50
     const linha = '_'.repeat(linhaW)
-    garantirEspaco(LINE_HEIGHT * 3)
+    garantirEspaco(LINE_HEIGHT * (testemunhas ? 6 : 3))
     const yAssin = y
     assinantes.forEach((a, i) => {
       const xCol = MARGIN_SIDE + i * colWidth
@@ -134,6 +150,17 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
       if (a.linha2) page.drawText(a.linha2, { x: xCol, y: yAssin - LINE_HEIGHT * 2, size: 10, font })
     })
     y = yAssin - LINE_HEIGHT * 2.5
+
+    if (testemunhas) {
+      y -= LINE_HEIGHT * 2
+      const yTest = y
+      ;['TESTEMUNHA', 'TESTEMUNHA'].forEach((label, i) => {
+        const xCol = MARGIN_SIDE + i * colWidth
+        page.drawText(linha, { x: xCol, y: yTest, size: 12, font })
+        page.drawText(label, { x: xCol, y: yTest - LINE_HEIGHT, size: 11, font })
+      })
+      y = yTest - LINE_HEIGHT * 1.5
+    }
   }
 
   return pdf.save()

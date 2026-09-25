@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   Plus, FileText, LayoutTemplate, Wand2, Pencil, Trash2,
-  Copy, Check, Scale, Clock, Stamp, ShieldOff,
+  Copy, Check, Scale, Clock, Stamp, ShieldOff, FileSignature,
 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
@@ -12,6 +12,7 @@ import type { UserRole } from '@/types'
 import ModeloModal, { TIPOS_DOCUMENTO, AREAS_DIREITO } from './ModeloModal'
 import GeradorModal from './GeradorModal'
 import PecaAutomaticaModal from './PecaAutomaticaModal'
+import ContratoPartidoModal from './ContratoPartidoModal'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
   const [modeloModal, setModeloModal] = useState<{ open: boolean; editando: DocModelo | null }>({ open: false, editando: null })
   const [geradorModal,setGeradorModal]= useState<{ open: boolean; modeloId?: string }>({ open: false })
   const [pecaModal,   setPecaModal]   = useState<'procuracao' | 'hipossuficiencia' | null>(null)
+  const [contratoModal, setContratoModal] = useState(false)
 
   const [excluindoModelo, setExcluindoModelo] = useState<string | null>(null)
   const [excluindoGerado, setExcluindoGerado] = useState<string | null>(null)
@@ -176,6 +178,15 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
             >
               <ShieldOff size={14} />
               Hipossuficiência
+            </button>
+          )}
+          {podeCriarGerado && (
+            <button
+              onClick={() => setContratoModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#f9fafb] text-[#374151] text-[13px] font-medium rounded-xl transition-colors border border-[#e5e7eb]"
+            >
+              <FileSignature size={14} />
+              Contrato de Honorários
             </button>
           )}
           {podeCriarGerado && (
@@ -417,6 +428,10 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
 
       {pecaModal && (
         <PecaAutomaticaModal tipo={pecaModal} onFechar={() => setPecaModal(null)} />
+      )}
+
+      {contratoModal && (
+        <ContratoPartidoModal onFechar={() => setContratoModal(false)} />
       )}
     </div>
   )
