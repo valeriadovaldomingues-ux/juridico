@@ -124,9 +124,11 @@ const PERMISSIONS: PermMatrix = {
   // ── Comercial ────────────────────────────────────────────────────────────────
   // Foco exclusivo no pipeline CRM. Acesso apenas ao módulo comercial e clientes.
   // Não acessa agenda, kanban, documentos, publicações, ia-juridica ou financeiro.
+  // INPI liberado em modo visualização a pedido da Valéria em 28/09/2026 (Luciana).
   comercial: {
     dashboard:  ['view'],
     clientes:   ['view', 'create', 'edit'],
+    inpi:       ['view'],
     comercial:  ['view', 'create', 'edit', 'delete'],
     ferramentasPdf: ['view'],
     tv: ['view'],
@@ -266,6 +268,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
   comercial: [
     '/dashboard',
     '/clientes',
+    '/inpi',
     '/comercial',
     '/ferramentas-pdf',
     '/tv/painel-diario',
