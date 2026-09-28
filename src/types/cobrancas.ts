@@ -36,6 +36,10 @@ export interface Cobranca {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Advocacia de partido vs. ação isolada (ver src/lib/documentos/schema.ts
+  // pro mesmo conceito no gerador de documentos, aqui é só pra Cobranças).
+  tipo_caso: 'isolado' | 'partido' | null
+  percentual_exito: string | null
   cliente?: {
     id: string
     nome: string
