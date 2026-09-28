@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import type { UserRole } from '@/types'
 
-const VIEW_ALLOWED: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+const VIEW_ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 const EDIT_ALLOWED: UserRole[] = ['administrativo', 'advogado', 'gerente', 'socio']
 
 const SELECT = `*, cliente:clientes!cliente_id(id, nome, email, telefone, celular)`
