@@ -15,6 +15,7 @@ import {
   getOfficeColumns,
   getListColumns,
   getUnassignedTasks,
+  resolverDestinoOffice,
   type OfficeColumn,
 } from '@/lib/kanban.service'
 import PersonalBoard from './PersonalBoard'
@@ -243,30 +244,33 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     const task = tasks.find(t => t.id === active.id)
     if (!task) return
 
-    // Soltar na área vazia da coluna: over.id é o droppable ("userId::status").
-    // Soltar EM CIMA de outro card (o caso mais comum — colunas raramente
-    // estão vazias): over.id é o id de outra tarefa, então a coluna de
-    // destino é a status dessa tarefa. Antes só o primeiro caso mudava o
-    // status; soltar sobre um card não fazia nada.
-    const overIdStr  = String(over.id)
-    const isDropZone = overIdStr.includes('::')
-    const destStatus = isDropZone
-      ? (overIdStr.split('::').pop() as KanbanStatus)
-      : tasks.find(t => t.id === over.id)?.status
+    // Soltar na área vazia da coluna ("pessoa::status") ou em cima de outro card —
+    // o destino inclui QUEM é o dono da coluna, então arrastar para a coluna de outra
+    // pessoa reatribui o card (antes só o status mudava e o dono era ignorado).
+    const destino = resolverDestinoOffice(String(over.id), tasks, profiles.map(p => p.id))
+    if (!destino) return
 
-    if (!destStatus || task.status === destStatus) return
+    const mudouStatus = destino.status !== task.status
+    const mudouDono   = destino.responsavelId !== null && destino.responsavelId !== task.responsavel_id
+    if (!mudouStatus && !mudouDono) return
 
-    const concluido_em = destStatus === 'concluido' ? new Date().toISOString() : null
+    const concluido_em = mudouStatus ? (destino.status === 'concluido' ? new Date().toISOString() : null) : task.concluido_em ?? null
+    const anterior = tasks
 
     setTasks(prev => prev.map(t =>
-      t.id === task.id ? { ...t, status: destStatus, concluido_em } : t,
+      t.id === task.id
+        ? { ...t, status: destino.status, concluido_em, ...(mudouDono ? { responsavel_id: destino.responsavelId } : {}) }
+        : t,
     ))
 
     fetch(`/api/kanban-tasks/${task.id}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status: destStatus, concluido_em }),
-    })
+      body:    JSON.stringify({
+        ...(mudouStatus ? { status: destino.status } : {}),
+        ...(mudouDono   ? { responsavel_id: destino.responsavelId } : {}),
+      }),
+    }).then(res => { if (!res.ok) setTasks(anterior) }).catch(() => setTasks(anterior))
   }
 
   // ── Loading / Erro ──────────────────────────────────────────────────────────
