@@ -11,7 +11,7 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { previewImport } from '@/lib/agenda-import/importer'
 import type { UserRole } from '@/types'
 
-const ALLOWED: UserRole[] = ['administrativo', 'advogado', 'gerente', 'socio']
+const ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
 
 export async function POST(req: NextRequest) {
   const auth = await apiGuard(ALLOWED)
