@@ -1,19 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockFetchOpenCards, mockCreateClient } = vi.hoisted(() => ({
+const { mockFetchOpenCards, mockFetchLists, mockCreateClient } = vi.hoisted(() => ({
   mockFetchOpenCards: vi.fn(),
+  mockFetchLists: vi.fn(),
   mockCreateClient: vi.fn(),
 }))
 
 vi.mock('./api', () => ({
   fetchOpenCards: mockFetchOpenCards,
+  fetchLists: mockFetchLists,
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: mockCreateClient,
 }))
 
-import { syncTrelloBoard } from './sync'
+import { syncTrelloBoard, idsParaArquivar } from './sync'
 
 function cartao(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -88,6 +90,8 @@ function supabaseFake(opts: {
 }
 
 beforeEach(() => {
+  mockFetchLists.mockReset()
+  mockFetchLists.mockResolvedValue([])
   mockFetchOpenCards.mockReset()
   mockCreateClient.mockReset()
 })
@@ -186,5 +190,39 @@ describe('syncTrelloBoard — responsável: lista tem prioridade sobre membro', 
     expect(resultado.cards_ignorados).toBe(1)
     expect(resultado.cards_criados).toBe(0)
     expect(supabase.inserts).toHaveLength(0)
+  })
+})
+
+describe('syncTrelloBoard — posição da lista e cards que sumiram do Trello', () => {
+  it('grava a posição da lista do Trello no card (ordem das colunas igual ao Trello)', async () => {
+    mockFetchOpenCards.mockResolvedValue([cartao()])
+    mockFetchLists.mockResolvedValue([{ id: 'list-tuane', name: 'Tuane', closed: false, pos: 529511.2 }])
+    const supabase = supabaseFake({ listMappings: [{ trello_list_id: 'list-tuane', kanban_status: 'a_fazer', trello_list_name: 'Tuane' }] })
+    mockCreateClient.mockResolvedValue(supabase)
+
+    await syncTrelloBoard('integ-1', null, supabase as never)
+
+    const insert = supabase.inserts.find(i => i.table === 'kanban_tasks')?.payload as Record<string, unknown>
+    expect(insert.trello_list_pos).toBe(529511.2)
+  })
+
+  it('segue sincronizando quando a busca das posições falha', async () => {
+    mockFetchOpenCards.mockResolvedValue([cartao()])
+    mockFetchLists.mockRejectedValue(new Error('Trello 500'))
+    const supabase = supabaseFake({ listMappings: [{ trello_list_id: 'list-tuane', kanban_status: 'a_fazer' }] })
+    mockCreateClient.mockResolvedValue(supabase)
+
+    const r = await syncTrelloBoard('integ-1', null, supabase as never)
+    expect(r.success).toBe(true)
+  })
+
+  it('idsParaArquivar devolve só os cards que não estão mais abertos no Trello', () => {
+    const existentes = [
+      { id: 'a', origem_id: 'trello-1' },
+      { id: 'b', origem_id: 'trello-2' },
+      { id: 'c', origem_id: null },
+    ]
+    expect(idsParaArquivar(existentes, new Set(['trello-1']))).toEqual(['b'])
+    expect(idsParaArquivar(existentes, new Set(['trello-1', 'trello-2']))).toEqual([])
   })
 })

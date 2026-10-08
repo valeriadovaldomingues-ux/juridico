@@ -16,6 +16,7 @@ import {
   getListColumns,
   getUnassignedTasks,
   resolverDestinoOffice,
+  ordenarColunasTrello,
   type OfficeColumn,
 } from '@/lib/kanban.service'
 import PersonalBoard from './PersonalBoard'
@@ -348,6 +349,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   const colVisiveis     = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
   const listColsVisiveis = ocultarVazios ? listCols.filter(col => col.tasks.length > 0) : listCols
   const mostrarUnassigned = unassignedTasks.length > 0
+  // Mesma ordem de colunas do Trello (pessoas e listas intercaladas pela posição da lista)
+  const colunasOrdenadas = ordenarColunasTrello(colVisiveis, listColsVisiveis, tasks)
 
   return (
     <>
@@ -379,30 +382,27 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           </div>
         ) : (
           <div className="flex items-start gap-4 overflow-x-auto pb-4">
-            {colVisiveis.map((col, i) => (
+            {colunasOrdenadas.map(item => item.tipo === 'pessoa' ? (
               <QuadroColuna
-                key={col.profile.id}
-                id={col.profile.id}
-                nome={col.profile.nome}
-                cor={getUserColor(col.profile, i)}
-                tasks={col.tasks}
+                key={item.col.profile.id}
+                id={item.col.profile.id}
+                nome={item.col.profile.nome}
+                cor={getUserColor(item.col.profile, officeCols.findIndex(c => c.profile.id === item.col.profile.id))}
+                tasks={item.col.tasks}
                 colorMap={colorMap}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
-                onAdd={() => handleAddParaPessoa(col.profile.id)}
+                onAdd={() => handleAddParaPessoa(item.col.profile.id)}
               />
-            ))}
-
-            {/* Listas do Trello que não representam uma pessoa (ex.: PRAZOS CÍVEIS) */}
-            {listColsVisiveis.map((col, i) => (
+            ) : (
               <QuadroColuna
-                key={col.key}
-                id={`__list__${col.key}`}
-                nome={col.nome}
-                cor={getUserColor({ id: col.key, nome: col.nome, cor_kanban: null, role: '' }, officeCols.length + i)}
-                tasks={col.tasks}
+                key={item.col.key}
+                id={`__list__${item.col.key}`}
+                nome={item.col.nome}
+                cor={getUserColor({ id: item.col.key, nome: item.col.nome, cor_kanban: null, role: '' }, officeCols.length + item.indice)}
+                tasks={item.col.tasks}
                 colorMap={colorMap}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

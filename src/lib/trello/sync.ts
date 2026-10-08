@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { calculateSimpleSLA } from '@/lib/kanban-sla'
-import { fetchOpenCards } from './api'
+import { fetchOpenCards, fetchLists } from './api'
 import type { KanbanPrioridade, KanbanStatus } from '@/types/kanban'
 import type { TrelloLabel, SyncResult } from '@/types/trello'
 
@@ -133,6 +133,17 @@ export async function syncTrelloBoard(
       integration.api_token,
     )
 
+    // Posição de cada lista no Trello — usada para ordenar as colunas do quadro igual ao Trello.
+    // Falha aqui não derruba a sincronização (só deixa a ordem como estava).
+    const posPorLista = new Map<string, number>()
+    try {
+      const listas = await fetchLists(integration.board_id, integration.api_key, integration.api_token)
+      for (const l of listas ?? []) if (typeof l.pos === 'number') posPorLista.set(l.id, l.pos)
+    } catch { /* sem posições nesta rodada */ }
+
+    // IDs de todos os cards abertos hoje no Trello (inclui os de listas "ignorar").
+    const idsAbertosNoTrello = new Set(cards.map(c => c.id))
+
     let criados = 0
     let atualizados = 0
     let ignorados = 0
@@ -196,6 +207,7 @@ export async function syncTrelloBoard(
             trello_member_id: firstMemberId,  // persiste o ID do membro para redistribuição futura
             trello_list_id:   card.idList,
             trello_list_nome: listaNome,
+            trello_list_pos:  posPorLista.get(card.idList) ?? null,
             prioridade,
             data,
             updated_at:       now,
@@ -225,6 +237,7 @@ export async function syncTrelloBoard(
           trello_member_id: firstMemberId,    // persiste o ID do membro para redistribuição futura
           trello_list_id:   card.idList,
           trello_list_nome: listaNome,
+          trello_list_pos:  posPorLista.get(card.idList) ?? null,
           prioridade,
           data,
           origem:           'trello',
@@ -236,6 +249,27 @@ export async function syncTrelloBoard(
         })
         criados++
       }
+    }
+
+    // Cards que existem no sistema mas não estão mais abertos no Trello (foram concluídos,
+    // arquivados ou apagados lá) saem do quadro — antes ficavam acumulando. Arquivar é
+    // reversível ("Ver arquivadas"). Só roda quando o Trello devolveu cards, para uma
+    // resposta vazia/falha nunca esvaziar o quadro.
+    let arquivados = 0
+    if (cards.length > 0) {
+      const { data: existentes } = await supabase
+        .from('kanban_tasks')
+        .select('id, origem_id')
+        .eq('origem', 'trello')
+        .eq('arquivado', false)
+      const orfaos = idsParaArquivar((existentes ?? []) as { id: string; origem_id: string | null }[], idsAbertosNoTrello)
+      for (let i = 0; i < orfaos.length; i += 100) {
+        await supabase
+          .from('kanban_tasks')
+          .update({ arquivado: true, arquivado_em: now, updated_at: now })
+          .in('id', orfaos.slice(i, i + 100))
+      }
+      arquivados = orfaos.length
     }
 
     const naoMapeados = Array.from(membrosSemMapping.values())
@@ -260,6 +294,7 @@ export async function syncTrelloBoard(
       cards_criados:        criados,
       cards_atualizados:    atualizados,
       cards_ignorados:      ignorados,
+      cards_arquivados:     arquivados,
       sem_responsavel:      semResponsavel,
       membros_nao_mapeados: naoMapeados,
       log_id:               logId,
@@ -270,4 +305,12 @@ export async function syncTrelloBoard(
     await failLog(msg)
     throw err
   }
+}
+
+/** IDs (do sistema) dos cards do Trello que não estão mais abertos no Trello. */
+export function idsParaArquivar(
+  existentes: { id: string; origem_id: string | null }[],
+  abertosNoTrello: Set<string>,
+): string[] {
+  return existentes.filter(t => t.origem_id && !abertosNoTrello.has(t.origem_id)).map(t => t.id)
 }

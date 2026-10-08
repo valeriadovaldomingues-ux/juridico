@@ -19,7 +19,7 @@ export function fetchBoard(boardId: string, key: string, token: string): Promise
 }
 
 export function fetchLists(boardId: string, key: string, token: string): Promise<TrelloList[]> {
-  return trelloFetch<TrelloList[]>(`/boards/${boardId}/lists?fields=id,name,closed`, key, token)
+  return trelloFetch<TrelloList[]>(`/boards/${boardId}/lists?fields=id,name,closed,pos`, key, token)
 }
 
 export function fetchMembers(boardId: string, key: string, token: string): Promise<TrelloMember[]> {
