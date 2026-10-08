@@ -15,7 +15,16 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
     .select('*, cliente:clientes(id, nome), partes_processo(id, pessoa_nome, tipo_parte)')
     .order('created_at', { ascending: false })
 
-  if (params.titulo) query = query.ilike('titulo', `%${params.titulo}%`)
+  // Busca geral: título, nº do processo, nome do cliente/partes e CPF/CNPJ (com ou sem
+  // pontuação, sem diferenciar acento/maiúscula). `titulo` segue valendo para links antigos.
+  const busca = (params.q ?? params.titulo ?? '').trim()
+  let buscaLimitada = false
+  if (busca) {
+    const { data: ids } = await supabase.rpc('processos_ids_busca', { q: busca })
+    const lista = (ids ?? []) as string[]
+    buscaLimitada = lista.length >= 300
+    query = query.in('id', lista.length > 0 ? lista : ['00000000-0000-0000-0000-000000000000'])
+  }
   if (params.numero) query = query.ilike('numero_processo', `%${params.numero}%`)
   if (params.area_direito) query = query.eq('area_direito', params.area_direito)
   if (params.status) query = query.eq('status', params.status)
@@ -37,6 +46,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
           <p className="text-[13px] text-[var(--color-ink-3)] mt-2 flex items-center gap-1.5">
             <Scale size={12} />
             {processos?.length ?? 0} registro{(processos?.length ?? 0) !== 1 ? 's' : ''}
+            {buscaLimitada && <span className="text-amber-700"> · mostrando os 300 primeiros — refine a busca</span>}
           </p>
         </div>
         <Link
