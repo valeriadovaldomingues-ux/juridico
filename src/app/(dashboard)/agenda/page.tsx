@@ -51,10 +51,14 @@ export default async function AgendaRoute() {
   const canManageTimeEntries = session ? ['administrativo', 'advogado', 'gerente', 'socio'].includes(session.profile.role) : false
   const canViewTimeReports = session ? ['gerente', 'socio'].includes(session.profile.role) : false
 
-  const [
-    { data: items, error: itemsError },
-  ] = await Promise.all([
-    supabase
+  // O Supabase devolve no máximo 1.000 linhas por consulta. Como a lista é ordenada da data
+  // mais antiga para a mais nova, passar de 1.000 itens cortava justamente os MAIS NOVOS
+  // (todos os pendentes) e a agenda parecia vazia. Por isso lê em páginas até acabar.
+  const TAMANHO_PAGINA = 1000
+  const items: Record<string, unknown>[] = []
+  let itemsError: { message: string } | null = null
+  for (let de = 0; ; de += TAMANHO_PAGINA) {
+    const { data, error } = await supabase
       .from('agenda_items')
       .select(`
         *,
@@ -67,8 +71,13 @@ export default async function AgendaRoute() {
           criado_por_profile:profiles!criado_por(id, nome)
         )
       `)
-      .order('data_inicio', { ascending: true }),
-  ])
+      .order('data_inicio', { ascending: true })
+      .order('id', { ascending: true })
+      .range(de, de + TAMANHO_PAGINA - 1)
+    if (error) { itemsError = error; break }
+    items.push(...(data ?? []))
+    if (!data || data.length < TAMANHO_PAGINA) break
+  }
 
   if (itemsError) {
     return (
@@ -109,7 +118,7 @@ export default async function AgendaRoute() {
   return (
     <div className="internal-page">
       <AgendaPage
-        initialItems={items ?? []}
+        initialItems={items as never}
         currentUserId={userId}
         currentUserRole={(role ?? 'cliente') as UserRole}
         canDelete={canDelete}
