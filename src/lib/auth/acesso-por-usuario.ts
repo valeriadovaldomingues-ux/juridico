@@ -19,15 +19,18 @@ export interface AcessoUsuario {
   rotasBloqueadas: readonly string[]
 }
 
+// Advogados liberados do modo restrito, a pedido da Valéria em 08/10/2026: tudo do
+// papel advogado, exceto Documentos, Monitoramento, IA Jurídica e Painel TV.
+// (Comercial, Financeiro, Cobranças, Relatórios, Importar, Automações,
+// Integrações, Dashboard TV, Usuários e Configurações já são barrados pelo papel.)
+const ADVOGADO_SEM_DOCUMENTOS_MONITORAMENTO_IA_TV: AcessoUsuario = {
+  liberadoDoModoRestrito: true,
+  rotasBloqueadas: ['/documentos', '/monitoramento', '/ia-juridica', '/tv'],
+}
+
 export const ACESSO_POR_USUARIO: Readonly<Record<string, AcessoUsuario>> = {
-  // Marcelo Mariano (advogado) — a pedido da Valéria em 08/10/2026: tudo do papel
-  // advogado, exceto Documentos, Monitoramento, IA Jurídica e Painel TV.
-  // (Comercial, Financeiro, Cobranças, Relatórios, Importar, Automações,
-  // Integrações, Dashboard TV, Usuários e Configurações já são barrados pelo papel.)
-  '1a5ed586-77e0-4f6f-a652-444056d86b1b': {
-    liberadoDoModoRestrito: true,
-    rotasBloqueadas: ['/documentos', '/monitoramento', '/ia-juridica', '/tv'],
-  },
+  '1a5ed586-77e0-4f6f-a652-444056d86b1b': ADVOGADO_SEM_DOCUMENTOS_MONITORAMENTO_IA_TV, // Marcelo Mariano
+  'dd154172-ebb2-498a-af49-c56ada33792a': ADVOGADO_SEM_DOCUMENTOS_MONITORAMENTO_IA_TV, // Débora Brito
 }
 
 export function acessoDoUsuario(userId?: string | null): AcessoUsuario | null {

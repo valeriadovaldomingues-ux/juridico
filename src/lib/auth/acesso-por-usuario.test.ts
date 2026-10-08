@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { getAllowedRoutes, roleCanAccessRoute } from '../permissions'
 
 const MARCELO = '1a5ed586-77e0-4f6f-a652-444056d86b1b'
+const DEBORA = 'dd154172-ebb2-498a-af49-c56ada33792a'
 const OUTRO_ADVOGADO = '00000000-0000-0000-0000-000000000000'
 
 describe('acesso por usuário — Marcelo (advogado)', () => {
@@ -34,5 +35,12 @@ describe('acesso por usuário — Marcelo (advogado)', () => {
     expect(getAllowedRoutes('advogado', OUTRO_ADVOGADO)).toEqual(['/kanban', '/inpi'])
     expect(getAllowedRoutes('advogado')).toEqual(['/kanban', '/inpi'])
     expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(false)
+  })
+
+  it('Débora tem exatamente o mesmo acesso do Marcelo', () => {
+    expect(getAllowedRoutes('advogado', DEBORA)).toEqual(getAllowedRoutes('advogado', MARCELO))
+    expect(roleCanAccessRoute('advogado', '/processos', DEBORA)).toBe(true)
+    expect(roleCanAccessRoute('advogado', '/documentos', DEBORA)).toBe(false)
+    expect(getAllowedRoutes('advogado', DEBORA)).not.toContain('/ia-juridica')
   })
 })
