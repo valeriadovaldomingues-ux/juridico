@@ -56,13 +56,16 @@ export async function POST(req: NextRequest) {
     origem = 'manual',
     // aceita tanto 'data' (nome do campo KanbanTask) quanto 'prazo' (legado)
     data: dataField, prazo,
-    tipo,
+    tipo, categoria,
   } = body
 
   const prazoFinal: string | null = dataField ?? prazo ?? null
 
   if (!titulo?.trim()) {
     return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
+  }
+  if (categoria != null && categoria !== 'inicial' && categoria !== 'despacho') {
+    return NextResponse.json({ error: "categoria deve ser 'inicial' ou 'despacho'" }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -90,6 +93,8 @@ export async function POST(req: NextRequest) {
       // constraint sempre que o form de "Nova tarefa" não mandava tipo
       // (é o caso de toda criação manual no Kanban), quebrando a criação.
       tipo:             tipo                     ?? 'tarefa',
+      categoria:        categoria                ?? null,
+      criado_por:       auth.userId,
       status,
       prioridade,
       responsavel_id:   responsavel_id           ?? null,
