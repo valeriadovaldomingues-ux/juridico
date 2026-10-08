@@ -1,5 +1,6 @@
 import type { UserRole } from '@/types'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
+import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
 
 export { KANBAN_ONLY_MODE }
 
@@ -394,8 +395,9 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
  * Usado por guards server-side. O proxy.ts tem a mesma lógica inlined
  * para compatibilidade com edge runtime.
  */
-export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
-  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) {
+export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: string | null): boolean {
+  if (rotaBloqueadaParaUsuario(pathname, userId)) return false
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId)) {
     return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
   }
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
@@ -406,12 +408,14 @@ export function roleCanAccessRoute(role: UserRole, pathname: string): boolean {
 
 /**
  * Rotas efetivamente permitidas para um perfil na sidebar, já considerando
- * o modo restrito temporário (KANBAN_ONLY_MODE). Prefira esta função a
- * indexar ALLOWED_ROUTES diretamente.
+ * o modo restrito temporário (KANBAN_ONLY_MODE) e os ajustes por usuário
+ * (src/lib/auth/acesso-por-usuario.ts). Prefira esta função a indexar
+ * ALLOWED_ROUTES diretamente.
  */
-export function getAllowedRoutes(role: UserRole): string[] {
-  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role)) return ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES]
-  return ALLOWED_ROUTES[role]
+export function getAllowedRoutes(role: UserRole, userId?: string | null): string[] {
+  const restrito = KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId)
+  const rotas = restrito ? ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES] : ALLOWED_ROUTES[role]
+  return rotas.filter(r => !rotaBloqueadaParaUsuario(r, userId))
 }
 
 // ─── Extensão futura: acesso por processo ────────────────────────────────────
