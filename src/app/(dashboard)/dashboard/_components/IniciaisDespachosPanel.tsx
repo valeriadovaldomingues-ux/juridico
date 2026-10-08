@@ -3,7 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FileText, Gavel, Plus, X, Loader2, ExternalLink, ChevronDown } from 'lucide-react'
+import { FileText, Gavel, Plus, X, Loader2, ExternalLink, ChevronDown, Check, SearchCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchProcessoOptions } from '@/lib/search/remote'
@@ -17,6 +17,7 @@ export interface LinhaPainel {
   partes: string | null
   prazo: string | null
   status: string
+  concluidoEm: string | null
   pendencia: string | null
   responsavel: string
   origem: 'trello' | 'cadastro'
@@ -54,7 +55,21 @@ function formatarData(iso: string | null) {
   return `${d}/${m}/${a}`
 }
 
-export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: LinhaPainel[]; perfis: { id: string; nome: string }[] }) {
+export interface ItemRevisao { id: string; titulo: string; detalhe: string | null }
+
+export default function IniciaisDespachosPanel({ linhas, perfis, paraRevisar }: { linhas: LinhaPainel[]; perfis: { id: string; nome: string }[]; paraRevisar: ItemRevisao[] }) {
+  const router = useRouter()
+  const [concluindo, setConcluindo] = useState<string | null>(null)
+  const [erroConcluir, setErroConcluir] = useState('')
+
+  async function concluir(id: string) {
+    setConcluindo(id); setErroConcluir('')
+    const res = await fetch(`/api/iniciais/${id}/concluir`, { method: 'POST' })
+    if (!res.ok) setErroConcluir((await res.json().catch(() => ({}))).error ?? 'Não foi possível concluir.')
+    setConcluindo(null)
+    router.refresh()
+  }
+
   const [aba, setAba] = useState<'inicial' | 'despacho'>('inicial')
   const [aberto, setAberto] = usePainelAberto()
   const [novo, setNovo] = useState<null | 'inicial' | 'despacho'>(null)
@@ -114,6 +129,22 @@ export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: Lin
 
       {aberto ? (
       <div className="border-t border-[var(--color-border)] px-5 py-4 space-y-5">
+        {erroConcluir && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erroConcluir}</p>}
+        {paraRevisar.length > 0 && (
+          <div className="rounded-xl border border-[var(--color-copper)]/40 bg-[var(--color-surface-warm)] px-3.5 py-3">
+            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--color-copper)] mb-2">
+              <SearchCheck size={13} /> Aguardando revisão do Cristiano ({paraRevisar.length})
+            </p>
+            <ul className="space-y-1">
+              {paraRevisar.map(r => (
+                <li key={r.id} className="text-[12px] text-[var(--color-ink)]">
+                  <span className="font-medium">{r.titulo}</span>
+                  {r.detalhe && <span className="text-[var(--color-ink-3)]"> · {r.detalhe}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {grupos.length === 0 && (
           <p className="text-[13px] text-[var(--color-ink-3)] py-6 text-center">
             {aba === 'inicial' ? 'Nenhuma inicial em andamento.' : 'Nenhum despacho cadastrado. Use "Novo despacho" para repassar um processo.'}
@@ -129,16 +160,30 @@ export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: Lin
               {itens.map(l => {
                 const st = STATUS[l.status] ?? STATUS.a_fazer
                 const prazo = formatarData(l.prazo)
+                const feita = l.status === 'concluido'
                 return (
-                  <li key={l.id} className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+                  <li key={l.id} className={cn('flex items-start justify-between gap-3 px-3.5 py-2.5', feita && 'bg-emerald-50/40')}>
                     <div className="min-w-0">
-                      <p className="text-[13px] text-[var(--color-ink)] leading-snug line-clamp-2">{l.titulo}</p>
+                      <p className={cn('text-[13px] leading-snug line-clamp-2', feita ? 'text-[var(--color-ink-3)] line-through' : 'text-[var(--color-ink)]')}>{l.titulo}</p>
                       <p className="text-[11px] text-[var(--color-ink-3)] mt-0.5">
                         {[l.processo && `Proc. ${l.processo}`, l.partes, prazo && `Prazo ${prazo}`, l.origem === 'trello' ? 'Trello' : null].filter(Boolean).join(' · ')}
                       </p>
                       {l.pendencia && <p className="text-[11px] text-amber-700 mt-0.5">Pendência: {l.pendencia}</p>}
+                      {feita && l.categoria === 'inicial' && <p className="text-[11px] text-emerald-700 mt-0.5">Concluída — enviada ao Cristiano para revisar. Some amanhã.</p>}
                     </div>
-                    <span className={cn('shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full', st.cls)}>{st.label}</span>
+                    <div className="shrink-0 flex items-center gap-2">
+                      {l.categoria === 'inicial' && l.origem === 'cadastro' && !feita && (
+                        <button
+                          onClick={() => concluir(l.id)}
+                          disabled={concluindo === l.id}
+                          title="Concluir e enviar para o Cristiano revisar"
+                          className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-full ring-1 ring-emerald-200 transition-colors disabled:opacity-60"
+                        >
+                          {concluindo === l.id ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />} Concluir
+                        </button>
+                      )}
+                      <span className={cn('text-[10px] font-semibold px-2 py-1 rounded-full', st.cls)}>{st.label}</span>
+                    </div>
                   </li>
                 )
               })}
