@@ -126,10 +126,12 @@ const PERMISSIONS: PermMatrix = {
   // Foco exclusivo no pipeline CRM. Acesso apenas ao módulo comercial e clientes.
   // Não acessa agenda, kanban, documentos, publicações, ia-juridica ou financeiro.
   // INPI liberado em modo visualização a pedido da Valéria em 28/09/2026 (Luciana).
+  // Kanban liberado em 08/10/2026 ("todos podem ter o kanban completo").
   comercial: {
     dashboard:  ['view'],
     clientes:   ['view', 'create', 'edit'],
     inpi:       ['view'],
+    kanban:     ['view', 'create', 'edit'],
     comercial:  ['view', 'create', 'edit', 'delete'],
     ferramentasPdf: ['view'],
     tv: ['view'],
@@ -270,6 +272,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/dashboard',
     '/clientes',
     '/inpi',
+    '/kanban',
     '/comercial',
     '/ferramentas-pdf',
     '/tv/painel-diario',

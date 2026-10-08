@@ -76,3 +76,16 @@ describe('INPI permissioning', () => {
     expect(getAllowedRoutes('advogado')).toContain('/kanban')
   })
 })
+
+describe('Kanban para todos os perfis internos', () => {
+  it.each(['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio'] as const)('%s vê e usa o Kanban', (role) => {
+    expect(can(role, 'kanban', 'view')).toBe(true)
+    expect(can(role, 'kanban', 'create')).toBe(true)
+    expect(ALLOWED_ROUTES[role]).toContain('/kanban')
+  })
+
+  it('cliente do portal não tem Kanban', () => {
+    expect(can('cliente', 'kanban', 'view')).toBe(false)
+    expect(ALLOWED_ROUTES.cliente).not.toContain('/kanban')
+  })
+})
