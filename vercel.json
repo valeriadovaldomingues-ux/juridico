@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/keepalive",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/cron/trello",
       "schedule": "0 9 * * *"
     },
