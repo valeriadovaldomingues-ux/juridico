@@ -74,13 +74,18 @@ describe('resolverDestinoOffice', () => {
     expect(resolverDestinoOffice('bia::a_fazer', tarefas, pessoas)).toEqual({ status: 'a_fazer', responsavelId: 'bia' })
   })
 
-  it('soltar em cima de um card vale como soltar na coluna dele', () => {
-    expect(resolverDestinoOffice('t2', tarefas, pessoas)).toEqual({ status: 'fazendo', responsavelId: 'bia' })
+  it('coluna estilo Trello (::todos) só reatribui, sem mexer no status', () => {
+    expect(resolverDestinoOffice('bia::todos', tarefas, pessoas)).toEqual({ status: null, responsavelId: 'bia' })
+    expect(resolverDestinoOffice('__list__x::todos', tarefas, pessoas)).toEqual({ status: null, responsavelId: null })
+  })
+
+  it('soltar em cima de um card vale como soltar na coluna dele (sem mudar status)', () => {
+    expect(resolverDestinoOffice('t2', tarefas, pessoas)).toEqual({ status: null, responsavelId: 'bia' })
   })
 
   it('colunas de lista do Trello e sem responsável só mudam o status', () => {
     expect(resolverDestinoOffice('lista123::concluido', tarefas, pessoas)).toEqual({ status: 'concluido', responsavelId: null })
-    expect(resolverDestinoOffice('t3', tarefas, pessoas)).toEqual({ status: 'concluido', responsavelId: null })
+    expect(resolverDestinoOffice('t3', tarefas, pessoas)).toEqual({ status: null, responsavelId: null })
   })
 
   it('destino inválido é ignorado', () => {
