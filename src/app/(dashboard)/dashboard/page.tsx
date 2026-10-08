@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import AtividadesBlock from './_components/AtividadesBlock'
 import ProdutividadeColaboradores from './_components/ProdutividadeColaboradores'
+import IniciaisDespachosBlock from './_components/IniciaisDespachosBlock'
 import { formatCurrency } from '@/lib/utils'
 
 // ─── Funil comercial ─────────────────────────────────────────────────────────
@@ -277,6 +278,9 @@ export default async function DashboardPage() {
         </Link>
         </div>
       </div>
+
+      {/* ── Iniciais e Despachos (sócio e gerente) ───────────────────────────── */}
+      {['socio', 'gerente'].includes(userRole) && <IniciaisDespachosBlock />}
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">

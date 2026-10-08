@@ -17,6 +17,7 @@ export interface KanbanTask {
   processo_id?: string | null
   numero_processo?: string | null
   partes_resumidas?: string | null
+  categoria?: 'inicial' | 'despacho' | null // card de Iniciais/Despachos (painel do Dashboard)
   area_juridica?: string | null
   pendencia_motivo?: string | null
   publicacao_id?: string | null

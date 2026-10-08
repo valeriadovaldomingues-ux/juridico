@@ -75,6 +75,11 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
 
         {/* Badges superiores */}
         <div className="flex items-center gap-1.5 flex-wrap">
+          {task.categoria && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-copper)] bg-[var(--color-surface-warm)] px-1.5 py-0.5 rounded-full ring-1 ring-[var(--color-copper)]/30">
+              {task.categoria === 'inicial' ? 'Inicial' : 'Despacho'}
+            </span>
+          )}
           {task.origem === 'publicacao' && (
             <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded-full ring-1 ring-violet-200">
               <Newspaper size={8} /> Publicação
