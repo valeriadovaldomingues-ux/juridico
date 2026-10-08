@@ -19,6 +19,7 @@ import type {
 import { parseCsv } from './csv-parser'
 import { buildColumnMapping, normalizeRow } from './normalizer'
 import { syncAgendaToKanban } from './sync-to-kanban'
+import { matchPerfilPorNome } from './match-responsavel'
 
 // ─── Helpers internos ─────────────────────────────────────────────────────────
 
@@ -62,11 +63,15 @@ async function fetchProfileMap(
   names: string[],
 ): Promise<Map<string, string>> {
   if (names.length === 0) return new Map()
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, nome')
-    .in('nome', names)
-  return new Map((data ?? []).map((p: any) => [p.nome as string, p.id as string]))
+  // O EasyJur manda o nome completo; o perfil usa o nome simples — ver match-responsavel.ts
+  const { data } = await supabase.from('profiles').select('id, nome').eq('ativo', true)
+  const perfis = (data ?? []) as { id: string; nome: string }[]
+  const map = new Map<string, string>()
+  for (const nome of names) {
+    const id = matchPerfilPorNome(nome, perfis)
+    if (id) map.set(nome, id)
+  }
+  return map
 }
 
 // ─── Preview ──────────────────────────────────────────────────────────────────
