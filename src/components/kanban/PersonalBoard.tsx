@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, Archive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import KanbanCard from './KanbanCard'
 import type { KanbanTask, KanbanStatus, KanbanProfile } from '@/types/kanban'
@@ -25,7 +25,7 @@ const COL_PALETTE: Record<KanbanStatus, {
 
 // ─── Coluna droppable ─────────────────────────────────────────────────────────
 function PersonalColumn({
-  status, label, tasks, userColor, onEdit, onDelete, onAddTask,
+  status, label, tasks, userColor, onEdit, onDelete, onArchive, onAddTask,
 }: {
   status:    KanbanStatus
   label:     string
@@ -33,6 +33,7 @@ function PersonalColumn({
   userColor: string
   onEdit:    (t: KanbanTask) => void
   onDelete:  (id: string) => void
+  onArchive?: (ids: string[]) => void
   onAddTask: (status: KanbanStatus) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `personal::${status}` })
@@ -46,6 +47,19 @@ function PersonalColumn({
         <span className={cn('text-[11px] font-bold uppercase tracking-wider flex-1', pal.header)}>
           {label}
         </span>
+        {onArchive && status === 'concluido' && tasks.length > 0 && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Arquivar ${tasks.length} card${tasks.length > 1 ? 's' : ''} concluído${tasks.length > 1 ? 's' : ''}? Eles saem do quadro e ficam em "Ver arquivadas".`)) {
+                onArchive(tasks.map(t => t.id))
+              }
+            }}
+            title="Arquivar todos os concluídos"
+            className="flex items-center gap-1 text-[9px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded-full ring-1 ring-emerald-200 transition-colors"
+          >
+            <Archive size={9} /> Arquivar todos
+          </button>
+        )}
         <span className="text-[10px] font-semibold text-[#9ca3af] bg-[#f3f4f6] px-1.5 py-0.5 rounded-full">
           {tasks.length}
         </span>
@@ -76,6 +90,7 @@ function PersonalColumn({
               userColor={userColor}
               onEdit={onEdit}
               onDelete={onDelete}
+              onArchive={onArchive ? (id) => onArchive([id]) : undefined}
             />
           ))}
         </SortableContext>
@@ -106,6 +121,7 @@ interface Props {
   onTasksChange: (tasks: KanbanTask[]) => void
   onEdit:        (task: KanbanTask) => void
   onDelete:      (id: string) => void
+  onArchive?:    (ids: string[]) => void
   onAddTask:     (status: KanbanStatus) => void
   activeTask:    KanbanTask | null
   onDragStart:   (task: KanbanTask) => void
@@ -113,7 +129,7 @@ interface Props {
 }
 
 export default function PersonalBoard({
-  tasks, currentUser, onTasksChange, onEdit, onDelete, onAddTask,
+  tasks, currentUser, onTasksChange, onEdit, onDelete, onArchive, onAddTask,
   activeTask, onDragStart, onDragEnd,
 }: Props) {
   const sensors   = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -221,6 +237,7 @@ export default function PersonalBoard({
             userColor={userColor}
             onEdit={onEdit}
             onDelete={onDelete}
+            onArchive={onArchive}
             onAddTask={onAddTask}
           />
         ))}
