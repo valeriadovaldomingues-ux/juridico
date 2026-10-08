@@ -18,12 +18,12 @@ function nomeDoPerfilPorLista(lista: string | null, perfis: { id: string; nome: 
 type Row = {
   id: string; titulo: string; descricao: string | null; status: string
   data: string | null; numero_processo: string | null; partes_resumidas: string | null
-  pendencia_motivo: string | null; categoria: 'inicial' | 'despacho' | null
+  pendencia_motivo: string | null; concluido_em: string | null; categoria: 'inicial' | 'despacho' | null
   origem: string; trello_list_nome: string | null; created_at: string
   responsavel: { id: string; nome: string } | null
 }
 
-const SELECT = 'id, titulo, descricao, status, data, numero_processo, partes_resumidas, pendencia_motivo, categoria, origem, trello_list_nome, created_at, responsavel:profiles!responsavel_id(id, nome)'
+const SELECT = 'id, titulo, descricao, status, data, numero_processo, partes_resumidas, pendencia_motivo, concluido_em, categoria, origem, trello_list_nome, created_at, responsavel:profiles!responsavel_id(id, nome)'
 
 /**
  * Painel do Dashboard para o Cristiano: iniciais repassadas (cadastradas + cards do
@@ -33,21 +33,31 @@ const SELECT = 'id, titulo, descricao, status, data, numero_processo, partes_res
 export default async function IniciaisDespachosBlock() {
   const supabase = await createClient()
 
-  const [{ data: cadastrados }, { data: doTrello }, { data: perfis }] = await Promise.all([
+  // Concluída fica visível só no dia em que foi concluída (fuso de Brasília) e some no dia seguinte.
+  const hojeBR = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const inicioDoDia = new Date(`${hojeBR}T00:00:00-03:00`).getTime()
+  const aindaVale = (r: { status: string; concluido_em: string | null }) =>
+    r.status !== 'concluido' || (!!r.concluido_em && new Date(r.concluido_em).getTime() >= inicioDoDia)
+
+  const [{ data: cadastrados }, { data: doTrello }, { data: perfis }, { data: revisoes }] = await Promise.all([
     supabase.from('kanban_tasks').select(SELECT)
       .not('categoria', 'is', null).eq('arquivado', false).order('created_at', { ascending: false }).limit(500),
     supabase.from('kanban_tasks').select(SELECT)
-      .is('categoria', null).eq('origem', 'trello').eq('arquivado', false).neq('status', 'concluido')
+      .is('categoria', null).eq('origem', 'trello').eq('arquivado', false)
       .ilike('titulo', '%inicial%').not('descricao', 'ilike', '%AUTOMACAO_PUBLICACOES%')
       .order('created_at', { ascending: false }).limit(300),
     supabase.from('profiles').select('id, nome').eq('ativo', true).neq('role', 'cliente').order('nome'),
+    // Iniciais concluídas que aguardam revisão do Cristiano (tarefas criadas por /api/iniciais/:id/concluir)
+    supabase.from('kanban_tasks').select('id, titulo, descricao, created_at')
+      .eq('origem', 'manual').like('origem_id', 'revisao-inicial:%').eq('arquivado', false).neq('status', 'concluido')
+      .order('created_at', { ascending: true }).limit(100),
   ])
 
   const trello = ((doTrello ?? []) as unknown as Row[])
-    .filter(r => !LISTAS_AUTOMATICAS.includes(r.trello_list_nome ?? ''))
+    .filter(r => !LISTAS_AUTOMATICAS.includes(r.trello_list_nome ?? '') && aindaVale(r))
     .map(r => ({ ...r, categoria: 'inicial' as const }))
 
-  const linhas: LinhaPainel[] = ([...((cadastrados ?? []) as unknown as Row[]), ...trello]).map(r => ({
+  const linhas: LinhaPainel[] = ([...((cadastrados ?? []) as unknown as Row[]).filter(aindaVale), ...trello]).map(r => ({
     id: r.id,
     categoria: r.categoria as 'inicial' | 'despacho',
     titulo: r.titulo,
@@ -56,10 +66,17 @@ export default async function IniciaisDespachosBlock() {
     partes: r.partes_resumidas,
     prazo: r.data,
     status: r.status,
+    concluidoEm: r.concluido_em,
     pendencia: r.pendencia_motivo,
     responsavel: r.responsavel?.nome ?? nomeDoPerfilPorLista(r.trello_list_nome, perfis ?? []) ?? r.trello_list_nome ?? 'Sem responsável',
     origem: r.origem === 'trello' ? 'trello' : 'cadastro',
   }))
 
-  return <IniciaisDespachosPanel linhas={linhas} perfis={perfis ?? []} />
+  const paraRevisar = ((revisoes ?? []) as { id: string; titulo: string; descricao: string | null }[]).map(r => ({
+    id: r.id,
+    titulo: r.titulo.replace(/^REVISAR INICIAL — /, ''),
+    detalhe: (r.descricao ?? '').split('\n')[0] || null,
+  }))
+
+  return <IniciaisDespachosPanel linhas={linhas} perfis={perfis ?? []} paraRevisar={paraRevisar} />
 }
