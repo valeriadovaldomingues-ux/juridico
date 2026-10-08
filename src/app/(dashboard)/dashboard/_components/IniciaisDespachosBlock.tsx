@@ -46,12 +46,16 @@ export default async function IniciaisDespachosBlock() {
       .is('categoria', null).eq('origem', 'trello').eq('arquivado', false)
       .ilike('titulo', '%inicial%').not('descricao', 'ilike', '%AUTOMACAO_PUBLICACOES%')
       .order('created_at', { ascending: false }).limit(300),
-    supabase.from('profiles').select('id, nome').eq('ativo', true).neq('role', 'cliente').order('nome'),
+    supabase.rpc('perfis_equipe'),
     // Iniciais concluídas que aguardam revisão do Cristiano (tarefas criadas por /api/iniciais/:id/concluir)
     supabase.from('kanban_tasks').select('id, titulo, descricao, created_at')
       .eq('origem', 'manual').like('origem_id', 'revisao-inicial:%').eq('arquivado', false).neq('status', 'concluido')
       .order('created_at', { ascending: true }).limit(100),
   ])
+
+  const listaPerfis = ((perfis ?? []) as { id: string; nome: string }[])
+    .map(p => ({ id: p.id, nome: p.nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
 
   const trello = ((doTrello ?? []) as unknown as Row[])
     .filter(r => !LISTAS_AUTOMATICAS.includes(r.trello_list_nome ?? '') && aindaVale(r))
@@ -68,7 +72,7 @@ export default async function IniciaisDespachosBlock() {
     status: r.status,
     concluidoEm: r.concluido_em,
     pendencia: r.pendencia_motivo,
-    responsavel: r.responsavel?.nome ?? nomeDoPerfilPorLista(r.trello_list_nome, perfis ?? []) ?? r.trello_list_nome ?? 'Sem responsável',
+    responsavel: r.responsavel?.nome ?? nomeDoPerfilPorLista(r.trello_list_nome, listaPerfis) ?? r.trello_list_nome ?? 'Sem responsável',
     origem: r.origem === 'trello' ? 'trello' : 'cadastro',
   }))
 
@@ -78,5 +82,5 @@ export default async function IniciaisDespachosBlock() {
     detalhe: (r.descricao ?? '').split('\n')[0] || null,
   }))
 
-  return <IniciaisDespachosPanel linhas={linhas} perfis={perfis ?? []} paraRevisar={paraRevisar} />
+  return <IniciaisDespachosPanel linhas={linhas} perfis={listaPerfis} paraRevisar={paraRevisar} />
 }

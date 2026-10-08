@@ -98,11 +98,9 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
         const [tasksData, profilesResult, processosResult] = await Promise.all([
           getKanbanTasks(),
-          supabase
-            .from('profiles')
-            .select('id, nome, cor_kanban, role')
-            .eq('ativo', true)
-            .order('nome'),
+          // Função perfis_equipe (só id/nome/cor/cargo): a tabela profiles só deixa
+          // advogados e estagiários verem o próprio perfil, o que escondia o resto da equipe.
+          supabase.rpc('perfis_equipe'),
           supabase
             .from('processos')
             .select('id, titulo, numero_processo')
@@ -112,7 +110,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
         if (cancelled) return
 
-        const allProfiles = (profilesResult.data ?? []) as KanbanProfile[]
+        const allProfiles = ((profilesResult.data ?? []) as KanbanProfile[])
+          .slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
         const allProcessos = (processosResult.data ?? []) as Processo[]
 
         setTasks(tasksData as KanbanTask[])
