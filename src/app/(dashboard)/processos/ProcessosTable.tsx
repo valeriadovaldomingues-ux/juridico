@@ -107,14 +107,14 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [titulo, setTitulo] = useState(searchParams.get('titulo') ?? '')
+  const [titulo, setTitulo] = useState(searchParams.get('q') ?? searchParams.get('titulo') ?? '')
   const [numero, setNumero] = useState(searchParams.get('numero') ?? '')
   const [area, setArea] = useState(searchParams.get('area_direito') ?? '')
   const [status, setStatus] = useState(searchParams.get('status') ?? '')
 
   function applyFilters() {
     const params = new URLSearchParams()
-    if (titulo) params.set('titulo', titulo)
+    if (titulo) params.set('q', titulo)
     if (numero) params.set('numero', numero)
     if (area)   params.set('area_direito', area)
     if (status) params.set('status', status)
@@ -141,7 +141,7 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-            placeholder="Buscar por título..."
+            placeholder="Título, cliente, parte, CPF ou CNPJ…"
             className="w-full pl-8 pr-3 py-2 text-[13px] bg-white border border-[var(--color-border)] rounded-xl outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10 placeholder:text-[var(--color-ink-3)] text-[var(--color-ink)] transition-all"
           />
         </div>
