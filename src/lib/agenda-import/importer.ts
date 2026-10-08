@@ -20,6 +20,7 @@ import { parseCsv } from './csv-parser'
 import { buildColumnMapping, normalizeRow } from './normalizer'
 import { syncAgendaToKanban } from './sync-to-kanban'
 import { matchPerfilPorNome } from './match-responsavel'
+import { montarIndice, resolverVinculos, type ProcessoRef, type ClienteRef } from './vinculos'
 
 // ─── Helpers internos ─────────────────────────────────────────────────────────
 
@@ -44,17 +45,28 @@ async function fetchExistingBySourceId(
   return new Map((data ?? []).map((r: any) => [r.source_event_id as string, r.id as string]))
 }
 
-/** Busca processo_id por numero_processo */
-async function fetchProcessoMap(
-  supabase: SupabaseClient,
-  numbers: string[],
-): Promise<Map<string, string>> {
-  if (numbers.length === 0) return new Map()
-  const { data } = await supabase
-    .from('processos')
-    .select('id, numero_processo')
-    .in('numero_processo', numbers)
-  return new Map((data ?? []).map((p: any) => [p.numero_processo as string, p.id as string]))
+/** Lê todas as linhas de uma consulta, página a página (o PostgREST corta em 1000). */
+async function fetchAll<T>(
+  pagina: (de: number, ate: number) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const todas: T[] = []
+  for (let de = 0; ; de += 1000) {
+    const { data } = await pagina(de, de + 999)
+    todas.push(...(data ?? []))
+    if (!data || data.length < 1000) break
+  }
+  return todas
+}
+
+/** Índices de processos e clientes para ligar os eventos (ver vinculos.ts) */
+async function fetchIndiceVinculos(supabase: SupabaseClient) {
+  const [processos, clientes] = await Promise.all([
+    fetchAll<ProcessoRef>((de, ate) =>
+      supabase.from('processos').select('id, numero_processo, cliente_id').order('id').range(de, ate)),
+    fetchAll<ClienteRef>((de, ate) =>
+      supabase.from('clientes').select('id, nome, cpf_cnpj').order('id').range(de, ate)),
+  ])
+  return montarIndice(processos, clientes)
 }
 
 /** Busca profile_id por nome */
@@ -178,18 +190,14 @@ export async function confirmImport(
 
   // ── Resolução em lote de relações ──────────────────────────────────────────
 
-  const processNumberKey = Object.keys(columnMapping).find(k => columnMapping[k] === 'process_number')
   const responsavelKey   = Object.keys(columnMapping).find(k => columnMapping[k] === 'responsible_name')
 
-  const processNumbers = [...new Set(
-    objects.map(o => (processNumberKey ? (o[processNumberKey] ?? '').trim() : '')).filter(Boolean),
-  )]
   const responsibleNames = [...new Set(
     objects.map(o => (responsavelKey ? (o[responsavelKey] ?? '').trim() : '')).filter(Boolean),
   )]
 
-  const [processoMap, profileMap, existingMap] = await Promise.all([
-    fetchProcessoMap(supabase, processNumbers),
+  const [indiceVinculos, profileMap, existingMap] = await Promise.all([
+    fetchIndiceVinculos(supabase),
     fetchProfileMap(supabase, responsibleNames),
     fetchExistingBySourceId(supabase, extractSourceIds(objects, columnMapping)),
   ])
@@ -232,7 +240,9 @@ export async function confirmImport(
     if (row.source_event_id) seenInFile.add(row.source_event_id)
 
     // Resolver relações
-    if (row.process_number)   row.processo_id         = processoMap.get(row.process_number) ?? null
+    const vinculos = resolverVinculos(row, indiceVinculos)
+    row.processo_id = vinculos.processo_id
+    row.cliente_id  = vinculos.cliente_id
     if (row.responsible_name) row.responsible_user_id = profileMap.get(row.responsible_name) ?? null
 
     const record = {
@@ -248,6 +258,7 @@ export async function confirmImport(
       published_at:        row.published_at,
       process_number:      row.process_number,
       processo_id:         row.processo_id,
+      cliente_id:          row.cliente_id,
       client_name:         row.client_name,
       opposing_party_name: row.opposing_party_name,
       responsible_name:    row.responsible_name,
@@ -265,9 +276,17 @@ export async function confirmImport(
     try {
       if (row.source_event_id && existingMap.has(row.source_event_id)) {
         const agendaItemId = existingMap.get(row.source_event_id)!
+        // Reimportar não apaga vínculos já existentes quando o novo arquivo não os resolve.
+        const { processo_id, cliente_id, responsible_user_id, ...semVinculos } = record
+        const atualizacao = {
+          ...semVinculos,
+          ...(processo_id         ? { processo_id }         : {}),
+          ...(cliente_id          ? { cliente_id }          : {}),
+          ...(responsible_user_id ? { responsible_user_id } : {}),
+        }
         const { error: updateError } = await supabase
           .from('agenda_items')
-          .update(record)
+          .update(atualizacao)
           .eq('id', agendaItemId)
         if (updateError) throw updateError
         updated++
