@@ -5,7 +5,8 @@
 // Converte datas brasileiras, mapeia tipos/status e limpa strings.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { NormalizedAgendaRow, RawCsvRow } from '@/types/agenda-import'
+import type { AgendaTipo, NormalizedAgendaRow, RawCsvRow } from '@/types/agenda-import'
+import { extrairDocumento } from './vinculos'
 
 // ─── Normalização de chaves ───────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ const EASYJUR_HEADER_MAP: Record<string, string> = {
   // ── Cliente ─────────────────────────────────────────────────────────────────
   'cliente':                     'client_name',
   'nome do cliente':             'client_name',
+  'dados do cliente':            'client_dados',
   'parte':                       'client_name',
   'reclamada':                   'client_name',
 
@@ -227,26 +229,39 @@ export function parseTime(s: string): string | null {
 
 // ─── Mapeamento de valores ────────────────────────────────────────────────────
 
-/** Mapeia tipo do EasyJur → tipo interno da agenda */
-const TIPO_MAP: Record<string, 'tarefa' | 'evento' | 'prazo' | 'audiencia'> = {
+/** Mapeia tipo do EasyJur → tipo interno da agenda (a agenda tem os mesmos tipos do EasyJur) */
+const TIPO_MAP: Record<string, AgendaTipo> = {
   'audiencia':          'audiencia',
   'audiencia de conciliacao': 'audiencia',
   'audiencia de instrucao':   'audiencia',
   'audiencia preliminar':     'audiencia',
   'prazo':              'prazo',
-  'prazo processual':   'prazo',
+  'prazo processual':   'prazo_processual',
   'prazo fatal':        'prazo',
   'peticao':            'prazo',
   'recurso':            'prazo',
   'tarefa':             'tarefa',
-  'diligencia':         'tarefa',
+  'diligencia':         'diligencia',
   'providencia':        'tarefa',
-  'reuniao':            'evento',
+  'reuniao':            'reuniao',
   'evento':             'evento',
   'publicacao':         'evento',
+  'pericia':            'pericia',
+  'atendimento':        'atendimento',
+  'outros':             'outros',
+  'outro':              'outros',
+  'auditoria':          'auditoria',
+  'consultoria':        'consultoria',
+  'ligacao':            'ligacao',
+  'viagem':             'viagem',
+  'sessao de julgamento': 'sessao_julgamento',
+  'solicitar demanda':  'solicitar_demanda',
+  'compromisso particular': 'compromisso_particular',
+  'compromisso privado':    'compromisso_privado',
+  'eventos e cursos':   'eventos_e_cursos',
 }
 
-export function normalizeEventType(raw: string): 'tarefa' | 'evento' | 'prazo' | 'audiencia' {
+export function normalizeEventType(raw: string): AgendaTipo {
   if (!raw?.trim()) return 'evento'
   const key = normalizeKey(raw)
   return TIPO_MAP[key] ?? 'evento'
@@ -286,7 +301,7 @@ export function normalizeStatus(raw: string): 'pendente' | 'concluido' | 'cancel
  *   - Outros:    tipo + processo ou nome principal
  */
 function buildTitle(
-  tipo:           'tarefa' | 'evento' | 'prazo' | 'audiencia',
+  tipo:           AgendaTipo,
   clientName:     string | null,
   opposingParty:  string | null,
   processNumber:  string | null,
@@ -409,6 +424,7 @@ export function normalizeRow(
   const rawResolucao     = get('resolucao_raw')
   const rawProcess       = get('process_number')
   const rawClientName    = get('client_name')
+  const clientDoc        = extrairDocumento(get('client_dados'))
   const rawOpposingParty = get('opposing_party_name')
   const rawResponsavel   = get('responsible_name')
   const rawStatus        = get('status_raw')
@@ -444,6 +460,7 @@ export function normalizeRow(
     process_number:      clean(rawProcess),
     processo_id:         null,   // resolvido no confirm
     client_name:         clean(rawClientName),
+    client_doc:          clientDoc,
     opposing_party_name: clean(rawOpposingParty),
     cliente_id:          null,
     responsible_name:    clean(rawResponsavel),
@@ -468,7 +485,7 @@ function buildFallbackRow(raw: RawCsvRow): NormalizedAgendaRow {
     tipo: 'evento', subtype: null, status: 'pendente', prioridade: 'media',
     data_inicio: '', hora_inicio: null, prazo_final: null, published_at: null,
     process_number: null, processo_id: null,
-    client_name: null, opposing_party_name: null, cliente_id: null,
+    client_name: null, client_doc: null, opposing_party_name: null, cliente_id: null,
     responsible_name: null, responsible_user_id: null,
     court: null, county: null,
     source: 'easyjur', source_event_id: null,

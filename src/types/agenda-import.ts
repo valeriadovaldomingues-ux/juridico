@@ -19,11 +19,19 @@ export type RawCsvRow = Record<string, string>
  * Uma linha do CSV depois de mapeada, convertida e validada,
  * mas antes de ser gravada no banco.
  */
+/** Tipos de item aceitos pela agenda (mesma lista do CHECK de agenda_items.tipo). */
+export type AgendaTipo =
+  | 'tarefa' | 'evento' | 'prazo' | 'audiencia'
+  | 'atendimento' | 'auditoria' | 'compromisso_particular' | 'compromisso_privado'
+  | 'consultoria' | 'diligencia' | 'eventos_e_cursos' | 'ligacao' | 'outros'
+  | 'pericia' | 'prazo_processual' | 'reuniao' | 'sessao_julgamento'
+  | 'solicitar_demanda' | 'viagem'
+
 export interface NormalizedAgendaRow {
   // Campos principais
   titulo:              string
   descricao:           string | null
-  tipo:                'tarefa' | 'evento' | 'prazo' | 'audiencia'
+  tipo:                AgendaTipo
   subtype:             string | null
   status:              'pendente' | 'concluido' | 'cancelado'
   prioridade:          'baixa' | 'media' | 'alta'
@@ -38,6 +46,7 @@ export interface NormalizedAgendaRow {
   process_number:      string | null
   processo_id:         string | null
   client_name:         string | null
+  client_doc:          string | null  // CPF/CNPJ (só dígitos) extraído de "Dados do Cliente"
   opposing_party_name: string | null
   cliente_id:          string | null
   responsible_name:    string | null
