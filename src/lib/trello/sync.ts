@@ -139,6 +139,10 @@ export async function syncTrelloBoard(
     try {
       const listas = await fetchLists(integration.board_id, integration.api_key, integration.api_token)
       for (const l of listas ?? []) if (typeof l.pos === 'number') posPorLista.set(l.id, l.pos)
+      // Mantém a posição também no mapeamento: colunas vazias (ex.: CONCLUÍDOS) seguem a ordem do Trello
+      for (const [listId, pos] of posPorLista) {
+        await supabase.from('trello_list_mappings').update({ posicao: pos }).eq('integration_id', integrationId).eq('trello_list_id', listId)
+      }
     } catch { /* sem posições nesta rodada */ }
 
     // IDs de todos os cards abertos hoje no Trello (inclui os de listas "ignorar").

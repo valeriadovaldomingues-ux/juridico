@@ -32,6 +32,17 @@ export interface ListColumn {
   key:   string   // trello_list_id
   nome:  string   // trello_list_nome
   tasks: KanbanTask[]
+  pos?:  number   // posição da lista no Trello (quando conhecida)
+}
+
+/** Lista do Trello mapeada no sistema (trello_list_mappings) — usada para mostrar
+ *  também as colunas vazias, como o Trello faz. */
+export interface ListaMapeada {
+  id:        string
+  nome:      string
+  pos:       number | null
+  profileId: string | null   // preenchido quando a lista é de uma pessoa
+  status:    string          // 'ignorar' = não entra no quadro
 }
 
 // ─── Agrupamento — funções puras (sem side-effects) ───────────────────────────
@@ -83,7 +94,7 @@ export function getOfficeColumns(
  * como categoria (ex.: PRAZOS CÍVEIS, CONCLUÍDOS) em colunas próprias —
  * mesmo padrão visual de uma coluna de pessoa, ordenadas por nome.
  */
-export function getListColumns(tasks: KanbanTask[]): ListColumn[] {
+export function getListColumns(tasks: KanbanTask[], mapeadas: ListaMapeada[] = []): ListColumn[] {
   const porLista = new Map<string, { nome: string; tasks: KanbanTask[] }>()
 
   for (const t of tasks) {
@@ -93,11 +104,20 @@ export function getListColumns(tasks: KanbanTask[]): ListColumn[] {
     porLista.set(t.trello_list_id, entry)
   }
 
+  // Listas do Trello que não são de uma pessoa continuam aparecendo mesmo vazias
+  // (ex.: CONCLUÍDOS depois que seus cards são arquivados no Trello).
+  for (const m of mapeadas) {
+    if (m.profileId || m.status === 'ignorar' || porLista.has(m.id)) continue
+    porLista.set(m.id, { nome: m.nome, tasks: [] })
+  }
+  const posDaLista = new Map(mapeadas.map(m => [m.id, m.pos]))
+
   return Array.from(porLista.entries())
     .map(([key, { nome, tasks }]) => ({
       key,
       nome,
       tasks: tasks.sort((a, b) => a.ordem - b.ordem),
+      pos: posDaLista.get(key) ?? undefined,
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
 }
@@ -118,6 +138,7 @@ export function ordenarColunasTrello(
   pessoas: OfficeColumn[],
   listas:  ListColumn[],
   tasks:   KanbanTask[],
+  mapeadas: ListaMapeada[] = [],
 ): ColunaOrdenada[] {
   const posPorNomeLista = new Map<string, number>()
   for (const t of tasks) {
@@ -129,11 +150,13 @@ export function ordenarColunasTrello(
   const itens: (ColunaOrdenada & { pos: number; nome: string })[] = [
     ...pessoas.map(col => ({
       tipo: 'pessoa' as const, col, nome: col.profile.nome,
-      pos: posPorNomeLista.get(semAcento(col.profile.nome).split(/\s+/)[0]) ?? Infinity,
+      pos: mapeadas.find(m => m.profileId === col.profile.id)?.pos
+        ?? posPorNomeLista.get(semAcento(col.profile.nome).split(/\s+/)[0])
+        ?? Infinity,
     })),
     ...listas.map((col, indice) => ({
       tipo: 'lista' as const, col, indice, nome: col.nome,
-      pos: col.tasks.find(t => typeof t.trello_list_pos === 'number')?.trello_list_pos ?? Infinity,
+      pos: col.pos ?? col.tasks.find(t => typeof t.trello_list_pos === 'number')?.trello_list_pos ?? Infinity,
     })),
   ]
 
