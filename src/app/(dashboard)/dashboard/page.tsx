@@ -279,8 +279,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Iniciais e Despachos (sócio e gerente) ───────────────────────────── */}
-      {['socio', 'gerente'].includes(userRole) && <IniciaisDespachosBlock />}
+      {/* ── Iniciais e Despachos (sócio, gerente, advogado e estagiário) ─────── */}
+      {['socio', 'gerente', 'advogado', 'estagiario'].includes(userRole) && <IniciaisDespachosBlock />}
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
