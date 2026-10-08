@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   Calendar, AlertTriangle, ExternalLink, Newspaper,
-  GripVertical, Trash2, Pencil, Clock,
+  GripVertical, Trash2, Pencil, Clock, Archive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KanbanTask } from '@/types/kanban'
@@ -23,9 +23,10 @@ interface Props {
   showResponsavel?: boolean
   onEdit:           (task: KanbanTask) => void
   onDelete:         (id: string) => void
+  onArchive?:       (id: string) => void  // só aparece em cards concluídos
 }
 
-export default function KanbanCard({ task, userColor, showResponsavel, onEdit, onDelete }: Props) {
+export default function KanbanCard({ task, userColor, showResponsavel, onEdit, onDelete, onArchive }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id })
 
@@ -182,6 +183,15 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
                 className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-violet-50 text-[#9ca3af] hover:text-violet-600 transition-colors"
               >
                 <ExternalLink size={11} />
+              </button>
+            )}
+            {onArchive && task.status === 'concluido' && (
+              <button
+                title="Arquivar (sai do quadro; fica em &quot;Ver arquivadas&quot;)"
+                onClick={() => onArchive(task.id)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-emerald-50 text-[#9ca3af] hover:text-emerald-600 transition-colors"
+              >
+                <Archive size={11} />
               </button>
             )}
             <button

@@ -2,6 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Archive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KanbanTask, KanbanStatus } from '@/types/kanban'
 import { STATUS_LABELS } from '@/types/kanban'
@@ -24,9 +25,10 @@ interface Props {
   showResponsavel?: boolean
   onEdit:          (task: KanbanTask) => void
   onDelete:        (id: string) => void
+  onArchive?:      (ids: string[]) => void
 }
 
-export default function KanbanColumn({ userId = 'geral', status, tasks, userColor, colorMap, showResponsavel, onEdit, onDelete }: Props) {
+export default function KanbanColumn({ userId = 'geral', status, tasks, userColor, colorMap, showResponsavel, onEdit, onDelete, onArchive }: Props) {
   const droppableId = `${userId}::${status}`
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
   const style = COL_STYLE[status]
@@ -47,6 +49,19 @@ export default function KanbanColumn({ userId = 'geral', status, tasks, userColo
           {STATUS_LABELS[status]}
         </span>
         <div className="ml-auto flex items-center gap-1">
+          {onArchive && status === 'concluido' && tasks.length > 0 && (
+            <button
+              onClick={() => {
+                if (window.confirm(`Arquivar ${tasks.length} card${tasks.length > 1 ? 's' : ''} concluído${tasks.length > 1 ? 's' : ''}? Eles saem do quadro e ficam em "Ver arquivadas".`)) {
+                  onArchive(tasks.map(t => t.id))
+                }
+              }}
+              title="Arquivar todos os concluídos desta coluna"
+              className="flex items-center gap-1 text-[9px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded-full ring-1 ring-emerald-200 transition-colors"
+            >
+              <Archive size={9} /> Arquivar todos
+            </button>
+          )}
           {overdueCount > 0 && (
             <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full ring-1 ring-red-200">
               {overdueCount} atrasada{overdueCount > 1 ? 's' : ''}
@@ -80,6 +95,7 @@ export default function KanbanColumn({ userId = 'geral', status, tasks, userColo
               showResponsavel={showResponsavel}
               onEdit={onEdit}
               onDelete={onDelete}
+              onArchive={onArchive ? (id) => onArchive([id]) : undefined}
             />
           ))}
         </SortableContext>

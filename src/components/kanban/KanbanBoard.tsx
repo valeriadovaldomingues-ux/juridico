@@ -200,6 +200,26 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     }
   }, [])
 
+  // Arquivar cards concluídos (qualquer perfil): saem do quadro e ficam em "Ver arquivadas".
+  const handleArchive = useCallback(async (ids: string[]) => {
+    const alvo = new Set(ids)
+    setTasks(prev => prev.filter(t => !alvo.has(t.id)))
+    try {
+      const respostas = await Promise.all(ids.map(id =>
+        fetch(`/api/kanban-tasks/${id}`, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ arquivado: true }),
+        }),
+      ))
+      if (respostas.some(r => !r.ok)) throw new Error('falha ao arquivar')
+    } catch (err) {
+      console.error('[KanbanBoard] erro ao arquivar:', err)
+      // Recarrega para refletir o que realmente foi arquivado
+      getKanbanTasks().then(data => setTasks(data as KanbanTask[]))
+    }
+  }, [])
+
   const handleAddTask = useCallback((status: KanbanStatus) => {
     setModalDefaultStatus(status)
     setModalTask(null) // null = novo
@@ -310,6 +330,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           onTasksChange={handleTasksChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onArchive={handleArchive}
           onAddTask={handleAddTask}
           activeTask={activeTask}
           onDragStart={handlePersonalDragStart}
@@ -417,6 +438,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                           showResponsavel={false}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
+                          onArchive={handleArchive}
                         />
                       ))}
                     </div>
@@ -469,6 +491,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                           showResponsavel={false}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
+                          onArchive={handleArchive}
                         />
                       ))}
                     </div>
@@ -514,6 +537,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                           showResponsavel={false}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
+                          onArchive={handleArchive}
                         />
                       ))}
                     </div>
