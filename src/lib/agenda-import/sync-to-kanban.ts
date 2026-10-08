@@ -100,7 +100,11 @@ export async function syncAgendaToKanban(
   const taskData = {
     titulo:           row.titulo,
     descricao:        buildDescricao(row),
-    status:           'a_fazer' as const,
+    // Item que já veio concluído do EasyJur entra concluído (e cancelado entra arquivado),
+    // em vez de lotar a coluna "A fazer" com coisa que já foi feita.
+    status:           (row.status === 'concluido' ? 'concluido' : 'a_fazer') as 'concluido' | 'a_fazer',
+    concluido_em:     row.status === 'concluido' ? new Date().toISOString() : null,
+    arquivado:        row.status === 'cancelado',
     prioridade,
     data:             row.prazo_final ?? row.data_inicio,
     responsavel_id:   row.responsible_user_id ?? null,
@@ -121,8 +125,10 @@ export async function syncAgendaToKanban(
         descricao:        taskData.descricao,
         data:             taskData.data,
         prioridade:       taskData.prioridade,
-        responsavel_id:   taskData.responsavel_id,
-        responsavel:      taskData.responsavel,
+        // não apaga o responsável já definido quando o arquivo novo não o resolve
+        ...(taskData.responsavel_id ? { responsavel_id: taskData.responsavel_id, responsavel: taskData.responsavel } : {}),
+        // o que o EasyJur já deu como concluído conclui o card (nunca "reabre" um card)
+        ...(row.status === 'concluido' ? { status: 'concluido', concluido_em: taskData.concluido_em } : {}),
         numero_processo:  taskData.numero_processo,
         partes_resumidas: taskData.partes_resumidas,
         updated_at:       new Date().toISOString(),

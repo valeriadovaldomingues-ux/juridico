@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getListColumns, getUnassignedTasks } from './kanban.service'
+import { getListColumns, getUnassignedTasks, resolverDestinoOffice } from './kanban.service'
 import type { KanbanTask } from '@/types/kanban'
 
 function tarefa(overrides: Partial<KanbanTask> = {}): KanbanTask {
@@ -58,5 +58,33 @@ describe('getUnassignedTasks', () => {
 
     expect(semResponsavel).toHaveLength(1)
     expect(semResponsavel[0].id).toBe('2')
+  })
+})
+
+describe('resolverDestinoOffice', () => {
+  const tarefas = [
+    { id: 't1', status: 'a_fazer', responsavel_id: 'ana' },
+    { id: 't2', status: 'fazendo', responsavel_id: 'bia' },
+    { id: 't3', status: 'concluido', responsavel_id: null },
+  ] as unknown as import('@/types/kanban').KanbanTask[]
+  const pessoas = ['ana', 'bia']
+
+  it('soltar na coluna de outra pessoa informa a nova pessoa e o status', () => {
+    expect(resolverDestinoOffice('bia::fazendo', tarefas, pessoas)).toEqual({ status: 'fazendo', responsavelId: 'bia' })
+    expect(resolverDestinoOffice('bia::a_fazer', tarefas, pessoas)).toEqual({ status: 'a_fazer', responsavelId: 'bia' })
+  })
+
+  it('soltar em cima de um card vale como soltar na coluna dele', () => {
+    expect(resolverDestinoOffice('t2', tarefas, pessoas)).toEqual({ status: 'fazendo', responsavelId: 'bia' })
+  })
+
+  it('colunas de lista do Trello e sem responsável só mudam o status', () => {
+    expect(resolverDestinoOffice('lista123::concluido', tarefas, pessoas)).toEqual({ status: 'concluido', responsavelId: null })
+    expect(resolverDestinoOffice('t3', tarefas, pessoas)).toEqual({ status: 'concluido', responsavelId: null })
+  })
+
+  it('destino inválido é ignorado', () => {
+    expect(resolverDestinoOffice('bia::inexistente', tarefas, pessoas)).toBeNull()
+    expect(resolverDestinoOffice('nao-existe', tarefas, pessoas)).toBeNull()
   })
 })
