@@ -127,7 +127,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/esqueci-senha') ||
     pathname.startsWith('/redefinir-senha') ||
-    pathname.startsWith('/nr1-sem-risco')
+    pathname.startsWith('/nr1-sem-risco') ||
+    // Rotinas agendadas da Vercel chegam sem sessão; cada rota se protege sozinha
+    // (CRON_SECRET) ou é inofensiva (keepalive). Antes eram redirecionadas ao /login.
+    pathname.startsWith('/api/cron')
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
