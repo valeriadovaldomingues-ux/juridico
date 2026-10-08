@@ -204,6 +204,8 @@ export async function confirmImport(
 
   // ── Processamento linha a linha ────────────────────────────────────────────
 
+  const partesContrarias: { processo_id: string; nome: string }[] = []
+
   let created = 0, updated = 0, skipped = 0, errors = 0
   const errorRows: ImportErrorRow[] = []
 
@@ -243,6 +245,10 @@ export async function confirmImport(
     const vinculos = resolverVinculos(row, indiceVinculos)
     row.processo_id = vinculos.processo_id
     row.cliente_id  = vinculos.cliente_id
+    // Parte contrária ("Contrário" do EasyJur) vai também para o processo, não só para o evento.
+    if (row.processo_id && row.opposing_party_name) {
+      partesContrarias.push({ processo_id: row.processo_id, nome: row.opposing_party_name })
+    }
     if (row.responsible_name) row.responsible_user_id = profileMap.get(row.responsible_name) ?? null
 
     const record = {
@@ -323,6 +329,14 @@ export async function confirmImport(
       errorRows.push({ rowNumber, error: msg, raw })
       rowLogs.push({ rowNumber, status: 'error', error: msg, raw })
     }
+  }
+
+  // ── Parte contrária no processo ────────────────────────────────────────────
+  // Cadastra (tipo 'reu') nos processos que ainda não têm parte contrária — idempotente e
+  // nunca mexe em processo que já tem uma. Falha aqui não desfaz a importação da agenda.
+  for (let i = 0; i < partesContrarias.length; i += 500) {
+    const { error: parteErr } = await supabase.rpc('registrar_partes_contrarias', { pares: partesContrarias.slice(i, i + 500) })
+    if (parteErr) console.error('[importer] falha ao registrar partes contrárias:', parteErr.message)
   }
 
   // ── Registrar job de importação ────────────────────────────────────────────
