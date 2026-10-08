@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FileText, Gavel, Plus, X, Loader2, ExternalLink } from 'lucide-react'
+import { FileText, Gavel, Plus, X, Loader2, ExternalLink, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchProcessoOptions } from '@/lib/search/remote'
@@ -22,6 +22,25 @@ export interface LinhaPainel {
   origem: 'trello' | 'cadastro'
 }
 
+// Painel aberto/recolhido — lembrado neste navegador (conveniência por pessoa).
+const CHAVE_ABERTO = 'painel-iniciais-despachos-aberto'
+const ouvintes = new Set<() => void>()
+function lerAberto() {
+  try { return window.localStorage.getItem(CHAVE_ABERTO) !== 'fechado' } catch { return true }
+}
+function salvarAberto(aberto: boolean) {
+  try { window.localStorage.setItem(CHAVE_ABERTO, aberto ? 'aberto' : 'fechado') } catch { /* sem armazenamento: só vale nesta sessão */ }
+  ouvintes.forEach(fn => fn())
+}
+function usePainelAberto(): [boolean, (v: boolean) => void] {
+  const aberto = useSyncExternalStore(
+    fn => { ouvintes.add(fn); return () => { ouvintes.delete(fn) } },
+    lerAberto,
+    () => true,
+  )
+  return [aberto, salvarAberto]
+}
+
 const STATUS: Record<string, { label: string; cls: string }> = {
   a_fazer:       { label: 'A fazer',       cls: 'bg-zinc-100 text-zinc-700' },
   fazendo:       { label: 'Fazendo',       cls: 'bg-sky-50 text-sky-700' },
@@ -37,6 +56,7 @@ function formatarData(iso: string | null) {
 
 export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: LinhaPainel[]; perfis: { id: string; nome: string }[] }) {
   const [aba, setAba] = useState<'inicial' | 'despacho'>('inicial')
+  const [aberto, setAberto] = usePainelAberto()
   const [novo, setNovo] = useState<null | 'inicial' | 'despacho'>(null)
 
   const doAba = useMemo(() => linhas.filter(l => l.categoria === aba), [linhas, aba])
@@ -55,10 +75,10 @@ export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: Lin
           {([['inicial', 'Iniciais', FileText], ['despacho', 'Despachos', Gavel]] as const).map(([id, label, Icon]) => (
             <button
               key={id}
-              onClick={() => setAba(id)}
+              onClick={() => { setAba(id); setAberto(true) }}
               className={cn(
                 'flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold border-b-2 -mb-px transition-colors',
-                aba === id ? 'border-[var(--color-copper)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-3)] hover:text-[var(--color-ink)]',
+                aba === id && aberto ? 'border-[var(--color-copper)] text-[var(--color-ink)]' : 'border-transparent text-[var(--color-ink-3)] hover:text-[var(--color-ink)]',
               )}
             >
               <Icon size={14} /> {label}
@@ -67,18 +87,32 @@ export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: Lin
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/kanban" className="flex items-center gap-1.5 text-[12px] text-[var(--color-ink-3)] hover:text-[var(--color-ink)]">
-            Ver no Kanban <ExternalLink size={11} />
-          </Link>
+          {aberto && (
+            <>
+              <Link href="/kanban" className="flex items-center gap-1.5 text-[12px] text-[var(--color-ink-3)] hover:text-[var(--color-ink)]">
+                Ver no Kanban <ExternalLink size={11} />
+              </Link>
+              <button
+                onClick={() => setNovo(aba)}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold text-white bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] rounded-xl transition-colors"
+              >
+                <Plus size={13} /> {aba === 'inicial' ? 'Nova inicial' : 'Novo despacho'}
+              </button>
+            </>
+          )}
           <button
-            onClick={() => setNovo(aba)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold text-white bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] rounded-xl transition-colors"
+            onClick={() => setAberto(!aberto)}
+            aria-expanded={aberto}
+            title={aberto ? 'Recolher painel' : 'Abrir painel'}
+            className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold text-[var(--color-ink-2)] border border-[var(--color-border)] rounded-xl hover:border-[var(--color-copper)] hover:bg-[var(--color-surface-warm)] transition-colors"
           >
-            <Plus size={13} /> {aba === 'inicial' ? 'Nova inicial' : 'Novo despacho'}
+            {aberto ? 'Recolher' : 'Abrir'}
+            <ChevronDown size={13} className={cn('transition-transform', aberto && 'rotate-180')} />
           </button>
         </div>
       </div>
 
+      {aberto ? (
       <div className="border-t border-[var(--color-border)] px-5 py-4 space-y-5">
         {grupos.length === 0 && (
           <p className="text-[13px] text-[var(--color-ink-3)] py-6 text-center">
@@ -112,6 +146,9 @@ export default function IniciaisDespachosPanel({ linhas, perfis }: { linhas: Lin
           </div>
         ))}
       </div>
+      ) : (
+        <div className="pb-3" />
+      )}
 
       {novo && <NovoItemModal categoria={novo} perfis={perfis} onFechar={() => setNovo(null)} />}
     </section>
