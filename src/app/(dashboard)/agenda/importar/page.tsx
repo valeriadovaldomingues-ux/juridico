@@ -5,7 +5,7 @@ export const metadata = { title: 'Importar Agenda EasyJur' }
 
 export default async function ImportarAgendaServerPage() {
   // Apenas perfis que podem criar eventos na agenda
-  await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
+  await requireRole(['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio'])
 
   return (
     <div className="internal-page">
