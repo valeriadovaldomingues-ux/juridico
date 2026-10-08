@@ -287,16 +287,18 @@ function validarProcessoRow(row: Record<string, string>, linha: number): Process
 function validarParteContrariaRow(row: Record<string, string>, linha: number): ParteContrariaRow {
   const erros: string[] = []
 
-  const numero_processo = pick(row, ...ALIASES_NUMERO_PROCESSO)
-  const parte_contraria = pick(
+  // EasyJur exporta o número entre aspas ("0027615-02...") e "-" quando não há parte contrária.
+  const numero_processo = pick(row, ...ALIASES_NUMERO_PROCESSO).replace(/["'“”]/g, '').trim()
+  const parteBruta = pick(
     row,
     'parte_contraria', 'parte contraria', 'parte_adversa', 'parte adversa',
-    'reclamado', 'requerido', 'executado', 'reu', 'réu',
+    'contrario', 'reclamado', 'requerido', 'executado', 'reu', 'réu',
     'contraparte', 'contra_parte', 'nome_parte', 'parte',
   )
+  const parte_contraria = parteBruta.trim() === '-' ? '' : parteBruta
 
   if (!numero_processo) erros.push('Número do processo obrigatório')
-  if (!parte_contraria) erros.push('Parte contrária obrigatória')
+  if (!parte_contraria) erros.push('Sem parte contrária no arquivo')
 
   return {
     _linha: linha,
@@ -317,6 +319,7 @@ export default function ImportadorPage() {
   const [partesRows, setPartesRows] = useState<ParteContrariaRow[]>([])
   const [etapa, setEtapa] = useState<'upload' | 'preview' | 'importando' | 'resultado'>('upload')
   const [log, setLog] = useState<LogImportacao | null>(null)
+  const [simulado, setSimulado] = useState(false)
   const [erroArquivo, setErroArquivo] = useState('')
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -648,7 +651,7 @@ export default function ImportadorPage() {
   }
 
   // ── Importar partes contrárias (via API route server-side) ──
-  async function importarPartesContrarias(): Promise<LogImportacao> {
+  async function importarPartesContrarias(simular = false): Promise<LogImportacao> {
     const validas = partesRows.filter(r => r._status !== 'erro')
     const invalidas = partesRows.filter(r => r._status === 'erro')
 
@@ -657,6 +660,7 @@ export default function ImportadorPage() {
         numero_processo: r.numero_processo,
         parte_contraria: r.parte_contraria,
       })),
+      simular,
     }
 
     const res = await fetch('/api/importar/partes-contrarias', {
@@ -708,7 +712,17 @@ export default function ImportadorPage() {
     return log
   }
 
+  // Simula a importação das partes contrárias: mostra o que seria feito, sem gravar nada.
+  async function simularImportacao() {
+    setEtapa('importando')
+    const resultado = await importarPartesContrarias(true)
+    setLog(resultado)
+    setSimulado(true)
+    setEtapa('resultado')
+  }
+
   async function confirmarImportacao() {
+    setSimulado(false)
     setEtapa('importando')
     const resultado = tipo === 'clientes'          ? await importarClientes()
                     : tipo === 'processos'          ? await importarProcessos()
@@ -869,6 +883,15 @@ export default function ImportadorPage() {
                   {totalErros} linha{totalErros > 1 ? 's' : ''} com erro {totalErros < rows.length ? '(serão ignoradas)' : '(nenhuma será importada)'}
                 </p>
               )}
+              {tipo === 'partes_contrarias' && (
+                <button
+                  onClick={simularImportacao}
+                  disabled={totalOk === 0}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-[#145A5B] text-[#145A5B] hover:bg-[#145A5B]/5 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Simular (não grava)
+                </button>
+              )}
               <button
                 onClick={confirmarImportacao}
                 disabled={totalOk === 0}
@@ -894,6 +917,11 @@ export default function ImportadorPage() {
       {/* Resultado */}
       {etapa === 'resultado' && log && (
         <>
+          {simulado && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <strong>Simulação — nada foi gravado.</strong> Confira os números abaixo; se estiver certo, grave de verdade.
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-4">
             <StatCard label="Total" value={log.total} cor="gray" />
             <StatCard label="Importados" value={log.inseridos} cor="green" />
@@ -920,9 +948,16 @@ export default function ImportadorPage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <button onClick={resetar} className="flex items-center gap-2 px-5 py-2.5 bg-[#145A5B] hover:bg-[#1B6E70] text-white text-sm font-medium rounded-xl transition-colors">
-              <RotateCcw size={14} /> Nova importação
+          <div className="flex justify-end gap-3">
+            {simulado && (
+              <button onClick={confirmarImportacao} className="flex items-center gap-2 px-5 py-2.5 bg-[#145A5B] hover:bg-[#1B6E70] text-white text-sm font-medium rounded-xl transition-colors">
+                <ChevronRight size={15} /> Gravar de verdade
+              </button>
+            )}
+            <button onClick={resetar} className={simulado
+              ? 'flex items-center gap-2 px-5 py-2.5 border border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb] text-sm font-medium rounded-xl transition-colors'
+              : 'flex items-center gap-2 px-5 py-2.5 bg-[#145A5B] hover:bg-[#1B6E70] text-white text-sm font-medium rounded-xl transition-colors'}>
+              <RotateCcw size={14} /> {simulado ? 'Cancelar' : 'Nova importação'}
             </button>
           </div>
         </>
