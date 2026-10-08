@@ -102,6 +102,46 @@ export function getListColumns(tasks: KanbanTask[]): ListColumn[] {
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
 }
 
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+export type ColunaOrdenada =
+  | { tipo: 'pessoa'; col: OfficeColumn }
+  | { tipo: 'lista';  col: ListColumn; indice: number }
+
+/**
+ * Ordena as colunas do Quadro do Escritório na mesma ordem das listas do Trello
+ * (posição gravada em `trello_list_pos` pela sincronização). Pessoa e lista entram
+ * na mesma sequência; a lista de uma pessoa é achada pelo primeiro nome ("Tuane"
+ * ↔ "Tuane Miranda"). Quem não tem posição conhecida vai para o fim, em ordem alfabética.
+ */
+export function ordenarColunasTrello(
+  pessoas: OfficeColumn[],
+  listas:  ListColumn[],
+  tasks:   KanbanTask[],
+): ColunaOrdenada[] {
+  const posPorNomeLista = new Map<string, number>()
+  for (const t of tasks) {
+    if (t.trello_list_nome && typeof t.trello_list_pos === 'number') {
+      posPorNomeLista.set(semAcento(t.trello_list_nome), t.trello_list_pos)
+    }
+  }
+
+  const itens: (ColunaOrdenada & { pos: number; nome: string })[] = [
+    ...pessoas.map(col => ({
+      tipo: 'pessoa' as const, col, nome: col.profile.nome,
+      pos: posPorNomeLista.get(semAcento(col.profile.nome).split(/\s+/)[0]) ?? Infinity,
+    })),
+    ...listas.map((col, indice) => ({
+      tipo: 'lista' as const, col, indice, nome: col.nome,
+      pos: col.tasks.find(t => typeof t.trello_list_pos === 'number')?.trello_list_pos ?? Infinity,
+    })),
+  ]
+
+  return itens
+    .sort((a, b) => (a.pos === b.pos ? a.nome.localeCompare(b.nome, 'pt-BR') : a.pos - b.pos))
+    .map(({ pos: _pos, nome: _nome, ...resto }) => resto as ColunaOrdenada)
+}
+
 /**
  * Resolve para onde um card foi solto no Quadro do Escritório.
  *

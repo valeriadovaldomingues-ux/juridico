@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getListColumns, getUnassignedTasks, resolverDestinoOffice } from './kanban.service'
+import { getListColumns, getUnassignedTasks, resolverDestinoOffice, ordenarColunasTrello } from './kanban.service'
 import type { KanbanTask } from '@/types/kanban'
 
 function tarefa(overrides: Partial<KanbanTask> = {}): KanbanTask {
@@ -91,5 +91,22 @@ describe('resolverDestinoOffice', () => {
   it('destino inválido é ignorado', () => {
     expect(resolverDestinoOffice('bia::inexistente', tarefas, pessoas)).toBeNull()
     expect(resolverDestinoOffice('nao-existe', tarefas, pessoas)).toBeNull()
+  })
+})
+
+describe('ordenarColunasTrello', () => {
+  const perfil = (id: string, nome: string) => ({ profile: { id, nome, cor_kanban: null, role: 'advogado' }, tasks: [] }) as unknown as import('./kanban.service').OfficeColumn
+  const tarefa = (over: Record<string, unknown>) => ({ id: String(Math.random()), status: 'a_fazer', ...over }) as unknown as import('@/types/kanban').KanbanTask
+
+  it('segue a ordem das listas do Trello, intercalando pessoas e listas; sem posição vai para o fim', () => {
+    const pessoas = [perfil('1', 'Marcelo Mariano'), perfil('2', 'Tuane Miranda'), perfil('3', 'Luana Souza')]
+    const tasks = [
+      tarefa({ trello_list_nome: 'Tuane', trello_list_pos: 100 }),
+      tarefa({ trello_list_nome: 'Marcelo', trello_list_pos: 300 }),
+      tarefa({ trello_list_nome: 'PRAZOS CÍVEIS', trello_list_id: 'L1', trello_list_pos: 200 }),
+    ]
+    const listas = [{ key: 'L1', nome: 'PRAZOS CÍVEIS', tasks: [tasks[2]] }]
+    const ordem = ordenarColunasTrello(pessoas, listas, tasks).map(c => (c.tipo === 'pessoa' ? c.col.profile.nome : c.col.nome))
+    expect(ordem).toEqual(['Tuane Miranda', 'PRAZOS CÍVEIS', 'Marcelo Mariano', 'Luana Souza'])
   })
 })

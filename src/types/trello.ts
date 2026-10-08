@@ -9,6 +9,7 @@ export interface TrelloList {
   id: string
   name: string
   closed: boolean
+  pos?: number
 }
 
 export interface TrelloMember {
@@ -89,6 +90,7 @@ export interface TrelloSyncLog {
 // ─── Resultado do sync ────────────────────────────────────────────────────────
 
 export interface SyncResult {
+  cards_arquivados?: number  // cards que sumiram do Trello (concluídos/arquivados/apagados) e saíram do quadro
   success: boolean
   cards_criados: number
   cards_atualizados: number
