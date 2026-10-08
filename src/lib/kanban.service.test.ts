@@ -110,3 +110,28 @@ describe('ordenarColunasTrello', () => {
     expect(ordem).toEqual(['Tuane Miranda', 'PRAZOS CÍVEIS', 'Marcelo Mariano', 'Luana Souza'])
   })
 })
+
+describe('colunas vazias do Trello', () => {
+  it('lista mapeada que não é de pessoa aparece mesmo sem cards (ex.: CONCLUÍDOS), com a posição do Trello', () => {
+    const mapeadas = [
+      { id: 'L-conc', nome: 'CONCLUÍDOS', pos: 1099189, profileId: null, status: 'concluido' },
+      { id: 'L-ign',  nome: 'Qualquer',   pos: 1,       profileId: null, status: 'ignorar' },
+      { id: 'L-pes',  nome: 'Luciana',    pos: 2,       profileId: 'p1',  status: 'a_fazer' },
+    ]
+    const cols = getListColumns([], mapeadas)
+    expect(cols.map(c => c.nome)).toEqual(['CONCLUÍDOS'])
+    expect(cols[0].tasks).toEqual([])
+    expect(cols[0].pos).toBe(1099189)
+  })
+
+  it('a posição do mapeamento ordena a coluna de pessoa e a lista vazia', () => {
+    const pessoas = [{ profile: { id: 'p1', nome: 'Luciana Pessoa', cor_kanban: null, role: 'comercial' }, tasks: [] }] as unknown as import('./kanban.service').OfficeColumn[]
+    const mapeadas = [
+      { id: 'L-conc', nome: 'CONCLUÍDOS', pos: 300, profileId: null, status: 'concluido' },
+      { id: 'L-pes',  nome: 'Luciana',    pos: 100, profileId: 'p1',  status: 'a_fazer' },
+    ]
+    const ordem = ordenarColunasTrello(pessoas, getListColumns([], mapeadas), [], mapeadas)
+      .map(c => (c.tipo === 'pessoa' ? c.col.profile.nome : c.col.nome))
+    expect(ordem).toEqual(['Luciana Pessoa', 'CONCLUÍDOS'])
+  })
+})

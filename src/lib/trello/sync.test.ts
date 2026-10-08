@@ -65,6 +65,11 @@ function supabaseFake(opts: {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ data: opts.listMappings ?? [], error: null }),
+          update: vi.fn((payload: unknown) => {
+            updates.push({ table, payload })
+            const cadeia = { eq: vi.fn(() => cadeia), then: (r: (v: unknown) => void) => r({ error: null }) }
+            return cadeia
+          }),
         }
       }
       if (table === 'trello_member_mappings') {

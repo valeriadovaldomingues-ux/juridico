@@ -18,6 +18,7 @@ import {
   resolverDestinoOffice,
   ordenarColunasTrello,
   type OfficeColumn,
+  type ListaMapeada,
 } from '@/lib/kanban.service'
 import PersonalBoard from './PersonalBoard'
 import QuadroColuna from './QuadroColuna'
@@ -50,6 +51,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   const [profiles,    setProfiles]    = useState<KanbanProfile[]>([])
   const [processos,   setProcessos]   = useState<Processo[]>([])
   const [officeCols,  setOfficeCols]  = useState<OfficeColumn[]>([])
+  const [listasMapeadas, setListasMapeadas] = useState<ListaMapeada[]>([])
   const [loading,     setLoading]     = useState(true)
   const [erro,        setErro]        = useState('')
 
@@ -131,6 +133,15 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
         if (view === 'office') {
           setOfficeCols(getOfficeColumns(tasksData as KanbanTask[], allProfiles))
+          // Listas do Trello mapeadas (para mostrar também as vazias, na ordem do Trello)
+          const { data: mapeadas } = await supabase
+            .from('trello_list_mappings')
+            .select('trello_list_id, trello_list_name, profile_id, kanban_status, posicao')
+          if (!cancelled) {
+            setListasMapeadas((mapeadas ?? []).map((m: { trello_list_id: string; trello_list_name: string | null; profile_id: string | null; kanban_status: string; posicao: number | null }) => ({
+              id: m.trello_list_id, nome: m.trello_list_name ?? '', pos: m.posicao, profileId: m.profile_id, status: m.kanban_status,
+            })).filter(m => m.nome))
+          }
         }
       } catch (err) {
         console.error('[KanbanBoard] erro ao carregar:', err)
@@ -345,12 +356,12 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // ── Quadro do Escritório (estilo Trello: uma coluna por pessoa, lado a lado) ─
 
   const unassignedTasks = getUnassignedTasks(tasks)
-  const listCols        = getListColumns(tasks)
+  const listCols        = getListColumns(tasks, listasMapeadas)
   const colVisiveis     = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
   const listColsVisiveis = ocultarVazios ? listCols.filter(col => col.tasks.length > 0) : listCols
   const mostrarUnassigned = unassignedTasks.length > 0
   // Mesma ordem de colunas do Trello (pessoas e listas intercaladas pela posição da lista)
-  const colunasOrdenadas = ordenarColunasTrello(colVisiveis, listColsVisiveis, tasks)
+  const colunasOrdenadas = ordenarColunasTrello(colVisiveis, listColsVisiveis, tasks, listasMapeadas)
 
   return (
     <>
