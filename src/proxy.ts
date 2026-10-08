@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
+import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
 
 // ── Service client para leitura de profiles no middleware ─────────────────────
 //
@@ -203,10 +204,18 @@ export async function proxy(request: NextRequest) {
       role && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
       isInternalPath && !pathname.startsWith('/kanban') &&
       !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) &&
-      !isRotaDespesasLiberadaPorUsuario(pathname, user.id)
+      !isRotaDespesasLiberadaPorUsuario(pathname, user.id) &&
+      !usuarioLiberadoDoModoRestrito(user.id)
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
+      return NextResponse.redirect(url)
+    }
+
+    // 3a-usuario. Rotas bloqueadas só para esta pessoa (ver acesso-por-usuario.ts).
+    if (isInternalPath && rotaBloqueadaParaUsuario(pathname, user.id)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
       return NextResponse.redirect(url)
     }
 

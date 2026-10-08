@@ -90,7 +90,7 @@ interface SidebarProps {
 
 export default function Sidebar({ role, userId, devMode = false, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const allowed  = getAllowedRoutes(role)
+  const allowed  = getAllowedRoutes(role, userId)
 
   // Exceção pontual por usuário (não por papel) — ver src/lib/auth/despesas-acesso.ts.
   // Sócio já enxerga /financeiro inteiro, então não precisa do atalho extra.

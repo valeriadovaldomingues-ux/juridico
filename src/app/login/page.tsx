@@ -9,6 +9,7 @@ import { ROLE_REDIRECT, KANBAN_ONLY_MODE } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import Logo from '@/components/ui/Logo'
 import { sanitizeAuthError } from '@/lib/auth/password-reset'
+import { usuarioLiberadoDoModoRestrito } from '@/lib/auth/acesso-por-usuario'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -46,7 +47,8 @@ export default function LoginPage() {
         .single()
       if (profile?.role) {
         const role = profile.role as UserRole
-        redirect = KANBAN_ONLY_MODE && role !== 'socio' && role !== 'cliente' && role !== 'comercial'
+        redirect = KANBAN_ONLY_MODE && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
+          !usuarioLiberadoDoModoRestrito(authData.user.id)
           ? '/kanban'
           : ROLE_REDIRECT[role] ?? '/dashboard'
       }
