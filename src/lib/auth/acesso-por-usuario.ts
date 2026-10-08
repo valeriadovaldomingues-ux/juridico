@@ -45,3 +45,16 @@ export function rotaBloqueadaParaUsuario(pathname: string, userId?: string | nul
   const acesso = acessoDoUsuario(userId)
   return !!acesso && acesso.rotasBloqueadas.some(prefixo => pathname.startsWith(prefixo))
 }
+
+/**
+ * Quem enxerga a aba "Meu quadro" (Kanban pessoal por status) na página do Kanban.
+ * A pedido da Valéria em 08/10/2026: os advogados preferem só o quadro do escritório
+ * (estilo Trello); o quadro pessoal ficou só para ela.
+ */
+export const MEU_QUADRO_USER_IDS: readonly string[] = [
+  'a7eccddf-443a-408d-be21-23a285093fca', // Valéria do Val
+]
+
+export function temMeuQuadro(userId?: string | null): boolean {
+  return !!userId && MEU_QUADRO_USER_IDS.includes(userId)
+}

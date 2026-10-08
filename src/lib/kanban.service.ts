@@ -105,7 +105,7 @@ export function getListColumns(tasks: KanbanTask[]): ListColumn[] {
 /**
  * Resolve para onde um card foi solto no Quadro do Escritório.
  *
- * Cada coluna é "<dono>::<status>" (dono = id de pessoa, id de lista do Trello ou
+ * Cada coluna é "<dono>::todos" (quadro estilo Trello) ou "<dono>::<status>" (dono = id de pessoa, id de lista do Trello ou
  * "__unassigned__"). Soltar EM CIMA de outro card vale como soltar na coluna dele.
  * `responsavelId` só vem preenchido quando o destino é a coluna de uma PESSOA —
  * é isso que reatribui o card; colunas de lista/sem responsável só mudam o status.
@@ -114,16 +114,20 @@ export function resolverDestinoOffice(
   overId:     string,
   tasks:      KanbanTask[],
   profileIds: string[],
-): { status: KanbanStatus; responsavelId: string | null } | null {
+): { status: KanbanStatus | null; responsavelId: string | null } | null {
+  const donoPessoa = (dono: string | null | undefined) => (dono && profileIds.includes(dono) ? dono : null)
+
   if (overId.includes('::')) {
     const [dono, status] = overId.split('::')
+    // "todos" = coluna estilo Trello (sem status): só reatribui, o status não muda.
+    if (status === 'todos') return { status: null, responsavelId: donoPessoa(dono) }
     if (!STATUS_ORDER.includes(status as KanbanStatus)) return null
-    return { status: status as KanbanStatus, responsavelId: profileIds.includes(dono) ? dono : null }
+    return { status: status as KanbanStatus, responsavelId: donoPessoa(dono) }
   }
   const alvo = tasks.find(t => t.id === overId)
   if (!alvo) return null
-  const dono = alvo.responsavel_id ?? null
-  return { status: alvo.status, responsavelId: dono && profileIds.includes(dono) ? dono : null }
+  // Soltar em cima de um card = soltar na coluna dele (a pessoa dele), sem mexer no status.
+  return { status: null, responsavelId: donoPessoa(alvo.responsavel_id) }
 }
 
 /**

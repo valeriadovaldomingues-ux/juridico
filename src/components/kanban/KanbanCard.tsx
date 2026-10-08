@@ -7,8 +7,8 @@ import {
   GripVertical, Trash2, Pencil, Clock, Archive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { KanbanTask } from '@/types/kanban'
-import { PRIORIDADE_CFG } from '@/types/kanban'
+import type { KanbanTask, KanbanStatus } from '@/types/kanban'
+import { PRIORIDADE_CFG, STATUS_ORDER, STATUS_LABELS } from '@/types/kanban'
 import { getTaskSLABadge } from '@/lib/kanban-sla'
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
@@ -24,9 +24,10 @@ interface Props {
   onEdit:           (task: KanbanTask) => void
   onDelete:         (id: string) => void
   onArchive?:       (id: string) => void  // só aparece em cards concluídos
+  onStatusChange?:  (task: KanbanTask, status: KanbanStatus) => void  // mostra o status no card e permite trocá-lo
 }
 
-export default function KanbanCard({ task, userColor, showResponsavel, onEdit, onDelete, onArchive }: Props) {
+export default function KanbanCard({ task, userColor, showResponsavel, onEdit, onDelete, onArchive, onStatusChange }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id })
 
@@ -76,6 +77,23 @@ export default function KanbanCard({ task, userColor, showResponsavel, onEdit, o
 
         {/* Badges superiores */}
         <div className="flex items-center gap-1.5 flex-wrap">
+          {onStatusChange && (
+            <select
+              value={task.status}
+              onChange={e => onStatusChange(task, e.target.value as KanbanStatus)}
+              onPointerDown={e => e.stopPropagation()}
+              title="Mudar o status do card"
+              className={cn(
+                'text-[9px] font-semibold rounded-full px-1.5 py-0.5 border-0 outline-none cursor-pointer ring-1',
+                task.status === 'concluido'     ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                : task.status === 'fazendo'      ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                : task.status === 'com_pendencia' ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                : 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+              )}
+            >
+              {STATUS_ORDER.map(st => <option key={st} value={st}>{STATUS_LABELS[st]}</option>)}
+            </select>
+          )}
           {task.categoria && (
             <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-copper)] bg-[var(--color-surface-warm)] px-1.5 py-0.5 rounded-full ring-1 ring-[var(--color-copper)]/30">
               {task.categoria === 'inicial' ? 'Inicial' : 'Despacho'}
