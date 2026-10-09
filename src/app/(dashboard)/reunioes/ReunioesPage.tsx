@@ -39,7 +39,7 @@ export default function ReunioesPage({ reunioes, tarefas, equipe, podeCriar }: {
           <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none flex items-center gap-2">
             <NotebookPen size={26} className="text-[var(--color-copper)]" /> Reuniões PEDV
           </h1>
-          <p className="text-[13px] text-[var(--color-ink-3)] mt-2">Atas das reuniões do escritório. As tarefas de cada pessoa viram cartões no Kanban.</p>
+          <p className="text-[13px] text-[var(--color-ink-3)] mt-2">Atas das reuniões do escritório — depois de salvas, ficam só para leitura. As tarefas de cada pessoa viram cartões no Kanban.</p>
         </div>
         {podeCriar && (
           <button onClick={() => setNova(true)} className="flex items-center gap-2 px-4 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl">
@@ -250,6 +250,9 @@ function NovaReuniao({ equipe, onFechar }: { equipe: Pessoa[]; onFechar: () => v
           )}
 
           {erro && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
+          {etapa === 'revisar' && (
+            <p className="text-[11px] text-[#9ca3af]">Atenção: depois de salva, a ata <strong>não pode mais ser alterada nem apagada</strong> por ninguém. Confira o texto antes de salvar.</p>
+          )}
 
           <div className="flex gap-3 pt-1 justify-between">
             {etapa === 'ata' ? (
