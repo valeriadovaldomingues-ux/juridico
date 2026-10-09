@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
-import { escapeLike, normalizeSearchText } from '@/lib/cnpj'
 import { buildProcessoLookupOption, type ProcessoSearchRecord } from '@/lib/processos/search'
 import type { UserRole } from '@/types'
 
@@ -15,10 +14,6 @@ function clampLimit(value: string | null, fallback = 10) {
 
 async function buscarProcessosRelacionados(q: string, limit: number) {
   const supabase = await createClient()
-  const normalized = normalizeSearchText(q)
-  const safe = escapeLike(q)
-  const digits = q.replace(/\D/g, '')
-
   const ids = new Set<string>()
   const candidatos: ProcessoSearchRecord[] = []
 
@@ -40,57 +35,17 @@ async function buscarProcessosRelacionados(q: string, limit: number) {
     }
   }
 
-  const [porTexto, porCliente, porParte] = await Promise.all([
-    supabase
-      .from('processos')
-      .select(selectFields)
-      .in('status', ['ativo', 'suspenso'])
-      .or([
-        `numero_processo.ilike.%${safe}%`,
-        `titulo.ilike.%${safe}%`,
-        `area_direito.ilike.%${safe}%`,
-        `status.ilike.%${safe}%`,
-      ].join(','))
-      .limit(limit * 2),
-    supabase
-      .from('clientes')
-      .select('id')
-      .eq('ativo', true)
-      .or([
-        `nome.ilike.%${safe}%`,
-        digits ? `cpf_cnpj.ilike.%${digits}%` : null,
-        normalized ? `nome_fantasia.ilike.%${safe}%` : null,
-        normalized ? `socio_representante.ilike.%${safe}%` : null,
-      ].filter(Boolean).join(','))
-      .limit(limit * 2),
-    supabase
-      .from('partes_processo')
-      .select('processo_id, pessoa_nome, tipo_parte')
-      .ilike('pessoa_nome', `%${safe}%`)
-      .limit(limit * 2),
-  ])
-
-  addRecords((porTexto.data ?? []) as ProcessoSearchRecord[])
-
-  const clienteIds = (porCliente.data ?? []).map((cliente: { id: string }) => cliente.id)
-  if (clienteIds.length > 0) {
+  // Título, número, cliente (nome/fantasia/sócio/CPF-CNPJ) e partes: tudo sem acento/ç (processos_ids_busca).
+  const { data: idsBusca, error: errBusca } = await supabase.rpc('processos_ids_busca', { q })
+  if (errBusca) throw new Error(errBusca.message)
+  const idsEncontrados = (idsBusca ?? []) as string[]
+  if (idsEncontrados.length > 0) {
     const { data } = await supabase
       .from('processos')
       .select(selectFields)
       .in('status', ['ativo', 'suspenso'])
-      .in('cliente_id', clienteIds)
-      .limit(limit * 2)
-    addRecords(data as ProcessoSearchRecord[])
-  }
-
-  const processoIds = (porParte.data ?? []).map((parte: { processo_id: string | null }) => parte.processo_id).filter(Boolean) as string[]
-  if (processoIds.length > 0) {
-    const { data } = await supabase
-      .from('processos')
-      .select(selectFields)
-      .in('status', ['ativo', 'suspenso'])
-      .in('id', processoIds)
-      .limit(limit * 2)
+      .in('id', idsEncontrados.slice(0, 200))
+      .limit(limit * 3)
     addRecords(data as ProcessoSearchRecord[])
   }
 
