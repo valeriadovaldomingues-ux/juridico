@@ -10,6 +10,7 @@ import {
   FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles, Gavel,
 } from 'lucide-react'
 import AtaAudienciaModal from './AtaAudienciaModal'
+import NovoCompromissoModal from './NovoCompromissoModal'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -210,13 +211,23 @@ export default function ProcessoDetail({
 }) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<TabAtiva>('dados')
+  const [novoCompromisso, setNovoCompromisso] = useState<'prazo' | 'audiencia' | null>(null)
   const [andamentos, setAndamentos] = useState(andamentosIniciais)
   const [comunicacoes, setComunicacoes] = useState(comunicacoesIniciais)
   const relatorios = relatoriosIniciais ?? []
   const auroraClienteHistorico = useMemo(() => auroraClienteHistoricoIniciais ?? [], [auroraClienteHistoricoIniciais])
   const router = useRouter()
   const latestAndamento = andamentos[0] ?? null
-  const nextPrazo = prazos[0] ?? null
+  // Próximo prazo em aberto: prazos cadastrados + itens de prazo da Agenda, o mais próximo de hoje.
+  const hojeISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const nextPrazo = [
+    ...prazos
+      .filter(p => !['cumprido', 'concluido', 'cancelado'].includes(p.status) && p.data_final >= hojeISO)
+      .map(p => ({ titulo: p.titulo, data: p.data_final, prioridade: p.prioridade as string })),
+    ...agendaItems
+      .filter(i => i.status === 'pendente' && ['prazo', 'prazo_processual'].includes(i.tipo) && (i.prazo_final ?? i.data_inicio) >= hojeISO)
+      .map(i => ({ titulo: i.titulo, data: i.prazo_final ?? i.data_inicio, prioridade: i.prioridade })),
+  ].sort((a, b) => a.data.localeCompare(b.data))[0] ?? null
   const tabCount = {
     dados: 0,
     andamentos: andamentos.length,
@@ -289,7 +300,7 @@ export default function ProcessoDetail({
             <SummaryCard
               label="Próximo prazo"
               value={nextPrazo ? nextPrazo.titulo : 'Sem prazo'}
-              detail={nextPrazo ? `${formatDate(nextPrazo.data_final)} · ${prioridadeColors[nextPrazo.prioridade] ? nextPrazo.prioridade : '—'}` : 'Sem prazos cadastrados'}
+              detail={nextPrazo ? `${formatDate(nextPrazo.data)} · ${prioridadeColors[nextPrazo.prioridade] ? nextPrazo.prioridade : '—'}` : 'Sem prazos em aberto'}
             />
             <SummaryCard
               label="Documentos"
@@ -369,6 +380,7 @@ export default function ProcessoDetail({
                   role={role}
                   andamentos={andamentos}
                   setAndamentos={setAndamentos}
+                  onNovoCompromisso={setNovoCompromisso}
                 />
               )}
 
@@ -402,7 +414,7 @@ export default function ProcessoDetail({
               )}
 
               {tab === 'prazos' && (
-                <PrazosTab prazos={prazos} agendaItems={agendaItems} />
+                <PrazosTab prazos={prazos} agendaItems={agendaItems} podeCriar={role !== 'estagiario'} onNovoCompromisso={setNovoCompromisso} />
               )}
 
               {tab === 'observacoes' && (
@@ -414,6 +426,16 @@ export default function ProcessoDetail({
 
         {/* ── Coluna lateral ── */}
         <div className="space-y-4">
+          {novoCompromisso && (
+            <NovoCompromissoModal
+              processoId={processo.id}
+              tipo={novoCompromisso}
+              advogadoId={processo.advogado_responsavel_id ?? null}
+              onFechar={() => setNovoCompromisso(null)}
+              onSalvo={() => { setNovoCompromisso(null); router.refresh() }}
+            />
+          )}
+
           <AgendaTimeline processoId={processo.id} items={agendaItems} />
 
           <div className="bg-white rounded-lg border border-[#e5e7eb] p-5">
@@ -970,11 +992,13 @@ function AndamentosTab({
   role,
   andamentos,
   setAndamentos,
+  onNovoCompromisso,
 }: {
   processoId: string
   role: UserRole
   andamentos: ProcessoAndamento[]
   setAndamentos: Dispatch<SetStateAction<ProcessoAndamento[]>>
+  onNovoCompromisso: (tipo: 'prazo' | 'audiencia') => void
 }) {
   const [showForm, setShowForm] = useState(false)
   const [showAta, setShowAta] = useState(false)
@@ -1179,6 +1203,22 @@ function AndamentosTab({
             >
               <Gavel size={13} /> Ata de audiência
             </button>
+          )}
+          {role !== 'estagiario' && (
+            <>
+              <button
+                onClick={() => onNovoCompromisso('prazo')}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[12px] font-medium hover:bg-[#145A5B]/5 transition-colors"
+              >
+                <CalendarRange size={13} /> Novo prazo
+              </button>
+              <button
+                onClick={() => onNovoCompromisso('audiencia')}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[12px] font-medium hover:bg-[#145A5B]/5 transition-colors"
+              >
+                <Landmark size={13} /> Nova audiência
+              </button>
+            </>
           )}
           <button
             onClick={abrirNovo}
@@ -1628,7 +1668,12 @@ interface CompromissoLinha {
   origem: 'prazo' | 'agenda'
 }
 
-function PrazosTab({ prazos, agendaItems }: { prazos: Prazo[]; agendaItems: AgendaItemSimple[] }) {
+function PrazosTab({ prazos, agendaItems, podeCriar, onNovoCompromisso }: {
+  prazos: Prazo[]
+  agendaItems: AgendaItemSimple[]
+  podeCriar: boolean
+  onNovoCompromisso: (tipo: 'prazo' | 'audiencia') => void
+}) {
   // Prazos cadastrados + tudo que está na Agenda do processo (audiências, perícias, obrigações
   // do cliente etc.). Item da Agenda igual a um prazo já cadastrado (mesma data e título) não repete.
   const jaCadastrados = new Set(prazos.map(p => `${p.data_final}|${normalizarTitulo(p.titulo)}`))
@@ -1671,12 +1716,24 @@ function PrazosTab({ prazos, agendaItems }: { prazos: Prazo[]; agendaItems: Agen
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Prazos</p>
-        <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Prazos e compromissos do processo</h3>
-        <p className="text-[12px] text-[#6b7280] mt-1">
-          Prazos cadastrados e compromissos da agenda (audiências, perícias, obrigações do cliente). O mais próximo aparece primeiro.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Prazos</p>
+          <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Prazos e compromissos do processo</h3>
+          <p className="text-[12px] text-[#6b7280] mt-1">
+            Prazos cadastrados e compromissos da agenda (audiências, perícias, obrigações do cliente). O mais próximo aparece primeiro.
+          </p>
+        </div>
+        {podeCriar && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => onNovoCompromisso('prazo')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#145A5B] text-white text-[12px] font-medium hover:bg-[#1B6E70] transition-colors">
+              <Plus size={13} /> Novo prazo
+            </button>
+            <button onClick={() => onNovoCompromisso('audiencia')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[12px] font-medium hover:bg-[#145A5B]/5 transition-colors">
+              <Landmark size={13} /> Nova audiência
+            </button>
+          </div>
+        )}
       </div>
 
       {linhas.length === 0 ? (

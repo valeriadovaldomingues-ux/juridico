@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Copy, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
+import { createClient } from '@/lib/supabase/client'
 import { fetchClienteOptions, fetchProcessoOptions, fetchUsuarioOptions } from '@/lib/search/remote'
 import {
   AgendaForm, AgendaItem, Processo, Cliente,
@@ -42,6 +43,29 @@ export default function AgendaModal({
   onClose, saving,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
+
+  // O combobox só sabe o id escolhido; sem a opção selecionada ele volta a mostrar "— Nenhum —".
+  // Guarda a opção ao escolher e, ao abrir um item que já tem cliente/processo, busca o nome.
+  const [clienteSel, setClienteSel] = useState<SearchableComboboxOption | null>(null)
+  const [processoSel, setProcessoSel] = useState<SearchableComboboxOption | null>(null)
+
+  useEffect(() => {
+    if (!form.cliente_id || clienteSel?.value === form.cliente_id) return
+    let cancelado = false
+    createClient().from('clientes').select('id, nome').eq('id', form.cliente_id).maybeSingle().then(({ data }) => {
+      if (!cancelado && data) setClienteSel({ value: data.id, label: data.nome, description: null })
+    })
+    return () => { cancelado = true }
+  }, [form.cliente_id, clienteSel?.value])
+
+  useEffect(() => {
+    if (!form.processo_id || processoSel?.value === form.processo_id) return
+    let cancelado = false
+    createClient().from('processos').select('id, titulo, numero_processo').eq('id', form.processo_id).maybeSingle().then(({ data }) => {
+      if (!cancelado && data) setProcessoSel({ value: data.id, label: data.titulo, description: data.numero_processo ?? null })
+    })
+    return () => { cancelado = true }
+  }, [form.processo_id, processoSel?.value])
 
   useEffect(() => {
     ref.current?.focus()
@@ -96,7 +120,8 @@ export default function AgendaModal({
               <label className={labelCls}>Cliente</label>
               <SearchableCombobox
                 value={form.cliente_id}
-                onChange={value => set({ cliente_id: value })}
+                selectedOption={clienteSel?.value === form.cliente_id ? clienteSel : null}
+                onChange={(value, option) => { setClienteSel(option); set({ cliente_id: value }) }}
                 loadOptions={async (query) => fetchClienteOptions(query, 10)}
                 placeholder="— Nenhum —"
                 searchPlaceholder="Buscar cliente por nome, CPF/CNPJ, telefone ou e-mail"
@@ -211,7 +236,8 @@ export default function AgendaModal({
             <label className={labelCls}>Processo</label>
             <SearchableCombobox
               value={form.processo_id}
-              onChange={value => set({ processo_id: value })}
+              selectedOption={processoSel?.value === form.processo_id ? processoSel : null}
+              onChange={(value, option) => { setProcessoSel(option); set({ processo_id: value }) }}
               loadOptions={async (query) => fetchProcessoOptions(query, 10)}
               placeholder="— Nenhum —"
               searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
