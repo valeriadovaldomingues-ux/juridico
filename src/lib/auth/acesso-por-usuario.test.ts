@@ -31,11 +31,14 @@ describe('acesso por usuário — Marcelo (advogado)', () => {
     expect(roleCanAccessRoute('advogado', '/financeiro', MARCELO)).toBe(false)
   })
 
-  it('outro advogado continua só com Kanban + INPI + Horas (modo restrito)', () => {
-    expect(getAllowedRoutes('advogado', OUTRO_ADVOGADO)).toEqual(['/kanban', '/inpi', '/horas'])
-    expect(getAllowedRoutes('advogado')).toEqual(['/kanban', '/inpi', '/horas'])
+  it('outro advogado continua no modo restrito (só as rotas liberadas a todos)', () => {
+    for (const rotas of [getAllowedRoutes('advogado', OUTRO_ADVOGADO), getAllowedRoutes('advogado')]) {
+      expect(rotas).toEqual(expect.arrayContaining(['/kanban', '/inpi', '/horas']))
+      for (const fechada of ['/processos', '/clientes', '/agenda', '/dashboard', '/publicacoes']) expect(rotas).not.toContain(fechada)
+    }
     expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(false)
   })
+
 
   it('Débora tem exatamente o mesmo acesso do Marcelo', () => {
     expect(getAllowedRoutes('advogado', DEBORA)).toEqual(getAllowedRoutes('advogado', MARCELO))

@@ -21,8 +21,8 @@ const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente', 'comercial']
 // Isenção por ROTA (diferente da isenção por papel acima): liberada pra
 // TODOS os papéis mesmo com o modo restrito ligado, sem abrir o resto do
 // sistema. Hoje só o INPI, a pedido da Valéria em 22/09/2026 — "todo mundo
-// vê INPI" (e, em 08/10/2026, o relatório de Horas, aberto a toda a equipe). Espelhado em src/proxy.ts.
-const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi', '/horas']
+// vê INPI" (e, em 08/10/2026, Horas e Reuniões PEDV, abertos a toda a equipe). Espelhado em src/proxy.ts.
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi', '/horas', '/reunioes']
 
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em
@@ -263,6 +263,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/horas',
     '/publicacoes',
     '/documentos',
@@ -285,6 +286,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/horas',
     '/documentos',
     '/ferramentas-pdf',
@@ -299,6 +301,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/horas',
     '/publicacoes',
     '/documentos',
@@ -314,6 +317,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/horas',
     '/publicacoes',
     '/documentos',
@@ -333,6 +337,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/horas',
     '/publicacoes',
     '/financeiro',
