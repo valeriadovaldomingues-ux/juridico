@@ -31,9 +31,9 @@ describe('acesso por usuário — Marcelo (advogado)', () => {
     expect(roleCanAccessRoute('advogado', '/financeiro', MARCELO)).toBe(false)
   })
 
-  it('outro advogado continua só com Kanban + INPI (modo restrito)', () => {
-    expect(getAllowedRoutes('advogado', OUTRO_ADVOGADO)).toEqual(['/kanban', '/inpi'])
-    expect(getAllowedRoutes('advogado')).toEqual(['/kanban', '/inpi'])
+  it('outro advogado continua só com Kanban + INPI + Horas (modo restrito)', () => {
+    expect(getAllowedRoutes('advogado', OUTRO_ADVOGADO)).toEqual(['/kanban', '/inpi', '/horas'])
+    expect(getAllowedRoutes('advogado')).toEqual(['/kanban', '/inpi', '/horas'])
     expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(false)
   })
 

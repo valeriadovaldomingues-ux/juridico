@@ -13,13 +13,13 @@ const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_SIDE * 2
 const LINE_HEIGHT   = 15.5
 
 let _logoBytes: Buffer | null = null
-async function getLogoBytes() {
+export async function getLogoBytes() {
   if (_logoBytes) return _logoBytes
   _logoBytes = await fs.readFile(path.join(process.cwd(), 'public/documentos/folha-timbrada.png'))
   return _logoBytes
 }
 
-function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+export function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const lines: string[] = []
   // "\n" é respeitado como quebra de linha forçada (ex: itens de cláusula em lista) —
   // dentro de cada trecho o texto continua sendo quebrado normalmente por largura.
