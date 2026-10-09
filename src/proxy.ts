@@ -60,7 +60,7 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
 ]
 
 const INTERNAL_PREFIXES = [
-  '/dashboard', '/clientes', '/processos', '/inpi', '/agenda', '/kanban',
+  '/dashboard', '/clientes', '/processos', '/inpi', '/horas', '/agenda', '/kanban',
   '/publicacoes', '/documentos', '/financeiro', '/comercial', '/relatorios',
   '/importar', '/automacoes', '/monitoramento', '/ia-juridica',
   '/integracoes', '/configuracoes', '/tv',
@@ -69,7 +69,7 @@ const INTERNAL_PREFIXES = [
 // Isenção por ROTA do modo restrito (diferente da isenção por papel logo
 // abaixo) — liberada pra todos os papéis mesmo com KANBAN_ONLY_MODE ligado.
 // Espelha KANBAN_ONLY_EXTRA_ROUTES em src/lib/permissions.ts.
-const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi']
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi', '/horas']
 
 function routeAllowed(role: string, pathname: string): boolean {
   for (const r of RESTRICTED) {
