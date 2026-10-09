@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
-import { escapeLike, normalizeSearchText } from '@/lib/cnpj'
+import { normalizeSearchText } from '@/lib/cnpj'
 import type { UserRole } from '@/types'
 
 const ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
@@ -25,27 +25,23 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = await createClient()
-    const safe = escapeLike(q)
-    const normalized = normalizeSearchText(q)
-
-    let query = supabase
+    // Equipe é pequena: busca tudo que está ativo e filtra aqui, sem acento e em qualquer ordem
+    // das palavras ("valeria" acha "Valéria do Val").
+    const { data: todos, error } = await supabase
       .from('profiles')
       .select('id, nome, email, role')
       .eq('ativo', true)
-      .limit(limit)
       .order('nome')
-
-    query = query.or([
-      `nome.ilike.%${safe}%`,
-      `email.ilike.%${safe}%`,
-      normalized ? `role.ilike.%${safe}%` : null,
-    ].filter(Boolean).join(','))
-
-    const { data, error } = await query
     if (error) {
       console.error('[profiles busca]', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const tokens = normalizeSearchText(q).split(/\s+/).filter(Boolean)
+    const data = (todos ?? []).filter(p => {
+      const alvo = normalizeSearchText(`${p.nome ?? ''} ${p.email ?? ''} ${p.role ?? ''}`)
+      return tokens.every(t => alvo.includes(t))
+    }).slice(0, limit)
 
     return NextResponse.json((data ?? []) as Array<{ id: string; nome: string; email: string | null; role: string | null }>)
   } catch (error) {
