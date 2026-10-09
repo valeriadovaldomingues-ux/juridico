@@ -11,6 +11,8 @@ export interface TRT3DJENPublicacao {
   termo_encontrado: string
   numero_processo: string | null
   data_publicacao: string
+  /** Data em que a comunicação foi disponibilizada no Diário — o sinal real, distinto de data_publicacao. */
+  data_disponibilizacao: string | null
   texto_publicacao: string
   orgao: string | null
   tribunal: string
@@ -201,6 +203,7 @@ export function mapearComunicacaoDJEN(
     termo_encontrado: termo,
     numero_processo: numero || null,
     data_publicacao: item.data_disponibilizacao ?? item.datadisponibilizacao ?? hojeSaoPaulo(),
+    data_disponibilizacao: item.data_disponibilizacao ?? item.datadisponibilizacao ?? null,
     texto_publicacao: texto.slice(0, 5_000),
     orgao: item.nomeOrgao ?? null,
     tribunal,

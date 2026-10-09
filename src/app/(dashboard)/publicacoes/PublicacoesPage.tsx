@@ -8,7 +8,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Search,
   ChevronDown, ChevronLeft, ChevronRight, Upload, Plus,
   Gavel, FileText, ExternalLink, Link2, Clock, X, Sparkles,
-  Zap, Target, Play, Pause, TrendingUp, CalendarDays, Scale,
+  Zap, Target, Play, Pause, TrendingUp, CalendarDays, Scale, Radar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as XLSX from 'xlsx'
@@ -76,6 +76,23 @@ const TIPO_CFG: Record<string, { label: string; bg: string; text: string }> = {
   sentenca:   { label: 'Sentença',   bg: 'bg-purple-50', text: 'text-purple-700' },
   acordao:    { label: 'Acórdão',    bg: 'bg-indigo-50', text: 'text-indigo-700' },
   outro:      { label: 'Outro',      bg: 'bg-slate-100', text: 'text-slate-600'  },
+}
+
+/** Origens que representam captura pela fonte DJEN (CNJ). */
+function origemEhDJEN(origem: string) {
+  return origem === 'djen' || origem.endsWith('_djen')
+}
+
+/** Badge "DJEN — Diário de Justiça Eletrônico Nacional" na listagem de publicações. */
+function DJENBadge() {
+  return (
+    <span
+      title="DJEN — Diário de Justiça Eletrônico Nacional"
+      className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-teal-200 bg-teal-50 text-teal-700 flex-shrink-0"
+    >
+      <Radar size={9} /> DJEN
+    </span>
+  )
 }
 
 const PRIORIDADE_CFG: Record<Prioridade, {
@@ -601,7 +618,10 @@ function PublicacaoModal({
             </div>
             <div>
               <p className="text-[10px] font-semibold text-[#9aabb8] uppercase tracking-wide mb-1">Origem</p>
-              <p className="text-[12px] text-[#7a8899]">{pub.origem}</p>
+              <div className="flex items-center gap-1.5">
+                {origemEhDJEN(pub.origem) && <DJENBadge />}
+                <p className="text-[12px] text-[#7a8899]">{pub.origem}</p>
+              </div>
             </div>
           </div>
 
@@ -1704,6 +1724,7 @@ export default function PublicacoesPage({
                         {tipoCfg.label}
                       </span>
                       {isNao && <PrioridadeBadge prioridade={prio} />}
+                      {origemEhDJEN(pub.origem) && <DJENBadge />}
                       {pub.prazo_detectado && <AlertTriangle size={11} className="text-orange-500 flex-shrink-0" />}
                       {pub.audiencia_detectada && <Gavel size={11} className="text-rose-500 flex-shrink-0" />}
                       {!pub.prazo_detectado && !pub.audiencia_detectada && textoPublicacao &&
