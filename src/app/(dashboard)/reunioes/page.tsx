@@ -9,7 +9,7 @@ export default async function Page() {
   const supabase = await createClient()
 
   const [{ data: reunioes }, { data: tarefas }, { data: equipe }] = await Promise.all([
-    supabase.from('reunioes_pedv').select('id, titulo, data_reuniao, participantes, ata, criado_por, created_at')
+    supabase.from('reunioes_pedv').select('id, titulo, data_reuniao, participantes, ata, arquivo_nome, criado_por, created_at')
       .order('data_reuniao', { ascending: false }).order('created_at', { ascending: false }).limit(200),
     supabase.from('kanban_tasks').select('id, titulo, status, responsavel_id, data, reuniao_id, arquivado')
       .not('reuniao_id', 'is', null).limit(1000),

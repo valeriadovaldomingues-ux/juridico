@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
 import { completarJSON } from '@/lib/ai/service'
+import { mensagemFalhaIA } from '@/lib/ai/erros'
 import { normalizarExtracaoAta, promptSistemaAta } from '@/lib/atas/extrair-ata'
 
 const MAX_ATA = 30_000
@@ -34,6 +35,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...normalizarExtracaoAta(resposta, equipe), equipe })
   } catch (err) {
     console.error('[atas/extrair]', err)
-    return NextResponse.json({ error: 'A IA não conseguiu ler a ata agora. Tente de novo ou preencha as providências manualmente.' }, { status: 502 })
+    return NextResponse.json({ error: mensagemFalhaIA(err, 'A IA não conseguiu ler a ata agora. Tente de novo ou preencha as providências manualmente.') }, { status: 502 })
   }
 }
