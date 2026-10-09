@@ -29,6 +29,20 @@ function normalizarTextoExtraido(value: unknown): string {
   return String(value).trim()
 }
 
+/**
+ * Tipo do arquivo para o leitor, olhando os primeiros bytes (PDF: "%PDF"; DOCX: zip "PK").
+ * Sem esse aviso o leitor tenta adivinhar o tipo sozinho e, no servidor, a adivinhação falhava
+ * ("Auto-detection of file type from buffer failed"). DOC legado não é suportado: segue sem aviso.
+ */
+export function tipoArquivoParaLeitor(bytes: Uint8Array, nome: string): 'pdf' | 'docx' | undefined {
+  const comeco = String.fromCharCode(...bytes.subarray(0, 4))
+  if (comeco === '%PDF') return 'pdf'
+  if (comeco.startsWith('PK')) return 'docx'
+  const ext = getExtensaoArquivo(nome)
+  if (ext === 'pdf' || ext === 'docx') return ext
+  return undefined
+}
+
 export function validarArquivoImportacaoProcesso(file: File) {
   const extensao = getExtensaoArquivo(file.name)
   if (!EXTENSOES_PERMITIDAS.has(extensao)) {
@@ -52,7 +66,8 @@ export async function extrairTextoDocumentoProcesso(file: File) {
 
   let texto = ''
   try {
-    const ast = await parseOffice(buffer)
+    const fileType = tipoArquivoParaLeitor(buffer, file.name)
+    const ast = await parseOffice(buffer, fileType ? { fileType } : undefined)
     texto = normalizarTextoExtraido(await ast.to('text'))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao extrair texto'
