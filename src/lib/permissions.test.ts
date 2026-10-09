@@ -89,3 +89,13 @@ describe('Kanban para todos os perfis internos', () => {
     expect(ALLOWED_ROUTES.cliente).not.toContain('/kanban')
   })
 })
+
+describe('Reuniões PEDV (/reunioes)', () => {
+  it.each(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'] as const)('%s tem /reunioes no menu', (role) => {
+    expect(ALLOWED_ROUTES[role]).toContain('/reunioes')
+  })
+  it('comercial e cliente do portal não têm', () => {
+    expect(ALLOWED_ROUTES.comercial).not.toContain('/reunioes')
+    expect(ALLOWED_ROUTES.cliente).not.toContain('/reunioes')
+  })
+})

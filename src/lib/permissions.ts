@@ -22,7 +22,7 @@ const KANBAN_ONLY_EXEMPT_ROLES: UserRole[] = ['socio', 'cliente', 'comercial']
 // TODOS os papéis mesmo com o modo restrito ligado, sem abrir o resto do
 // sistema. Hoje só o INPI, a pedido da Valéria em 22/09/2026 — "todo mundo
 // vê INPI". Espelhado em src/proxy.ts.
-const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi']
+const KANBAN_ONLY_EXTRA_ROUTES = ['/inpi', '/reunioes']
 
 // ─── Roles internos (staff) — usados para filtrar UIs internas ───────────────
 // 'cliente' é um role externo do portal e não deve aparecer em
@@ -263,6 +263,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
@@ -284,6 +285,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/documentos',
     '/ferramentas-pdf',
     '/importar',
@@ -297,6 +299,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
@@ -311,6 +314,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/publicacoes',
     '/documentos',
     '/ferramentas-pdf',
@@ -329,6 +333,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/inpi',
     '/agenda',
     '/kanban',
+    '/reunioes',
     '/publicacoes',
     '/financeiro',
     '/financeiro/cobrancas',
