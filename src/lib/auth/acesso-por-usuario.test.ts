@@ -33,7 +33,7 @@ describe('acesso por usuário — Marcelo (advogado)', () => {
 
   it('outro advogado continua no modo restrito (só as rotas liberadas a todos)', () => {
     for (const rotas of [getAllowedRoutes('advogado', OUTRO_ADVOGADO), getAllowedRoutes('advogado')]) {
-      expect(rotas).toEqual(expect.arrayContaining(['/kanban', '/inpi']))
+      expect(rotas).toEqual(expect.arrayContaining(['/kanban', '/inpi', '/horas']))
       for (const fechada of ['/processos', '/clientes', '/agenda', '/dashboard', '/publicacoes']) expect(rotas).not.toContain(fechada)
     }
     expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(false)

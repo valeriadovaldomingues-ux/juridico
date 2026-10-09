@@ -99,3 +99,15 @@ describe('Reuniões PEDV (/reunioes)', () => {
     expect(ALLOWED_ROUTES.cliente).not.toContain('/reunioes')
   })
 })
+
+describe('Relatório de horas (/horas)', () => {
+  it.each(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'] as const)('%s tem /horas no menu', (role) => {
+    expect(getAllowedRoutes(role, null)).toContain('/horas')
+    expect(ALLOWED_ROUTES[role]).toContain('/horas')
+  })
+
+  it('cliente do portal e comercial não têm /horas', () => {
+    expect(ALLOWED_ROUTES.cliente).not.toContain('/horas')
+    expect(ALLOWED_ROUTES.comercial).not.toContain('/horas')
+  })
+})

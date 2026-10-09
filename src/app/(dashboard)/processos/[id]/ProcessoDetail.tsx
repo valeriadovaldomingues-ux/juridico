@@ -939,6 +939,20 @@ interface AndamentoFormState {
   responsavel_id: string
 }
 
+interface TempoFormState {
+  ativo: boolean
+  modo: 'horario' | 'duracao'
+  inicio: string   // datetime-local
+  fim: string      // datetime-local
+  horas: string
+  minutos: string
+  cobravel: boolean
+}
+
+const TEMPO_FORM_VAZIO: TempoFormState = {
+  ativo: false, modo: 'horario', inicio: '', fim: '', horas: '', minutos: '', cobravel: true,
+}
+
 const ANDAMENTO_FORM_VAZIO: AndamentoFormState = {
   data_andamento: toInputDateTimeValue(),
   tipo: 'outro',
@@ -962,6 +976,7 @@ function AndamentosTab({
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AndamentoFormState>(ANDAMENTO_FORM_VAZIO)
+  const [tempo, setTempo] = useState<TempoFormState>(TEMPO_FORM_VAZIO)
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
   const [filtroTipo, setFiltroTipo] = useState<'todos' | AndamentoTipo>('todos')
@@ -1023,10 +1038,12 @@ function AndamentosTab({
     setEditingId(null)
     setErro('')
     setForm(ANDAMENTO_FORM_VAZIO)
+    setTempo(TEMPO_FORM_VAZIO)
     setResponsavelOption(null)
   }
 
   function abrirNovo() {
+    setTempo(TEMPO_FORM_VAZIO)
     setEditingId(null)
     setErro('')
     setShowForm(true)
@@ -1081,6 +1098,21 @@ function AndamentosTab({
       responsavel_id: form.responsavel_id.trim() || null,
     }
 
+    // Tempo gasto (só ao criar): ou início + fim, ou só a duração em horas/minutos.
+    let tempoPayload: Record<string, unknown> | undefined
+    if (!editingId && tempo.ativo) {
+      if (tempo.modo === 'horario') {
+        const inicio = fromInputDateTimeValue(tempo.inicio)
+        const fim = fromInputDateTimeValue(tempo.fim)
+        if (!inicio || !fim) { setErro('Informe o início e o fim do tempo gasto.'); return }
+        tempoPayload = { inicio_em: inicio, fim_em: fim, cobravel: tempo.cobravel }
+      } else {
+        const minutos = (Number(tempo.horas) || 0) * 60 + (Number(tempo.minutos) || 0)
+        if (minutos <= 0) { setErro('Informe quantas horas e minutos foram gastos.'); return }
+        tempoPayload = { duracao_minutos: minutos, cobravel: tempo.cobravel }
+      }
+    }
+
     setSaving(true)
     setErro('')
 
@@ -1092,7 +1124,7 @@ function AndamentosTab({
     const res = await fetch(url, {
       method,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(tempoPayload ? { ...payload, tempo: tempoPayload } : payload),
     })
 
     setSaving(false)
@@ -1104,6 +1136,7 @@ function AndamentosTab({
     }
 
     const saved = await res.json()
+    if (saved.tempo_aviso) alert(saved.tempo_aviso)
     setAndamentos(prev => {
       if (editingId) {
         return prev.map(item => item.id === editingId ? saved : item)
@@ -1259,6 +1292,99 @@ function AndamentosTab({
           </div>
 
           {erro && <p className="mt-3 text-[12px] text-red-500">{erro}</p>}
+
+          {!editingId && (
+            <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-white p-3">
+              <label className="flex items-center gap-2 text-[13px] font-medium text-[#1a1d23] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tempo.ativo}
+                  onChange={e => setTempo(prev => ({ ...prev, ativo: e.target.checked }))}
+                  className="rounded border-[#d1d5db]"
+                />
+                <Clock3 size={14} className="text-[#1D5F60]" />
+                Lançar o tempo gasto nesta tarefa
+              </label>
+              <p className="mt-1 text-[11px] text-[#9ca3af]">
+                O tempo entra na Agenda e no relatório de horas do cliente.
+              </p>
+
+              {tempo.ativo && (
+                <div className="mt-3 space-y-3">
+                  <div className="flex gap-2">
+                    {([['horario', 'Início e fim'], ['duracao', 'Só a duração']] as const).map(([modo, rotulo]) => (
+                      <button
+                        key={modo}
+                        type="button"
+                        onClick={() => setTempo(prev => ({ ...prev, modo }))}
+                        className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                          tempo.modo === modo
+                            ? 'border-[#145A5B] bg-[#145A5B] text-white'
+                            : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f9fafb]'
+                        }`}
+                      >
+                        {rotulo}
+                      </button>
+                    ))}
+                  </div>
+
+                  {tempo.modo === 'horario' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Início</label>
+                        <input
+                          type="datetime-local"
+                          value={tempo.inicio}
+                          onChange={e => setTempo(prev => ({ ...prev, inicio: e.target.value }))}
+                          className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Fim</label>
+                        <input
+                          type="datetime-local"
+                          value={tempo.fim}
+                          onChange={e => setTempo(prev => ({ ...prev, fim: e.target.value }))}
+                          className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-end gap-3">
+                      <div className="w-24">
+                        <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Horas</label>
+                        <input
+                          type="number" min={0} max={24} inputMode="numeric"
+                          value={tempo.horas}
+                          onChange={e => setTempo(prev => ({ ...prev, horas: e.target.value }))}
+                          className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-[11px] text-[#9ca3af] uppercase tracking-wider mb-1">Minutos</label>
+                        <input
+                          type="number" min={0} max={59} inputMode="numeric"
+                          value={tempo.minutos}
+                          onChange={e => setTempo(prev => ({ ...prev, minutos: e.target.value }))}
+                          className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#1a1d23] outline-none focus:border-[#1D5F60]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-2 text-[12px] text-[#374151] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tempo.cobravel}
+                      onChange={e => setTempo(prev => ({ ...prev, cobravel: e.target.checked }))}
+                      className="rounded border-[#d1d5db]"
+                    />
+                    Conta nas horas do cliente
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-4 flex items-center gap-2">
             <button
