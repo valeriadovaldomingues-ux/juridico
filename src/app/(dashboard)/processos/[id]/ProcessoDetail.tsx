@@ -116,6 +116,8 @@ interface AgendaItemSimple {
   hora_inicio?: string
   prazo_final?: string
   prioridade: string
+  descricao?: string | null
+  responsible_name?: string | null
 }
 
 interface ClienteSimple {
@@ -222,7 +224,7 @@ export default function ProcessoDetail({
     relatorios: canViewRelatorio(role) ? relatorios.length : 0,
     aurora_cliente: auroraClienteHistorico.length,
     documentos: documentos.length,
-    prazos: prazos.length,
+    prazos: prazos.length + agendaItems.filter(i => i.status === 'pendente').length,
     observacoes: processo.observacoes ? 1 : 0,
   }
 
@@ -400,7 +402,7 @@ export default function ProcessoDetail({
               )}
 
               {tab === 'prazos' && (
-                <PrazosTab prazos={prazos} />
+                <PrazosTab prazos={prazos} agendaItems={agendaItems} />
               )}
 
               {tab === 'observacoes' && (
@@ -1605,45 +1607,92 @@ function DocumentosTab({ documentos }: { documentos: DocumentoProcessoSimple[] }
   )
 }
 
-function PrazosTab({ prazos }: { prazos: Prazo[] }) {
+const AGENDA_TIPO_LABELS: Record<string, string> = {
+  audiencia: 'Audiência', prazo: 'Prazo', prazo_processual: 'Prazo processual', pericia: 'Perícia',
+  tarefa: 'Tarefa', reuniao: 'Reunião', diligencia: 'Diligência', sessao_julgamento: 'Sessão de julgamento',
+  atendimento: 'Atendimento', consultoria: 'Consultoria', evento: 'Evento',
+}
+
+const normalizarTitulo = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim()
+
+interface CompromissoLinha {
+  chave: string
+  titulo: string
+  descricao: string | null
+  data: string
+  hora?: string | null
+  tipo: string
+  prioridade: string
+  status: string
+  responsavel: string | null
+  origem: 'prazo' | 'agenda'
+}
+
+function PrazosTab({ prazos, agendaItems }: { prazos: Prazo[]; agendaItems: AgendaItemSimple[] }) {
+  // Prazos cadastrados + tudo que está na Agenda do processo (audiências, perícias, obrigações
+  // do cliente etc.). Item da Agenda igual a um prazo já cadastrado (mesma data e título) não repete.
+  const jaCadastrados = new Set(prazos.map(p => `${p.data_final}|${normalizarTitulo(p.titulo)}`))
+  const linhas: CompromissoLinha[] = [
+    ...prazos.map(p => ({
+      chave: `p-${p.id}`, titulo: p.titulo, descricao: p.descricao, data: p.data_final, hora: null,
+      tipo: p.tipo, prioridade: p.prioridade, status: p.status, responsavel: p.responsavel?.nome ?? null, origem: 'prazo' as const,
+    })),
+    ...agendaItems
+      .filter(i => i.status !== 'cancelado' && !jaCadastrados.has(`${i.prazo_final ?? i.data_inicio}|${normalizarTitulo(i.titulo)}`))
+      .map(i => ({
+        chave: `a-${i.id}`, titulo: i.titulo, descricao: i.descricao ?? null, data: i.prazo_final ?? i.data_inicio, hora: i.hora_inicio ?? null,
+        tipo: AGENDA_TIPO_LABELS[i.tipo] ?? i.tipo.replace(/_/g, ' '), prioridade: i.prioridade, status: i.status,
+        responsavel: i.responsible_name ?? null, origem: 'agenda' as const,
+      })),
+  ]
+  const feito = (l: CompromissoLinha) => ['concluido', 'cumprido', 'cancelado'].includes(l.status)
+  const abertos = linhas.filter(l => !feito(l)).sort((a, b) => a.data.localeCompare(b.data))
+  const encerrados = linhas.filter(feito).sort((a, b) => b.data.localeCompare(a.data))
+
+  const cartao = (l: CompromissoLinha) => (
+    <div key={l.chave} className={`rounded-xl border border-[#e5e7eb] bg-white p-4 ${feito(l) ? 'opacity-60' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-[#1a1d23]">{l.titulo}</p>
+          {l.descricao && <p className="mt-1 text-[12px] text-[#4b5563] whitespace-pre-line">{l.descricao}</p>}
+          <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-[#6b7280]">
+            <span>{formatDate(l.data)}{l.hora ? ` · ${l.hora.slice(0, 5)}` : ''}</span>
+            <span className="font-medium text-[#145A5B]">{l.tipo}</span>
+            <span>{l.status}</span>
+            {l.responsavel && <span>{l.responsavel}</span>}
+          </div>
+        </div>
+        <span className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full ${prioridadeColors[l.prioridade] ?? 'bg-gray-100 text-gray-600'}`}>
+          {l.prioridade}
+        </span>
+      </div>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
       <div>
         <p className="text-[11px] uppercase tracking-wider text-[#9ca3af]">Prazos</p>
         <h3 className="text-sm font-semibold text-[#1a1d23] mt-1">Prazos e compromissos do processo</h3>
         <p className="text-[12px] text-[#6b7280] mt-1">
-          O próximo prazo aparece primeiro; a timeline da agenda continua disponível na lateral.
+          Prazos cadastrados e compromissos da agenda (audiências, perícias, obrigações do cliente). O mais próximo aparece primeiro.
         </p>
       </div>
 
-      {prazos.length === 0 ? (
+      {linhas.length === 0 ? (
         <div className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-8 text-center">
-          <p className="text-sm text-[#6b7280]">Nenhum prazo cadastrado.</p>
+          <p className="text-sm text-[#6b7280]">Nenhum prazo ou compromisso cadastrado.</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {prazos.map((prazo) => (
-            <div key={prazo.id} className="rounded-xl border border-[#e5e7eb] bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#1a1d23]">{prazo.titulo}</p>
-                  {prazo.descricao && (
-                    <p className="mt-1 text-[12px] text-[#4b5563] whitespace-pre-line">{prazo.descricao}</p>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-[#6b7280]">
-                    <span>{formatDate(prazo.data_final)}</span>
-                    <span>{prazo.prioridade}</span>
-                    <span>{prazo.status}</span>
-                    <span>{prazo.tipo}</span>
-                  </div>
-                </div>
-                <span className={`shrink-0 text-[11px] px-2.5 py-1 rounded-full ${prioridadeColors[prazo.prioridade] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {prazo.prioridade}
-                </span>
-              </div>
+        <>
+          {abertos.length > 0 && <div className="space-y-2.5">{abertos.map(cartao)}</div>}
+          {encerrados.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-[11px] uppercase tracking-wider text-[#9ca3af] pt-2">Concluídos</p>
+              {encerrados.map(cartao)}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )
