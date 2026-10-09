@@ -3,12 +3,12 @@
 import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, FileUp, Loader2, NotebookPen, Plus, Sparkles, X } from 'lucide-react'
+import { ChevronDown, Download, FileUp, Loader2, NotebookPen, Plus, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TarefaSugerida } from '@/lib/reunioes/extrair-tarefas'
 
 export interface Pessoa { id: string; nome: string }
-export interface Reuniao { id: string; titulo: string; data_reuniao: string; participantes: string[]; ata: string; criado_por: string | null; created_at: string }
+export interface Reuniao { id: string; titulo: string; data_reuniao: string; participantes: string[]; ata: string; arquivo_nome: string | null; criado_por: string | null; created_at: string }
 export interface TarefaDaReuniao { id: string; titulo: string; status: string; responsavel_id: string | null; data: string | null; reuniao_id: string; arquivado: boolean | null }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -98,7 +98,14 @@ export default function ReunioesPage({ reunioes, tarefas, equipe, podeCriar }: {
                       </div>
                     )}
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)] mb-2">Ata</p>
+                      <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">Ata</p>
+                        {r.arquivo_nome && (
+                          <a href={`/api/reunioes/${r.id}/arquivo`} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--color-copper)] hover:underline">
+                            <Download size={13} /> Baixar a ata original ({r.arquivo_nome})
+                          </a>
+                        )}
+                      </div>
                       <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-[var(--color-ink-2)] max-h-[420px] overflow-y-auto rounded-xl bg-[var(--color-surface-warm)]/60 p-4">{r.ata}</pre>
                     </div>
                   </div>
@@ -125,6 +132,7 @@ function NovaReuniao({ equipe, onFechar }: { equipe: Pessoa[]; onFechar: () => v
   const [data, setData] = useState(hojeISO())
   const [participantes, setParticipantes] = useState<string[]>([])
   const [ata, setAta] = useState('')
+  const [arquivo, setArquivo] = useState<File | null>(null)
   const [linhas, setLinhas] = useState<Linha[]>([])
   const [ocupado, setOcupado] = useState<'arquivo' | 'ia' | 'salvar' | null>(null)
   const [erro, setErro] = useState('')
@@ -132,15 +140,16 @@ function NovaReuniao({ equipe, onFechar }: { equipe: Pessoa[]; onFechar: () => v
   const inputCls = 'w-full px-3 py-2 text-[13px] bg-[#f9fafb] border border-[#e5e7eb] rounded-xl outline-none focus:bg-white focus:border-[#1D5F60] text-[#1a1d23]'
   const labelCls = 'block text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider mb-1.5'
 
-  async function lerArquivo(arquivo: File) {
+  async function lerArquivo(arq: File) {
     setOcupado('arquivo'); setErro('')
-    const form = new FormData(); form.append('arquivo', arquivo)
+    const form = new FormData(); form.append('arquivo', arq)
     const res = await fetch('/api/reunioes/ler-arquivo', { method: 'POST', body: form })
     setOcupado(null)
     const corpo = await res.json().catch(() => ({}))
     if (!res.ok) { setErro(corpo.error ?? 'Não foi possível ler o arquivo.'); return }
     setAta(corpo.texto)
-    if (!titulo) setTitulo(arquivo.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' '))
+    setArquivo(arq)
+    if (!titulo) setTitulo(arq.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' '))
   }
 
   async function extrair() {
@@ -160,10 +169,10 @@ function NovaReuniao({ equipe, onFechar }: { equipe: Pessoa[]; onFechar: () => v
     const tarefas = linhas.filter(l => l.incluir && l.titulo.trim()).map(l => ({
       titulo: l.titulo, descricao: l.descricao, prazo: l.prazo, responsavel_id: l.responsavelId,
     }))
-    const res = await fetch('/api/reunioes', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ titulo, data_reuniao: data, participantes, ata, tarefas }),
-    })
+    const form = new FormData()
+    form.append('dados', JSON.stringify({ titulo, data_reuniao: data, participantes, ata, tarefas }))
+    if (arquivo) form.append('arquivo', arquivo)
+    const res = await fetch('/api/reunioes', { method: 'POST', body: form })
     setOcupado(null)
     const corpo = await res.json().catch(() => ({}))
     if (!res.ok) { setErro(corpo.error ?? 'Não foi possível salvar.'); return }
@@ -217,6 +226,7 @@ function NovaReuniao({ equipe, onFechar }: { equipe: Pessoa[]; onFechar: () => v
                   <input ref={inputArquivo} type="file" accept=".docx,.doc,.pdf,.txt" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) lerArquivo(f); e.target.value = '' }} />
                 </div>
+                {arquivo && <p className="mb-1.5 text-[11px] text-[#1D5F60]">O arquivo original será guardado com a ata, para todos baixarem: <strong>{arquivo.name}</strong></p>}
                 <textarea value={ata} onChange={e => setAta(e.target.value)} rows={13} placeholder="Cole aqui o texto da ata, ou envie o arquivo." className={cn(inputCls, 'leading-relaxed')} />
               </div>
             </>
