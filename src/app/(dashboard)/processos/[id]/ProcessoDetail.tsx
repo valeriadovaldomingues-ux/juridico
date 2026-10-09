@@ -7,8 +7,9 @@ import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
-  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles, Gavel,
 } from 'lucide-react'
+import AtaAudienciaModal from './AtaAudienciaModal'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -974,6 +975,7 @@ function AndamentosTab({
   setAndamentos: Dispatch<SetStateAction<ProcessoAndamento[]>>
 }) {
   const [showForm, setShowForm] = useState(false)
+  const [showAta, setShowAta] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AndamentoFormState>(ANDAMENTO_FORM_VAZIO)
   const [tempo, setTempo] = useState<TempoFormState>(TEMPO_FORM_VAZIO)
@@ -1167,13 +1169,35 @@ function AndamentosTab({
             Registre o histórico cronológico do processo. A Aurora poderá usar esta base como contexto futuro.
           </p>
         </div>
-        <button
-          onClick={abrirNovo}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#145A5B] text-white text-[12px] font-medium hover:bg-[#1B6E70] transition-colors"
-        >
-          <Plus size={13} /> Novo andamento
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {role !== 'estagiario' && (
+            <button
+              onClick={() => setShowAta(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[12px] font-medium hover:bg-[#145A5B]/5 transition-colors"
+            >
+              <Gavel size={13} /> Ata de audiência
+            </button>
+          )}
+          <button
+            onClick={abrirNovo}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#145A5B] text-white text-[12px] font-medium hover:bg-[#1B6E70] transition-colors"
+          >
+            <Plus size={13} /> Novo andamento
+          </button>
+        </div>
       </div>
+
+      {showAta && (
+        <AtaAudienciaModal
+          processoId={processoId}
+          onFechar={() => setShowAta(false)}
+          onSalvo={async () => {
+            setShowAta(false)
+            const res = await fetch(`/api/processos/${processoId}/andamentos`)
+            if (res.ok) setAndamentos(await res.json())
+          }}
+        />
+      )}
 
       {showForm && (
         <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-4">
