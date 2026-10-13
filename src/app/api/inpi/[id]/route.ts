@@ -16,13 +16,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const supabase = await createClient()
 
-  const [processoRes, movRes] = await Promise.all([
+  const [processoRes, movRes, andRes] = await Promise.all([
     supabase.from('inpi_processos').select(SELECT).eq('id', id).single(),
     supabase.from('inpi_movimentacoes').select('*').eq('inpi_processo_id', id).order('rpi_data', { ascending: false }),
+    supabase.from('inpi_andamentos').select('*').eq('inpi_processo_id', id).order('data_andamento', { ascending: false }).order('created_at', { ascending: false }),
   ])
 
   if (processoRes.error) return NextResponse.json({ error: processoRes.error.message }, { status: 404 })
-  return NextResponse.json({ ...processoRes.data, movimentacoes: movRes.data ?? [] })
+  return NextResponse.json({ ...processoRes.data, movimentacoes: movRes.data ?? [], andamentos: andRes.data ?? [] })
 }
 
 // PATCH /api/inpi/[id]
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const allowed_fields = [
     'cliente_id', 'numero_processo', 'tipo', 'titulo', 'natureza', 'classe_nice',
-    'procurador', 'status', 'data_deposito', 'data_concessao', 'observacoes',
+    'procurador', 'status', 'data_deposito', 'data_concessao', 'observacoes', 'prorrogacoes',
   ]
   const updates: Record<string, unknown> = {}
   for (const field of allowed_fields) {
@@ -47,6 +48,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.nao_acompanhar = body.nao_acompanhar
     updates.nao_acompanhar_em = body.nao_acompanhar ? new Date().toISOString() : null
     updates.nao_acompanhar_motivo = body.nao_acompanhar ? (String(body.nao_acompanhar_motivo ?? '').trim() || null) : null
+  }
+
+  if ('prorrogacoes' in updates) {
+    const n = Number(updates.prorrogacoes)
+    if (!Number.isInteger(n) || n < 0 || n > 5) return NextResponse.json({ error: 'Prorrogações: informe um número de 0 a 5.' }, { status: 400 })
+    updates.prorrogacoes = n
   }
 
   const { data, error } = await supabase
