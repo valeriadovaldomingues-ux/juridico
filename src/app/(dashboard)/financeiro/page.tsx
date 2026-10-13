@@ -1,11 +1,15 @@
-import { requireRole } from '@/lib/auth/guards'
+import { redirect } from 'next/navigation'
+import { requireAuth } from '@/lib/auth/guards'
+import { podeAcessarFinanceiro, financeiroLiberadoPorUsuario } from '@/lib/auth/financeiro-acesso'
 import { createClient } from '@/lib/supabase/server'
 import FinanceiroPage from './FinanceiroPage'
 
 export default async function FinanceiroRoute() {
-  // Apenas sócios acessam o financeiro — alinhado com proxy RESTRICTED e ALLOWED_ROUTES.
-  // O proxy já bloqueia outros roles, mas requireRole adiciona defense-in-depth.
-  const { profile } = await requireRole(['socio'])
+  // Sócio vê tudo; pessoas liberadas individualmente (ex.: Célio, ver financeiro-acesso.ts) veem os
+  // lançamentos e a grade, mas NÃO salários/folha. Alinhado com proxy e com as políticas do banco.
+  const { profile, userId } = await requireAuth()
+  if (!podeAcessarFinanceiro(userId, profile.role)) redirect('/dashboard')
+  const verSalarios = profile.role === 'socio'
   const supabase = await createClient()
 
   const hoje = new Date()
@@ -18,20 +22,15 @@ export default async function FinanceiroRoute() {
       .order('vencimento', { ascending: false })
       .limit(500),
     // Todo mundo que recebe salário: todos os papéis, menos sócio (ver folha_pagamento).
-    supabase
-      .from('profiles')
-      .select('id, nome, email, role')
-      .eq('ativo', true)
-      .neq('role', 'socio')
-      .order('role')
-      .order('nome'),
-    supabase
-      .from('folha_pagamento')
-      .select('*')
-      .eq('mes_referencia', mesFolhaAtual),
-    supabase
-      .from('funcionarios_dados_pessoais')
-      .select('profile_id, tipo_recibo, cpf, endereco'),
+    verSalarios
+      ? supabase.from('profiles').select('id, nome, email, role').eq('ativo', true).neq('role', 'socio').order('role').order('nome')
+      : Promise.resolve({ data: [] as { id: string; nome: string; email: string | null; role: string }[] }),
+    verSalarios
+      ? supabase.from('folha_pagamento').select('*').eq('mes_referencia', mesFolhaAtual)
+      : Promise.resolve({ data: [] as { profile_id: string }[] }),
+    verSalarios
+      ? supabase.from('funcionarios_dados_pessoais').select('profile_id, tipo_recibo, cpf, endereco')
+      : Promise.resolve({ data: [] as { profile_id: string; tipo_recibo: string | null; cpf: string | null; endereco: string | null }[] }),
   ])
 
   const { data: gradePagamento } = await supabase
@@ -62,6 +61,8 @@ export default async function FinanceiroRoute() {
         mesFolhaAtual={mesFolhaAtual}
         gradePagamento={(gradePagamento ?? []) as any}
         role={profile.role}
+        acessoCompleto={financeiroLiberadoPorUsuario(userId)}
+        verSalarios={verSalarios}
       />
     </div>
   )

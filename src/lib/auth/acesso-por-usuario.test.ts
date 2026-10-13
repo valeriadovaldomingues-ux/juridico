@@ -3,6 +3,7 @@ import { getAllowedRoutes, roleCanAccessRoute } from '../permissions'
 
 const MARCELO = '1a5ed586-77e0-4f6f-a652-444056d86b1b'
 const DEBORA = 'dd154172-ebb2-498a-af49-c56ada33792a'
+const CELIO = '3baf1f52-4950-4a1e-937a-126ce0fa1e34'
 const TUANE = '80be07bd-e23a-4ece-aa02-a7cde54bf6c7'
 const OUTRO_ADVOGADO = '00000000-0000-0000-0000-000000000000'
 
@@ -81,5 +82,31 @@ describe('acesso por usuário — Tuane (advogada com Relatórios)', () => {
     expect(roleCanAccessRoute('advogado', '/relatorios', DEBORA)).toBe(false)
     expect(roleCanAccessRoute('advogado', '/relatorios', OUTRO_ADVOGADO)).toBe(false)
     expect(roleCanAccessRoute('estagiario', '/relatorios', OUTRO_ADVOGADO)).toBe(false)
+  })
+})
+
+
+describe('acesso por usuário — Célio (administrativo com Financeiro)', () => {
+  it('vê Financeiro no menu, mas não Cobranças', () => {
+    const rotas = getAllowedRoutes('administrativo', CELIO)
+    expect(rotas).toContain('/financeiro')
+    expect(rotas).not.toContain('/financeiro/cobrancas')
+    expect(rotas).toEqual(expect.arrayContaining(['/kanban', '/inpi', '/horas', '/reunioes']))
+  })
+
+  it('acessa /financeiro e /financeiro/despesas; Cobranças é barrada', () => {
+    expect(roleCanAccessRoute('administrativo', '/financeiro', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/financeiro/despesas', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/financeiro/cobrancas', CELIO)).toBe(false)
+  })
+
+  it('continua no modo restrito para o resto (Processos fechado) e sem rotas de sócio', () => {
+    expect(roleCanAccessRoute('administrativo', '/processos', CELIO)).toBe(false)
+    expect(roleCanAccessRoute('administrativo', '/configuracoes/usuarios', CELIO)).toBe(false)
+  })
+
+  it('outro administrativo (ex.: Luana) não ganha Financeiro', () => {
+    expect(getAllowedRoutes('administrativo', OUTRO_ADVOGADO)).not.toContain('/financeiro')
+    expect(roleCanAccessRoute('administrativo', '/financeiro', OUTRO_ADVOGADO)).toBe(false)
   })
 })

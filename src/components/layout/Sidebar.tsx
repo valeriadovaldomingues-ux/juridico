@@ -96,7 +96,7 @@ export default function Sidebar({ role, userId, devMode = false, isOpen = false,
 
   // Exceção pontual por usuário (não por papel) — ver src/lib/auth/despesas-acesso.ts.
   // Sócio já enxerga /financeiro inteiro, então não precisa do atalho extra.
-  const temAcessoExtraDespesas = role !== 'socio' && !!userId && DESPESAS_EXTRA_USER_IDS.includes(userId)
+  const temAcessoExtraDespesas = role !== 'socio' && !!userId && DESPESAS_EXTRA_USER_IDS.includes(userId) && !allowed.includes('/financeiro')
 
   const visibleGroups = ALL_NAV_GROUPS
     .map(group => ({

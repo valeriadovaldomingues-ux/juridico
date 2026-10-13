@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
+import { financeiroLiberadoPorUsuario } from '@/lib/auth/financeiro-acesso'
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
+  if (auth.role === 'administrativo' && !financeiroLiberadoPorUsuario(auth.userId)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
 
   const { id } = await params
   if (!id) return NextResponse.json({ error: 'ID ausente' }, { status: 400 })
