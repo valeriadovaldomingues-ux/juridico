@@ -6,6 +6,8 @@ import { AlertCircle, CheckCircle2, Copy, Loader2, Mail, X } from 'lucide-react'
 interface Rascunho {
   para: string[]
   cc: string[]
+  cc_obrigatorios: { papel: 'responsavel' | 'remetente'; nome: string | null; email: string }[]
+  erro_copia: string | null
   assunto: string
   corpo: string
   anexo: { nome: string | null } | null
@@ -98,9 +100,15 @@ export default function EmailAtaModal({ processoId, ataId, onFechar }: { process
                 <p className="rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800">O cliente não tem e-mail cadastrado. Digite o endereço em &quot;Para&quot; (e depois atualize o cadastro do cliente).</p>
               )}
 
+              {rascunho.erro_copia && (
+                <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] text-red-700"><AlertCircle size={14} className="mt-0.5 shrink-0" />{rascunho.erro_copia}</p>
+              )}
+              <p className="rounded-lg bg-[#f0f7f7] px-3 py-2 text-[12px] text-[#1D5F60]">
+                Sempre em cópia (não dá para tirar): {rascunho.cc_obrigatorios.length === 0 ? '—' : rascunho.cc_obrigatorios.map(c => `${c.nome ?? c.email} — ${c.papel === 'responsavel' ? 'advogado responsável' : 'quem envia'}`).join(' · ')}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label className={labelCls}>Para (cliente)</label><input value={para} onChange={e => setPara(e.target.value)} className={inputCls} placeholder="email@cliente.com" /></div>
-                <div><label className={labelCls}>Cópia (advogado do processo)</label><input value={cc} onChange={e => setCc(e.target.value)} className={inputCls} /></div>
+                <div><label className={labelCls}>Outras pessoas em cópia (opcional)</label><input value={cc} onChange={e => setCc(e.target.value)} className={inputCls} placeholder="Além dos abaixo" /></div>
               </div>
               <div><label className={labelCls}>Assunto</label><input value={assunto} onChange={e => setAssunto(e.target.value)} className={inputCls} /></div>
               <div><label className={labelCls}>Texto</label><textarea value={corpo} onChange={e => setCorpo(e.target.value)} rows={16} className={`${inputCls} leading-relaxed`} /></div>
@@ -125,7 +133,7 @@ export default function EmailAtaModal({ processoId, ataId, onFechar }: { process
                 <button onClick={copiar} className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#1D5F60] border border-[#1D5F60]/40 rounded-xl hover:bg-[#1D5F60]/5">
                   <Copy size={13} /> {copiado ? 'Copiado!' : 'Copiar texto'}
                 </button>
-                <button onClick={enviar} disabled={enviando || !rascunho.smtp_configurado || !para.trim() || !assunto.trim() || !corpo.trim()}
+                <button onClick={enviar} disabled={enviando || !!rascunho.erro_copia || !rascunho.smtp_configurado || !para.trim() || !assunto.trim() || !corpo.trim()}
                   className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold rounded-xl bg-[#1D5F60] hover:bg-[#27777A] text-white disabled:opacity-50">
                   {enviando ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Enviar
                 </button>

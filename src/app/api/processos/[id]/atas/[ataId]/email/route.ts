@@ -6,6 +6,7 @@ import { isUUID } from '@/lib/portal/validate'
 import { CENTRAL_ARQUIVOS_BUCKET } from '@/lib/central-arquivos/types'
 import { emailConfigurado, enviarEmail, listaDeEmails, textoParaHtml } from '@/lib/email/mailer'
 import { montarEmailPosAudiencia } from '@/lib/email/templates'
+import { copiaObrigatoria, juntarCopias } from '@/lib/email/copia'
 
 const PAPEIS = ['administrativo', 'advogado', 'gerente', 'socio'] as const
 
@@ -59,9 +60,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     temAnexo: !!ctx.ata.arquivo_path,
   })
 
+  const { copias, erro: erroCopia } = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId)
   return NextResponse.json({
     para: ctx.cliente?.email ? [ctx.cliente.email] : [],
-    cc: ctx.advogado?.email ? [ctx.advogado.email] : [],
+    cc: [],
+    cc_obrigatorios: copias,
+    erro_copia: erroCopia ?? null,
     assunto: rascunho.assunto,
     corpo: rascunho.corpo,
     anexo: ctx.ata.arquivo_path ? { nome: ctx.ata.arquivo_nome } : null,
@@ -90,11 +94,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: `E-mail inválido: ${[...para.invalidos, ...cc.invalidos].join(', ')}` }, { status: 400 })
   }
   if (para.validos.length === 0) return NextResponse.json({ error: 'Informe o e-mail do cliente (campo "Para").' }, { status: 400 })
-  if (para.validos.length + cc.validos.length > 10) return NextResponse.json({ error: 'Muitos destinatários (máx. 10).' }, { status: 400 })
+  if (para.validos.length + cc.validos.length + 2 > 10) return NextResponse.json({ error: 'Muitos destinatários (máx. 10).' }, { status: 400 })
   if (!assunto || !corpo) return NextResponse.json({ error: 'Assunto e texto são obrigatórios.' }, { status: 400 })
 
   const ctx = await carregar(id, ataId, auth.userId)
   if (!ctx) return NextResponse.json({ error: 'Ata não encontrada.' }, { status: 404 })
+
+  // O advogado responsável e quem envia sempre vão em cópia (decidido aqui, não no formulário).
+  const obrig = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId)
+  if (obrig.erro) return NextResponse.json({ error: obrig.erro }, { status: 400 })
+  const ccFinal = juntarCopias(obrig.copias.map(c => c.email), cc.validos, para.validos)
 
   const anexos: { filename: string; content: Buffer }[] = []
   if (body?.incluir_anexo !== false && ctx.ata.arquivo_path) {
@@ -107,7 +116,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let messageId: string | null = null
   try {
     const r = await enviarEmail({
-      to: para.validos, cc: cc.validos, replyTo: ctx.advogado?.email ?? undefined, remetenteNome: ctx.advogado?.nome ?? undefined,
+      to: para.validos, cc: ccFinal, replyTo: ctx.advogado?.email ?? undefined, remetenteNome: ctx.advogado?.nome ?? undefined,
       subject: assunto, text: corpo, html: textoParaHtml(corpo), attachments: anexos,
     })
     messageId = r.messageId
@@ -118,7 +127,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await ctx.supabase.from('emails_cliente').insert({
     tipo: 'ata', processo_id: id, cliente_id: ctx.processo.cliente_id ?? null, ata_id: ataId,
-    para: para.validos, cc: cc.validos, assunto, corpo,
+    para: para.validos, cc: ccFinal, assunto, corpo,
     anexos: anexos.map(a => ({ nome: a.filename })),
     status: erro ? 'erro' : 'enviado', erro, message_id: messageId, enviado_por: auth.userId,
   })
