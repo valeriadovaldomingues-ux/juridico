@@ -31,12 +31,25 @@ describe('acesso por usuário — Marcelo (advogado)', () => {
     expect(roleCanAccessRoute('advogado', '/financeiro', MARCELO)).toBe(false)
   })
 
-  it('outro advogado continua no modo restrito (só as rotas liberadas a todos)', () => {
-    for (const rotas of [getAllowedRoutes('advogado', OUTRO_ADVOGADO), getAllowedRoutes('advogado')]) {
-      expect(rotas).toEqual(expect.arrayContaining(['/kanban', '/inpi', '/horas']))
-      for (const fechada of ['/processos', '/clientes', '/agenda', '/dashboard', '/publicacoes']) expect(rotas).not.toContain(fechada)
+  it('qualquer advogado (mesmo sem ajuste pessoal) tem o mesmo acesso da Débora', () => {
+    expect(getAllowedRoutes('advogado', OUTRO_ADVOGADO)).toEqual(getAllowedRoutes('advogado', DEBORA))
+    expect(getAllowedRoutes('advogado')).toEqual(getAllowedRoutes('advogado', DEBORA))
+    expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(true)
+    expect(roleCanAccessRoute('advogado', '/documentos', OUTRO_ADVOGADO)).toBe(false)
+  })
+
+  it('gerente e estagiário ganham o mesmo conjunto da Débora, sem nada a mais', () => {
+    const debora = getAllowedRoutes('advogado', DEBORA).sort()
+    for (const papel of ['gerente', 'estagiario'] as const) {
+      const rotas = getAllowedRoutes(papel).sort()
+      expect(rotas).toEqual(debora)
     }
-    expect(roleCanAccessRoute('advogado', '/processos', OUTRO_ADVOGADO)).toBe(false)
+  })
+
+  it('administrativo e comercial não mudam', () => {
+    expect(getAllowedRoutes('administrativo')).toEqual(['/kanban', '/inpi', '/horas', '/reunioes'])
+    expect(roleCanAccessRoute('administrativo', '/processos')).toBe(false)
+    expect(roleCanAccessRoute('comercial', '/comercial')).toBe(true)
   })
 
 

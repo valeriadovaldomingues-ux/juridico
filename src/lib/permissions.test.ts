@@ -71,9 +71,9 @@ describe('INPI permissioning', () => {
     expect(getAllowedRoutes('gerente')).toContain('/inpi')
     expect(getAllowedRoutes('administrativo')).toContain('/inpi')
     expect(getAllowedRoutes('estagiario')).toContain('/inpi')
-    // Mas o resto continua restrito ao Kanban — a isenção não abriu geral.
-    expect(getAllowedRoutes('advogado')).not.toContain('/processos')
-    expect(getAllowedRoutes('advogado')).toContain('/kanban')
+    // Administrativo continua restrito ao Kanban (+ rotas liberadas a todos) — a isenção não abriu geral.
+    expect(getAllowedRoutes('administrativo')).not.toContain('/processos')
+    expect(getAllowedRoutes('administrativo')).toContain('/kanban')
   })
 })
 
