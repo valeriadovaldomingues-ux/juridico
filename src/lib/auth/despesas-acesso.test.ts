@@ -29,9 +29,9 @@ describe('podeGerenciarLancamentoDespesa', () => {
     expect(podeGerenciarLancamentoDespesa('x', 'gerente', 'despesa')).toBe(true)
   })
 
-  it('Célio (liberado no Financeiro inteiro em 13/10/2026) gerencia despesa e receita', () => {
+  it('Célio só gerencia lançamentos do tipo despesa (receitas ficam de fora, 13/10/2026)', () => {
     expect(podeGerenciarLancamentoDespesa(CELIO_ID, 'administrativo', 'despesa')).toBe(true)
-    expect(podeGerenciarLancamentoDespesa(CELIO_ID, 'administrativo', 'receita')).toBe(true)
+    expect(podeGerenciarLancamentoDespesa(CELIO_ID, 'administrativo', 'receita')).toBe(false)
   })
 
   it('outro usuário administrativo não pode gerenciar nada', () => {

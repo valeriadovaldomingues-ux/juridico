@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { podeAcessarSalarios } from '@/lib/auth/financeiro-acesso'
 
 // Dado sensível — só sócio. Ver política RLS em folha_pagamento (dupla trava).
 
 export async function GET(req: NextRequest) {
-  const auth = await apiGuard(['socio'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
+  if (!podeAcessarSalarios(auth.userId, auth.role)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const mes = req.nextUrl.searchParams.get('mes') // 'YYYY-MM-01'
   if (!mes) return NextResponse.json({ error: 'Parâmetro mes ausente' }, { status: 400 })
@@ -14,7 +17,7 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient()
 
   const [{ data: profiles, error: profilesError }, { data: folhas, error: folhasError }, { data: dadosPessoais }] = await Promise.all([
-    supabase
+    (auth.role === 'socio' ? supabase : createServiceClient())
       .from('profiles')
       .select('id, nome, email, role')
       .eq('ativo', true)
@@ -53,8 +56,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const auth = await apiGuard(['socio'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
+  if (!podeAcessarSalarios(auth.userId, auth.role)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await req.json()
   if (!body.profile_id || !body.mes_referencia) {
