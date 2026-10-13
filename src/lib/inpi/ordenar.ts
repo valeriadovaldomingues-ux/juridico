@@ -1,4 +1,5 @@
 import type { InpiProcesso } from '@/types/inpi'
+import { calcularDecenio } from '@/types/inpi'
 
 export type OrdemInpi = 'marca' | 'cliente' | 'decenio' | 'numero' | 'recentes'
 
@@ -15,6 +16,12 @@ export const ORDEM_INPI_PADRAO: OrdemInpi = 'marca'
 // Alfabética do português: ignora acento e maiúscula ("Ótica" fica junto de "Otica"), números em ordem natural.
 const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 const txt = (v: string | null | undefined) => (v ?? '').trim()
+
+/** Vencimento efetivo da vigência (já com as prorrogações); null se não é concedido. */
+function vencimentoMs(p: InpiProcesso): number | null {
+  if (p.status !== 'concedido' || !p.data_concessao) return null
+  return calcularDecenio(p.data_concessao, p.prorrogacoes ?? 0).vencimento.getTime()
+}
 
 function porMarca(a: InpiProcesso, b: InpiProcesso) {
   return collator.compare(txt(a.titulo), txt(b.titulo)) || collator.compare(txt(a.numero_processo), txt(b.numero_processo))
@@ -34,13 +41,12 @@ export function ordenarInpi(lista: InpiProcesso[], ordem: OrdemInpi): InpiProces
         return collator.compare(ca, cb) || porMarca(a, b)
       })
     case 'decenio':
-      // Concedidos com data de concessão, do decênio mais perto de vencer (concessão mais antiga) ao mais longe;
+      // Concedidos com data de concessão, da vigência que vence primeiro (já contando as prorrogações) à que vence por último;
       // o resto (em andamento, indeferido, arquivado…) vai depois, em ordem alfabética.
       return copia.sort((a, b) => {
-        const da = a.status === 'concedido' ? a.data_concessao : null
-        const db = b.status === 'concedido' ? b.data_concessao : null
-        if (!da !== !db) return da ? -1 : 1
-        if (da && db && da !== db) return da < db ? -1 : 1
+        const va = vencimentoMs(a), vb = vencimentoMs(b)
+        if ((va === null) !== (vb === null)) return va === null ? 1 : -1
+        if (va !== null && vb !== null && va !== vb) return va - vb
         return porMarca(a, b)
       })
     case 'numero':

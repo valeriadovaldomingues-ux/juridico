@@ -8,8 +8,9 @@ import {
 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import type { UserRole } from '@/types'
-import type { InpiProcesso, InpiStatus, InpiTipo } from '@/types/inpi'
-import { INPI_STATUS_LABEL, INPI_TIPO_LABEL, calcularDecenio } from '@/types/inpi'
+import type { InpiAndamento, InpiAndamentoTipo, InpiMovimentacao, InpiProcesso, InpiStatus, InpiTipo } from '@/types/inpi'
+import { INPI_ANDAMENTO_TIPO_LABEL, INPI_STATUS_LABEL, INPI_TIPO_LABEL, calcularDecenio } from '@/types/inpi'
+import { createClient } from '@/lib/supabase/client'
 
 interface ClienteOpcao {
   id: string
@@ -35,11 +36,12 @@ type FormValues = {
   procurador: string
   data_deposito: string
   observacoes: string
+  prorrogacoes: string
 }
 
 const emptyForm: FormValues = {
   cliente_id: '', numero_processo: '', tipo: 'marca', titulo: '',
-  natureza: '', classe_nice: '', procurador: '', data_deposito: '', observacoes: '',
+  natureza: '', classe_nice: '', procurador: '', data_deposito: '', observacoes: '', prorrogacoes: '0',
 }
 
 const statusCfg: Record<InpiStatus, { label: string; chip: string; dot: string; icon: React.ElementType }> = {
@@ -93,6 +95,11 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Andamentos do escritório (o que o advogado fez) — janela de lançamento.
+  const ANDAMENTO_VAZIO = { data_andamento: new Date().toISOString().slice(0, 10), tipo: 'peticao' as InpiAndamentoTipo, titulo: '', descricao: '', protocolo: '', responsavel_id: '', prorrogacao_deferida: false }
+  const [andModal, setAndModal] = useState(false)
+  const [andForm, setAndForm] = useState(ANDAMENTO_VAZIO)
+  const [equipe, setEquipe] = useState<{ id: string; nome: string }[]>([])
   const [movModal, setMovModal] = useState(false)
   const [movForm, setMovForm] = useState({ rpi_data: new Date().toISOString().slice(0, 10), descricao: '', codigo_despacho: '' })
   const [deleteTarget, setDeleteTarget] = useState<InpiProcesso | null>(null)
@@ -119,6 +126,18 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
   const ordenados = useMemo(() => ordenarInpi(filtrados, ordem), [filtrados, ordem])
   const selected = processos.find(p => p.id === selectedId) ?? ordenados[0] ?? processos[0] ?? null
 
+  // Tudo vira "andamento": o que o escritório fez + as publicações da RPI do processo, do mais novo ao mais antigo.
+  type ItemLinha =
+    | { kind: 'andamento'; id: string; data: string; criado: string; a: InpiAndamento }
+    | { kind: 'rpi'; id: string; data: string; criado: string; m: InpiMovimentacao }
+  const linhaDoTempo = useMemo<ItemLinha[]>(() => {
+    const itens: ItemLinha[] = [
+      ...(selected?.andamentos ?? []).map(a => ({ kind: 'andamento' as const, id: `a-${a.id}`, data: a.data_andamento, criado: a.created_at, a })),
+      ...(selected?.movimentacoes ?? []).map(m => ({ kind: 'rpi' as const, id: `m-${m.id}`, data: m.rpi_data, criado: m.created_at, m })),
+    ]
+    return itens.sort((x, y) => (y.data.localeCompare(x.data)) || (y.criado.localeCompare(x.criado)))
+  }, [selected?.andamentos, selected?.movimentacoes])
+
   const metricas = useMemo(() => {
     const total = visiveis.length
     const andamento = visiveis.filter(p => p.status === 'em_andamento').length
@@ -127,7 +146,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     let expirados = 0
     for (const p of visiveis) {
       if (p.status !== 'concedido' || !p.data_concessao || p.nao_acompanhar) continue
-      const d = calcularDecenio(p.data_concessao)
+      const d = calcularDecenio(p.data_concessao, p.prorrogacoes)
       if (d.expirado) expirados += 1
       else if (d.janelaRenovacao || d.janelaMulta) vencendo += 1
     }
@@ -163,7 +182,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     const data = await res.json().catch(() => ({}))
     setSaving(false)
     if (!res.ok) { setError(data.error ?? 'Erro ao salvar.'); return }
-    setProcessos(prev => prev.map(p => p.id === data.id ? { ...data, movimentacoes: p.movimentacoes } : p))
+    setProcessos(prev => prev.map(p => p.id === data.id ? { ...data, movimentacoes: p.movimentacoes, andamentos: p.andamentos } : p))
     setModal(null)
   }
 
@@ -184,7 +203,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     const data = await res.json().catch(() => ({}))
     setBusyId(null)
     if (!res.ok) { setError(data.error ?? 'Não foi possível salvar.'); return }
-    setProcessos(prev => prev.map(x => x.id === data.id ? { ...data, movimentacoes: x.movimentacoes } : x))
+    setProcessos(prev => prev.map(x => x.id === data.id ? { ...data, movimentacoes: x.movimentacoes, andamentos: x.andamentos } : x))
   }
 
   function abrirEdicao() {
@@ -199,6 +218,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
       procurador: selected.procurador ?? '',
       data_deposito: selected.data_deposito ?? '',
       observacoes: selected.observacoes ?? '',
+      prorrogacoes: String(selected.prorrogacoes ?? 0),
     })
     setModal('editar')
   }
@@ -227,6 +247,43 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
       const atualizado = await r.json().catch(() => null)
       if (r.ok && atualizado) setProcessos(prev => prev.map(p => p.id === selected.id ? { ...atualizado } : p))
     }
+  }
+
+  async function abrirAndamento() {
+    setAndForm({ ...ANDAMENTO_VAZIO, data_andamento: new Date().toISOString().slice(0, 10) })
+    setAndModal(true)
+    if (equipe.length === 0) {
+      const { data } = await createClient().rpc('perfis_equipe')
+      setEquipe(((data ?? []) as { id: string; nome: string }[]).map(p => ({ id: p.id, nome: p.nome })))
+    }
+  }
+
+  async function registrarAndamento() {
+    if (!selected) return
+    setSaving(true)
+    setError(null)
+    const res = await fetch(`/api/inpi/${selected.id}/andamentos`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...andForm, responsavel_id: andForm.responsavel_id || null }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setSaving(false)
+    if (!res.ok) { setError(data.error ?? 'Erro ao registrar andamento.'); return }
+    const { prorrogacoes, aviso, ...andamento } = data as InpiAndamento & { prorrogacoes?: number | null; aviso?: string }
+    setProcessos(prev => prev.map(p => p.id === selected.id
+      ? { ...p, andamentos: [andamento, ...(p.andamentos ?? [])], prorrogacoes: prorrogacoes ?? p.prorrogacoes }
+      : p))
+    setAndModal(false)
+    if (aviso) setError(aviso)
+  }
+
+  async function apagarAndamento(a: InpiAndamento) {
+    if (!selected || !window.confirm(`Apagar o andamento "${a.titulo}"? Isso é definitivo.`)) return
+    const res = await fetch(`/api/inpi/${selected.id}/andamentos/${a.id}`, { method: 'DELETE' })
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? 'Não foi possível apagar.'); return }
+    setProcessos(prev => prev.map(p => p.id === selected.id
+      ? { ...p, andamentos: (p.andamentos ?? []).filter(x => x.id !== a.id), prorrogacoes: a.prorrogacao_deferida ? Math.max(0, p.prorrogacoes - 1) : p.prorrogacoes }
+      : p))
   }
 
   async function excluir() {
@@ -380,26 +437,52 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               )}
 
               <div className="pt-2 border-t border-[#eef2f5]">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-[#34495e]">Movimentações</p>
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <p className="text-[12px] font-semibold text-[#34495e]">Andamentos</p>
                   {podeCriar && (
-                    <button onClick={() => setMovModal(true)} className="text-[12px] text-[#145A5B] font-medium hover:underline">+ Registrar</button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setMovModal(true)} className="text-[12px] text-[#145A5B] font-medium hover:underline" title="Lançar à mão uma publicação da RPI">+ Publicação (RPI)</button>
+                      <button onClick={abrirAndamento} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0F3D3E] text-white text-[12px] font-medium hover:bg-[#145A5B]">
+                        <Plus size={13} /> Andamento
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="space-y-2 max-h-[240px] overflow-y-auto">
-                  {(selected.movimentacoes ?? []).map(m => (
-                    <div key={m.id} className="rounded-lg border border-[#eef2f5] px-3 py-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(m.rpi_data)}{m.rpi_numero ? ` · RPI ${m.rpi_numero}` : ''}</p>
-                        <span className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-medium', m.origem === 'rpi_auto' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-600')}>
-                          {m.origem === 'rpi_auto' ? 'RPI' : 'Manual'}
+                <p className="text-[11px] text-[#9aa5b1] mb-2">As publicações da RPI aparecem aqui junto com o que o escritório fez.</p>
+                <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                  {linhaDoTempo.map(item => item.kind === 'andamento' ? (
+                    <div key={item.id} className="rounded-lg border border-[#eef2f5] px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(item.a.data_andamento)}{item.a.protocolo ? ` · Prot. ${item.a.protocolo}` : ''}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-teal-50 text-teal-700">{INPI_ANDAMENTO_TIPO_LABEL[item.a.tipo] ?? item.a.tipo}</span>
+                          {podeExcluir && (
+                            <button onClick={() => apagarAndamento(item.a)} title="Apagar andamento" className="text-[#9aa5b1] hover:text-rose-600"><Trash2 size={12} /></button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[13px] font-medium text-[#0f1923] mt-1">{item.a.titulo}</p>
+                      {item.a.prorrogacao_deferida && <p className="text-[11px] font-semibold text-emerald-700 mt-0.5">Prorrogação deferida (+10 anos de vigência)</p>}
+                      {item.a.descricao && <p className="text-[12px] text-[#34495e] mt-1 whitespace-pre-wrap">{item.a.descricao}</p>}
+                      <p className="text-[11px] text-[#9aa5b1] mt-1">
+                        {item.a.responsavel_nome ? `Responsável: ${item.a.responsavel_nome}` : ''}{item.a.responsavel_nome && item.a.criado_por_nome ? ' · ' : ''}{item.a.criado_por_nome ? `Lançado por ${item.a.criado_por_nome}` : ''}
+                      </p>
+                    </div>
+                  ) : (
+                    <div key={item.id} className="rounded-lg border border-sky-100 bg-sky-50/40 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(item.m.rpi_data)}{item.m.rpi_numero ? ` · RPI ${item.m.rpi_numero}` : ''}</p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-sky-100 text-sky-800">
+                          {item.m.origem === 'rpi_auto' ? 'Publicação INPI (RPI)' : 'Publicação INPI (lançada à mão)'}
                         </span>
                       </div>
-                      <p className="text-[13px] text-[#0f1923] mt-0.5">{m.descricao}</p>
+                      <p className="text-[13px] font-medium text-[#0f1923] mt-1">{item.m.descricao}</p>
+                      {item.m.codigo_despacho && <p className="text-[11px] text-[#7a8899] mt-0.5">Despacho {item.m.codigo_despacho}</p>}
                     </div>
                   ))}
-                  {(!selected.movimentacoes || selected.movimentacoes.length === 0) && (
-                    <p className="text-[12px] text-[#9aa5b1]">Nenhuma movimentação registrada ainda.</p>
+                  {(selected.andamentos === undefined || selected.movimentacoes === undefined) && <p className="text-[12px] text-[#9aa5b1]">Carregando…</p>}
+                  {selected.andamentos !== undefined && selected.movimentacoes !== undefined && linhaDoTempo.length === 0 && (
+                    <p className="text-[12px] text-[#9aa5b1]">Nenhum andamento registrado ainda.</p>
                   )}
                 </div>
               </div>
@@ -441,13 +524,70 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               <button onClick={() => setModal(null)}><X size={18} /></button>
             </div>
             <div className="p-5">
-              <ProcessoForm form={form} setForm={setForm} clientes={clientes} />
+              <ProcessoForm form={form} setForm={setForm} clientes={clientes} editando={modal === 'editar'} />
             </div>
             <div className="px-5 py-4 border-t border-[#eef2f5] flex justify-end gap-2">
               <button onClick={() => setModal(null)} className="px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]">Cancelar</button>
               <button onClick={modal === 'novo' ? createProcesso : salvarEdicao} disabled={saving} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0F3D3E] text-white text-[13px] font-medium disabled:opacity-60">
                 {saving && <Loader2 size={15} className="animate-spin" />}
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {andModal && (
+        <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl border border-[#e8edf2] max-h-[92vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-[#eef2f5] flex items-center justify-between">
+              <h2 className="text-[16px] font-semibold text-[#0f1923]">Novo andamento — {selected?.titulo}</h2>
+              <button onClick={() => setAndModal(false)}><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-[12px] font-medium text-[#34495e]">Data</span>
+                  <input type="date" value={andForm.data_andamento} onChange={e => setAndForm(f => ({ ...f, data_andamento: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[12px] font-medium text-[#34495e]">Tipo</span>
+                  <select value={andForm.tipo} onChange={e => setAndForm(f => ({ ...f, tipo: e.target.value as InpiAndamentoTipo, prorrogacao_deferida: false }))} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+                    {(Object.keys(INPI_ANDAMENTO_TIPO_LABEL) as InpiAndamentoTipo[]).map(t => <option key={t} value={t}>{INPI_ANDAMENTO_TIPO_LABEL[t]}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Título *</span>
+                <input value={andForm.titulo} onChange={e => setAndForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Ex.: Protocolada prorrogação do registro (prazo ordinário)" className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Nº do protocolo (se houver)</span>
+                <input value={andForm.protocolo} onChange={e => setAndForm(f => ({ ...f, protocolo: e.target.value }))} placeholder="Ex.: 800260222875" className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">O que foi feito</span>
+                <textarea value={andForm.descricao} onChange={e => setAndForm(f => ({ ...f, descricao: e.target.value }))} rows={4} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Responsável</span>
+                <select value={andForm.responsavel_id} onChange={e => setAndForm(f => ({ ...f, responsavel_id: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+                  <option value="">—</option>
+                  {equipe.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+              </label>
+              {andForm.tipo === 'prorrogacao' && (
+                <label className="flex items-start gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12px] text-emerald-900 cursor-pointer">
+                  <input type="checkbox" checked={andForm.prorrogacao_deferida} onChange={e => setAndForm(f => ({ ...f, prorrogacao_deferida: e.target.checked }))} className="mt-0.5" />
+                  <span>A prorrogação foi <strong>deferida</strong>. Soma mais 10 anos à vigência do registro (hoje: {selected?.prorrogacoes ?? 0} prorrogação{(selected?.prorrogacoes ?? 0) === 1 ? '' : 'ões'} concedida{(selected?.prorrogacoes ?? 0) === 1 ? '' : 's'}).</span>
+                </label>
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-[#eef2f5] flex justify-end gap-2">
+              <button onClick={() => setAndModal(false)} className="px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]">Cancelar</button>
+              <button onClick={registrarAndamento} disabled={saving || !andForm.titulo.trim() || !andForm.data_andamento} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0F3D3E] text-white text-[13px] font-medium disabled:opacity-60">
+                {saving && <Loader2 size={15} className="animate-spin" />}
+                Registrar andamento
               </button>
             </div>
           </div>
@@ -542,7 +682,7 @@ function StatusChip({ status }: { status: InpiStatus }) {
 
 function DecenioBadge({ processo }: { processo: InpiProcesso }) {
   if (processo.status !== 'concedido' || !processo.data_concessao) return <span className="text-[12px] text-[#9aa5b1]">—</span>
-  const d = calcularDecenio(processo.data_concessao)
+  const d = calcularDecenio(processo.data_concessao, processo.prorrogacoes)
   if (processo.nao_acompanhar) return <span className="inline-flex flex-col text-[11px]"><span className="text-[#7a8899]">{formatDate(d.vencimento.toISOString())}</span><span className="font-semibold text-zinc-600">Não acompanhar</span></span>
   if (d.expirado) return <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700"><AlertCircle size={10} />Vencido</span>
   if (d.janelaMulta) return <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700"><AlertCircle size={10} />Prazo de multa</span>
@@ -552,7 +692,7 @@ function DecenioBadge({ processo }: { processo: InpiProcesso }) {
 
 function DecenioCard({ processo }: { processo: InpiProcesso }) {
   if (!processo.data_concessao) return null
-  const d = calcularDecenio(processo.data_concessao)
+  const d = calcularDecenio(processo.data_concessao, processo.prorrogacoes)
   if (processo.nao_acompanhar) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
@@ -592,10 +732,11 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ProcessoForm({ form, setForm, clientes }: {
+function ProcessoForm({ form, setForm, clientes, editando }: {
   form: FormValues
   setForm: React.Dispatch<React.SetStateAction<FormValues>>
   clientes: ClienteOpcao[]
+  editando: boolean
 }) {
   const set = (key: keyof FormValues, value: string) => setForm(prev => ({ ...prev, [key]: value }))
   return (
@@ -641,6 +782,11 @@ function ProcessoForm({ form, setForm, clientes }: {
         <span className="text-[12px] font-medium text-[#34495e]">Observações</span>
         <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
       </label>
+      {editando && <label className="block space-y-1">
+        <span className="text-[12px] font-medium text-[#34495e]">Prorrogações (decênios) já concedidas</span>
+        <input type="number" min={0} max={5} value={form.prorrogacoes} onChange={e => set('prorrogacoes', e.target.value)} className="w-28 px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+        <span className="block text-[11px] text-[#7a8899]">0 = só o primeiro decênio. Cada prorrogação deferida soma mais 10 anos à vigência.</span>
+      </label>}
     </div>
   )
 }

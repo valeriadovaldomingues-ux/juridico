@@ -5,7 +5,7 @@ import { ordenarInpi, ordemInpiValida } from './ordenar'
 const p = (titulo: string, extra: Partial<InpiProcesso> = {}): InpiProcesso => ({
   id: titulo, cliente_id: null, numero_processo: '1', tipo: 'marca', titulo, natureza: null, classe_nice: null,
   procurador: null, status: 'em_andamento', data_deposito: null, data_concessao: null, observacoes: null,
-  nao_acompanhar: false, nao_acompanhar_motivo: null, nao_acompanhar_em: null,
+  nao_acompanhar: false, nao_acompanhar_motivo: null, nao_acompanhar_em: null, prorrogacoes: 0,
   created_by: null, created_at: '2026-09-22T00:00:00Z', updated_at: '2026-09-22T00:00:00Z', ...extra,
 })
 const titulos = (l: InpiProcesso[]) => l.map(x => x.titulo)
@@ -40,6 +40,14 @@ describe('ordenarInpi', () => {
       p('Indeferida', { status: 'indeferido' }),
     ]
     expect(titulos(ordenarInpi(l, 'decenio'))).toEqual(['Antiga', 'Recente', 'Em andamento', 'Indeferida'])
+  })
+
+  it('por decênio conta as prorrogações: marca antiga já prorrogada vence depois', () => {
+    const l = [
+      p('Antiga prorrogada', { status: 'concedido', data_concessao: '2016-09-20', prorrogacoes: 1 }),
+      p('Meio', { status: 'concedido', data_concessao: '2020-01-01' }),
+    ]
+    expect(titulos(ordenarInpi(l, 'decenio'))).toEqual(['Meio', 'Antiga prorrogada'])
   })
 
   it('por número usa ordem natural; recentes põe o cadastro mais novo primeiro', () => {
