@@ -411,9 +411,9 @@ function BotoesRecibo({ funcionario, mes }: { funcionario: FuncionarioFolha; mes
   if (funcionario.tipoRecibo === 'funcionario_dividido') {
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
-        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'transporte')}>Transporte</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Salário</BotaoRecibo>
         <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'alimentacao')}>Alimentação</BotaoRecibo>
-        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Resto</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'transporte')}>Transporte</BotaoRecibo>
       </div>
     )
   }

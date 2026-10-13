@@ -62,6 +62,17 @@ export function corpoReciboEstagiario(d: DadosPessoais, valor: number, mesRefere
     `serviços prestados no mês de ${mes}, durante o período de ${inicio.replaceAll('.', '/')} a ${fim.replaceAll('.', '/')}, exceto período de férias.`
 }
 
+/**
+ * Recibo de SALÁRIO (CLT com benefícios pagos à parte, como a Luana): só a parte do salário —
+ * transporte e alimentação saem em recibos próprios. `comVerbas` = há extra/gratificação/1/3 de férias no valor.
+ */
+export function corpoReciboSalario(d: DadosPessoais, valor: number, mesReferencia: string, comVerbas = false): string {
+  const mes = mesReferenciaLabel(mesReferencia)
+  const o = comVerbas ? 'ao salário e demais verbas' : 'ao salário'
+  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
+    `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente ${o} do mês de ${mes} de ${mesReferencia.slice(0, 4)}.`
+}
+
 export type TipoBeneficio = 'transporte' | 'alimentacao'
 
 /** Recibo de benefício avulso (transporte / auxílio alimentação) — padrão usado pra Luana. */
