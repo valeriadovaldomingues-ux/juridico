@@ -33,12 +33,22 @@ const DEFAULT_USER_COLOR = '#145A5B'
 // Preferência de exibição do quadro do escritório — pessoal, por navegador
 // (não sincroniza entre dispositivos nem aparece pra outros usuários).
 const LS_HIDE_EMPTY_KEY = 'pedv:kanban:ocultar-vazios'
+const LS_RECOLHIDAS_KEY = 'pedv:kanban:colunas-recolhidas'
 
 function lerOcultarVazios(): boolean {
   try {
     return localStorage.getItem(LS_HIDE_EMPTY_KEY) === 'true'
   } catch {
     return false
+  }
+}
+
+function lerRecolhidas(): string[] {
+  try {
+    const bruto = JSON.parse(localStorage.getItem(LS_RECOLHIDAS_KEY) ?? '[]')
+    return Array.isArray(bruto) ? bruto.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
   }
 }
 
@@ -68,9 +78,22 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // ── Preferências de exibição (quadro do escritório) — por navegador ────────
   const [ocultarVazios, setOcultarVazios] = useState(false)
 
+  // Colunas recolhidas (só o nome na vertical) — também pessoal, por navegador.
+  const [recolhidas, setRecolhidas] = useState<string[]>([])
+
   useEffect(() => {
     setOcultarVazios(lerOcultarVazios())
+    setRecolhidas(lerRecolhidas())
   }, [])
+
+  const salvarRecolhidas = useCallback((proximas: string[]) => {
+    setRecolhidas(proximas)
+    try { localStorage.setItem(LS_RECOLHIDAS_KEY, JSON.stringify(proximas)) } catch { /* preferência não persiste */ }
+  }, [])
+
+  const alternarRecolhida = useCallback((id: string) => {
+    salvarRecolhidas(recolhidas.includes(id) ? recolhidas.filter(x => x !== id) : [...recolhidas, id])
+  }, [recolhidas, salvarRecolhidas])
 
   const alternarOcultarVazios = useCallback(() => {
     setOcultarVazios(prev => {
@@ -376,6 +399,29 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
             <EyeOff size={13} className="text-[var(--color-ink-3)]" />
             Ocultar quem não tem tarefas
           </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => salvarRecolhidas([
+                ...officeCols.map(c => c.profile.id),
+                ...listCols.map(c => `__list__${c.key}`),
+                ...(mostrarUnassigned ? ['__unassigned__'] : []),
+              ].filter(id => id !== currentUser?.id))}
+              className="text-[12px] font-medium text-[var(--color-ink-2)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)]"
+              title="Deixa só a sua coluna aberta; as outras ficam como uma faixa com o nome na vertical"
+            >
+              Recolher as dos outros
+            </button>
+            {recolhidas.length > 0 && (
+              <button
+                type="button"
+                onClick={() => salvarRecolhidas([])}
+                className="text-[12px] font-medium text-[var(--color-ink-2)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)]"
+              >
+                Abrir todas
+              </button>
+            )}
+          </div>
           <p className="text-[11px] text-[var(--color-ink-3)]">Arraste para o lado para ver todo mundo · arraste um cartão para outra coluna para trocar o responsável</p>
         </div>
       )}
@@ -405,6 +451,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
                 onAdd={() => handleAddParaPessoa(item.col.profile.id)}
+                recolhida={recolhidas.includes(item.col.profile.id)}
+                onToggleRecolher={() => alternarRecolhida(item.col.profile.id)}
               />
             ) : (
               <QuadroColuna
@@ -418,6 +466,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 onDelete={handleDelete}
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
+                recolhida={recolhidas.includes(`__list__${item.col.key}`)}
+                onToggleRecolher={() => alternarRecolhida(`__list__${item.col.key}`)}
               />
             ))}
 
@@ -433,6 +483,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
                 onAdd={() => handleAddParaPessoa(undefined)}
+                recolhida={recolhidas.includes('__unassigned__')}
+                onToggleRecolher={() => alternarRecolhida('__unassigned__')}
               />
             )}
           </div>
