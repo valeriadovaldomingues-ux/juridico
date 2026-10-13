@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
-import { financeiroLiberadoPorUsuario } from '@/lib/auth/financeiro-acesso'
 
 export async function GET() {
-  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
+  const auth = await apiGuard(['gerente', 'socio'])
   if (auth instanceof NextResponse) return auth
-  if (auth.role === 'administrativo' && !financeiroLiberadoPorUsuario(auth.userId)) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -21,11 +17,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
+  const auth = await apiGuard(['gerente', 'socio'])
   if (auth instanceof NextResponse) return auth
-  if (auth.role === 'administrativo' && !financeiroLiberadoPorUsuario(auth.userId)) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
 
   const body = await req.json()
   if (!body.cliente_id) return NextResponse.json({ error: 'cliente_id ausente' }, { status: 400 })

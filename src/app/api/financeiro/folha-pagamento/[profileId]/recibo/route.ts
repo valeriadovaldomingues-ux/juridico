@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { podeAcessarSalarios } from '@/lib/auth/financeiro-acesso'
 import {
   corpoReciboAdvogado, corpoReciboBeneficio, corpoReciboEstagiario, corpoReciboFuncionario,
   gerarReciboPdfBytes, type DadosPessoais, type TipoBeneficio,
@@ -17,8 +19,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ profileId: string }> },
 ) {
-  const auth = await apiGuard(['socio'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
+  if (!podeAcessarSalarios(auth.userId, auth.role)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const { profileId } = await params
   const mes = req.nextUrl.searchParams.get('mes')

@@ -100,13 +100,28 @@ describe('acesso por usuário — Célio (administrativo com Financeiro)', () =>
     expect(roleCanAccessRoute('administrativo', '/financeiro/cobrancas', CELIO)).toBe(false)
   })
 
-  it('continua no modo restrito para o resto (Processos fechado) e sem rotas de sócio', () => {
-    expect(roleCanAccessRoute('administrativo', '/processos', CELIO)).toBe(false)
+  it('vê Dashboard, Agenda, Clientes, Processos e Ferramentas PDF (liberados em 13/10/2026)', () => {
+    const rotas = getAllowedRoutes('administrativo', CELIO)
+    expect(rotas).toEqual(expect.arrayContaining(['/dashboard', '/agenda', '/clientes', '/processos', '/ferramentas-pdf']))
+    expect(roleCanAccessRoute('administrativo', '/dashboard', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/agenda', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/processos/novo', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/clientes', CELIO)).toBe(true)
+    expect(roleCanAccessRoute('administrativo', '/ferramentas-pdf', CELIO)).toBe(true)
+  })
+
+  it('continua no modo restrito para o resto (Documentos, Importar…) e sem rotas de sócio', () => {
+    expect(roleCanAccessRoute('administrativo', '/documentos', CELIO)).toBe(false)
+    expect(roleCanAccessRoute('administrativo', '/importar', CELIO)).toBe(false)
     expect(roleCanAccessRoute('administrativo', '/configuracoes/usuarios', CELIO)).toBe(false)
   })
 
-  it('outro administrativo (ex.: Luana) não ganha Financeiro', () => {
+  it('outro administrativo (ex.: Luana) não ganha nada disso', () => {
     expect(getAllowedRoutes('administrativo', OUTRO_ADVOGADO)).not.toContain('/financeiro')
+    expect(roleCanAccessRoute('administrativo', '/processos', OUTRO_ADVOGADO)).toBe(false)
+    expect(roleCanAccessRoute('administrativo', '/clientes', OUTRO_ADVOGADO)).toBe(false)
+    expect(roleCanAccessRoute('administrativo', '/agenda', OUTRO_ADVOGADO)).toBe(false)
+    expect(roleCanAccessRoute('administrativo', '/dashboard', OUTRO_ADVOGADO)).toBe(false)
     expect(roleCanAccessRoute('administrativo', '/financeiro', OUTRO_ADVOGADO)).toBe(false)
   })
 })

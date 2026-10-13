@@ -47,6 +47,8 @@ interface Props {
   acessoCompleto?: boolean
   /** Aba de Salários/folha: só sócio. */
   verSalarios?: boolean
+  /** Se informado, só estas abas aparecem (ex.: Célio: despesas, a pagar, salários). */
+  abasPermitidas?: Aba[]
 }
 
 // ─── Config de status ────────────────────────────────────────────────────────
@@ -112,9 +114,9 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true, abasPermitidas }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
-  const [aba,         setAba]         = useState<Aba>('grade')
+  const [aba,         setAba]         = useState<Aba>(abasPermitidas?.[0] ?? 'grade')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando,    setEditando]    = useState<Lancamento | null>(null)
   const [excluindo,   setExcluindo]   = useState<string | null>(null)
@@ -332,7 +334,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         <div className="flex border-b border-[#f3f4f6]">
-          {ABAS.filter(a => a.id !== 'salarios' || verSalarios).map(a => {
+          {ABAS.filter(a => (a.id !== 'salarios' || verSalarios) && (!abasPermitidas || abasPermitidas.includes(a.id))).map(a => {
             const Icon = a.icon
             const ativo = aba === a.id
             return (
@@ -571,6 +573,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       {/* Modal */}
       {modalAberto && (
         <LancamentoModal
+          tipoFixo={acessoCompleto ? 'despesa' : undefined}
           lancamento={editando
             ? {
                 id:           editando.id,

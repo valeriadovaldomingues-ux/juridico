@@ -1,5 +1,3 @@
-import { FINANCEIRO_EXTRA_USER_IDS } from './financeiro-acesso'
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Acesso restrito à tela /financeiro/despesas.
 //
@@ -30,6 +28,5 @@ export function podeAcessarDespesas(userId: string, role: string): boolean {
  */
 export function podeGerenciarLancamentoDespesa(userId: string, role: string, tipoLancamento: string): boolean {
   if (role === 'socio' || role === 'gerente') return true
-  if (FINANCEIRO_EXTRA_USER_IDS.includes(userId)) return true // liberado no Financeiro inteiro (financeiro-acesso.ts)
   return DESPESAS_EXTRA_USER_IDS.includes(userId) && tipoLancamento === 'despesa'
 }
