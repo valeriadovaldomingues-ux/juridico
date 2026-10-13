@@ -23,6 +23,7 @@ export default async function Page() {
         tarefas={(tarefas ?? []) as TarefaDaReuniao[]}
         equipe={((equipe ?? []) as Pessoa[]).map(p => ({ id: p.id, nome: p.nome }))}
         podeCriar={['administrativo', 'advogado', 'gerente', 'socio'].includes(profile.role)}
+        podeApagar={profile.role === 'socio'}
       />
     </div>
   )
