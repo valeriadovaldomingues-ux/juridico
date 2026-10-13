@@ -12,8 +12,9 @@ export interface DadosPessoais {
   endereco:      string | null
 }
 
+// "**texto**" = negrito no recibo (nome do escritório e de quem assina).
 const ESCRITORIO =
-  'PESSOA E DO VAL ADVOCACIA, sociedade de advogados devidamente registrada na Ordem dos Advogados do Brasil – OAB, ' +
+  '**PESSOA E DO VAL ADVOCACIA**, sociedade de advogados devidamente registrada na Ordem dos Advogados do Brasil – OAB, ' +
   'Seção do Estado de Minas Gerais, sob o nº 2.422, com escritório à rua Gonçalves Dias, nº 874, 8º andar, ' +
   'bairro Savassi – Belo Horizonte/MG'
 
@@ -40,7 +41,7 @@ function qualificacao(d: DadosPessoais, { comOab }: { comOab: boolean }): string
 /** Advogado(a) Associado(a): um recibo com o valor total da folha. */
 export function corpoReciboAdvogado(d: DadosPessoais, valor: number, mesReferencia: string): string {
   const mes = mesReferenciaLabel(mesReferencia)
-  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: true })}, recebi de ${ESCRITORIO}, ` +
+  return `Eu, **${d.nomeCompleto}**, ${qualificacao(d, { comOab: true })}, recebi de ${ESCRITORIO}, ` +
     `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente às verbas descritas na cláusula ` +
     `oitava do Contrato de Associação de Advogado, quanto aos serviços prestados, na forma da cláusula sexta do mesmo ` +
     `instrumento, no mês de ${mes}/${mesReferencia.slice(0, 4)}.`
@@ -49,7 +50,7 @@ export function corpoReciboAdvogado(d: DadosPessoais, valor: number, mesReferenc
 /** Funcionário/colaborador (recibo único, valor total) — Célio, Luciana e afins. */
 export function corpoReciboFuncionario(d: DadosPessoais, valor: number, mesReferencia: string): string {
   const mes = mesReferenciaLabel(mesReferencia)
-  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
+  return `Eu, **${d.nomeCompleto}**, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
     `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente ao mês de ${mes} de ${mesReferencia.slice(0, 4)}.`
 }
 
@@ -57,7 +58,7 @@ export function corpoReciboFuncionario(d: DadosPessoais, valor: number, mesRefer
 export function corpoReciboEstagiario(d: DadosPessoais, valor: number, mesReferencia: string): string {
   const mes = mesReferenciaLabel(mesReferencia)
   const { inicio, fim } = periodoBeneficio(mesReferencia)
-  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
+  return `Eu, **${d.nomeCompleto}**, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
     `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente a bolsa de estágio, quanto aos ` +
     `serviços prestados no mês de ${mes}, durante o período de ${inicio.replaceAll('.', '/')} a ${fim.replaceAll('.', '/')}, exceto período de férias.`
 }
@@ -69,7 +70,7 @@ export function corpoReciboEstagiario(d: DadosPessoais, valor: number, mesRefere
 export function corpoReciboSalario(d: DadosPessoais, valor: number, mesReferencia: string, comVerbas = false): string {
   const mes = mesReferenciaLabel(mesReferencia)
   const o = comVerbas ? 'ao salário e demais verbas' : 'ao salário'
-  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
+  return `Eu, **${d.nomeCompleto}**, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
     `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente ${o} do mês de ${mes} de ${mesReferencia.slice(0, 4)}.`
 }
 
@@ -79,26 +80,50 @@ export type TipoBeneficio = 'transporte' | 'alimentacao'
 export function corpoReciboBeneficio(d: DadosPessoais, valor: number, mesReferencia: string, tipo: TipoBeneficio): string {
   const { inicio, fim } = periodoBeneficio(mesReferencia)
   const descricao = tipo === 'transporte' ? 'transporte' : 'auxílio alimentação'
-  return `Eu, ${d.nomeCompleto}, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
+  return `Eu, **${d.nomeCompleto}**, ${qualificacao(d, { comOab: false })}, recebi de ${ESCRITORIO}, ` +
     `a importância de ${formatarValorBRL(valor)} (${valorPorExtenso(valor)}), referente ao ${descricao} no período de ${inicio} a ${fim}.`
 }
 
 // ─── Geração do PDF ───────────────────────────────────────────────────────────
 
-function wrapText(text: string, fontSize: number, maxWidth: number, charWidthRatio = 0.5) {
-  const words = text.split(/\s+/).filter(Boolean)
-  const lines: string[] = []
-  let current = ''
-  const measure = (value: string) => value.length * fontSize * charWidthRatio
+export interface PalavraRecibo { texto: string; negrito: boolean }
 
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word
-    if (measure(next) <= maxWidth) { current = next; continue }
-    if (current) lines.push(current)
-    current = word
+/** Uma "palavra" na linha pode juntar pedaços sem espaço entre eles (ex.: nome em negrito + vírgula normal). */
+export type UnidadeRecibo = PalavraRecibo[]
+
+/** Divide o texto em unidades, respeitando os trechos entre "**" (negrito). Pontuação colada ao negrito fica junto, sem espaço. */
+export function unidadesDoRecibo(corpo: string): UnidadeRecibo[] {
+  const unidades: UnidadeRecibo[] = []
+  let anteriorTerminaEmEspaco = true
+  corpo.split('**').forEach((trecho, i) => {
+    const negrito = i % 2 === 1
+    // Só cola no que veio antes quando não há espaço entre os dois trechos (ex.: "**Nome**," ).
+    const colaNoAnterior = trecho.length > 0 && !/^\s/.test(trecho) && !anteriorTerminaEmEspaco
+    trecho.split(/\s+/).filter(Boolean).forEach((texto, j) => {
+      if (j === 0 && colaNoAnterior && unidades.length > 0) unidades[unidades.length - 1].push({ texto, negrito })
+      else unidades.push([{ texto, negrito }])
+    })
+    if (trecho.length > 0) anteriorTerminaEmEspaco = /\s$/.test(trecho)
+  })
+  return unidades
+}
+
+export interface LinhaRecibo { unidades: UnidadeRecibo[]; ultima: boolean }
+
+/** Quebra em linhas que cabem em `largura`; `medir` dá a largura real de uma unidade (com a fonte certa de cada pedaço). */
+export function quebrarEmLinhas(unidades: UnidadeRecibo[], largura: number, medir: (u: UnidadeRecibo) => number, espaco: number): LinhaRecibo[] {
+  const linhas: LinhaRecibo[] = []
+  let atual: UnidadeRecibo[] = []
+  let usado = 0
+  for (const u of unidades) {
+    const w = medir(u)
+    const proximo = atual.length === 0 ? w : usado + espaco + w
+    if (proximo <= largura || atual.length === 0) { atual.push(u); usado = proximo; continue }
+    linhas.push({ unidades: atual, ultima: false })
+    atual = [u]; usado = w
   }
-  if (current) lines.push(current)
-  return lines
+  if (atual.length) linhas.push({ unidades: atual, ultima: true })
+  return linhas
 }
 
 export async function gerarReciboPdfBytes(params: {
@@ -127,9 +152,24 @@ export async function gerarReciboPdfBytes(params: {
   page.drawText(titulo, { x: (pageWidth - tituloWidth) / 2, y, size: 16, font: fontBold, color: rgb(0, 0, 0) })
   y -= 48
 
-  const lines = wrapText(corpo, 12, contentWidth)
-  lines.forEach(line => {
-    page.drawText(line, { x: margin, y, size: 12, font, color: rgb(0, 0, 0) })
+  // Texto justificado: as palavras se espalham até as duas margens; a última linha fica alinhada à esquerda.
+  const tamanho = 12
+  const fonteDe = (p: PalavraRecibo) => (p.negrito ? fontBold : font)
+  const larguraEspaco = font.widthOfTextAtSize(' ', tamanho)
+  const larguraUnidade = (u: UnidadeRecibo) => u.reduce((a, p) => a + fonteDe(p).widthOfTextAtSize(p.texto, tamanho), 0)
+  const linhas = quebrarEmLinhas(unidadesDoRecibo(corpo), contentWidth, larguraUnidade, larguraEspaco)
+  linhas.forEach(linha => {
+    const soma = linha.unidades.reduce((a, u) => a + larguraUnidade(u), 0)
+    const lacunas = linha.unidades.length - 1
+    const espaco = linha.ultima || lacunas === 0 ? larguraEspaco : (contentWidth - soma) / lacunas
+    let x = margin
+    linha.unidades.forEach(u => {
+      u.forEach(p => {
+        page.drawText(p.texto, { x, y, size: tamanho, font: fonteDe(p), color: rgb(0, 0, 0) })
+        x += fonteDe(p).widthOfTextAtSize(p.texto, tamanho)
+      })
+      x += espaco
+    })
     y -= lineHeight
   })
 
@@ -139,8 +179,8 @@ export async function gerarReciboPdfBytes(params: {
   const linha = '_'.repeat(58)
   page.drawText(linha, { x: margin, y, size: 12, font })
   y -= 16
-  const nomeWidth = font.widthOfTextAtSize(nomeAssinante.toUpperCase(), 12)
-  page.drawText(nomeAssinante.toUpperCase(), { x: margin + (font.widthOfTextAtSize(linha, 12) - nomeWidth) / 2, y, size: 12, font })
+  const nomeWidth = fontBold.widthOfTextAtSize(nomeAssinante.toUpperCase(), 12)
+  page.drawText(nomeAssinante.toUpperCase(), { x: margin + (font.widthOfTextAtSize(linha, 12) - nomeWidth) / 2, y, size: 12, font: fontBold })
 
   return pdf.save()
 }
