@@ -48,7 +48,7 @@ export default function LoginPage() {
       if (profile?.role) {
         const role = profile.role as UserRole
         redirect = KANBAN_ONLY_MODE && role !== 'socio' && role !== 'cliente' && role !== 'comercial' &&
-          !usuarioLiberadoDoModoRestrito(authData.user.id)
+          !usuarioLiberadoDoModoRestrito(authData.user.id, role)
           ? '/kanban'
           : ROLE_REDIRECT[role] ?? '/dashboard'
       }

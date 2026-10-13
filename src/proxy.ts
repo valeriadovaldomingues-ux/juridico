@@ -205,7 +205,7 @@ export async function proxy(request: NextRequest) {
       isInternalPath && !pathname.startsWith('/kanban') &&
       !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) &&
       !isRotaDespesasLiberadaPorUsuario(pathname, user.id) &&
-      !usuarioLiberadoDoModoRestrito(user.id)
+      !usuarioLiberadoDoModoRestrito(user.id, role)
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
@@ -213,7 +213,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // 3a-usuario. Rotas bloqueadas só para esta pessoa (ver acesso-por-usuario.ts).
-    if (isInternalPath && rotaBloqueadaParaUsuario(pathname, user.id)) {
+    if (isInternalPath && rotaBloqueadaParaUsuario(pathname, user.id, role)) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

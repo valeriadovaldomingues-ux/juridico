@@ -409,8 +409,8 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
  * para compatibilidade com edge runtime.
  */
 export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: string | null): boolean {
-  if (rotaBloqueadaParaUsuario(pathname, userId)) return false
-  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId)) {
+  if (rotaBloqueadaParaUsuario(pathname, userId, role)) return false
+  if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId, role)) {
     return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
   }
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
@@ -426,9 +426,9 @@ export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: st
  * ALLOWED_ROUTES diretamente.
  */
 export function getAllowedRoutes(role: UserRole, userId?: string | null): string[] {
-  const restrito = KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId)
+  const restrito = KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId, role)
   const rotas = restrito ? ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES] : ALLOWED_ROUTES[role]
-  return rotas.filter(r => !rotaBloqueadaParaUsuario(r, userId))
+  return rotas.filter(r => !rotaBloqueadaParaUsuario(r, userId, role))
 }
 
 // ─── Extensão futura: acesso por processo ────────────────────────────────────
