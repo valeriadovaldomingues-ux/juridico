@@ -107,7 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let messageId: string | null = null
   try {
     const r = await enviarEmail({
-      to: para.validos, cc: cc.validos, replyTo: ctx.advogado?.email ?? undefined,
+      to: para.validos, cc: cc.validos, replyTo: ctx.advogado?.email ?? undefined, remetenteNome: ctx.advogado?.nome ?? undefined,
       subject: assunto, text: corpo, html: textoParaHtml(corpo), attachments: anexos,
     })
     messageId = r.messageId

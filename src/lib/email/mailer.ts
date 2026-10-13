@@ -32,10 +32,18 @@ export interface EmailSaida {
   to: string[]
   cc?: string[]
   replyTo?: string
+  /** Nome de quem assina (advogado). O endereço continua sendo o da caixa do escritório. */
+  remetenteNome?: string
   subject: string
   text: string
   html?: string
   attachments?: { filename: string; content: Buffer }[]
+}
+
+/** "Nome <a@b.com>" → "a@b.com". */
+function enderecoDe(valor: string): string {
+  const m = valor.match(/<([^>]+)>/)
+  return (m ? m[1] : valor).trim()
 }
 
 export async function enviarEmail(msg: EmailSaida): Promise<{ messageId: string }> {
@@ -47,8 +55,13 @@ export async function enviarEmail(msg: EmailSaida): Promise<{ messageId: string 
     secure: porta === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
   })
+  // O servidor só aceita enviar pela caixa autenticada; o nome do advogado aparece como remetente
+  // e as respostas vão para o e-mail dele (replyTo).
+  const from = msg.remetenteNome
+    ? { name: `${msg.remetenteNome} — Pessoa e do Val Advocacia`, address: enderecoDe(process.env.SMTP_FROM as string) }
+    : process.env.SMTP_FROM
   const info = await transporte.sendMail({
-    from: process.env.SMTP_FROM,
+    from,
     to: msg.to,
     cc: msg.cc?.length ? msg.cc : undefined,
     replyTo: msg.replyTo,

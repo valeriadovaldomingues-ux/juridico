@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const sendMail = vi.fn()
-const createTransport = vi.fn(() => ({ sendMail }))
+const { sendMail, createTransport } = vi.hoisted(() => {
+  const sendMail = vi.fn()
+  return { sendMail, createTransport: vi.fn(() => ({ sendMail })) }
+})
 vi.mock('nodemailer', () => ({ default: { createTransport } }))
 
 import { emailConfigurado, enviarEmail } from './mailer'
@@ -34,6 +36,13 @@ describe('emailConfigurado / enviarEmail', () => {
     const msg = sendMail.mock.calls[0][0]
     expect(msg).toMatchObject({ from: 'Escritório <pedv@x.com>', to: ['cliente@c.com'], cc: ['adv@x.com'], replyTo: 'adv@x.com', subject: 'Assunto' })
     expect(msg.attachments[0].filename).toBe('ata.docx')
+  })
+
+  it('mostra o nome do advogado no remetente, mas envia pela caixa do escritório', async () => {
+    Object.assign(process.env, { SMTP_HOST: 'h', SMTP_PORT: '465', SMTP_USER: 'u', SMTP_PASSWORD: 'p', SMTP_FROM: 'Pessoa e do Val <pedv@x.com>' })
+    sendMail.mockResolvedValue({ messageId: 'x' })
+    await enviarEmail({ to: ['a@b.com'], subject: 's', text: 't', remetenteNome: 'Débora Brito' })
+    expect(sendMail.mock.calls[0][0].from).toEqual({ name: 'Débora Brito — Pessoa e do Val Advocacia', address: 'pedv@x.com' })
   })
 
   it('porta 587 não usa SSL direto (STARTTLS)', async () => {
