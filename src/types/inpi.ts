@@ -27,6 +27,10 @@ export interface InpiProcesso {
   data_deposito: string | null
   data_concessao: string | null
   observacoes: string | null
+  /** Cliente não vai renovar / não precisa mais ser acompanhado: some dos alertas de decênio e da leitura da RPI. */
+  nao_acompanhar: boolean
+  nao_acompanhar_motivo: string | null
+  nao_acompanhar_em: string | null
   created_by: string | null
   created_at: string
   updated_at: string

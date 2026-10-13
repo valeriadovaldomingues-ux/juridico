@@ -31,6 +31,7 @@ export async function sincronizarRpi(supabase: SupabaseClient): Promise<Resultad
     .from('inpi_processos')
     .select('id, numero_processo, titulo, cliente:clientes!cliente_id(nome)')
     .eq('tipo', 'marca')
+    .eq('nao_acompanhar', false)
 
   if (errProcessos) {
     return { ok: false, edicoesProcessadas: 0, movimentacoesInseridas: 0, erro: errProcessos.message }

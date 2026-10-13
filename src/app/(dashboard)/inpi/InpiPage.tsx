@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle, Stamp, Plus, Search, X, Loader2, Mail, Phone,
   Clock, CheckCircle2, XCircle, Archive, Ban, Trash2, Send,
@@ -49,6 +49,14 @@ const statusCfg: Record<InpiStatus, { label: string; chip: string; dot: string; 
   indeferido:   { label: 'Indeferido',   chip: 'bg-rose-50 text-rose-700',    dot: 'bg-rose-500',    icon: Ban },
 }
 
+function lerMostrarArquivados(): boolean {
+  try {
+    return localStorage.getItem('pedv:inpi:mostrar-arquivados') === 'true'
+  } catch {
+    return false
+  }
+}
+
 export default function InpiPage({ initialProcessos, clientes, role }: Props) {
   const [processos, setProcessos] = useState(initialProcessos)
   const [selectedId, setSelectedId] = useState(initialProcessos[0]?.id ?? '')
@@ -57,6 +65,17 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
   const [status, setStatus] = useState('')
   const [clienteId, setClienteId] = useState('')
   const [busca, setBusca] = useState('')
+  // Arquivados ficam escondidos; quem quiser vê-los marca "Mostrar arquivados" (lembra a escolha neste navegador).
+  const [mostrarArquivados, setMostrarArquivados] = useState(false)
+  useEffect(() => {
+    // Preferência pessoal lida só no navegador (evita divergência com o HTML do servidor).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMostrarArquivados(lerMostrarArquivados())
+  }, [])
+  function alternarArquivados(valor: boolean) {
+    setMostrarArquivados(valor)
+    try { localStorage.setItem('pedv:inpi:mostrar-arquivados', String(valor)) } catch { /* preferência não persiste */ }
+  }
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -68,32 +87,38 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
 
   const podeCriar = role !== 'estagiario'
   const podeExcluir = role === 'socio'
-  const selected = processos.find(p => p.id === selectedId) ?? processos[0] ?? null
+  // Sem o filtro de status explícito, arquivados só aparecem se "Mostrar arquivados" estiver marcado.
+  const visiveis = useMemo(
+    () => (mostrarArquivados || status === 'arquivado' ? processos : processos.filter(p => p.status !== 'arquivado')),
+    [processos, mostrarArquivados, status],
+  )
+  const qtdArquivados = useMemo(() => processos.filter(p => p.status === 'arquivado').length, [processos])
+  const selected = processos.find(p => p.id === selectedId) ?? visiveis[0] ?? processos[0] ?? null
 
   const filtrados = useMemo(() => {
-    return processos.filter(p => {
+    return visiveis.filter(p => {
       if (status && p.status !== status) return false
       if (clienteId && p.cliente_id !== clienteId) return false
       const haystack = `${p.titulo} ${p.numero_processo} ${p.cliente?.nome ?? ''}`.toLowerCase()
       if (busca && !haystack.includes(busca.toLowerCase())) return false
       return true
     })
-  }, [processos, status, clienteId, busca])
+  }, [visiveis, status, clienteId, busca])
 
   const metricas = useMemo(() => {
-    const total = processos.length
-    const andamento = processos.filter(p => p.status === 'em_andamento').length
-    const concedidos = processos.filter(p => p.status === 'concedido').length
+    const total = visiveis.length
+    const andamento = visiveis.filter(p => p.status === 'em_andamento').length
+    const concedidos = visiveis.filter(p => p.status === 'concedido').length
     let vencendo = 0
     let expirados = 0
-    for (const p of processos) {
-      if (p.status !== 'concedido' || !p.data_concessao) continue
+    for (const p of visiveis) {
+      if (p.status !== 'concedido' || !p.data_concessao || p.nao_acompanhar) continue
       const d = calcularDecenio(p.data_concessao)
       if (d.expirado) expirados += 1
       else if (d.janelaRenovacao || d.janelaMulta) vencendo += 1
     }
     return { total, andamento, concedidos, vencendo, expirados }
-  }, [processos])
+  }, [visiveis])
 
   async function createProcesso() {
     setSaving(true)
@@ -126,6 +151,26 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     if (!res.ok) { setError(data.error ?? 'Erro ao salvar.'); return }
     setProcessos(prev => prev.map(p => p.id === data.id ? { ...data, movimentacoes: p.movimentacoes } : p))
     setModal(null)
+  }
+
+  async function alternarNaoAcompanhar(p: InpiProcesso) {
+    let motivo = ''
+    if (!p.nao_acompanhar) {
+      const resposta = window.prompt('Por que não acompanhar mais? (ex.: cliente não vai renovar o decênio)', '')
+      if (resposta === null) return
+      motivo = resposta.trim()
+    }
+    setBusyId(p.id)
+    setError(null)
+    const res = await fetch(`/api/inpi/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nao_acompanhar: !p.nao_acompanhar, nao_acompanhar_motivo: motivo }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setBusyId(null)
+    if (!res.ok) { setError(data.error ?? 'Não foi possível salvar.'); return }
+    setProcessos(prev => prev.map(x => x.id === data.id ? { ...data, movimentacoes: x.movimentacoes } : x))
   }
 
   function abrirEdicao() {
@@ -237,6 +282,10 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               <option value="">Todos clientes</option>
               {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
+            <label className="flex items-center gap-2 text-[12px] text-[#5b6776] cursor-pointer select-none">
+              <input type="checkbox" checked={mostrarArquivados} onChange={e => alternarArquivados(e.target.checked)} className="rounded border-[#d8dee8]" />
+              Mostrar arquivados{qtdArquivados > 0 ? ` (${qtdArquivados})` : ''}
+            </label>
           </div>
 
           <div className="overflow-hidden rounded-lg border border-[#e8edf2] bg-white">
@@ -342,6 +391,15 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
                 {podeCriar && (
                   <button onClick={abrirEdicao} className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[#34495e] text-[13px] font-medium hover:bg-[#F7F9F9]">
                     Editar processo
+                  </button>
+                )}
+                {podeCriar && (
+                  <button
+                    onClick={() => alternarNaoAcompanhar(selected)}
+                    disabled={busyId === selected.id}
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[#34495e] text-[13px] font-medium hover:bg-[#F7F9F9] disabled:opacity-60"
+                  >
+                    {selected.nao_acompanhar ? 'Voltar a acompanhar' : 'Marcar como "não acompanhar"'}
                   </button>
                 )}
                 {podeExcluir && (
@@ -468,6 +526,7 @@ function StatusChip({ status }: { status: InpiStatus }) {
 function DecenioBadge({ processo }: { processo: InpiProcesso }) {
   if (processo.status !== 'concedido' || !processo.data_concessao) return <span className="text-[12px] text-[#9aa5b1]">—</span>
   const d = calcularDecenio(processo.data_concessao)
+  if (processo.nao_acompanhar) return <span className="inline-flex flex-col text-[11px]"><span className="text-[#7a8899]">{formatDate(d.vencimento.toISOString())}</span><span className="font-semibold text-zinc-600">Não acompanhar</span></span>
   if (d.expirado) return <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700"><AlertCircle size={10} />Vencido</span>
   if (d.janelaMulta) return <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700"><AlertCircle size={10} />Prazo de multa</span>
   if (d.janelaRenovacao) return <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700"><Clock size={10} />Renovar até {formatDate(d.vencimento.toISOString())}</span>
@@ -477,6 +536,14 @@ function DecenioBadge({ processo }: { processo: InpiProcesso }) {
 function DecenioCard({ processo }: { processo: InpiProcesso }) {
   if (!processo.data_concessao) return null
   const d = calcularDecenio(processo.data_concessao)
+  if (processo.nao_acompanhar) {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+        <p className="text-[12px] font-semibold text-zinc-700">Não acompanhar — decênio em {formatDate(d.vencimento.toISOString())}</p>
+        <p className="text-[12px] text-[#5b6776] mt-1">{processo.nao_acompanhar_motivo || 'Marcado para não acompanhar.'} Não entra nos alertas de decênio nem na leitura da RPI.</p>
+      </div>
+    )
+  }
   const tone = d.expirado ? 'danger' : (d.janelaMulta || d.janelaRenovacao) ? 'warn' : 'ok'
   return (
     <div className={cn(
