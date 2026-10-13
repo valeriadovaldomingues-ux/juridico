@@ -173,14 +173,17 @@ export async function gerarReciboPdfBytes(params: {
     y -= lineHeight
   })
 
+  // Data, linha de assinatura e nome do assinante: centralizados na página.
+  const centralizado = (texto: string, fonte: typeof font) => (pageWidth - fonte.widthOfTextAtSize(texto, 12)) / 2
   y -= 40
-  page.drawText(`Belo Horizonte, ${dataAssinaturaExtenso(mesReferencia)}`, { x: margin, y, size: 12, font })
+  const dataLocal = `Belo Horizonte, ${dataAssinaturaExtenso(mesReferencia)}`
+  page.drawText(dataLocal, { x: centralizado(dataLocal, font), y, size: 12, font })
   y -= 60
   const linha = '_'.repeat(58)
-  page.drawText(linha, { x: margin, y, size: 12, font })
+  page.drawText(linha, { x: centralizado(linha, font), y, size: 12, font })
   y -= 16
-  const nomeWidth = fontBold.widthOfTextAtSize(nomeAssinante.toUpperCase(), 12)
-  page.drawText(nomeAssinante.toUpperCase(), { x: margin + (font.widthOfTextAtSize(linha, 12) - nomeWidth) / 2, y, size: 12, font: fontBold })
+  const nome = nomeAssinante.toUpperCase()
+  page.drawText(nome, { x: centralizado(nome, fontBold), y, size: 12, font: fontBold })
 
   return pdf.save()
 }
