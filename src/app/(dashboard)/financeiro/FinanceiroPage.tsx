@@ -715,13 +715,6 @@ function RelatoriosView({ metricas }: { metricas: Metricas }) {
         </div>
       </div>
 
-      {/* Preparação futura: integração de pagamentos */}
-      <div className="border border-dashed border-[#e5e7eb] rounded-xl p-4">
-        <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-1">Em breve</p>
-        <p className="text-[12px] text-[#c5cdd8]">
-          Geração de boletos e cobranças via PIX — estrutura de dados preparada para integração futura com gateways de pagamento.
-        </p>
-      </div>
     </div>
   )
 }
