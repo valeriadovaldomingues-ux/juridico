@@ -28,6 +28,7 @@
     "fflate": "^0.8.3",
     "lucide-react": "^1.7.0",
     "next": "^16.2.6",
+    "nodemailer": "^10.1.0",
     "officeparser": "^7.1.0",
     "openai": "^6.33.0",
     "papaparse": "^5.5.3",
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sax": "^1.2.7",

@@ -1,16 +1,17 @@
 'use client'
 
-import { useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Edit, Users, CalendarDays,
   Plus, Trash2, Pencil, X, Check, Loader2,
   ExternalLink,
-  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles, Gavel,
+  FileText, Clock3, Landmark, Paperclip, CalendarRange, ListChecks, MessageSquare, BarChart3, Sparkles, Gavel, Mail,
 } from 'lucide-react'
 import AtaAudienciaModal from './AtaAudienciaModal'
 import NovoCompromissoModal from './NovoCompromissoModal'
+import EmailAtaModal from './EmailAtaModal'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -1002,6 +1003,20 @@ function AndamentosTab({
 }) {
   const [showForm, setShowForm] = useState(false)
   const [showAta, setShowAta] = useState(false)
+  // Atas de audiência do processo (andamento → ata) e a ata cujo e-mail ao cliente está aberto.
+  const [atasPorAndamento, setAtasPorAndamento] = useState<Record<string, string>>({})
+  const [emailAtaId, setEmailAtaId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (role === 'estagiario') return
+    let cancelado = false
+    fetch(`/api/processos/${processoId}/atas`).then(async res => {
+      if (!res.ok || cancelado) return
+      const lista = (await res.json()) as { id: string; andamento_id: string | null }[]
+      setAtasPorAndamento(Object.fromEntries(lista.filter(a => a.andamento_id).map(a => [a.andamento_id as string, a.id])))
+    }).catch(() => { /* sem botão de e-mail se falhar */ })
+    return () => { cancelado = true }
+  }, [processoId, role, andamentos.length])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AndamentoFormState>(ANDAMENTO_FORM_VAZIO)
   const [tempo, setTempo] = useState<TempoFormState>(TEMPO_FORM_VAZIO)
@@ -1233,12 +1248,17 @@ function AndamentosTab({
         <AtaAudienciaModal
           processoId={processoId}
           onFechar={() => setShowAta(false)}
-          onSalvo={async () => {
+          onSalvo={async (ataId) => {
             setShowAta(false)
             const res = await fetch(`/api/processos/${processoId}/andamentos`)
             if (res.ok) setAndamentos(await res.json())
+            setEmailAtaId(ataId) // já abre o e-mail pronto para o advogado revisar
           }}
         />
+      )}
+
+      {emailAtaId && (
+        <EmailAtaModal processoId={processoId} ataId={emailAtaId} onFechar={() => setEmailAtaId(null)} />
       )}
 
       {showForm && (
@@ -1567,6 +1587,16 @@ function AndamentosTab({
                       <span>Criação: {formatDateTime(andamento.created_at)}</span>
                     </div>
                   </div>
+
+                  {atasPorAndamento[andamento.id] && role !== 'estagiario' && (
+                    <button
+                      onClick={() => setEmailAtaId(atasPorAndamento[andamento.id])}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#145A5B]/40 px-2.5 py-1.5 text-[11px] font-medium text-[#145A5B] hover:bg-[#145A5B]/5 transition-colors"
+                      title="Montar o e-mail ao cliente sobre esta ata"
+                    >
+                      <Mail size={12} /> E-mail ao cliente
+                    </button>
+                  )}
 
                   {role === 'socio' && (
                     <div className="flex items-center gap-1">
