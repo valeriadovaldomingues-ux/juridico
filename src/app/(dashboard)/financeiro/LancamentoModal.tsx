@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FORMAS_PAGAMENTO, FORMAS_COM_PARCELAS, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import {
   fetchClienteOptions,
@@ -21,6 +22,12 @@ interface LancamentoForm {
   cliente_id:   string
   processo_id:  string
   centro_custo: string
+  /** Como foi/será pago (só despesa). */
+  forma_pagamento: FormaPagamento | ''
+  parcelas_total:  string
+  parcela_atual:   string
+  /** Crédito parcelado, ao criar: lança as parcelas seguintes nos meses seguintes. */
+  lancar_parcelas_seguintes: boolean
 }
 
 const FORM_VAZIO: LancamentoForm = {
@@ -34,6 +41,10 @@ const FORM_VAZIO: LancamentoForm = {
   cliente_id:   '',
   processo_id:  '',
   centro_custo: '',
+  forma_pagamento: '',
+  parcelas_total:  '',
+  parcela_atual:   '',
+  lancar_parcelas_seguintes: true,
 }
 
 interface Props {
@@ -65,6 +76,10 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
         cliente_id:   lancamento.cliente_id   ?? '',
         processo_id:  lancamento.processo_id  ?? '',
         centro_custo: lancamento.centro_custo ?? '',
+        forma_pagamento: (lancamento.forma_pagamento ?? '') as LancamentoForm['forma_pagamento'],
+        parcelas_total:  lancamento.parcelas_total ? String(lancamento.parcelas_total) : '',
+        parcela_atual:   lancamento.parcela_atual ? String(lancamento.parcela_atual) : '',
+        lancar_parcelas_seguintes: true,
         categoria:    lancamento.categoria    ?? '',
       })
     } else {
@@ -257,6 +272,44 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
               allowClear
             />
           </div>
+
+          {/* Forma de pagamento (só despesa) */}
+          {form.tipo === 'despesa' && (
+            <div className="space-y-3 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3">
+              <div>
+                <label className={labelCls}>Forma de pagamento</label>
+                <select
+                  value={form.forma_pagamento}
+                  onChange={e => set('forma_pagamento', e.target.value as LancamentoForm['forma_pagamento'])}
+                  className={inputCls}
+                >
+                  <option value="">— Não informada —</option>
+                  {FORMAS_PAGAMENTO.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </div>
+              {form.forma_pagamento && FORMAS_COM_PARCELAS.includes(form.forma_pagamento as FormaPagamento) && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Total de parcelas</label>
+                      <input type="number" min="1" max="60" value={form.parcelas_total} onChange={e => set('parcelas_total', e.target.value)} placeholder="Ex: 10" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Parcela deste mês</label>
+                      <input type="number" min="1" max="60" value={form.parcela_atual} onChange={e => set('parcela_atual', e.target.value)} placeholder="Ex: 3" className={inputCls} />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#6b7280]">O valor acima é o da <strong>parcela</strong>, não o total da compra.</p>
+                  {!isEdicao && Number(form.parcelas_total) > 1 && Number(form.parcela_atual || 1) < Number(form.parcelas_total) && (
+                    <label className="flex items-start gap-2 text-[12px] text-[#374151] cursor-pointer">
+                      <input type="checkbox" checked={form.lancar_parcelas_seguintes} onChange={e => set('lancar_parcelas_seguintes', e.target.checked)} className="mt-0.5 rounded border-[#d1d5db]" />
+                      <span>Lançar também as próximas parcelas, uma em cada mês seguinte (da {form.parcela_atual || 1}ª à {form.parcelas_total}ª).</span>
+                    </label>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Centro de custo */}
           <div>

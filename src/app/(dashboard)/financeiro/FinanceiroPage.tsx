@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, TrendingUp, TrendingDown, Clock, AlertCircle,
   Pencil, Trash2, CheckCircle2, ChevronDown, Search,
-  Wallet, BarChart3, ListFilter, Banknote,
+  Wallet, BarChart3, ListFilter, Banknote, Send,
 } from 'lucide-react'
+import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
+import PedidosPagamentoView from './PedidosPagamentoView'
 import SalariosView, { type FuncionarioFolha } from './SalariosView'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
 
@@ -32,6 +35,9 @@ interface Lancamento {
   cliente_id:   string | null
   processo_id:  string | null
   centro_custo: string | null
+  forma_pagamento?: FormaPagamento | null
+  parcelas_total?:  number | null
+  parcela_atual?:   number | null
   created_at:   string
   cliente:  { id: string; nome: string } | null
   processo: { id: string; numero_processo: string | null; titulo: string } | null
@@ -58,7 +64,7 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
@@ -66,6 +72,7 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'despesas',    label: 'Despesas',        icon: TrendingDown },
   { id: 'salarios',    label: 'Salários',        icon: Banknote    },
   { id: 'receber',     label: 'A Receber',       icon: Clock       },
+  { id: 'pedidos',     label: 'Pedidos a pagar', icon: Send        },
   { id: 'pagar',       label: 'A Pagar',         icon: TrendingDown },
   { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
   { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
@@ -114,6 +121,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
 
 export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
+  const router = useRouter()
   const [aba,         setAba]         = useState<Aba>('grade')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando,    setEditando]    = useState<Lancamento | null>(null)
@@ -208,6 +216,10 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       processo_id:  form.processo_id || null,
       status:       form.status,
       centro_custo: form.centro_custo || null,
+      forma_pagamento: form.tipo === 'despesa' ? (form.forma_pagamento || null) : null,
+      parcelas_total:  form.tipo === 'despesa' ? (form.parcelas_total || null) : null,
+      parcela_atual:   form.tipo === 'despesa' ? (form.parcela_atual || null) : null,
+      lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
     }
 
     if (editando) {
@@ -232,8 +244,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         const err = await res.json().catch(() => ({}))
         return err.error ?? 'Erro ao criar'
       }
-      const novo = await res.json()
-      setLancamentos(prev => [novo, ...prev])
+      const { parcelas_extras: extras = [], ...novo } = await res.json()
+      setLancamentos(prev => [...extras, novo, ...prev])
     }
 
     fecharModal()
@@ -367,7 +379,9 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         </div>
 
         {/* Conteúdo das abas */}
-        {aba === 'relatorios' ? (
+        {aba === 'pedidos' ? (
+          <PedidosPagamentoView podeDecidir={role === 'socio'} onDespesaCriada={() => router.refresh()} />
+        ) : aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
         ) : aba === 'salarios' ? (
           <SalariosView mesInicial={mesFolhaAtual} funcionariosIniciais={funcionarios} />
@@ -478,8 +492,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                       <tr key={l.id} className="border-b border-[#f5f7fa] last:border-0 hover:bg-[#fafbfb] transition-colors group">
                         <td className="px-5 py-3.5">
                           <p className="text-[13px] font-medium text-[#0f1923]">{l.descricao}</p>
-                          {l.categoria && (
-                            <p className="text-[11px] text-[#a8b3c4] mt-0.5">{l.categoria}</p>
+                          {(l.categoria || rotuloPagamento(l)) && (
+                            <p className="text-[11px] text-[#a8b3c4] mt-0.5">{[l.categoria, rotuloPagamento(l)].filter(Boolean).join(' · ')}</p>
                           )}
                         </td>
                         <td className="px-4 py-3.5">
@@ -584,6 +598,9 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 cliente_id:   editando.cliente_id ?? '',
                 processo_id:  editando.processo_id ?? '',
                 centro_custo: editando.centro_custo ?? '',
+                forma_pagamento: editando.forma_pagamento ?? '',
+                parcelas_total:  editando.parcelas_total ? String(editando.parcelas_total) : '',
+                parcela_atual:   editando.parcela_atual ? String(editando.parcela_atual) : '',
               }
             : null}
           onSalvar={handleSalvar}
