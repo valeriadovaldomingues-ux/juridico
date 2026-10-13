@@ -205,7 +205,8 @@ export async function proxy(request: NextRequest) {
       isInternalPath && !pathname.startsWith('/kanban') &&
       !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) &&
       !isRotaDespesasLiberadaPorUsuario(pathname, user.id) &&
-      !usuarioLiberadoDoModoRestrito(user.id, role)
+      !usuarioLiberadoDoModoRestrito(user.id, role) &&
+      !rotaLiberadaParaUsuario(pathname, user.id, role)
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
