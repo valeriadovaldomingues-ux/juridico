@@ -103,7 +103,7 @@ const areaLabels: Record<string, string> = {
   empresarial: 'Empresarial', outro: 'Outro',
 }
 
-export default function ProcessosTable({ processos }: { processos: any[] }) {
+export default function ProcessosTable({ processos, totalEncerrados = 0 }: { processos: any[]; totalEncerrados?: number }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -111,9 +111,11 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
   const [numero, setNumero] = useState(searchParams.get('numero') ?? '')
   const [area, setArea] = useState(searchParams.get('area_direito') ?? '')
   const [status, setStatus] = useState(searchParams.get('status') ?? '')
+  const [encerrados, setEncerrados] = useState(searchParams.get('encerrados') === '1')
 
-  function applyFilters() {
+  function applyFilters(verEncerrados: boolean = encerrados) {
     const params = new URLSearchParams()
+    if (verEncerrados) params.set('encerrados', '1')
     if (titulo) params.set('q', titulo)
     if (numero) params.set('numero', numero)
     if (area)   params.set('area_direito', area)
@@ -122,11 +124,11 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
   }
 
   function clearFilters() {
-    setTitulo(''); setNumero(''); setArea(''); setStatus('')
+    setTitulo(''); setNumero(''); setArea(''); setStatus(''); setEncerrados(false)
     router.push('/processos')
   }
 
-  const hasFilters = titulo || numero || area || status
+  const hasFilters = titulo || numero || area || status || encerrados
 
   return (
     <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
@@ -170,8 +172,18 @@ export default function ProcessosTable({ processos }: { processos: any[] }) {
           {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
+        <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-2)] cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={encerrados}
+            onChange={(e) => { setEncerrados(e.target.checked); applyFilters(e.target.checked) }}
+            className="rounded border-[var(--color-border)]"
+          />
+          Ver encerrados e arquivados{totalEncerrados > 0 ? ` (${totalEncerrados.toLocaleString('pt-BR')})` : ''}
+        </label>
+
         <button
-          onClick={applyFilters}
+          onClick={() => applyFilters()}
           className="px-4 py-2 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
         >
           Filtrar
