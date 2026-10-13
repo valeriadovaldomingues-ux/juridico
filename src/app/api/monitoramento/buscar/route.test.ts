@@ -15,6 +15,9 @@ const {
   mockSleepExecutor: vi.fn(),
 }))
 
+// A trava "só de hoje para a frente" (data-minima.ts) tem teste próprio; aqui os cenários usam datas passadas.
+vi.mock('@/lib/monitoramento/data-minima', () => ({ publicacaoAnteriorADataMinima: () => false }))
+
 vi.mock('@/lib/auth/api-guard', () => ({
   apiGuard: mockApiGuard,
 }))
