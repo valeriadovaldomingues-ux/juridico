@@ -12,6 +12,7 @@ import {
 import AtaAudienciaModal from './AtaAudienciaModal'
 import NovoCompromissoModal from './NovoCompromissoModal'
 import EmailAtaModal from './EmailAtaModal'
+import EmailClienteModal from './EmailClienteModal'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -1006,6 +1007,7 @@ function AndamentosTab({
   // Atas de audiência do processo (andamento → ata) e a ata cujo e-mail ao cliente está aberto.
   const [atasPorAndamento, setAtasPorAndamento] = useState<Record<string, string>>({})
   const [emailAtaId, setEmailAtaId] = useState<string | null>(null)
+  const [showEmail, setShowEmail] = useState(false)
 
   useEffect(() => {
     if (role === 'estagiario') return
@@ -1220,6 +1222,15 @@ function AndamentosTab({
             </button>
           )}
           {role !== 'estagiario' && (
+            <button
+              onClick={() => setShowEmail(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[12px] font-medium hover:bg-[#145A5B]/5 transition-colors"
+              title="Escrever e enviar um e-mail ao cliente deste processo"
+            >
+              <Mail size={13} /> E-mail ao cliente
+            </button>
+          )}
+          {role !== 'estagiario' && (
             <>
               <button
                 onClick={() => onNovoCompromisso('prazo')}
@@ -1257,6 +1268,7 @@ function AndamentosTab({
         />
       )}
 
+      {showEmail && <EmailClienteModal processoId={processoId} onFechar={() => setShowEmail(false)} />}
       {emailAtaId && (
         <EmailAtaModal processoId={processoId} ataId={emailAtaId} onFechar={() => setEmailAtaId(null)} />
       )}

@@ -84,3 +84,17 @@ export function montarEmailAudienciaMarcada(d: DadosEmailAudienciaMarcada): Rasc
     corpo: blocos.join('\n\n'),
   }
 }
+
+export interface DadosEmailLivre {
+  clienteNome: string
+  numeroProcesso: string | null
+  advogadoNome: string | null
+}
+
+/** E-mail avulso ao cliente (sem ata): só a saudação e a assinatura; o advogado escreve o resto. */
+export function montarEmailLivre(d: DadosEmailLivre): RascunhoEmail {
+  return {
+    assunto: d.numeroProcesso ? `Processo ${d.numeroProcesso}` : '',
+    corpo: [`Prezado(a) ${d.clienteNome},`, '', '', ASSINATURA(d.advogadoNome)].join('\n'),
+  }
+}
