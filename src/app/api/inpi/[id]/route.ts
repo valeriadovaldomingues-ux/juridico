@@ -42,6 +42,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   for (const field of allowed_fields) {
     if (field in body) updates[field] = body[field]
   }
+  // "Não acompanhar": liga/desliga e guarda o motivo e quando foi marcado.
+  if (typeof body.nao_acompanhar === 'boolean') {
+    updates.nao_acompanhar = body.nao_acompanhar
+    updates.nao_acompanhar_em = body.nao_acompanhar ? new Date().toISOString() : null
+    updates.nao_acompanhar_motivo = body.nao_acompanhar ? (String(body.nao_acompanhar_motivo ?? '').trim() || null) : null
+  }
 
   const { data, error } = await supabase
     .from('inpi_processos')
