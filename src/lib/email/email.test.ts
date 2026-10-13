@@ -52,3 +52,17 @@ describe('montarEmailAudienciaMarcada', () => {
     expect(e.corpo).toContain('Local/link: Sala virtual https://x')
   })
 })
+
+describe('montarEmailLivre', () => {
+  it('traz só saudação e assinatura, com o número do processo no assunto', async () => {
+    const { montarEmailLivre } = await import('./templates')
+    const r = montarEmailLivre({ clienteNome: 'Maria', numeroProcesso: '0001234-56.2026.8.13.0024', advogadoNome: 'Débora' })
+    expect(r.assunto).toBe('Processo 0001234-56.2026.8.13.0024')
+    expect(r.corpo.startsWith('Prezado(a) Maria,')).toBe(true)
+    expect(r.corpo.endsWith('Atenciosamente,\nDébora\nPessoa e do Val Advocacia')).toBe(true)
+  })
+  it('sem número de processo, o assunto fica em branco para o advogado preencher', async () => {
+    const { montarEmailLivre } = await import('./templates')
+    expect(montarEmailLivre({ clienteNome: 'João', numeroProcesso: null, advogadoNome: null }).assunto).toBe('')
+  })
+})
