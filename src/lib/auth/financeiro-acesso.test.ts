@@ -26,8 +26,8 @@ describe('Salários e abas liberadas', () => {
     expect(podeAcessarSalarios('x', 'gerente')).toBe(false)
   })
 
-  it('quem é liberado individualmente só vê despesas, a pagar e salários (nada de receita)', () => {
-    expect([...ABAS_FINANCEIRO_LIBERADO]).toEqual(['despesas', 'pagar', 'salarios'])
+  it('quem é liberado individualmente só vê despesas, pedidos a pagar, a pagar e salários (nada de receita)', () => {
+    expect([...ABAS_FINANCEIRO_LIBERADO]).toEqual(['despesas', 'pedidos', 'pagar', 'salarios'])
     for (const aba of ['grade', 'receitas', 'receber', 'lancamentos', 'relatorios']) {
       expect(ABAS_FINANCEIRO_LIBERADO as readonly string[]).not.toContain(aba)
     }

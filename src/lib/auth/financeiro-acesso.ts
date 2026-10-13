@@ -2,7 +2,7 @@
 // Acesso à aba FINANCEIRO por usuário (não por papel).
 //
 // Pedido da Valéria em 13/10/2026: o Célio (administrativo) tem a aba Financeiro SÓ com as partes de
-// DESPESAS (Despesas, A Pagar) e SALÁRIOS (folha de pagamento). Sem receitas: Receita Partido (grade),
+// DESPESAS (Despesas, Pedidos a pagar, A Pagar) e SALÁRIOS (folha de pagamento). Sem receitas: Receita Partido (grade),
 // Receitas Extras, A Receber, Lançamentos e Relatórios. Continua SÓ com o sócio: apagar lançamentos e Cobranças (Inter).
 // Espelha as políticas do banco (função SQL public.financeiro_usuario_liberado()).
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ export function financeiroLiberadoPorUsuario(userId: string | null | undefined):
 }
 
 /** Abas do Financeiro que as pessoas liberadas individualmente enxergam (sócio vê todas). */
-export const ABAS_FINANCEIRO_LIBERADO = ['despesas', 'pagar', 'salarios'] as const
+export const ABAS_FINANCEIRO_LIBERADO = ['despesas', 'pedidos', 'pagar', 'salarios'] as const
 
 /** Folha de pagamento (Salários): sócio e quem foi liberado individualmente. */
 export function podeAcessarSalarios(userId: string | null | undefined, role: string): boolean {
