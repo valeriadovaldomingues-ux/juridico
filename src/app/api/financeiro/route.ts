@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { podeGerenciarLancamentoDespesa } from '@/lib/auth/despesas-acesso'
 import { createClient } from '@/lib/supabase/server'
+import { fornecedorDaDescricao } from '@/lib/financeiro/fornecedor'
 import { lerPagamento, serieDeParcelas } from '@/lib/financeiro/forma-pagamento'
 
 export async function POST(req: NextRequest) {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     processo_id:  body.processo_id || null,
     status:       i === 0 ? body.status : 'pendente',
     centro_custo: body.centro_custo || null,
+    fornecedor:   body.tipo === 'despesa' ? (String(body.fornecedor ?? '').trim() || fornecedorDaDescricao(String(body.descricao ?? '')) || null) : null,
     forma_pagamento: pag.dados.forma_pagamento,
     parcelas_total:  pag.dados.parcelas_total,
     parcela_atual:   pag.dados.forma_pagamento === 'credito' && pag.dados.parcelas_total ? parcela.parcela_atual : null,
