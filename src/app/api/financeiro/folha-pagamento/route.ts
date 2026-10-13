@@ -89,3 +89,27 @@ export async function PUT(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json(data)
 }
+
+// DELETE ?profile_id=...&mes=YYYY-MM-01 — cancela a folha (e, com ela, os recibos) lançada errada. Sócio e quem está liberado em Salários.
+export async function DELETE(req: NextRequest) {
+  const auth = await apiGuard(['socio', 'administrativo'])
+  if (auth instanceof NextResponse) return auth
+  if (!podeAcessarSalarios(auth.userId, auth.role)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+
+  const profileId = req.nextUrl.searchParams.get('profile_id')
+  const mes = req.nextUrl.searchParams.get('mes')
+  if (!profileId || !mes || !/^\d{4}-\d{2}-01$/.test(mes)) {
+    return NextResponse.json({ error: 'profile_id e mes (AAAA-MM-01) são obrigatórios' }, { status: 400 })
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('folha_pagamento')
+    .delete()
+    .eq('profile_id', profileId)
+    .eq('mes_referencia', mes)
+    .select('id')
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (!data?.length) return NextResponse.json({ error: 'Não há folha lançada para esse funcionário nesse mês.' }, { status: 404 })
+  return new NextResponse(null, { status: 204 })
+}
