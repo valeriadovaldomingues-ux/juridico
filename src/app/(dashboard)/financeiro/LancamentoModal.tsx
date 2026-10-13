@@ -22,6 +22,8 @@ interface LancamentoForm {
   cliente_id:   string
   processo_id:  string
   centro_custo: string
+  /** Quem recebeu o pagamento (só despesa). Vazio = usa o nome da despesa. */
+  fornecedor:   string
   /** Como foi/será pago (só despesa). */
   forma_pagamento: FormaPagamento | ''
   parcelas_total:  string
@@ -41,6 +43,7 @@ const FORM_VAZIO: LancamentoForm = {
   cliente_id:   '',
   processo_id:  '',
   centro_custo: '',
+  fornecedor:   '',
   forma_pagamento: '',
   parcelas_total:  '',
   parcela_atual:   '',
@@ -56,9 +59,11 @@ interface Props {
   onFechar:    () => void
   /** Trava o tipo (esconde o seletor) — usado em telas dedicadas, ex: /financeiro/despesas. */
   tipoFixo?:   'receita' | 'despesa'
+  /** Fornecedores já usados, para sugerir ao digitar. */
+  fornecedores?: string[]
 }
 
-export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFixo }: Props) {
+export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFixo, fornecedores = [] }: Props) {
   const [form,    setForm]    = useState<LancamentoForm>(tipoFixo ? { ...FORM_VAZIO, tipo: tipoFixo } : FORM_VAZIO)
   const [loading, setLoading] = useState(false)
   const [erro,    setErro]    = useState('')
@@ -76,6 +81,7 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
         cliente_id:   lancamento.cliente_id   ?? '',
         processo_id:  lancamento.processo_id  ?? '',
         centro_custo: lancamento.centro_custo ?? '',
+        fornecedor:   lancamento.fornecedor ?? '',
         forma_pagamento: (lancamento.forma_pagamento ?? '') as LancamentoForm['forma_pagamento'],
         parcelas_total:  lancamento.parcelas_total ? String(lancamento.parcelas_total) : '',
         parcela_atual:   lancamento.parcela_atual ? String(lancamento.parcela_atual) : '',
@@ -229,6 +235,24 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
             )}
           </div>
 
+          {form.tipo === 'despesa' ? (
+            <div>
+              <label className={labelCls}>Fornecedor</label>
+              <input
+                type="text"
+                list="fornecedores-sugeridos"
+                value={form.fornecedor}
+                onChange={e => set('fornecedor', e.target.value)}
+                placeholder={form.descricao.trim() ? `Em branco = ${form.descricao.trim()}` : 'Quem recebeu o pagamento'}
+                className={inputCls}
+              />
+              <datalist id="fornecedores-sugeridos">
+                {fornecedores.map(f => <option key={f} value={f} />)}
+              </datalist>
+              <p className="text-[11px] text-[#6b7280] mt-1">Preenchido sozinho pelo nome da despesa quando você não informar.</p>
+            </div>
+          ) : (
+          <>
           {/* Cliente */}
           <div>
             <label className={labelCls}>Cliente</label>
@@ -272,6 +296,9 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
               allowClear
             />
           </div>
+
+          </>
+          )}
 
           {/* Forma de pagamento (só despesa) */}
           {form.tipo === 'despesa' && (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { podeGerenciarLancamentoDespesa } from '@/lib/auth/despesas-acesso'
 import { createClient } from '@/lib/supabase/server'
+import { fornecedorDaDescricao } from '@/lib/financeiro/fornecedor'
 import { lerPagamento } from '@/lib/financeiro/forma-pagamento'
 
 export async function PUT(
@@ -48,6 +49,7 @@ export async function PUT(
       processo_id:  body.processo_id || null,
       status:       body.status,
       centro_custo: body.centro_custo || null,
+      fornecedor:   body.tipo === 'despesa' ? (String(body.fornecedor ?? '').trim() || fornecedorDaDescricao(String(body.descricao ?? '')) || null) : null,
       forma_pagamento: pag.dados.forma_pagamento,
       parcelas_total:  pag.dados.parcelas_total,
       parcela_atual:   pag.dados.parcela_atual,

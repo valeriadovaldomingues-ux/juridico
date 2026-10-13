@@ -14,6 +14,7 @@ import type { UserRole } from '@/types'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
+import RelatorioDespesasView from './RelatorioDespesasView'
 import PedidosPagamentoView from './PedidosPagamentoView'
 import SalariosView, { type FuncionarioFolha } from './SalariosView'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
@@ -35,6 +36,7 @@ interface Lancamento {
   cliente_id:   string | null
   processo_id:  string | null
   centro_custo: string | null
+  fornecedor?:  string | null
   forma_pagamento?: FormaPagamento | null
   parcelas_total?:  number | null
   parcela_atual?:   number | null
@@ -66,7 +68,7 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos' | 'rel_despesas'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
@@ -76,6 +78,7 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'receber',     label: 'A Receber',       icon: Clock       },
   { id: 'pedidos',     label: 'Pedidos a pagar', icon: Send        },
   { id: 'pagar',       label: 'A Pagar',         icon: TrendingDown },
+  { id: 'rel_despesas', label: 'Relatório de despesas', icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
   { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
 ]
@@ -154,7 +157,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       // Filtros extras
       if (filtStatus  && l.status !== filtStatus)              return false
       if (filtCliente && l.cliente_id !== filtCliente)         return false
-      if (busca       && !l.descricao.toLowerCase().includes(busca.toLowerCase()) && !(l.categoria ?? '').toLowerCase().includes(busca.toLowerCase())) return false
+      if (busca) {
+        const q = busca.toLowerCase()
+        const alvo = [l.descricao, l.categoria, l.fornecedor, l.cliente?.nome].filter(Boolean).join(' ').toLowerCase()
+        if (!alvo.includes(q)) return false
+      }
 
       // "A Receber"/"A Pagar" mostram tudo que está pendente, independente do mês —
       // o filtro de período só se aplica às demais abas (senão o contador da aba
@@ -164,6 +171,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       return true
     })
   }, [lancamentos, aba, filtStatus, filtCliente, busca, periodo, mesEspecifico, anoEspecifico])
+
+  const fornecedoresUsados = useMemo(
+    () => Array.from(new Set(lancamentos.map(l => l.fornecedor).filter((f): f is string => !!f))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [lancamentos],
+  )
 
   // ── Métricas ────────────────────────────────────────────────────────────
 
@@ -218,6 +230,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       processo_id:  form.processo_id || null,
       status:       form.status,
       centro_custo: form.centro_custo || null,
+      fornecedor:   form.tipo === 'despesa' ? (form.fornecedor?.trim() || null) : null,
       forma_pagamento: form.tipo === 'despesa' ? (form.forma_pagamento || null) : null,
       parcelas_total:  form.tipo === 'despesa' ? (form.parcelas_total || null) : null,
       parcela_atual:   form.tipo === 'despesa' ? (form.parcela_atual || null) : null,
@@ -305,13 +318,13 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       </div>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className={cn('grid gap-4', abasPermitidas ? 'grid-cols-2' : 'grid-cols-4')}>
         {[
           { label: 'Recebido',  value: metricas.recebido, icon: TrendingUp,   iconBg: 'bg-[#e6f4ee]', iconCl: 'text-[#2ecc71]', textCl: 'text-[#1a7a45]' },
           { label: 'Pago',      value: metricas.despPago, icon: TrendingDown,  iconBg: 'bg-[#fde8e8]', iconCl: 'text-[#e74c3c]', textCl: 'text-[#a93226]' },
           { label: 'A Receber', value: metricas.aReceber, icon: Clock,         iconBg: 'bg-[#e8f0fb]', iconCl: 'text-[#3498db]', textCl: 'text-[#1a4d9e]' },
           { label: 'Vencidos',  value: metricas.vencidos, icon: AlertCircle,   iconBg: 'bg-[#fde8e8]', iconCl: 'text-[#e74c3c]', textCl: 'text-[#a93226]' },
-        ].map(m => {
+        ].filter(m => !abasPermitidas || (m.label !== 'Recebido' && m.label !== 'A Receber')).map(m => {
           const Icon = m.icon
           return (
             <div key={m.label} className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -327,19 +340,6 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
             </div>
           )
         })}
-      </div>
-
-      {/* Saldo */}
-      <div className={cn(
-        'rounded-lg border px-5 py-3.5 flex items-center justify-between',
-        metricas.saldo >= 0 ? 'bg-[#e6f4ee] border-[#b8dfc9]' : 'bg-[#fde8e8] border-[#f5c6c6]',
-      )}>
-        <p className={`text-[13px] font-semibold ${metricas.saldo >= 0 ? 'text-[#1a7a45]' : 'text-[#a93226]'}`}>
-          Saldo geral (recebido − despesas pagas)
-        </p>
-        <p className={`text-[18px] font-bold tabular-nums ${metricas.saldo >= 0 ? 'text-[#1a7a45]' : 'text-[#a93226]'}`}>
-          {metricas.saldo >= 0 ? '+' : '−'} {formatCurrency(Math.abs(metricas.saldo))}
-        </p>
       </div>
 
       {/* Abas */}
@@ -383,6 +383,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         {/* Conteúdo das abas */}
         {aba === 'pedidos' ? (
           <PedidosPagamentoView podeDecidir={role === 'socio'} onDespesaCriada={() => router.refresh()} />
+        ) : aba === 'rel_despesas' ? (
+          <RelatorioDespesasView podeVerReferencia={role === 'socio'} />
         ) : aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
         ) : aba === 'salarios' ? (
@@ -399,7 +401,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                   type="text"
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
-                  placeholder="Buscar descrição…"
+                  placeholder={aba === 'despesas' || aba === 'pagar' ? 'Buscar descrição ou fornecedor…' : 'Buscar descrição…'}
                   className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8]"
                 />
               </div>
@@ -445,6 +447,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 />
               )}
 
+              {aba !== 'despesas' && aba !== 'pagar' && (
               <div className="min-w-[240px] max-w-sm flex-1">
                 <SearchableCombobox
                   value={filtCliente}
@@ -459,6 +462,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                   clearLabel="Todos os clientes"
                 />
               </div>
+              )}
 
               <span className="text-[11px] text-[#9ca3af] ml-auto shrink-0">
                 {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
@@ -475,7 +479,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 <thead>
                   <tr className="bg-[#f9fafb] border-b border-[#f3f4f6]">
                     <Th first>Descrição</Th>
-                    <Th>Cliente / Processo</Th>
+                    <Th>{aba === 'despesas' || aba === 'pagar' ? 'Fornecedor' : 'Cliente / Fornecedor'}</Th>
                     <Th>Vencimento</Th>
                     <Th>Tipo</Th>
                     <Th>Valor</Th>
@@ -499,15 +503,17 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                           )}
                         </td>
                         <td className="px-4 py-3.5">
-                          {l.cliente ? (
+                          {l.tipo === 'despesa' ? (
+                            <p className="text-[12px] text-[#374151]">{l.fornecedor || l.descricao}</p>
+                          ) : l.cliente ? (
                             <p className="text-[12px] text-[#374151]">{l.cliente.nome}</p>
                           ) : null}
-                          {l.processo ? (
+                          {l.tipo !== 'despesa' && l.processo ? (
                             <p className="text-[11px] text-[#9ca3af] mt-0.5 truncate max-w-[160px]">
                               {l.processo.numero_processo ?? l.processo.titulo}
                             </p>
                           ) : null}
-                          {!l.cliente && !l.processo && <span className="text-[12px] text-[#c5cdd8]">—</span>}
+                          {l.tipo !== 'despesa' && !l.cliente && !l.processo && <span className="text-[12px] text-[#c5cdd8]">—</span>}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className={cn('text-[12px]', vencido ? 'text-red-600 font-medium' : 'text-[#374151]')}>
@@ -588,6 +594,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       {modalAberto && (
         <LancamentoModal
           tipoFixo={acessoCompleto ? 'despesa' : undefined}
+          fornecedores={fornecedoresUsados}
           lancamento={editando
             ? {
                 id:           editando.id,
@@ -601,6 +608,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 cliente_id:   editando.cliente_id ?? '',
                 processo_id:  editando.processo_id ?? '',
                 centro_custo: editando.centro_custo ?? '',
+                fornecedor:   editando.fornecedor ?? '',
                 forma_pagamento: editando.forma_pagamento ?? '',
                 parcelas_total:  editando.parcelas_total ? String(editando.parcelas_total) : '',
                 parcela_atual:   editando.parcela_atual ? String(editando.parcela_atual) : '',

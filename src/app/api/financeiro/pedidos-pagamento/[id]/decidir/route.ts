@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
 import { isUUID } from '@/lib/portal/validate'
+import { fornecedorDaDescricao } from '@/lib/financeiro/fornecedor'
 import { descricaoDaDespesa } from '@/lib/financeiro/pedidos-pagamento'
 import { serieDeParcelas } from '@/lib/financeiro/forma-pagamento'
 
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       vencimento: parcela.vencimento,
       status: 'pendente',
       centro_custo: pedido.centro_custo,
+      fornecedor: String(pedido.fornecedor ?? '').trim() || fornecedorDaDescricao(descricaoDaDespesa(pedido)),
       forma_pagamento: pedido.forma_pagamento,
       parcelas_total: pedido.parcelas_total,
       parcela_atual: pedido.forma_pagamento === 'credito' && pedido.parcelas_total ? parcela.parcela_atual : null,

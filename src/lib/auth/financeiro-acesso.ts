@@ -22,7 +22,7 @@ export function financeiroLiberadoPorUsuario(userId: string | null | undefined):
 }
 
 /** Abas do Financeiro que as pessoas liberadas individualmente enxergam (sócio vê todas). */
-export const ABAS_FINANCEIRO_LIBERADO = ['despesas', 'pedidos', 'pagar', 'salarios'] as const
+export const ABAS_FINANCEIRO_LIBERADO = ['despesas', 'pedidos', 'pagar', 'rel_despesas', 'salarios'] as const
 
 /** Folha de pagamento (Salários): sócio e quem foi liberado individualmente. */
 export function podeAcessarSalarios(userId: string | null | undefined, role: string): boolean {
