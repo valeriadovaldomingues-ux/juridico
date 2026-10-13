@@ -39,7 +39,16 @@ const ADVOGADO_COM_RELATORIOS: AcessoUsuario = {
   rotasLiberadas: ['/relatorios'],
 }
 
+// Célio (administrativo): continua no modo restrito, mais a aba Financeiro (13/10/2026), sem Cobranças.
+// Salários/folha ficam só com o sócio (a página esconde a aba e o banco bloqueia).
+const CELIO_FINANCEIRO: AcessoUsuario = {
+  liberadoDoModoRestrito: false,
+  rotasBloqueadas: ['/financeiro/cobrancas'],
+  rotasLiberadas: ['/financeiro'],
+}
+
 export const ACESSO_POR_USUARIO: Readonly<Record<string, AcessoUsuario>> = {
+  '3baf1f52-4950-4a1e-937a-126ce0fa1e34': CELIO_FINANCEIRO, // Célio Costa
   '80be07bd-e23a-4ece-aa02-a7cde54bf6c7': ADVOGADO_COM_RELATORIOS, // Tuane Miranda
   '1a5ed586-77e0-4f6f-a652-444056d86b1b': ADVOGADO_SEM_DOCUMENTOS_MONITORAMENTO_IA_TV, // Marcelo Mariano
   'dd154172-ebb2-498a-af49-c56ada33792a': ADVOGADO_SEM_DOCUMENTOS_MONITORAMENTO_IA_TV, // Débora Brito

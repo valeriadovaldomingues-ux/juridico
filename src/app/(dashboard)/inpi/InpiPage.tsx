@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { ORDENS_INPI, ORDEM_INPI_PADRAO, ordemInpiValida, ordenarInpi, type OrdemInpi } from '@/lib/inpi/ordenar'
 import {
   AlertCircle, Stamp, Plus, Search, X, Loader2, Mail, Phone,
   Clock, CheckCircle2, XCircle, Archive, Ban, Trash2, Send,
@@ -74,6 +75,19 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMostrarArquivados(lerMostrarArquivados())
   }, [])
+  // Ordem da lista (padrão: alfabética pela marca); a escolha fica guardada neste navegador.
+  const [ordem, setOrdem] = useState<OrdemInpi>(ORDEM_INPI_PADRAO)
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrdem(ordemInpiValida(localStorage.getItem('pedv:inpi:ordem')))
+    } catch { /* sem preferência */ }
+  }, [])
+  function mudarOrdem(valor: string) {
+    const nova = ordemInpiValida(valor)
+    setOrdem(nova)
+    try { localStorage.setItem('pedv:inpi:ordem', nova) } catch { /* preferência não persiste */ }
+  }
   function alternarArquivados(valor: boolean) {
     setMostrarArquivados(valor)
     try { localStorage.setItem('pedv:inpi:mostrar-arquivados', String(valor)) } catch { /* preferência não persiste */ }
@@ -100,7 +114,17 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     [processos, mostrarArquivados, status],
   )
   const qtdArquivados = useMemo(() => processos.filter(p => p.status === 'arquivado').length, [processos])
-  const selected = processos.find(p => p.id === selectedId) ?? visiveis[0] ?? processos[0] ?? null
+  const filtrados = useMemo(() => {
+    return visiveis.filter(p => {
+      if (status && p.status !== status) return false
+      if (clienteId && p.cliente_id !== clienteId) return false
+      const haystack = `${p.titulo} ${p.numero_processo} ${p.cliente?.nome ?? ''}`.toLowerCase()
+      if (busca && !haystack.includes(busca.toLowerCase())) return false
+      return true
+    })
+  }, [visiveis, status, clienteId, busca])
+  const ordenados = useMemo(() => ordenarInpi(filtrados, ordem), [filtrados, ordem])
+  const selected = processos.find(p => p.id === selectedId) ?? ordenados[0] ?? processos[0] ?? null
 
   // Tudo vira "andamento": o que o escritório fez + as publicações da RPI do processo, do mais novo ao mais antigo.
   type ItemLinha =
@@ -113,16 +137,6 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     ]
     return itens.sort((x, y) => (y.data.localeCompare(x.data)) || (y.criado.localeCompare(x.criado)))
   }, [selected?.andamentos, selected?.movimentacoes])
-
-  const filtrados = useMemo(() => {
-    return visiveis.filter(p => {
-      if (status && p.status !== status) return false
-      if (clienteId && p.cliente_id !== clienteId) return false
-      const haystack = `${p.titulo} ${p.numero_processo} ${p.cliente?.nome ?? ''}`.toLowerCase()
-      if (busca && !haystack.includes(busca.toLowerCase())) return false
-      return true
-    })
-  }, [visiveis, status, clienteId, busca])
 
   const metricas = useMemo(() => {
     const total = visiveis.length
@@ -339,6 +353,9 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               <option value="">Todos clientes</option>
               {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
+            <select value={ordem} onChange={e => mudarOrdem(e.target.value)} aria-label="Ordenar por" className="px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+              {ORDENS_INPI.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
             <label className="flex items-center gap-2 text-[12px] text-[#5b6776] cursor-pointer select-none">
               <input type="checkbox" checked={mostrarArquivados} onChange={e => alternarArquivados(e.target.checked)} className="rounded border-[#d8dee8]" />
               Mostrar arquivados{qtdArquivados > 0 ? ` (${qtdArquivados})` : ''}
@@ -357,7 +374,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#eef2f5]">
-                {filtrados.map(p => (
+                {ordenados.map(p => (
                   <tr key={p.id} onClick={() => setSelectedId(p.id)} className={cn('cursor-pointer hover:bg-[#F7F9F9]', selected?.id === p.id && 'bg-[#eef7f7]')}>
                     <td className="px-4 py-3">
                       <p className="text-[13px] font-medium text-[#0f1923]">{p.titulo}</p>

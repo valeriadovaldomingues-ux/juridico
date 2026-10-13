@@ -411,7 +411,7 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
 export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: string | null): boolean {
   if (rotaBloqueadaParaUsuario(pathname, userId, role)) return false
   if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId, role)) {
-    return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
+    return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) || rotaLiberadaParaUsuario(pathname, userId, role)
   }
   if (rotaLiberadaParaUsuario(pathname, userId, role)) return true
   for (const { prefix, roles } of RESTRICTED_ROUTES) {

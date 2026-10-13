@@ -43,6 +43,10 @@ interface Props {
   mesFolhaAtual: string
   gradePagamento: ItemGrade[]
   role:         UserRole
+  /** Liberado individualmente no Financeiro (ex.: Célio): pode lançar e editar, mas não apagar. */
+  acessoCompleto?: boolean
+  /** Aba de Salários/folha: só sócio. */
+  verSalarios?: boolean
 }
 
 // ─── Config de status ────────────────────────────────────────────────────────
@@ -108,7 +112,7 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const [aba,         setAba]         = useState<Aba>('grade')
   const [modalAberto, setModalAberto] = useState(false)
@@ -123,8 +127,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
   const [filtStatus,    setFiltStatus]    = useState('')
   const [filtCliente,   setFiltCliente]   = useState('')
 
-  const podeCriar  = can(role, 'financeiro', 'create')
-  const podeEditar = can(role, 'financeiro', 'edit')
+  const podeCriar  = acessoCompleto || can(role, 'financeiro', 'create')
+  const podeEditar = acessoCompleto || can(role, 'financeiro', 'edit')
   const podeExcluir= can(role, 'financeiro', 'delete')
 
   // ── Dados filtrados ──────────────────────────────────────────────────────
@@ -328,7 +332,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         <div className="flex border-b border-[#f3f4f6]">
-          {ABAS.map(a => {
+          {ABAS.filter(a => a.id !== 'salarios' || verSalarios).map(a => {
             const Icon = a.icon
             const ativo = aba === a.id
             return (
