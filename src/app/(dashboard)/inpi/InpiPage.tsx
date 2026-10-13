@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import type { UserRole } from '@/types'
-import type { InpiAndamento, InpiAndamentoTipo, InpiProcesso, InpiStatus, InpiTipo } from '@/types/inpi'
+import type { InpiAndamento, InpiAndamentoTipo, InpiMovimentacao, InpiProcesso, InpiStatus, InpiTipo } from '@/types/inpi'
 import { INPI_ANDAMENTO_TIPO_LABEL, INPI_STATUS_LABEL, INPI_TIPO_LABEL, calcularDecenio } from '@/types/inpi'
 import { createClient } from '@/lib/supabase/client'
 
@@ -101,6 +101,18 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
   )
   const qtdArquivados = useMemo(() => processos.filter(p => p.status === 'arquivado').length, [processos])
   const selected = processos.find(p => p.id === selectedId) ?? visiveis[0] ?? processos[0] ?? null
+
+  // Tudo vira "andamento": o que o escritório fez + as publicações da RPI do processo, do mais novo ao mais antigo.
+  type ItemLinha =
+    | { kind: 'andamento'; id: string; data: string; criado: string; a: InpiAndamento }
+    | { kind: 'rpi'; id: string; data: string; criado: string; m: InpiMovimentacao }
+  const linhaDoTempo = useMemo<ItemLinha[]>(() => {
+    const itens: ItemLinha[] = [
+      ...(selected?.andamentos ?? []).map(a => ({ kind: 'andamento' as const, id: `a-${a.id}`, data: a.data_andamento, criado: a.created_at, a })),
+      ...(selected?.movimentacoes ?? []).map(m => ({ kind: 'rpi' as const, id: `m-${m.id}`, data: m.rpi_data, criado: m.created_at, m })),
+    ]
+    return itens.sort((x, y) => (y.data.localeCompare(x.data)) || (y.criado.localeCompare(x.criado)))
+  }, [selected?.andamentos, selected?.movimentacoes])
 
   const filtrados = useMemo(() => {
     return visiveis.filter(p => {
@@ -408,60 +420,52 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               )}
 
               <div className="pt-2 border-t border-[#eef2f5]">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-[#34495e]">Andamentos do escritório</p>
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <p className="text-[12px] font-semibold text-[#34495e]">Andamentos</p>
                   {podeCriar && (
-                    <button onClick={abrirAndamento} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0F3D3E] text-white text-[12px] font-medium hover:bg-[#145A5B]">
-                      <Plus size={13} /> Andamento
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setMovModal(true)} className="text-[12px] text-[#145A5B] font-medium hover:underline" title="Lançar à mão uma publicação da RPI">+ Publicação (RPI)</button>
+                      <button onClick={abrirAndamento} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0F3D3E] text-white text-[12px] font-medium hover:bg-[#145A5B]">
+                        <Plus size={13} /> Andamento
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {(selected.andamentos ?? []).map(a => (
-                    <div key={a.id} className="rounded-lg border border-[#eef2f5] px-3 py-2">
+                <p className="text-[11px] text-[#9aa5b1] mb-2">As publicações da RPI aparecem aqui junto com o que o escritório fez.</p>
+                <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                  {linhaDoTempo.map(item => item.kind === 'andamento' ? (
+                    <div key={item.id} className="rounded-lg border border-[#eef2f5] px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(a.data_andamento)}{a.protocolo ? ` · Prot. ${a.protocolo}` : ''}</p>
+                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(item.a.data_andamento)}{item.a.protocolo ? ` · Prot. ${item.a.protocolo}` : ''}</p>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-teal-50 text-teal-700">{INPI_ANDAMENTO_TIPO_LABEL[a.tipo] ?? a.tipo}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-teal-50 text-teal-700">{INPI_ANDAMENTO_TIPO_LABEL[item.a.tipo] ?? item.a.tipo}</span>
                           {podeExcluir && (
-                            <button onClick={() => apagarAndamento(a)} title="Apagar andamento" className="text-[#9aa5b1] hover:text-rose-600"><Trash2 size={12} /></button>
+                            <button onClick={() => apagarAndamento(item.a)} title="Apagar andamento" className="text-[#9aa5b1] hover:text-rose-600"><Trash2 size={12} /></button>
                           )}
                         </div>
                       </div>
-                      <p className="text-[13px] font-medium text-[#0f1923] mt-1">{a.titulo}</p>
-                      {a.prorrogacao_deferida && <p className="text-[11px] font-semibold text-emerald-700 mt-0.5">Prorrogação deferida (+10 anos de vigência)</p>}
-                      {a.descricao && <p className="text-[12px] text-[#34495e] mt-1 whitespace-pre-wrap">{a.descricao}</p>}
+                      <p className="text-[13px] font-medium text-[#0f1923] mt-1">{item.a.titulo}</p>
+                      {item.a.prorrogacao_deferida && <p className="text-[11px] font-semibold text-emerald-700 mt-0.5">Prorrogação deferida (+10 anos de vigência)</p>}
+                      {item.a.descricao && <p className="text-[12px] text-[#34495e] mt-1 whitespace-pre-wrap">{item.a.descricao}</p>}
                       <p className="text-[11px] text-[#9aa5b1] mt-1">
-                        {a.responsavel_nome ? `Responsável: ${a.responsavel_nome}` : ''}{a.responsavel_nome && a.criado_por_nome ? ' · ' : ''}{a.criado_por_nome ? `Lançado por ${a.criado_por_nome}` : ''}
+                        {item.a.responsavel_nome ? `Responsável: ${item.a.responsavel_nome}` : ''}{item.a.responsavel_nome && item.a.criado_por_nome ? ' · ' : ''}{item.a.criado_por_nome ? `Lançado por ${item.a.criado_por_nome}` : ''}
                       </p>
                     </div>
-                  ))}
-                  {selected.andamentos === undefined && <p className="text-[12px] text-[#9aa5b1]">Carregando…</p>}
-                  {selected.andamentos?.length === 0 && <p className="text-[12px] text-[#9aa5b1]">Nenhum andamento registrado ainda.</p>}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-[#eef2f5]">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-[#34495e]">Publicações da RPI (movimentações)</p>
-                  {podeCriar && (
-                    <button onClick={() => setMovModal(true)} className="text-[12px] text-[#145A5B] font-medium hover:underline">+ Registrar</button>
-                  )}
-                </div>
-                <div className="space-y-2 max-h-[240px] overflow-y-auto">
-                  {(selected.movimentacoes ?? []).map(m => (
-                    <div key={m.id} className="rounded-lg border border-[#eef2f5] px-3 py-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(m.rpi_data)}{m.rpi_numero ? ` · RPI ${m.rpi_numero}` : ''}</p>
-                        <span className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-medium', m.origem === 'rpi_auto' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-600')}>
-                          {m.origem === 'rpi_auto' ? 'RPI' : 'Manual'}
+                  ) : (
+                    <div key={item.id} className="rounded-lg border border-sky-100 bg-sky-50/40 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-[#7a8899]">{formatDate(item.m.rpi_data)}{item.m.rpi_numero ? ` · RPI ${item.m.rpi_numero}` : ''}</p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-sky-100 text-sky-800">
+                          {item.m.origem === 'rpi_auto' ? 'Publicação INPI (RPI)' : 'Publicação INPI (lançada à mão)'}
                         </span>
                       </div>
-                      <p className="text-[13px] text-[#0f1923] mt-0.5">{m.descricao}</p>
+                      <p className="text-[13px] font-medium text-[#0f1923] mt-1">{item.m.descricao}</p>
+                      {item.m.codigo_despacho && <p className="text-[11px] text-[#7a8899] mt-0.5">Despacho {item.m.codigo_despacho}</p>}
                     </div>
                   ))}
-                  {(!selected.movimentacoes || selected.movimentacoes.length === 0) && (
-                    <p className="text-[12px] text-[#9aa5b1]">Nenhuma movimentação registrada ainda.</p>
+                  {(selected.andamentos === undefined || selected.movimentacoes === undefined) && <p className="text-[12px] text-[#9aa5b1]">Carregando…</p>}
+                  {selected.andamentos !== undefined && selected.movimentacoes !== undefined && linhaDoTempo.length === 0 && (
+                    <p className="text-[12px] text-[#9aa5b1]">Nenhum andamento registrado ainda.</p>
                   )}
                 </div>
               </div>
