@@ -9,6 +9,7 @@ import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from '../LancamentoModal'
+import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,9 @@ interface Despesa {
   cliente_id:   string | null
   processo_id:  string | null
   centro_custo: string | null
+  forma_pagamento?: FormaPagamento | null
+  parcelas_total?:  number | null
+  parcela_atual?:   number | null
   created_at:   string
   cliente:  { id: string; nome: string } | null
   processo: { id: string; numero_processo: string | null; titulo: string } | null
@@ -137,6 +141,10 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
       processo_id:  form.processo_id || null,
       status:       form.status,
       centro_custo: form.centro_custo || null,
+      forma_pagamento: form.forma_pagamento || null,
+      parcelas_total:  form.parcelas_total || null,
+      parcela_atual:   form.parcela_atual || null,
+      lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
     }
 
     if (editando) {
@@ -161,8 +169,8 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
         const err = await res.json().catch(() => ({}))
         return err.error ?? 'Erro ao criar'
       }
-      const novo = await res.json()
-      setDespesas(prev => [novo, ...prev])
+      const { parcelas_extras: extras = [], ...novo } = await res.json()
+      setDespesas(prev => [...extras, novo, ...prev])
     }
 
     fecharModal()
@@ -331,7 +339,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
                   <tr key={d.id} className="border-b border-[#f9fafb] last:border-0 hover:bg-[#fafbfb]">
                     <td className="px-4 py-3 text-[13px] text-[#374151]">
                       {d.descricao}
-                      {d.categoria && <span className="block text-[11px] text-[#9ca3af]">{d.categoria}</span>}
+                      {(d.categoria || rotuloPagamento(d)) && <span className="block text-[11px] text-[#9ca3af]">{[d.categoria, rotuloPagamento(d)].filter(Boolean).join(' · ')}</span>}
                     </td>
                     <td className="px-4 py-3 text-[13px] text-[#374151]">{d.cliente?.nome ?? '—'}</td>
                     <td className="px-4 py-3 text-[13px] text-[#374151]">{formatDate(d.vencimento)}</td>
