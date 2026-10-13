@@ -1,4 +1,6 @@
-import { requireRole } from '@/lib/auth/guards'
+import { redirect } from 'next/navigation'
+import { requireAuth } from '@/lib/auth/guards'
+import { rotaLiberadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
 import { createClient } from '@/lib/supabase/server'
 import { TIPO_TEM_PRAZO } from '../agenda/agenda-types'
 import { createClient as svcClient }  from '@supabase/supabase-js'
@@ -15,8 +17,12 @@ function getServiceClient() {
 import RelatoriosPage from './RelatoriosPage'
 
 export default async function RelatoriosRoute() {
-  // advogado removido — relatorios apenas para gerente e sócio na nova matriz
-  const { profile } = await requireRole(['gerente', 'socio'])
+  // Relatórios: gerente e sócio, mais pessoas liberadas individualmente (ex.: Tuane) — ver
+  // src/lib/auth/acesso-por-usuario.ts. O financeiro continua só para gerente/sócio (verFinanceiro).
+  const { profile, userId } = await requireAuth()
+  if (!['gerente', 'socio'].includes(profile.role) && !rotaLiberadaParaUsuario('/relatorios', userId, profile.role)) {
+    redirect('/dashboard')
+  }
   const supabase = await createClient()
 
   const verFinanceiro = ['gerente', 'socio'].includes(profile.role)

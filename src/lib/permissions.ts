@@ -1,6 +1,6 @@
 import type { UserRole } from '@/types'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
-import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
+import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario, acessoDoUsuario } from '@/lib/auth/acesso-por-usuario'
 
 export { KANBAN_ONLY_MODE }
 
@@ -413,6 +413,7 @@ export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: st
   if (KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId, role)) {
     return pathname.startsWith('/kanban') || KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r))
   }
+  if (rotaLiberadaParaUsuario(pathname, userId, role)) return true
   for (const { prefix, roles } of RESTRICTED_ROUTES) {
     if (pathname.startsWith(prefix)) return roles.includes(role)
   }
@@ -428,7 +429,8 @@ export function roleCanAccessRoute(role: UserRole, pathname: string, userId?: st
 export function getAllowedRoutes(role: UserRole, userId?: string | null): string[] {
   const restrito = KANBAN_ONLY_MODE && !KANBAN_ONLY_EXEMPT_ROLES.includes(role) && !usuarioLiberadoDoModoRestrito(userId, role)
   const rotas = restrito ? ['/kanban', ...KANBAN_ONLY_EXTRA_ROUTES] : ALLOWED_ROUTES[role]
-  return rotas.filter(r => !rotaBloqueadaParaUsuario(r, userId, role))
+  const extras = (acessoDoUsuario(userId, role)?.rotasLiberadas ?? []).filter(r => !rotas.includes(r))
+  return [...rotas, ...extras].filter(r => !rotaBloqueadaParaUsuario(r, userId, role))
 }
 
 // ─── Extensão futura: acesso por processo ────────────────────────────────────
