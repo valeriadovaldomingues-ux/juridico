@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Download, FileUp, Loader2, NotebookPen, Plus, Sparkles, X } from 'lucide-react'
+import { ChevronDown, Download, FileUp, Loader2, NotebookPen, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TarefaSugerida } from '@/lib/reunioes/extrair-tarefas'
 
@@ -21,7 +21,18 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const dataBR = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : null)
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
-export default function ReunioesPage({ reunioes, tarefas, equipe, podeCriar }: { reunioes: Reuniao[]; tarefas: TarefaDaReuniao[]; equipe: Pessoa[]; podeCriar: boolean }) {
+export default function ReunioesPage({ reunioes, tarefas, equipe, podeCriar, podeApagar }: { reunioes: Reuniao[]; tarefas: TarefaDaReuniao[]; equipe: Pessoa[]; podeCriar: boolean; podeApagar: boolean }) {
+  const router = useRouter()
+  const [apagando, setApagando] = useState<string | null>(null)
+
+  async function apagar(r: Reuniao) {
+    if (!window.confirm(`Apagar a ata "${r.titulo}" (${dataBR(r.data_reuniao)})?\n\nIsso é definitivo: o texto e o arquivo guardado somem. Os cartões que ela criou no Kanban continuam.`)) return
+    setApagando(r.id)
+    const res = await fetch(`/api/reunioes/${r.id}`, { method: 'DELETE' })
+    setApagando(null)
+    if (!res.ok) { const corpo = await res.json().catch(() => ({})); alert(corpo.error ?? 'Não foi possível apagar a ata.'); return }
+    router.refresh()
+  }
   const [aberta, setAberta] = useState<string | null>(null)
   const [nova, setNova] = useState(false)
   const nomes = useMemo(() => new Map(equipe.map(p => [p.id, p.nome])), [equipe])
@@ -59,8 +70,19 @@ export default function ReunioesPage({ reunioes, tarefas, equipe, podeCriar }: {
             const feitas = ts.filter(t => t.status === 'concluido').length
             const expandida = aberta === r.id
             return (
-              <li key={r.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-                <button onClick={() => setAberta(expandida ? null : r.id)} className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-[var(--color-surface-warm)]/50">
+              <li key={r.id} className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+                {podeApagar && (
+                  <button
+                    type="button"
+                    onClick={() => apagar(r)}
+                    disabled={apagando === r.id}
+                    title="Apagar esta ata"
+                    className="absolute right-12 top-3.5 z-10 p-1.5 rounded-lg text-[var(--color-ink-3)] hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {apagando === r.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  </button>
+                )}
+                <button onClick={() => setAberta(expandida ? null : r.id)} className="w-full flex items-center justify-between gap-3 px-5 py-4 pr-24 text-left hover:bg-[var(--color-surface-warm)]/50">
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold text-[var(--color-ink)]">{r.titulo}</p>
                     <p className="text-[12px] text-[var(--color-ink-3)] mt-0.5">
