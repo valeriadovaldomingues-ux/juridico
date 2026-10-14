@@ -6,6 +6,7 @@ import {
   COBRANCAS_ALLOWED_ROLES,
   WEBHOOK_MAX_BYTES,
   createRecurringCobrancasAction,
+  cancelCobrancaAction,
   createSingleCobrancaAction,
   deleteCobrancaAction,
   emitInterCobrancaAction,
@@ -942,4 +943,50 @@ test('duplicate delete attempt returns 404 after first deletion', async () => {
   assert.equal(second.ok, false)
   assert.equal(second.status, 404)
   assert.equal(store.logs.length, 1)
+})
+
+test('cancel: cancela no Inter e depois marca como cancelada, com evento e log', async () => {
+  const store = createTestStore({ charges: [{ id: 'c-emitida', status: 'emitida', inter_cobranca_id: 'inter-1', linha_digitavel: '123' }] })
+  const chamadas: string[] = []
+  const result = await cancelCobrancaAction({
+    role: 'socio', userId: 'socio-1', store: store.store, id: 'c-emitida', motivo: 'Cobranca em duplicidade',
+    inter: { cancelInterCharge: async (id, motivo) => { chamadas.push(`${id}|${motivo}`); return { ok: true } } },
+  })
+  assert.equal(result.ok, true)
+  assert.deepEqual(chamadas, ['inter-1|Cobranca em duplicidade'])
+  assert.equal(store.charges[0].status, 'cancelada')
+  assert.equal(store.logs.at(-1)?.acao, 'cancelamento')
+  assert.equal(store.logs.at(-1)?.usuario_id, 'socio-1')
+})
+
+test('cancel: se o Inter recusa, a cobranca continua como estava', async () => {
+  const store = createTestStore({ charges: [{ id: 'c-emitida', status: 'emitida', inter_cobranca_id: 'inter-1' }] })
+  const result = await cancelCobrancaAction({
+    role: 'socio', userId: 'socio-1', store: store.store, id: 'c-emitida',
+    inter: { cancelInterCharge: async () => { throw new Error('Inter indisponivel') } },
+  })
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 502)
+  assert.equal(store.charges[0].status, 'emitida')
+  assert.equal(store.logs.at(-1)?.acao, 'erro_cancelamento_inter')
+})
+
+test('cancel: sem emissao no Inter, so marca como cancelada (nao chama o banco)', async () => {
+  const store = createTestStore({ charges: [{ id: 'c-rascunho', status: 'pendente' }] })
+  let chamou = false
+  const result = await cancelCobrancaAction({
+    role: 'socio', userId: 'socio-1', store: store.store, id: 'c-rascunho',
+    inter: { cancelInterCharge: async () => { chamou = true } },
+  })
+  assert.equal(result.ok, true)
+  assert.equal(chamou, false)
+  assert.equal(store.charges[0].status, 'cancelada')
+})
+
+test('cancel: paga, ja cancelada e nao-socio sao recusadas', async () => {
+  const store = createTestStore({ charges: [{ id: 'c-paga', status: 'paga' }, { id: 'c-canc', status: 'cancelada' }, { id: 'c-ok', status: 'emitida', inter_cobranca_id: 'i' }] })
+  const inter = { cancelInterCharge: async () => ({}) }
+  assert.equal((await cancelCobrancaAction({ role: 'socio', userId: 'u', store: store.store, inter, id: 'c-paga' })).status, 409)
+  assert.equal((await cancelCobrancaAction({ role: 'socio', userId: 'u', store: store.store, inter, id: 'c-canc' })).status, 409)
+  assert.equal((await cancelCobrancaAction({ role: 'gerente', userId: 'u', store: store.store, inter, id: 'c-ok' })).status, 403)
 })
