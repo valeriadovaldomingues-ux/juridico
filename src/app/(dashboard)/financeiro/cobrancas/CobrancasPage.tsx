@@ -21,6 +21,8 @@ import { can } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/types'
 import type { Cobranca, CobrancaStatus } from '@/types/cobrancas'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
+import { fetchClienteOptions } from '@/lib/search/remote'
 import PagadorInterModal from './PagadorInterModal'
 
 interface ClienteOpcao {
@@ -83,6 +85,9 @@ type PagadorFormValues = {
   uf:          string
 }
 
+type NovoClienteValues = { ativo: boolean; nome: string; email: string }
+const emptyNovoCliente: NovoClienteValues = { ativo: false, nome: '', email: '' }
+
 const emptyPagador: PagadorFormValues = {
   cpf_cnpj: '', tipo_pessoa: '', cep: '', endereco: '',
   numero: '', complemento: '', bairro: '', cidade: '', uf: '',
@@ -143,6 +148,8 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [form, setForm] = useState(emptyForm)
   const [recorrente, setRecorrente] = useState(emptyRecorrente)
   const [pagadorForm, setPagadorForm] = useState<PagadorFormValues>(emptyPagador)
+  const [novoCliente, setNovoCliente] = useState<NovoClienteValues>(emptyNovoCliente)
+  const [processosExtras, setProcessosExtras] = useState<ProcessoOpcao[]>([])
   const [status, setStatus] = useState('')
   const [clienteId, setClienteId] = useState('')
   const [mes, setMes] = useState('')
@@ -178,21 +185,32 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     return { aberto, pago, vencidas, total: cobrancas.length }
   }, [cobrancas])
 
-  const processosDoCliente = processos.filter(p => {
+  const processosDoCliente = [...processos, ...processosExtras.filter(e => !processos.some(p => p.id === e.id))].filter(p => {
     const cid = modal === 'recorrente' ? recorrente.cliente_id : form.cliente_id
-    return !cid || p.cliente_id === cid
+    return !!cid && p.cliente_id === cid
   })
 
-  /** Salva os dados do pagador (CPF/CNPJ, endereço...) direto no cadastro
-   *  do cliente, se algo foi preenchido na tela de nova cobrança. Não
-   *  bloqueia a criação da cobrança se falhar — a tela de emissão
-   *  (PagadorInterModal) continua como conferência final antes do Inter. */
-  async function salvarDadosPagador(clienteId: string) {
-    if (!clienteId) return
-    const preenchido = Object.values(pagadorForm).some(v => v.trim())
-    if (!preenchido) return
+  function abrirModal(tipo: 'unica' | 'recorrente') {
+    setForm(emptyForm); setRecorrente(emptyRecorrente); setPagadorForm(emptyPagador); setNovoCliente(emptyNovoCliente); setError(null)
+    setModal(tipo)
+  }
+
+  /** Cliente escolhido na busca (qualquer cliente do cadastro): traz os dados do pagador e os processos dele. */
+  async function carregarCliente(id: string) {
     const supabase = createClient()
-    await supabase.from('clientes').update({
+    const [{ data: cli }, { data: procs }] = await Promise.all([
+      supabase.from('clientes').select('id, nome, cpf_cnpj, email, tipo_pessoa, cep, endereco, numero, complemento, bairro, cidade, uf').eq('id', id).maybeSingle(),
+      supabase.from('processos').select('id, numero_processo, titulo, cliente_id').eq('cliente_id', id).in('status', ['ativo', 'suspenso']).order('titulo').limit(200),
+    ])
+    setPagadorForm(pagadorFromCliente((cli ?? undefined) as ClienteOpcao | undefined))
+    setProcessosExtras(prev => [...prev, ...((procs ?? []) as ProcessoOpcao[]).filter(n => !prev.some(p => p.id === n.id))])
+  }
+
+  /** Guarda os dados do pagador (CPF/CNPJ, endereço...) no cadastro do cliente — e cria o cliente, se for novo.
+   *  Devolve o id do cliente a cobrar, ou um erro (a cobrança não é criada sem os dados guardados). */
+  async function prepararCliente(clienteSelecionado: string): Promise<{ id: string } | { erro: string }> {
+    const supabase = createClient()
+    const dados = {
       cpf_cnpj:    pagadorForm.cpf_cnpj.trim()    || null,
       tipo_pessoa: pagadorForm.tipo_pessoa         || null,
       cep:         pagadorForm.cep.trim()         || null,
@@ -202,15 +220,42 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
       bairro:      pagadorForm.bairro.trim()      || null,
       cidade:      pagadorForm.cidade.trim()      || null,
       uf:          pagadorForm.uf.trim().toUpperCase() || null,
-    }).eq('id', clienteId)
+    }
+    const digitos = (dados.cpf_cnpj ?? '').replace(/\D/g, '')
+    if (dados.cpf_cnpj && digitos.length !== 11 && digitos.length !== 14) {
+      return { erro: 'CPF/CNPJ inválido: informe 11 dígitos (CPF) ou 14 (CNPJ).' }
+    }
+
+    if (novoCliente.ativo) {
+      const nome = novoCliente.nome.trim()
+      if (!nome) return { erro: 'Informe o nome do novo cliente.' }
+      if (digitos) {
+        const { data: igual } = await supabase.from('clientes').select('id, nome').or(`cpf_cnpj.eq.${dados.cpf_cnpj},cpf_cnpj.eq.${digitos}`).limit(1)
+        if (igual?.length) return { erro: `Já existe um cliente com este CPF/CNPJ: ${igual[0].nome}. Cancele o "cliente novo" e escolha-o na busca.` }
+      }
+      const { data: criado, error: erroCriar } = await supabase.from('clientes').insert({
+        nome, email: novoCliente.email.trim() || null, tipo_contato: 'cliente', ...dados, tipo_pessoa: dados.tipo_pessoa ?? (digitos.length === 14 ? 'juridica' : 'fisica'),
+      }).select('id').single()
+      if (erroCriar || !criado) return { erro: `Não consegui cadastrar o cliente: ${erroCriar?.message ?? 'erro'}` }
+      return { id: criado.id as string }
+    }
+
+    if (!clienteSelecionado) return { erro: 'Escolha o cliente (ou marque "Cliente novo").' }
+    if (Object.values(dados).some(Boolean)) {
+      const { error: erroAtualizar } = await supabase.from('clientes').update(dados).eq('id', clienteSelecionado)
+      if (erroAtualizar) return { erro: `Não consegui guardar os dados do pagador: ${erroAtualizar.message}` }
+    }
+    return { id: clienteSelecionado }
   }
 
   async function createSingle() {
     setSaving(true)
     setError(null)
-    await salvarDadosPagador(form.cliente_id)
+    const cliente = await prepararCliente(form.cliente_id)
+    if ('erro' in cliente) { setSaving(false); setError(cliente.erro); return }
     const payload = {
       ...form,
+      cliente_id: cliente.id,
       valor: Number(form.valor.replace(',', '.')),
       processo_id: form.processo_id || null,
     }
@@ -229,17 +274,20 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setSelectedId(data.id)
     setForm(emptyForm)
     setPagadorForm(emptyPagador)
+    setNovoCliente(emptyNovoCliente)
     setModal(null)
   }
 
   async function createRecurring() {
     setSaving(true)
     setError(null)
-    await salvarDadosPagador(recorrente.cliente_id)
+    const cliente = await prepararCliente(recorrente.cliente_id)
+    if ('erro' in cliente) { setSaving(false); setError(cliente.erro); return }
     const quantidade = Number(recorrente.quantidade_parcelas)
     const valorVariavel = recorrente.tipo_caso === 'partido' && !!recorrente.valor_variavel
     const payload = {
       ...recorrente,
+      cliente_id: cliente.id,
       valor: Number(recorrente.valor.replace(',', '.')),
       quantidade_parcelas: quantidade,
       dia_vencimento: Number(recorrente.dia_vencimento),
@@ -267,6 +315,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     setSelectedId(data[0]?.id ?? selectedId)
     setRecorrente(emptyRecorrente)
     setPagadorForm(emptyPagador)
+    setNovoCliente(emptyNovoCliente)
     setModal(null)
   }
 
@@ -343,11 +392,11 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
         </div>
         {podeCriar && (
           <div className="flex items-center gap-2">
-            <button onClick={() => setModal('recorrente')} className="inline-flex items-center gap-2 px-3 py-2 border border-[#d8dee8] text-[#34495e] text-[13px] font-medium rounded-lg hover:bg-[#F7F9F9]">
+            <button onClick={() => abrirModal('recorrente')} className="inline-flex items-center gap-2 px-3 py-2 border border-[#d8dee8] text-[#34495e] text-[13px] font-medium rounded-lg hover:bg-[#F7F9F9]">
               <Clipboard size={15} />
               Gerar contrato
             </button>
-            <button onClick={() => setModal('unica')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-lg">
+            <button onClick={() => abrirModal('unica')} className="inline-flex items-center gap-2 px-3 py-2 bg-[#0F3D3E] hover:bg-[#145A5B] text-white text-[13px] font-medium rounded-lg">
               <Plus size={15} />
               Nova cobranca
             </button>
@@ -526,11 +575,13 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
                     ? setForm as React.Dispatch<React.SetStateAction<ChargeFormValues>>
                     : setRecorrente as React.Dispatch<React.SetStateAction<ChargeFormValues>>
                 }
-                clientes={clientes}
                 processos={processosDoCliente}
                 recorrente={modal === 'recorrente'}
                 pagadorForm={pagadorForm}
                 setPagadorForm={setPagadorForm}
+                novoCliente={novoCliente}
+                setNovoCliente={setNovoCliente}
+                onClienteEscolhido={carregarCliente}
               />
               <div className="rounded-lg bg-[#F7F9F9] border border-[#e8edf2] p-3 text-[12px] text-[#5b6776]">
                 Revise cliente, valor, vencimento e descricao antes de salvar. Nesta versao, a emissao no Inter e a confirmacao de boleto/Pix acontecem de forma ativa apos a criacao.
@@ -665,42 +716,77 @@ function CopyBox({ label, value, onCopy }: { label: string; value: string | null
 function ChargeForm({
   form,
   setForm,
-  clientes,
   processos,
   recorrente,
   pagadorForm,
   setPagadorForm,
+  novoCliente,
+  setNovoCliente,
+  onClienteEscolhido,
 }: {
   form: ChargeFormValues
   setForm: React.Dispatch<React.SetStateAction<ChargeFormValues>>
-  clientes: ClienteOpcao[]
   processos: ProcessoOpcao[]
   recorrente: boolean
   pagadorForm: PagadorFormValues
   setPagadorForm: React.Dispatch<React.SetStateAction<PagadorFormValues>>
+  novoCliente: NovoClienteValues
+  setNovoCliente: React.Dispatch<React.SetStateAction<NovoClienteValues>>
+  onClienteEscolhido: (id: string) => Promise<void>
 }) {
+  const [clienteOpcao, setClienteOpcao] = useState<SearchableComboboxOption | null>(null)
   const set = (key: keyof ChargeFormValues, value: string) => setForm(prev => ({ ...prev, [key]: value }))
   const setPagador = (key: keyof PagadorFormValues, value: string) => setPagadorForm(prev => ({ ...prev, [key]: value }))
 
-  function selecionarCliente(id: string) {
+  function escolherCliente(id: string, opcao: SearchableComboboxOption | null) {
     set('cliente_id', id)
-    setPagadorForm(pagadorFromCliente(clientes.find(c => c.id === id)))
+    set('processo_id', '')
+    setClienteOpcao(opcao)
+    if (id) void onClienteEscolhido(id)
+    else setPagadorForm(emptyPagador)
+  }
+
+  function alternarNovoCliente(ativo: boolean) {
+    setNovoCliente(prev => ({ ...prev, ativo }))
+    set('cliente_id', '')
+    set('processo_id', '')
+    setClienteOpcao(null)
+    setPagadorForm(emptyPagador)
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <label className="space-y-1 md:col-span-2">
-        <span className="text-[12px] font-medium text-[#34495e]">Cliente</span>
-        <select value={form.cliente_id} onChange={e => selecionarCliente(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
-          <option value="">Selecione</option>
-          {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-        </select>
-      </label>
+      <div className="space-y-1 md:col-span-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-medium text-[#34495e]">Cliente</span>
+          <button type="button" onClick={() => alternarNovoCliente(!novoCliente.ativo)} className="text-[12px] font-medium text-[#145A5B] hover:underline">
+            {novoCliente.ativo ? 'Escolher cliente já cadastrado' : 'Cliente novo? Cadastrar aqui'}
+          </button>
+        </div>
+        {novoCliente.ativo ? (
+          <div className="grid grid-cols-2 gap-3">
+            <input value={novoCliente.nome} onChange={e => setNovoCliente(prev => ({ ...prev, nome: e.target.value }))} placeholder="Nome completo / razão social" className="col-span-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+            <input value={novoCliente.email} onChange={e => setNovoCliente(prev => ({ ...prev, email: e.target.value }))} placeholder="E-mail (opcional)" className="col-span-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+          </div>
+        ) : (
+          <SearchableCombobox
+            value={form.cliente_id}
+            selectedOption={clienteOpcao}
+            onChange={escolherCliente}
+            loadOptions={async (query) => fetchClienteOptions(query, 10)}
+            placeholder="Buscar cliente por nome, CPF/CNPJ…"
+            searchPlaceholder="Digite o nome, CPF/CNPJ, telefone ou e-mail"
+            helperText="Digite ao menos 2 caracteres."
+            emptyText="Digite para buscar clientes."
+            noResultsText="Nenhum cliente encontrado. Use “Cliente novo? Cadastrar aqui”."
+          />
+        )}
+      </div>
 
-      {form.cliente_id && (
+      {(form.cliente_id || novoCliente.ativo) && (
         <div className="md:col-span-2 rounded-lg border border-[#e8edf2] bg-[#F7F9F9] p-3 space-y-3">
           <p className="text-[12px] font-semibold text-[#34495e]">
-            Dados do pagador <span className="font-normal text-[#7a8899]">— necessários pra emitir boleto/Pix no Inter; confira ou complete</span>
+            Dados do pagador <span className="font-normal text-[#7a8899]">— necessários pra emitir boleto/Pix no Inter. Ficam guardados no cadastro do cliente.</span>
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
