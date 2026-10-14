@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import {
   AlertCircle,
+  Ban,
   Banknote,
   Clipboard,
   Copy,
@@ -162,6 +163,11 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteReason, setDeleteReason] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [cancelTarget, setCancelTarget] = useState<Cobranca | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelConfirm, setCancelConfirm] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   const podeCriar = can(role, 'financeiro', 'create') || ['administrativo', 'gerente', 'socio'].includes(role)
   const podeExcluir = role === 'socio'
@@ -378,6 +384,34 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     closeDeleteModal()
   }
 
+  function openCancelModal(cobranca: Cobranca) {
+    setCancelTarget(cobranca); setCancelConfirm(''); setCancelReason(''); setCancelError(null)
+  }
+
+  function closeCancelModal() {
+    if (cancelling) return
+    setCancelTarget(null); setCancelConfirm(''); setCancelReason(''); setCancelError(null)
+  }
+
+  async function cancelarCobranca() {
+    if (!cancelTarget || cancelConfirm !== 'CANCELAR') return
+    setCancelling(true)
+    setCancelError(null)
+    const res = await fetch(`/api/financeiro/cobrancas/${cancelTarget.id}/cancelar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo: cancelReason.trim() || null }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setCancelling(false)
+    if (!res.ok) {
+      setCancelError(data.error ?? 'Nao foi possivel cancelar a cobranca.')
+      return
+    }
+    setCobrancas(prev => prev.map(c => c.id === cancelTarget.id ? { ...c, ...data, cliente: c.cliente, processo: c.processo } : c))
+    closeCancelModal()
+  }
+
   const deleteBlockReason = selected ? getDeleteBlockReason(selected) : null
 
   return (
@@ -537,6 +571,18 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
                   <Send size={15} />
                   Copiar mensagem WhatsApp
                 </button>
+                {podeExcluir && !['paga', 'cancelada'].includes(selected.status) && (
+                  <div className="pt-2 border-t border-[#eef2f5]">
+                    <button
+                      onClick={() => openCancelModal(selected)}
+                      disabled={busyId === selected.id}
+                      className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg border border-amber-300 text-amber-800 text-[13px] font-medium hover:bg-amber-50 disabled:opacity-60"
+                    >
+                      <Ban size={15} />
+                      Cancelar cobrança{selected.inter_cobranca_id ? ' (e o boleto no Inter)' : ''}
+                    </button>
+                  </div>
+                )}
                 {podeExcluir && (
                   <div className="pt-2 border-t border-[#eef2f5]">
                     <button
@@ -606,6 +652,47 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
         />
       )}
 
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl border border-[#e8edf2]">
+            <div className="px-5 py-4 border-b border-[#eef2f5] flex items-center justify-between">
+              <h2 className="text-[16px] font-semibold text-[#0f1923]">Cancelar cobrança</h2>
+              <button onClick={closeCancelModal} disabled={cancelling}><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+                {cancelTarget.inter_cobranca_id
+                  ? 'O boleto e o Pix serão cancelados no Banco Inter e o cliente não poderá mais pagá-los. Só será marcada como cancelada aqui se o banco aceitar.'
+                  : 'Esta cobrança ainda não foi emitida no Banco Inter; ela será apenas marcada como cancelada.'}
+                {' '}A cobrança fica no histórico.
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-[13px]">
+                <Info label="Cliente" value={cancelTarget.cliente?.nome ?? 'Cliente'} />
+                <Info label="Valor" value={formatCurrency(Number(cancelTarget.valor))} />
+                <Info label="Vencimento" value={formatDate(cancelTarget.data_vencimento)} />
+                <Info label="Status" value={statusCfg[cancelTarget.status]?.label ?? cancelTarget.status} />
+              </div>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Motivo do cancelamento (opcional)</span>
+                <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[12px] font-medium text-[#34495e]">Digite CANCELAR para confirmar</span>
+                <input value={cancelConfirm} onChange={e => setCancelConfirm(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
+              </label>
+              {cancelError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{cancelError}</p>}
+            </div>
+            <div className="px-5 py-4 border-t border-[#eef2f5] flex justify-end gap-2">
+              <button onClick={closeCancelModal} disabled={cancelling} className="px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]">Voltar</button>
+              <button onClick={cancelarCobranca} disabled={cancelling || cancelConfirm !== 'CANCELAR'} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-700 text-white text-[13px] font-medium disabled:opacity-60">
+                {cancelling ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
+                Cancelar cobrança
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-lg bg-white shadow-xl border border-[#e8edf2]">
@@ -666,7 +753,7 @@ function getDeleteBlockReason(cobranca: Cobranca) {
     cobranca.payload_criacao ||
     cobranca.payload_ultimo_status
   ) {
-    return 'Esta cobrança possui indícios de emissão no Banco Inter. Cancele a cobrança em vez de excluir.'
+    return 'Esta cobrança possui indícios de emissão no Banco Inter. Use “Cancelar cobrança” em vez de excluir.'
   }
   return null
 }
