@@ -18,6 +18,7 @@ import RelatorioDespesasView from './RelatorioDespesasView'
 import PedidosPagamentoView from './PedidosPagamentoView'
 import SalariosView, { type FuncionarioFolha } from './SalariosView'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
+import ReceberPartidoMes from './ReceberPartidoMes'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,15 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
   const podeEditar = acessoCompleto || can(role, 'financeiro', 'edit')
   const podeExcluir= can(role, 'financeiro', 'delete')
 
+  function mudarAba(nova: Aba) {
+    setAba(nova)
+  }
+
+  /** Mês escolhido no período (para a Receita Partido em A Receber); null se o período não é um único mês. */
+  const mesDoPeriodo: string | null = periodo === 'este-mes' ? new Date().toISOString().slice(0, 7)
+    : periodo === 'mes-anterior' ? somarMesYM(new Date().toISOString().slice(0, 7), -1)
+    : periodo === 'mes-especifico' && mesEspecifico ? mesEspecifico : null
+
   /** Setas ‹ › do período: andam de mês em mês (ou de ano em ano, se o período for um ano). */
   function navegarPeriodo(delta: number) {
     const agora = new Date().toISOString().slice(0, 7)
@@ -199,10 +209,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         if (!alvo.includes(q)) return false
       }
 
-      // "A Receber"/"A Pagar" mostram tudo que está pendente, independente do mês —
-      // o filtro de período só se aplica às demais abas (senão o contador da aba
-      // (que soma sem filtro de período) fica inconsistente com a lista mostrada).
-      if (aba !== 'receber' && aba !== 'pagar' && !filtrarPorPeriodo(l.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
+      // "A Receber"/"A Pagar" também andam por mês (setas ‹ ›); ao entrar nelas o período é "Todo o período".
+      if (!filtrarPorPeriodo(l.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
 
       return true
     })
@@ -389,7 +397,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
             return (
               <button
                 key={a.id}
-                onClick={() => setAba(a.id)}
+                onClick={() => mudarAba(a.id)}
                 className={cn(
                   'flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-all border-b-2 -mb-px',
                   ativo
@@ -443,7 +451,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 />
               </div>
 
-              {aba !== 'receber' && aba !== 'pagar' && (
+              {(
                 <>
                   <div className="flex items-center gap-1">
                     <button onClick={() => navegarPeriodo(-1)} title="Anterior" className="p-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]"><ChevronLeft size={13} /></button>
@@ -507,8 +515,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
               )}
 
               <span className="text-[11px] text-[#9ca3af] ml-auto shrink-0">
-                {(aba === 'receitas' || aba === 'despesas') && filtrados.length > 0 && (
-                  <strong className="mr-2 text-[#374151]">Total: {formatCurrency(filtrados.filter(l => l.tipo === (aba === 'receitas' ? 'receita' : 'despesa') && l.status !== 'cancelado').reduce((a, l) => a + l.valor, 0))}</strong>
+                {(aba === 'receitas' || aba === 'despesas' || aba === 'receber' || aba === 'pagar') && filtrados.length > 0 && (
+                  <strong className="mr-2 text-[#374151]">Total: {formatCurrency(filtrados.filter(l => l.tipo === (aba === 'receitas' || aba === 'receber' ? 'receita' : 'despesa') && l.status !== 'cancelado').reduce((a, l) => a + l.valor, 0))}</strong>
                 )}
                 {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
               </span>
@@ -630,6 +638,13 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                   })}
                 </tbody>
               </table>
+            )}
+
+            {/* A Receber: Receita Partido do mês escolhido (clientes de boleto que ainda não pagaram) */}
+            {aba === 'receber' && gradePagamento.length > 0 && (
+              mesDoPeriodo
+                ? <ReceberPartidoMes itens={gradePagamento} mes={mesDoPeriodo} />
+                : <p className="px-5 py-4 border-t border-[#f3f4f6] text-[12px] text-[#9ca3af]">Escolha um mês nas setas ‹ › para ver também a Receita Partido a receber.</p>
             )}
           </>
         )}
