@@ -22,7 +22,7 @@ export default async function FinanceiroRoute() {
       .from('financeiro_lancamentos')
       .select('*, cliente:clientes(id, nome), processo:processos(id, numero_processo, titulo)')
       .order('vencimento', { ascending: false })
-      .limit(500),
+      .limit(1000),
     // Todo mundo que recebe salário: todos os papéis, menos sócio (ver folha_pagamento).
     verSalarios
       // Quem não é gerente/sócio só enxerga o próprio perfil pelas regras do banco; a lista de funcionários

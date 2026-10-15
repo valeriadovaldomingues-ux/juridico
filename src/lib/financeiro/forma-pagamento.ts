@@ -54,7 +54,7 @@ export function lerPagamento(entrada: { forma_pagamento?: unknown; parcelas_tota
 
 /** "Crédito 3/10", "Débito", "Pix"… ou null se não informado. */
 export function rotuloPagamento(l: Partial<PagamentoDados> | null | undefined): string | null {
-  if (!l?.forma_pagamento) return null
+  if (!l?.forma_pagamento) return l?.parcelas_total && l.parcelas_total > 1 && l.parcela_atual ? `Parcela ${l.parcela_atual}/${l.parcelas_total}` : null
   const base = ROTULO.get(l.forma_pagamento) ?? l.forma_pagamento
   return l.parcelas_total && l.parcelas_total > 1 && l.parcela_atual ? `${base} ${l.parcela_atual}/${l.parcelas_total}` : base
 }

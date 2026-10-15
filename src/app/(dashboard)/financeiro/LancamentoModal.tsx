@@ -30,6 +30,11 @@ interface LancamentoForm {
   parcela_atual:   string
   /** Crédito parcelado, ao criar: lança as parcelas seguintes nos meses seguintes. */
   lancar_parcelas_seguintes: boolean
+  /** Pagamento recorrente/parcelado: um lançamento por mês, só ao criar. */
+  recorrente: boolean
+  recorrencia_qtd: string
+  /** true = o valor informado é o TOTAL (dividido nas parcelas); false = é o valor de cada parcela. */
+  recorrencia_valor_total: boolean
 }
 
 const FORM_VAZIO: LancamentoForm = {
@@ -48,6 +53,9 @@ const FORM_VAZIO: LancamentoForm = {
   parcelas_total:  '',
   parcela_atual:   '',
   lancar_parcelas_seguintes: true,
+  recorrente: false,
+  recorrencia_qtd: '',
+  recorrencia_valor_total: false,
 }
 
 interface Props {
@@ -86,6 +94,9 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
         parcelas_total:  lancamento.parcelas_total ? String(lancamento.parcelas_total) : '',
         parcela_atual:   lancamento.parcela_atual ? String(lancamento.parcela_atual) : '',
         lancar_parcelas_seguintes: true,
+        recorrente: false,
+        recorrencia_qtd: '',
+        recorrencia_valor_total: false,
         categoria:    lancamento.categoria    ?? '',
       })
     } else {
@@ -333,6 +344,39 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
                       <span>Lançar também as próximas parcelas, uma em cada mês seguinte (da {form.parcela_atual || 1}ª à {form.parcelas_total}ª).</span>
                     </label>
                   )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Pagamento recorrente / parcelado (só ao criar; no crédito parcelado vale o parcelamento do crédito) */}
+          {!isEdicao && !(form.tipo === 'despesa' && form.forma_pagamento === 'credito') && (
+            <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 space-y-3">
+              <label className="flex items-center gap-2 text-[13px] font-medium text-[#374151] cursor-pointer">
+                <input type="checkbox" checked={form.recorrente} onChange={e => set('recorrente', e.target.checked)} className="rounded border-[#d1d5db]" />
+                Pagamento recorrente / parcelado
+              </label>
+              {form.recorrente && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Quantos meses / parcelas</label>
+                      <input type="number" min="2" max="60" value={form.recorrencia_qtd} onChange={e => set('recorrencia_qtd', e.target.value)} placeholder="Ex: 6" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>O valor informado é</label>
+                      <select value={form.recorrencia_valor_total ? 'total' : 'parcela'} onChange={e => set('recorrencia_valor_total', e.target.value === 'total')} className={inputCls}>
+                        <option value="parcela">De cada mês / parcela</option>
+                        <option value="total">O total (dividir)</option>
+                      </select>
+                    </div>
+                  </div>
+                  {(() => {
+                    const q = Number(form.recorrencia_qtd), v = parseFloat(form.valor)
+                    if (!Number.isInteger(q) || q < 2 || !(v > 0)) return <p className="text-[11px] text-[#6b7280]">Será lançado um por mês, no mesmo dia do vencimento acima.</p>
+                    const cada = form.recorrencia_valor_total ? v / q : v
+                    return <p className="text-[11px] text-[#6b7280]">Serão {q} lançamentos mensais{form.recorrencia_valor_total ? ' de cerca de' : ' de'} <strong>{cada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong> (total {(form.recorrencia_valor_total ? v : v * q).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}), a partir da data de vencimento. Só o primeiro herda o status informado; os demais ficam pendentes.</p>
+                  })()}
                 </>
               )}
             </div>
