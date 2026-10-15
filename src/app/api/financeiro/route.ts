@@ -4,6 +4,7 @@ import { podeGerenciarLancamentoDespesa } from '@/lib/auth/despesas-acesso'
 import { createClient } from '@/lib/supabase/server'
 import { fornecedorDaDescricao } from '@/lib/financeiro/fornecedor'
 import { lerPagamento, serieDeParcelas } from '@/lib/financeiro/forma-pagamento'
+import { lerRecorrencia, serieRecorrente } from '@/lib/financeiro/recorrencia'
 
 export async function POST(req: NextRequest) {
   const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
@@ -21,14 +22,23 @@ export async function POST(req: NextRequest) {
     ? lerPagamento(body)
     : { ok: true as const, dados: { forma_pagamento: null, parcelas_total: null, parcela_atual: null } }
   if (!pag.ok) return NextResponse.json({ error: pag.erro }, { status: 400 })
-  const serie = serieDeParcelas(body.vencimento, pag.dados, body.lancar_parcelas_seguintes !== false)
+  // Pagamento recorrente/parcelado (despesas e receitas extras): um lançamento por mês. Não vale junto com o parcelamento do crédito.
+  const rec = lerRecorrencia(body.recorrencia)
+  if (!rec.ok) return NextResponse.json({ error: rec.erro }, { status: 400 })
+  if (rec.dados && pag.dados.forma_pagamento === 'credito' && pag.dados.parcelas_total) {
+    return NextResponse.json({ error: 'No crédito parcelado use o total de parcelas do próprio crédito, sem a recorrência.' }, { status: 400 })
+  }
+  const valorBase = Number(body.valor)
+  const serie = rec.dados
+    ? serieRecorrente(body.vencimento, valorBase, rec.dados)
+    : serieDeParcelas(body.vencimento, pag.dados, body.lancar_parcelas_seguintes !== false).map(p => ({ ...p, valor: valorBase, parcelas_total: pag.dados.parcelas_total }))
   const parcelamentoId = serie.length > 1 ? crypto.randomUUID() : null
 
   const linhas = serie.map((parcela, i) => ({
     tipo:         body.tipo,
     categoria:    body.categoria || 'Geral',
     descricao:    body.descricao,
-    valor:        Number(body.valor),
+    valor:        parcela.valor,
     vencimento:   parcela.vencimento,
     // as parcelas futuras nascem pendentes; só a primeira herda o status/pagamento informado
     pagamento_em: i === 0 ? (body.pagamento_em || null) : null,
@@ -38,8 +48,8 @@ export async function POST(req: NextRequest) {
     centro_custo: body.centro_custo || null,
     fornecedor:   body.tipo === 'despesa' ? (String(body.fornecedor ?? '').trim() || fornecedorDaDescricao(String(body.descricao ?? '')) || null) : null,
     forma_pagamento: pag.dados.forma_pagamento,
-    parcelas_total:  pag.dados.parcelas_total,
-    parcela_atual:   pag.dados.forma_pagamento === 'credito' && pag.dados.parcelas_total ? parcela.parcela_atual : null,
+    parcelas_total:  rec.dados ? parcela.parcelas_total : pag.dados.parcelas_total,
+    parcela_atual:   rec.dados ? parcela.parcela_atual : (pag.dados.forma_pagamento === 'credito' && pag.dados.parcelas_total ? parcela.parcela_atual : null),
     parcelamento_id: parcelamentoId,
   }))
 

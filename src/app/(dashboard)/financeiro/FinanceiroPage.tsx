@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, TrendingUp, TrendingDown, Clock, AlertCircle,
-  Pencil, Trash2, CheckCircle2, ChevronDown, Search,
+  Pencil, Trash2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search,
   Wallet, BarChart3, ListFilter, Banknote, Send,
 } from 'lucide-react'
 import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
@@ -122,6 +122,20 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
   }
 }
 
+const MESES_ROTULO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+/** "2026-10" → "outubro de 2026". */
+function rotuloMes(ym: string): string {
+  const [a, m] = ym.split('-').map(Number)
+  return `${MESES_ROTULO[(m || 1) - 1]} de ${a}`
+}
+
+function somarMesYM(ym: string, delta: number): string {
+  const [a, m] = ym.split('-').map(Number)
+  const t = (a * 12 + (m - 1)) + delta
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+}
+
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true, abasPermitidas }: Props) {
@@ -143,6 +157,28 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
   const podeCriar  = acessoCompleto || can(role, 'financeiro', 'create')
   const podeEditar = acessoCompleto || can(role, 'financeiro', 'edit')
   const podeExcluir= can(role, 'financeiro', 'delete')
+
+  /** Setas ‹ › do período: andam de mês em mês (ou de ano em ano, se o período for um ano). */
+  function navegarPeriodo(delta: number) {
+    const agora = new Date().toISOString().slice(0, 7)
+    if (periodo === 'ano' || periodo === 'ano-especifico') {
+      const base = periodo === 'ano' ? new Date().getFullYear() : Number(anoEspecifico) || new Date().getFullYear()
+      setAnoEspecifico(String(base + delta))
+      setPeriodo('ano-especifico')
+      return
+    }
+    const base = periodo === 'mes-anterior' ? somarMesYM(agora, -1) : periodo === 'mes-especifico' && mesEspecifico ? mesEspecifico : agora
+    setMesEspecifico(somarMesYM(base, delta))
+    setPeriodo('mes-especifico')
+  }
+
+  const rotuloPeriodo = periodo === 'todos' ? 'Todo o período'
+    : periodo === 'ano' ? String(new Date().getFullYear())
+    : periodo === 'ano-especifico' ? (anoEspecifico || '—')
+    : periodo === 'mes-especifico' ? (mesEspecifico ? rotuloMes(mesEspecifico) : '—')
+    : periodo === 'mes-anterior' ? rotuloMes(somarMesYM(new Date().toISOString().slice(0, 7), -1))
+    : periodo === 'este-mes' ? rotuloMes(new Date().toISOString().slice(0, 7))
+    : 'Últimos 3 meses'
 
   // ── Dados filtrados ──────────────────────────────────────────────────────
 
@@ -235,6 +271,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       parcelas_total:  form.tipo === 'despesa' ? (form.parcelas_total || null) : null,
       parcela_atual:   form.tipo === 'despesa' ? (form.parcela_atual || null) : null,
       lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
+      recorrencia: form.recorrente && !editando ? { quantidade: Number(form.recorrencia_qtd), valor_total: !!form.recorrencia_valor_total } : undefined,
     }
 
     if (editando) {
@@ -408,6 +445,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
 
               {aba !== 'receber' && aba !== 'pagar' && (
                 <>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => navegarPeriodo(-1)} title="Anterior" className="p-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]"><ChevronLeft size={13} /></button>
+                    <span className="px-2 text-[12px] font-medium text-[#1D5F60] min-w-[130px] text-center capitalize">{rotuloPeriodo}</span>
+                    <button onClick={() => navegarPeriodo(1)} title="Próximo" className="p-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]"><ChevronRight size={13} /></button>
+                  </div>
                   <SelectFiltro
                     value={periodo}
                     onChange={setPeriodo}
@@ -465,6 +507,9 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
               )}
 
               <span className="text-[11px] text-[#9ca3af] ml-auto shrink-0">
+                {(aba === 'receitas' || aba === 'despesas') && filtrados.length > 0 && (
+                  <strong className="mr-2 text-[#374151]">Total: {formatCurrency(filtrados.filter(l => l.tipo === (aba === 'receitas' ? 'receita' : 'despesa') && l.status !== 'cancelado').reduce((a, l) => a + l.valor, 0))}</strong>
+                )}
                 {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
               </span>
             </div>

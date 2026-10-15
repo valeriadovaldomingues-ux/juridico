@@ -33,6 +33,7 @@ describe('rotuloPagamento', () => {
     expect(rotuloPagamento({ forma_pagamento: 'debito', parcelas_total: null, parcela_atual: null })).toBe('Débito')
     expect(rotuloPagamento({ forma_pagamento: 'credito', parcelas_total: 1, parcela_atual: 1 })).toBe('Crédito')
     expect(rotuloPagamento({})).toBeNull()
+    expect(rotuloPagamento({ forma_pagamento: null, parcelas_total: 6, parcela_atual: 2 })).toBe('Parcela 2/6')
   })
 })
 

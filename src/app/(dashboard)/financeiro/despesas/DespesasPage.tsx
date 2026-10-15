@@ -145,6 +145,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
       parcelas_total:  form.parcelas_total || null,
       parcela_atual:   form.parcela_atual || null,
       lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
+      recorrencia: form.recorrente && !editando ? { quantidade: Number(form.recorrencia_qtd), valor_total: !!form.recorrencia_valor_total } : undefined,
     }
 
     if (editando) {
