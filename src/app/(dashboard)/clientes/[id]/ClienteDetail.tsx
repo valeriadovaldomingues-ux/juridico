@@ -320,12 +320,14 @@ function AgendaTab({ agenda }: { agenda: any[] }) {
 
 type Tab = 'processos' | 'tarefas' | 'agenda' | 'historico' | 'contatos'
 type ClienteDetailProps = {
-  cliente: Cliente
+  cliente: Cliente & { dono?: { id: string; nome: string } | null }
   processos: Partial<Processo>[]
   interactions: ContactInteraction[]
   tarefas: any[]
   agenda: any[]
   contatos: ClienteContato[]
+  /** Empresas que têm este cliente como dono / grupo. */
+  empresasDoDono?: { id: string; nome: string; cpf_cnpj: string | null }[]
   canEditContatos: boolean
 }
 
@@ -336,6 +338,7 @@ export default function ClienteDetail({
   tarefas,
   agenda,
   contatos,
+  empresasDoDono = [],
   canEditContatos,
 }: ClienteDetailProps) {
   const [editing, setEditing] = useState(false)
@@ -418,6 +421,24 @@ export default function ClienteDetail({
           </button>
         </div>
       </div>
+
+      {/* Dono / grupo */}
+      {(cliente.dono || empresasDoDono.length > 0) && (
+        <div className="rounded-lg border border-[#E2DDD8] bg-[#f7fafa] px-4 py-3 text-[13px] text-[#374151] space-y-1.5">
+          {cliente.dono && (
+            <p>Empresa de <Link href={`/clientes/${cliente.dono.id}`} className="font-semibold text-[#1D5F60] hover:underline">{cliente.dono.nome}</Link> (dono / grupo)</p>
+          )}
+          {empresasDoDono.length > 0 && (
+            <p>
+              <span className="font-semibold">Empresas deste dono ({empresasDoDono.length}):</span>{' '}
+              {empresasDoDono.map((e, i) => (
+                <span key={e.id}>{i > 0 && ' · '}<Link href={`/clientes/${e.id}`} className="text-[#1D5F60] hover:underline">{e.nome}</Link></span>
+              ))}
+              {' '}<Link href="/clientes/empresas-por-dono" className="text-[#6b7280] hover:underline">— ver relatório</Link>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Conteúdo */}
       <div className="grid grid-cols-[300px_1fr] gap-5">

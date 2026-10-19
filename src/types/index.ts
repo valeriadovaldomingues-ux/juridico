@@ -71,6 +71,8 @@ export interface Cliente {
   nome_fantasia?: string | null
   socio_representante?: string | null
   cnpj_raiz?: string | null
+  /** Dono / grupo: a pessoa dona desta empresa (outro cadastro de cliente). */
+  dono_id?: string | null
   // joined
   responsavel?: Profile
   processos_count?: number
