@@ -1,8 +1,8 @@
 // Provedor Claude (Anthropic) para a camada de IA. Usa a API Messages direto (sem SDK extra).
-// Ligado por ANTHROPIC_API_KEY (ou AI_PROVIDER=anthropic). Modelo: ANTHROPIC_MODEL (padrão claude-sonnet-5-5;
-// para gastar menos, use claude-haiku-5-5). AI_PROVIDER=openai força a OpenAI mesmo com a chave da Anthropic.
+// Ligado por ANTHROPIC_API_KEY (ou AI_PROVIDER=anthropic). Modelo: ANTHROPIC_MODEL (padrão claude-haiku-5-5, o mais barato;
+// para peças mais elaboradas, use claude-sonnet-5-5). AI_PROVIDER=openai força a OpenAI mesmo com a chave da Anthropic.
 
-export const ANTHROPIC_MODELO_PADRAO = 'claude-sonnet-5-5'
+export const ANTHROPIC_MODELO_PADRAO = 'claude-haiku-5-5'
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
 export interface MensagemIA { role: string; content?: unknown }
