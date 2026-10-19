@@ -2,6 +2,7 @@ import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
 import { FileText, Newspaper, Bot, ArrowRight, Sparkles, FolderArchive } from 'lucide-react'
 import TestePublicacaoIA from './TestePublicacaoIA'
+import { iaConfigurada as temIA } from '@/lib/ai/service'
 
 const modulos = [
   {
@@ -54,8 +55,8 @@ const modulos = [
 export default async function IAJuridicaPage() {
   // Sincronizado com ALLOWED_ROUTES: advogado, gerente, socio.
   const { profile } = await requireRole(['advogado', 'gerente', 'socio'])
-  // Verificação feita no servidor — OPENAI_API_KEY nunca é exposta ao cliente
-  const iaConfigurada = !!process.env.OPENAI_API_KEY
+  // Verificação feita no servidor — a chave de IA nunca é exposta ao cliente
+  const iaConfigurada = temIA()
   const modulosVisiveis = modulos.filter(mod => !mod.socioOnly || profile.role === 'socio')
 
   return (
@@ -127,13 +128,13 @@ export default async function IAJuridicaPage() {
         </>
       )}
 
-      {/* Aviso de configuração — exibido apenas se OPENAI_API_KEY não estiver definida no servidor */}
+      {/* Aviso de configuração — exibido apenas se a chave de IA não estiver definida no servidor */}
       {!iaConfigurada && (
         <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex items-start gap-3">
           <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
           <p className="text-[12px] text-amber-800 leading-relaxed">
             <strong>Configuração necessária:</strong> adicione{' '}
-            <code className="font-mono bg-amber-100 px-1 rounded">OPENAI_API_KEY=sua_chave</code>{' '}
+            <code className="font-mono bg-amber-100 px-1 rounded">ANTHROPIC_API_KEY=sua_chave</code>{' '}
             ao arquivo <code className="font-mono bg-amber-100 px-1 rounded">.env.local</code>{' '}
             e reinicie o servidor para ativar as funcionalidades de IA.
           </p>

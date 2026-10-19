@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
+import { completarTexto, streamTextoPreflight, iaConfigurada } from '@/lib/ai/service'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
 import { detectarIntencaoPublicacoes, buscarPublicacoesParaAurora, montarContextoPublicacoesParaAurora } from '@/lib/ai/aurora-context'
@@ -167,9 +167,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'mensagem é obrigatória' }, { status: 400 })
   }
 
-  if (!process.env.OPENAI_API_KEY && !process.env.AI_API_KEY) {
+  if (!iaConfigurada()) {
     return NextResponse.json(
-      { error: 'OPENAI_API_KEY ou AI_API_KEY não configurada. Adicione ao .env.local' },
+      { error: 'Chave de IA não configurada (ANTHROPIC_API_KEY ou OPENAI_API_KEY). Adicione nas variáveis de ambiente.' },
       { status: 503 },
     )
   }

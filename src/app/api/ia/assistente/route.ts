@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { streamTexto } from '@/lib/ai/service'
+import { streamTexto, iaConfigurada } from '@/lib/ai/service'
 import { buildMensagensAssistente } from '@/lib/ai/prompts'
 import type { DadosProcesso } from '@/lib/ai/prompts'
 
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'pergunta é obrigatória' }, { status: 400 })
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!iaConfigurada()) {
     return NextResponse.json(
-      { error: 'OPENAI_API_KEY não configurada. Adicione ao .env.local' },
+      { error: 'Chave de IA não configurada (ANTHROPIC_API_KEY ou OPENAI_API_KEY). Adicione nas variáveis de ambiente.' },
       { status: 503 },
     )
   }
