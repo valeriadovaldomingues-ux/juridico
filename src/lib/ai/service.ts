@@ -15,11 +15,6 @@ import { anthropicCompletar, anthropicStream, modeloAnthropic, usaAnthropic } fr
 
 export const AI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini'
 
-/** Há alguma chave de IA configurada (Claude ou OpenAI)? */
-export function iaConfigurada(): boolean {
-  return usaAnthropic() || !!(process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY)
-}
-
 /** Modelo em uso (Claude ou OpenAI), para mensagens e logs. */
 export function modeloEmUso(): string { return usaAnthropic() ? modeloAnthropic() : AI_MODEL }
 

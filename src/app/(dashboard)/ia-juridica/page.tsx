@@ -2,7 +2,7 @@ import { requireRole } from '@/lib/auth/guards'
 import Link from 'next/link'
 import { FileText, Newspaper, Bot, ArrowRight, Sparkles, FolderArchive } from 'lucide-react'
 import TestePublicacaoIA from './TestePublicacaoIA'
-import { iaConfigurada as temIA } from '@/lib/ai/service'
+import { iaConfigurada as temIA } from '@/lib/ai/config'
 
 const modulos = [
   {

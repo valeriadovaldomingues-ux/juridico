@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { completarTexto, streamTextoPreflight, iaConfigurada } from '@/lib/ai/service'
+import { completarTexto, streamTextoPreflight } from '@/lib/ai/service'
+import { iaConfigurada } from '@/lib/ai/config'
 import { buildMensagensAurora } from '@/lib/ai/prompts'
 import type { AuroraMensagemHistorico } from '@/lib/ai/prompts'
 import { detectarIntencaoPublicacoes, buscarPublicacoesParaAurora, montarContextoPublicacoesParaAurora } from '@/lib/ai/aurora-context'

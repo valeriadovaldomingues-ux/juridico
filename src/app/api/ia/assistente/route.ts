@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { streamTexto, iaConfigurada } from '@/lib/ai/service'
+import { streamTexto } from '@/lib/ai/service'
+import { iaConfigurada } from '@/lib/ai/config'
 import { buildMensagensAssistente } from '@/lib/ai/prompts'
 import type { DadosProcesso } from '@/lib/ai/prompts'
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { completarJSON, iaConfigurada } from '@/lib/ai/service'
+import { completarJSON } from '@/lib/ai/service'
+import { iaConfigurada } from '@/lib/ai/config'
 import { buildMensagensPublicacao } from '@/lib/ai/prompts'
 import type { AnalisePublicacao } from '@/lib/ai/prompts'
 
