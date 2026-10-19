@@ -4,7 +4,8 @@
 export type StatusMes = 'pendente' | 'pago' | 'vencido'
 export type StatusCelula = StatusMes | 'sem_registro'
 
-export interface RegistroMes { grade_id: string; mes: string; valor: number | null; status: StatusMes }
+/** `sem_registro` no banco = valor vindo do boleto, mas ainda sem confirmação de pagamento (meses passados). */
+export interface RegistroMes { grade_id: string; mes: string; valor: number | null; status: StatusCelula }
 
 export interface CelulaMes { valor: number | null; status: StatusCelula; registrado: boolean }
 

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { maskCpfCnpj, maskPhone, maskCEP, validateCPF, validateEmail, onlyDigits } from '@/lib/masks'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import type { Cliente } from '@/types'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
+import { fetchClienteOptions } from '@/lib/search/remote'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -27,6 +29,7 @@ type FormFields = {
   cidade: string
   uf: string
   observacoes: string
+  dono_id: string
   ativo: boolean
 }
 
@@ -97,7 +100,7 @@ export default function ClienteForm({
   cliente,
   onSuccess,
 }: {
-  cliente?: Cliente
+  cliente?: Cliente & { dono?: { id: string; nome: string } | null }
   onSuccess?: () => void
 }) {
   const router = useRouter()
@@ -119,6 +122,7 @@ export default function ClienteForm({
     cidade:       cliente?.cidade       ?? '',
     uf:           cliente?.uf           ?? '',
     observacoes:  cliente?.observacoes  ?? '',
+    dono_id:      cliente?.dono_id      ?? '',
     ativo:        cliente?.ativo        ?? true,
   })
 
@@ -127,6 +131,9 @@ export default function ClienteForm({
   const [loading, setLoading] = useState(false)
   const [cepLoading, setCepLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [donoOpcao, setDonoOpcao] = useState<SearchableComboboxOption | null>(
+    cliente?.dono ? { value: cliente.dono.id, label: cliente.dono.nome } : null,
+  )
 
   // ── Estado dos campos ──────────────────────────────────────────────────────
 
@@ -290,6 +297,7 @@ export default function ClienteForm({
       cidade:      form.cidade      || null,
       uf:          form.uf          || null,
       observacoes: form.observacoes || null,
+      dono_id:     form.dono_id     || null,
     }
 
     let result
@@ -530,6 +538,26 @@ export default function ClienteForm({
       {/* ── Outras Informações ── */}
       <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6 shadow-[0_12px_36px_rgba(13,34,53,0.05)]">
         <h2 className="font-brand text-[24px] font-semibold text-[var(--color-ink)] mb-5">Outras Informações</h2>
+        <div className="mb-4">
+          <label className={labelClass}>Dono / grupo</label>
+          <SearchableCombobox
+            value={form.dono_id}
+            selectedOption={donoOpcao}
+            onChange={(value, opcao) => {
+              if (value && value === cliente?.id) return
+              set('dono_id', value)
+              setDonoOpcao(opcao)
+            }}
+            loadOptions={async (query) => (await fetchClienteOptions(query, 10)).filter(o => o.value !== cliente?.id)}
+            placeholder="— Sem dono / grupo —"
+            searchPlaceholder="Buscar a pessoa dona desta empresa"
+            helperText="Digite ao menos 2 caracteres."
+            emptyText="Digite para buscar clientes."
+            noResultsText="Nenhum resultado encontrado."
+            allowClear
+          />
+          <p className="text-[11px] text-[var(--color-ink-3)] mt-1.5">Use quando esta empresa pertence a uma pessoa (ex.: Josias é dono da RF Rezende e da VS Móveis). Aparece no relatório &ldquo;Empresas por dono&rdquo; e agrupa as horas.</p>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
             <label className={labelClass}>Observações</label>

@@ -76,6 +76,13 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
             {clientes.length} registro{clientes.length !== 1 ? 's' : ''}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Link
+          href="/clientes/empresas-por-dono"
+          className="flex items-center gap-2 px-4 py-3 border border-[var(--color-border)] text-[var(--color-ink)] text-[13px] font-semibold rounded-xl hover:bg-white transition-colors"
+        >
+          Empresas por dono
+        </Link>
         <Link
           href="/clientes/novo"
           className="flex items-center gap-2 px-4 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
@@ -83,6 +90,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           <Plus size={15} />
           Novo Contato
         </Link>
+        </div>
         </div>
       </div>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
