@@ -241,7 +241,7 @@ describe('POST /api/ia/aurora', () => {
     const body = await res.json()
 
     expect(res.status).toBe(503)
-    expect(body.error).toContain('OPENAI_API_KEY ou AI_API_KEY')
+    expect(body.error).toContain('ANTHROPIC_API_KEY ou OPENAI_API_KEY')
     expect(mockBuildMensagensAurora).not.toHaveBeenCalled()
     expect(mockStreamTextoPreflight).not.toHaveBeenCalled()
   })

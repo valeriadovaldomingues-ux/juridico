@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { completarJSON } from '@/lib/ai/service'
+import { iaConfigurada } from '@/lib/ai/config'
 import { buildMensagensPublicacao } from '@/lib/ai/prompts'
 import type { AnalisePublicacao } from '@/lib/ai/prompts'
 
@@ -25,9 +26,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'textoPublicacao é obrigatório' }, { status: 400 })
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!iaConfigurada()) {
     return NextResponse.json(
-      { error: 'OPENAI_API_KEY não configurada. Adicione ao .env.local' },
+      { error: 'Chave de IA não configurada (ANTHROPIC_API_KEY ou OPENAI_API_KEY). Adicione nas variáveis de ambiente.' },
       { status: 503 },
     )
   }
