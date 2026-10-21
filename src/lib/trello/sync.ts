@@ -24,6 +24,35 @@ function derivePrioridade(labels: TrelloLabel[]): KanbanPrioridade {
   return 'media'
 }
 
+/** Roda `fn` sobre os itens, `tamanho` por vez em paralelo. */
+async function emLotes<T>(itens: T[], tamanho: number, fn: (item: T) => Promise<void>): Promise<void> {
+  for (let i = 0; i < itens.length; i += tamanho) {
+    await Promise.all(itens.slice(i, i + tamanho).map(fn))
+  }
+}
+
+/**
+ * Libera sincronizações "em andamento" que ficaram presas: quando a Vercel derruba a execução no meio, o log nunca
+ * é fechado e o bloqueio travava todas as sincronizações seguintes (HTTP 409 para sempre). Passou do limite, vira erro.
+ */
+export async function liberarSincronizacoesTravadas(
+  supabase: DbClient,
+  integrationId: string,
+  limiteMinutos = 10,
+): Promise<void> {
+  const corte = new Date(Date.now() - limiteMinutos * 60_000).toISOString()
+  await supabase
+    .from('trello_sync_logs')
+    .update({
+      status: 'erro',
+      erro_detalhes: 'Interrompida (tempo esgotado): liberada automaticamente para a próxima sincronização.',
+      finished_at: new Date().toISOString(),
+    })
+    .eq('integration_id', integrationId)
+    .eq('status', 'em_andamento')
+    .lt('started_at', corte)
+}
+
 // ─── Sync principal ───────────────────────────────────────────────────────────
 
 export async function syncTrelloBoard(
@@ -158,7 +187,21 @@ export async function syncTrelloBoard(
 
     const now = new Date().toISOString()
 
-    // 5. Processar cada card
+    // 5. Processar cada card. As consultas ao banco são o gargalo (2 por card, uma de cada vez passava de
+    // 2 min e a Vercel derrubava a execução). Agora: prepara tudo, confere "já existe?" e atualiza em lotes
+    // paralelos; só as inclusões (que calculam a ordem no fim da coluna) seguem uma a uma.
+    interface TrabalhoCard {
+      card: (typeof cards)[number]
+      kanbanStatus: KanbanStatus
+      responsavelId: string | null
+      firstMemberId: string | null
+      prioridade: ReturnType<typeof derivePrioridade>
+      data: string | null
+      listaNome: string | null
+      existingId?: string
+    }
+    const trabalhos: TrabalhoCard[] = []
+
     for (const card of cards) {
       if (card.closed) { ignorados++; continue }
 
@@ -188,71 +231,80 @@ export async function syncTrelloBoard(
         }
       }
 
-      const prioridade    = derivePrioridade(card.labels ?? [])
-      const data          = card.due ? card.due.slice(0, 10) : null
-      const listaNome     = listNameMap.get(card.idList) ?? null
+      trabalhos.push({
+        card, kanbanStatus, responsavelId, firstMemberId,
+        prioridade: derivePrioridade(card.labels ?? []),
+        data:       card.due ? card.due.slice(0, 10) : null,
+        listaNome:  listNameMap.get(card.idList) ?? null,
+      })
+    }
 
-      // Verificar se card já existe (upsert manual para contagem correta)
+    // Verificar quais já existem (em lotes paralelos)
+    await emLotes(trabalhos, 15, async t => {
       const { data: existing } = await supabase
         .from('kanban_tasks')
         .select('id')
         .eq('origem', 'trello')
-        .eq('origem_id', card.id)
+        .eq('origem_id', t.card.id)
         .maybeSingle()
+      t.existingId = existing?.id
+    })
 
-      if (existing) {
-        await supabase
-          .from('kanban_tasks')
-          .update({
-            titulo:           card.name,
-            descricao:        card.desc || null,
-            status:           kanbanStatus,
-            responsavel_id:   responsavelId,
-            trello_member_id: firstMemberId,  // persiste o ID do membro para redistribuição futura
-            trello_list_id:   card.idList,
-            trello_list_nome: listaNome,
-            trello_list_pos:  posPorLista.get(card.idList) ?? null,
-            prioridade,
-            data,
-            updated_at:       now,
-          })
-          .eq('id', existing.id)
-        atualizados++
-      } else {
-        // Calcular ordem no final da coluna
-        const { data: maxRow } = await supabase
-          .from('kanban_tasks')
-          .select('ordem')
-          .eq('status', kanbanStatus)
-          .order('ordem', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        const ordem = maxRow ? maxRow.ordem + 1 : 0
-
-        const sla = calculateSimpleSLA({
-          tipo: 'tarefa', origem: 'trello', data, status: kanbanStatus, prioridade,
-        })
-
-        await supabase.from('kanban_tasks').insert({
-          titulo:           card.name,
-          descricao:        card.desc || null,
-          status:           kanbanStatus,
-          responsavel_id:   responsavelId,    // null quando sem mapping — nunca fake
-          trello_member_id: firstMemberId,    // persiste o ID do membro para redistribuição futura
-          trello_list_id:   card.idList,
-          trello_list_nome: listaNome,
-          trello_list_pos:  posPorLista.get(card.idList) ?? null,
-          prioridade,
-          data,
-          origem:           'trello',
-          origem_id:        card.id,
-          ordem,
-          sla_level:        sla.sla_level,
-          sla_due_at:       sla.sla_due_at,
+    // Atualizar os existentes (em lotes paralelos)
+    await emLotes(trabalhos.filter(t => t.existingId), 15, async t => {
+      await supabase
+        .from('kanban_tasks')
+        .update({
+          titulo:           t.card.name,
+          descricao:        t.card.desc || null,
+          status:           t.kanbanStatus,
+          responsavel_id:   t.responsavelId,
+          trello_member_id: t.firstMemberId,  // persiste o ID do membro para redistribuição futura
+          trello_list_id:   t.card.idList,
+          trello_list_nome: t.listaNome,
+          trello_list_pos:  posPorLista.get(t.card.idList) ?? null,
+          prioridade:       t.prioridade,
+          data:             t.data,
           updated_at:       now,
         })
-        criados++
-      }
+        .eq('id', t.existingId!)
+      atualizados++
+    })
+
+    // Incluir os novos, um a um (cada um calcula a ordem no final da coluna)
+    for (const t of trabalhos.filter(x => !x.existingId)) {
+      const { data: maxRow } = await supabase
+        .from('kanban_tasks')
+        .select('ordem')
+        .eq('status', t.kanbanStatus)
+        .order('ordem', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const ordem = maxRow ? maxRow.ordem + 1 : 0
+
+      const sla = calculateSimpleSLA({
+        tipo: 'tarefa', origem: 'trello', data: t.data, status: t.kanbanStatus, prioridade: t.prioridade,
+      })
+
+      await supabase.from('kanban_tasks').insert({
+        titulo:           t.card.name,
+        descricao:        t.card.desc || null,
+        status:           t.kanbanStatus,
+        responsavel_id:   t.responsavelId,    // null quando sem mapping — nunca fake
+        trello_member_id: t.firstMemberId,    // persiste o ID do membro para redistribuição futura
+        trello_list_id:   t.card.idList,
+        trello_list_nome: t.listaNome,
+        trello_list_pos:  posPorLista.get(t.card.idList) ?? null,
+        prioridade:       t.prioridade,
+        data:             t.data,
+        origem:           'trello',
+        origem_id:        t.card.id,
+        ordem,
+        sla_level:        sla.sla_level,
+        sla_due_at:       sla.sla_due_at,
+        updated_at:       now,
+      })
+      criados++
     }
 
     // Cards que existem no sistema mas não estão mais abertos no Trello (foram concluídos,

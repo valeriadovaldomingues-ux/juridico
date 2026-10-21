@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { syncTrelloBoard } from '@/lib/trello/sync'
+import { liberarSincronizacoesTravadas, syncTrelloBoard } from '@/lib/trello/sync'
 import type { UserRole } from '@/types'
 
 const ALLOWED: UserRole[] = ['gerente', 'socio']
+
+export const maxDuration = 300
 
 /** POST /api/trello/sync — dispara sincronização manual */
 export async function POST() {
@@ -22,6 +24,9 @@ export async function POST() {
     .maybeSingle()
 
   if (!integration) return NextResponse.json({ error: 'Nenhuma integração configurada' }, { status: 404 })
+
+  // Libera sincronizações presas (execução derrubada no meio) antes de checar se há alguma em andamento
+  await liberarSincronizacoesTravadas(supabase, integration.id)
 
   // Verificar se já há sync em andamento
   const { data: running } = await supabase
