@@ -248,30 +248,33 @@ export default function AgendaModal({
             />
           </div>
 
-          {/* Responsável */}
-          <div>
-            <label className={labelCls}>Responsável</label>
-            <SearchableCombobox
-              value={form.responsavel}
-              selectedOption={form.responsavel ? {
-                value: form.responsavel,
-                label: form.responsavel,
-                description: null,
-              } : null}
-              onChange={(_, option) => set({ responsavel: option?.label ?? '' })}
-              loadOptions={async (query) => (await fetchUsuarioOptions(query, 10)).map(option => ({
-                value: option.label,
-                label: option.label,
-                description: option.description,
-              }))}
-              placeholder="Nome do responsável"
-              searchPlaceholder="Buscar por nome, e-mail ou função"
-              helperText="Digite ao menos 2 caracteres."
-              emptyText="Digite para buscar responsáveis."
-              noResultsText="Nenhum resultado encontrado."
-              allowClear
-            />
-          </div>
+          {/* Responsável (audiência: até 2, guardados juntos como "Nome 1 / Nome 2") */}
+          {form.tipo === 'audiencia' ? (
+            <div className="space-y-2">
+              <label className={labelCls}>Responsáveis pela audiência (até 2)</label>
+              {[0, 1].map(i => {
+                const nomes = (form.responsavel || '').split(' / ').map(n => n.trim()).filter(Boolean)
+                return (
+                  <ResponsavelCombobox
+                    key={i}
+                    value={nomes[i] ?? ''}
+                    placeholder={i === 0 ? 'Responsável principal' : '2º responsável (opcional)'}
+                    onChange={nome => {
+                      const lista = [...nomes]
+                      if (nome) lista[i] = nome
+                      else lista.splice(i, 1)
+                      set({ responsavel: lista.filter(Boolean).filter((n, idx, arr) => arr.indexOf(n) === idx).slice(0, 2).join(' / ') })
+                    }}
+                  />
+                )
+              })}
+            </div>
+          ) : (
+            <div>
+              <label className={labelCls}>Responsável</label>
+              <ResponsavelCombobox value={form.responsavel} placeholder="Nome do responsável" onChange={nome => set({ responsavel: nome })} />
+            </div>
+          )}
 
           {/* Descrição */}
           <div>
@@ -326,5 +329,27 @@ export default function AgendaModal({
         </div>
       </div>
     </div>
+  )
+}
+
+/** Caixa de busca de usuário para o campo Responsável da agenda (guarda o nome). */
+function ResponsavelCombobox({ value, onChange, placeholder }: { value: string; onChange: (nome: string) => void; placeholder: string }) {
+  return (
+    <SearchableCombobox
+      value={value}
+      selectedOption={value ? { value, label: value, description: null } : null}
+      onChange={(_, option) => onChange(option?.label ?? '')}
+      loadOptions={async (query) => (await fetchUsuarioOptions(query, 10)).map(option => ({
+        value: option.label,
+        label: option.label,
+        description: option.description,
+      }))}
+      placeholder={placeholder}
+      searchPlaceholder="Buscar por nome, e-mail ou função"
+      helperText="Digite ao menos 2 caracteres."
+      emptyText="Digite para buscar responsáveis."
+      noResultsText="Nenhum resultado encontrado."
+      allowClear
+    />
   )
 }
