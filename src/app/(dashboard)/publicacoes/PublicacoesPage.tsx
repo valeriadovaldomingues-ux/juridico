@@ -936,13 +936,46 @@ function AgendaQuickModal({
   const [hora,       setHora]       = useState('')
   const [processoId, setProcessoId] = useState(pub.processo_id ?? '')
   const [saving,     setSaving]     = useState(false)
+  const [tituloEditado, setTituloEditado] = useState(false)
+  const [partes, setPartes] = useState<{ clienteId: string | null; cliente: string | null; contrarias: string[] } | null>(null)
+
+  // Partes do processo (cliente x parte contrária): vão no título e na descrição do item da agenda
+  useEffect(() => {
+    if (!processoId) return
+    let ativo = true
+    const sb = createClient()
+    sb.from('processos')
+      .select('cliente_id, cliente:clientes!cliente_id(nome), partes_processo(pessoa_nome, tipo_parte)')
+      .eq('id', processoId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!ativo || !data) return
+        const d = data as unknown as { cliente_id: string | null; cliente: { nome?: string } | { nome?: string }[] | null; partes_processo: { pessoa_nome: string | null; tipo_parte: string | null }[] | null }
+        const cli = Array.isArray(d.cliente) ? d.cliente[0] : d.cliente
+        const contrarias = (d.partes_processo ?? []).filter(x => x.pessoa_nome && x.tipo_parte !== 'cliente').map(x => x.pessoa_nome as string)
+        setPartes({ clienteId: d.cliente_id, cliente: cli?.nome ?? null, contrarias })
+      })
+    return () => { ativo = false }
+  }, [processoId])
+
+  const textoPartes = partes && (partes.cliente || partes.contrarias.length)
+    ? [partes.cliente, partes.contrarias.join(', ')].filter(Boolean).join(' x ')
+    : ''
+
+  // Título sugerido passa a incluir as partes (enquanto você não editar o título à mão)
+  useEffect(() => {
+    if (tituloEditado || !textoPartes) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTitulo(`${tipo === 'prazo' ? 'PRAZO: ' : ''}${pub.tribunal ?? ''} ${pub.numero_processo ?? ''} — ${textoPartes}`.replace(/\s+/g, ' ').trim())
+  }, [textoPartes, tituloEditado, tipo, pub.tribunal, pub.numero_processo])
 
   async function save() {
     if (!titulo.trim()) return
     setSaving(true)
     await supabase.from('agenda_items').insert({
       titulo:      titulo.trim(),
-      descricao:   getTextoPublicacao(pub)?.slice(0, 500) ?? null,
+      descricao:   [textoPartes ? `Partes: ${textoPartes}` : null, getTextoPublicacao(pub)?.slice(0, 500)].filter(Boolean).join('\n\n') || null,
+      cliente_id:  partes?.clienteId ?? null,
       tipo,
       status:      'pendente',
       data_inicio: data,
@@ -970,7 +1003,8 @@ function AgendaQuickModal({
         <div className="px-6 py-4 space-y-3">
           <div>
             <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Título *</label>
-            <input className={inputCls} value={titulo} onChange={e => setTitulo(e.target.value)} />
+            <input className={inputCls} value={titulo} onChange={e => { setTitulo(e.target.value); setTituloEditado(true) }} />
+            {!processoId && <p className="mt-1 text-[11px] text-[#9aabb8]">Escolha o processo abaixo para o título e a descrição já trazerem as partes.</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
