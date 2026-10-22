@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { validarToken } from '@/lib/mcp/token'
-import { MCP_PAPEIS_PERMITIDOS, usuarioPodeMcp } from '@/lib/mcp/permitidos'
+import { MCP_PAPEIS_PERMITIDOS, usuarioPodeEscreverMcp, usuarioPodeMcp } from '@/lib/mcp/permitidos'
 import { responderMcp } from '@/lib/mcp/protocolo'
 
 // Conector MCP do PEDV (somente leitura). Autenticação por chave pessoal (Bearer) gerada em /conectar-claude.
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const corpo = await req.json().catch(() => null)
   if (!corpo) return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'JSON inválido' } }, { status: 400 })
 
-  const ctx = { db, userId: validacao.userId, nome: String(perfil.nome ?? '') }
+  const ctx = { db, userId: validacao.userId, nome: String(perfil.nome ?? ''), podeEscrever: usuarioPodeEscreverMcp(validacao.userId) }
   // Registro de auditoria: quem consultou o quê (aparece nos logs da Vercel).
   const auditar = (e: { ferramenta: string; args: unknown; ms: number; ok: boolean }) =>
     console.info('[mcp]', JSON.stringify({ usuario: validacao.userId, nome: ctx.nome, ...e, args: JSON.stringify(e.args).slice(0, 300) }))

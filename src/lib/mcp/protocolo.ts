@@ -1,10 +1,14 @@
 import { FERRAMENTAS, type ContextoMcp } from './ferramentas'
+import { FERRAMENTAS_ESCRITA } from './ferramentas-escrita'
 
 // Mínimo do protocolo MCP (JSON-RPC 2.0 sobre HTTP, sem sessão nem SSE): initialize, ping, tools/list e tools/call.
 
 const VERSOES = ['2025-06-18', '2025-03-26', '2024-11-05']
-const INSTRUCOES = 'Conector do PEDV (Pessoa e do Val Advocacia). Somente leitura: consulta processos, agenda, prazos e publicações. ' +
+const INSTRUCOES = 'Conector do PEDV (Pessoa e do Val Advocacia): consulta processos, agenda, prazos e publicações e, para quem tem permissão, grava andamentos, compromissos e clientes. ' +
+  'Toda gravação é em duas etapas: mostre o resumo ao usuário e só grave (confirmar=true) depois do "sim" dele. Nada é apagado. ' +
   'Dados sigilosos: use só para o trabalho do escritório e não repasse a terceiros.'
+
+const ferramentasDe = (ctx: ContextoMcp) => (ctx.podeEscrever ? [...FERRAMENTAS, ...FERRAMENTAS_ESCRITA] : FERRAMENTAS)
 
 export interface RespostaRpc { jsonrpc: '2.0'; id: string | number | null; result?: unknown; error?: { code: number; message: string } }
 
@@ -33,10 +37,10 @@ export async function responderMcp(
     }
     case 'ping': return { jsonrpc: '2.0', id, result: {} }
     case 'tools/list':
-      return { jsonrpc: '2.0', id, result: { tools: FERRAMENTAS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) } }
+      return { jsonrpc: '2.0', id, result: { tools: ferramentasDe(ctx).map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) } }
     case 'tools/call': {
       const nome = String(m.params?.name ?? '')
-      const f = FERRAMENTAS.find(x => x.name === nome)
+      const f = ferramentasDe(ctx).find(x => x.name === nome)
       if (!f) return erro(id, -32602, `Ferramenta desconhecida: ${nome}`)
       const args = (m.params?.arguments ?? {}) as Record<string, unknown>
       const t0 = Date.now()

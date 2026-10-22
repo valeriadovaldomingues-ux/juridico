@@ -10,7 +10,7 @@ export default async function ConectarClaudePage() {
     <div className="internal-page max-w-3xl space-y-5">
       <div>
         <h1 className="text-[22px] font-semibold text-[#0f1923] tracking-tight">Conectar meu Claude ao PEDV</h1>
-        <p className="text-[13px] text-[#6b7280] mt-1">Deixe o seu Claude (no computador) consultar processos, agenda, prazos e publicações do PEDV, em linguagem normal. Só leitura.</p>
+        <p className="text-[13px] text-[#6b7280] mt-1">Deixe o seu Claude (no computador) consultar processos, agenda, prazos e publicações do PEDV, em linguagem normal, e também preencher dados no sistema (sempre pedindo a sua confirmação antes de gravar).</p>
       </div>
       <ConectarClaude />
     </div>
