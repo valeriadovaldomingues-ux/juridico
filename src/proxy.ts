@@ -131,7 +131,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/nr1-sem-risco') ||
     // Rotinas agendadas da Vercel chegam sem sessão; cada rota se protege sozinha
     // (CRON_SECRET) ou é inofensiva (keepalive). Antes eram redirecionadas ao /login.
-    pathname.startsWith('/api/cron')
+    pathname.startsWith('/api/cron') ||
+    // Conector MCP do PEDV: o Claude chama com chave pessoal (Bearer), sem sessão; a rota valida a chave.
+    pathname === '/api/mcp'
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
