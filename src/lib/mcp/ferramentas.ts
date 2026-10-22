@@ -1,9 +1,9 @@
-// Ferramentas do conector MCP do PEDV — SÓ LEITURA. Rodam com o cliente de serviço, mas apenas consultas e só do que os
+// Ferramentas de LEITURA do conector MCP do PEDV (as de gravação estão em ferramentas-escrita.ts). Rodam com o cliente de serviço, mas apenas consultas e só do que os
 // advogados já veem na tela (processos, agenda, prazos, publicações); nada de financeiro, nada de escrita.
 
 type Db = { from: (t: string) => any; rpc: (f: string, a: Record<string, unknown>) => any }  // eslint-disable-line @typescript-eslint/no-explicit-any
 
-export interface ContextoMcp { db: Db; userId: string; nome: string }
+export interface ContextoMcp { db: Db; userId: string; nome: string; podeEscrever?: boolean }
 
 export interface Ferramenta {
   name: string

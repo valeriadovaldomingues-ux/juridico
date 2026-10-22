@@ -41,7 +41,7 @@ export default function ConectarClaude() {
   return (
     <div className="space-y-5">
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-900">
-        Os dados de processo são sigilosos. A chave é pessoal: <strong>não a compartilhe</strong>. Ela vale por 90 dias e todas as consultas ficam registradas.
+        Os dados de processo são sigilosos. A chave é pessoal: <strong>não a compartilhe</strong>. Ela vale por 90 dias e tudo o que for consultado ou gravado fica registrado.
       </div>
 
       <section className="space-y-2">
@@ -63,11 +63,22 @@ export default function ConectarClaude() {
       <section className="space-y-1">
         <h2 className="text-[14px] font-semibold text-[#0f1923]">O que ele consegue consultar</h2>
         <ul className="list-disc pl-5 text-[12px] text-[#374151] space-y-0.5">
-          <li><strong>agenda</strong> — compromissos, prazos e audiências por período</li>
-          <li><strong>prazos</strong> — prazos pendentes dos processos</li>
+          <li><strong>agenda</strong> e <strong>prazos</strong> — compromissos, prazos e audiências</li>
           <li><strong>buscar_processos</strong> e <strong>ver_processo</strong> — número, cliente, partes, andamentos</li>
           <li><strong>publicacoes</strong> — publicações recentes e prazos detectados</li>
         </ul>
+      </section>
+
+      <section className="space-y-1">
+        <h2 className="text-[14px] font-semibold text-[#0f1923]">O que ele consegue preencher</h2>
+        <ul className="list-disc pl-5 text-[12px] text-[#374151] space-y-0.5">
+          <li><strong>criar_andamento</strong> — registra andamento no processo</li>
+          <li><strong>criar_compromisso</strong> e <strong>concluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis)</li>
+          <li><strong>cadastrar_cliente</strong> e <strong>atualizar_cliente</strong></li>
+          <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>adicionar_parte_processo</strong></li>
+          <li><strong>tratar_publicacao</strong> — marca como tratada ou descartada</li>
+        </ul>
+        <p className="text-[12px] text-[#6b7280]">Antes de gravar, o Claude mostra o resumo e espera o seu &ldquo;sim&rdquo;. O que for gravado leva a marca &ldquo;registrado via Claude&rdquo;. <strong>Nada é apagado</strong> por este conector.</p>
       </section>
     </div>
   )
