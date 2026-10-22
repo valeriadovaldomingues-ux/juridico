@@ -36,7 +36,12 @@ export default function ConectarClaude() {
 
   const t = token || 'COLE_AQUI_A_SUA_CHAVE'
   const claudeCode = `claude mcp add --transport http pedv ${URL_MCP} --header "Authorization: Bearer ${t}"`
-  const desktop = JSON.stringify({ mcpServers: { pedv: { command: 'npx', args: ['-y', 'mcp-remote', URL_MCP, '--header', `Authorization: Bearer ${t}`] } } }, null, 2)
+  // A chave vai numa variável de ambiente: evita o problema do espaço em "Authorization: Bearer ..." no Windows
+  const desktop = JSON.stringify({ mcpServers: { pedv: {
+    command: 'npx',
+    args: ['-y', 'mcp-remote', URL_MCP, '--header', 'Authorization:${AUTH_HEADER}'],
+    env: { AUTH_HEADER: `Bearer ${t}` },
+  } } }, null, 2)
 
   return (
     <div className="space-y-5">
@@ -56,7 +61,8 @@ export default function ConectarClaude() {
       <section className="space-y-3">
         <h2 className="text-[14px] font-semibold text-[#0f1923]">2. Ligar no seu Claude</h2>
         <Bloco titulo="Claude Code (terminal) — uma linha" texto={claudeCode} />
-        <Bloco titulo="Claude Desktop — acrescente isto em Configurações → Desenvolvedor → Editar configuração (precisa do Node.js instalado)" texto={desktop} />
+        <Bloco titulo="Claude Desktop (Windows ou Mac) — acrescente isto em Configurações → Desenvolvedor → Editar configuração (precisa do Node.js instalado)" texto={desktop} />
+        <p className="text-[12px] text-[#6b7280]">No Windows, o arquivo fica em <code>%APPDATA%\\Claude\\claude_desktop_config.json</code>. Se já houver outros conectores, acrescente só o bloco <code>&quot;pedv&quot;</code> dentro de <code>mcpServers</code>. Feche o Claude <strong>por completo</strong> (inclusive na bandeja ao lado do relógio) e abra de novo.</p>
         <p className="text-[12px] text-[#6b7280]">Depois, reinicie o Claude. Teste perguntando: <em>&ldquo;quais são os meus prazos desta semana?&rdquo;</em></p>
       </section>
 
