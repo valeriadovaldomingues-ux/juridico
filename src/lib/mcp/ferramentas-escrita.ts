@@ -1,4 +1,5 @@
 import type { Ferramenta } from './ferramentas'
+import { ADVOGADO_RESPONSAVEL_ID, ADVOGADO_RESPONSAVEL_NOME } from '@/lib/processos/responsavel'
 import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
 import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
@@ -140,29 +141,35 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
     },
   },
   {
-    name: 'alterar_advogado_responsavel',
-    description: 'Troca o advogado responsável de um processo já cadastrado (pelo nome do advogado). Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    name: 'definir_quem_cuida_do_caso',
+    description: 'Define quem cuida do caso (o advogado que toca o processo no dia a dia). O advogado responsável é sempre a Valéria e não muda. Passe advogado vazio para deixar sem ninguém. Duas etapas: sem confirmar=true mostra o antes e o depois.',
     inputSchema: { type: 'object', properties: {
-      processo_id: { type: 'string' }, advogado: { type: 'string', description: 'Nome (ou parte do nome) do advogado responsável' }, confirmar: CONFIRMAR,
-    }, required: ['processo_id', 'advogado'] },
+      processo_id: { type: 'string' }, advogado: { type: 'string', description: 'Nome (ou parte do nome) de quem vai cuidar do caso; vazio para limpar' }, confirmar: CONFIRMAR,
+    }, required: ['processo_id'] },
     async executar(args, ctx) {
       const id = String(args.processo_id ?? '')
       const nome = texto(args.advogado, 120)
-      if (!UUID.test(id) || !nome) throw new Error('Informe o processo (id) e o nome do advogado.')
-      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, advogado_responsavel_id').eq('id', id).maybeSingle()
+      if (!UUID.test(id)) throw new Error('Informe o processo (id).')
+      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, advogado_caso_id').eq('id', id).maybeSingle()
       if (error) throw new Error(error.message)
       if (!proc) throw new Error('Processo não encontrado.')
-      const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).in('role', ['advogado', 'gerente', 'socio']).ilike('nome', `%${nome}%`).limit(5)
-      if (!perfis?.length) throw new Error(`Não encontrei advogado ativo com o nome "${nome}".`)
-      if (perfis.length > 1) throw new Error(`Mais de um advogado com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+      let novoId: string | null = null
+      let depois: string | null = null
+      if (nome) {
+        const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).ilike('nome', `%${nome}%`).limit(5)
+        if (!perfis?.length) throw new Error(`Não encontrei usuário ativo com o nome "${nome}".`)
+        if (perfis.length > 1) throw new Error(`Mais de um usuário com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+        novoId = perfis[0].id
+        depois = perfis[0].nome
+      }
       let antes: string | null = null
-      if (proc.advogado_responsavel_id) {
-        const { data: a } = await ctx.db.from('profiles').select('nome').eq('id', proc.advogado_responsavel_id).maybeSingle()
+      if (proc.advogado_caso_id) {
+        const { data: a } = await ctx.db.from('profiles').select('nome').eq('id', proc.advogado_caso_id).maybeSingle()
         antes = a?.nome ?? null
       }
-      const resumo = { processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), responsavel: { antes, depois: perfis[0].nome } }
+      const resumo = { processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), advogado_responsavel: ADVOGADO_RESPONSAVEL_NOME, quem_cuida_do_caso: { antes, depois } }
       if (args.confirmar !== true) return previa(resumo)
-      const { error: e2 } = await ctx.db.from('processos').update({ advogado_responsavel_id: perfis[0].id }).eq('id', id)
+      const { error: e2 } = await ctx.db.from('processos').update({ advogado_caso_id: novoId }).eq('id', id)
       if (e2) throw new Error(e2.message)
       return { gravado: true, ...resumo }
     },
@@ -350,7 +357,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       area_direito: { type: 'string', enum: [...AREAS], description: 'Padrão: civil' },
       fase: { type: 'string' }, tribunal: { type: 'string' }, vara: { type: 'string' }, comarca: { type: 'string' }, classe_processual: { type: 'string' },
       assunto: { type: 'string' }, valor_causa: { type: 'number' }, data_distribuicao: { type: 'string', description: 'AAAA-MM-DD' }, observacoes: { type: 'string' },
-      advogado_responsavel: { type: 'string', description: 'Nome do advogado responsável pelo processo (padrão: quem está cadastrando)' },
+      quem_cuida: { type: 'string', description: 'Nome de quem vai cuidar do caso (opcional). O advogado responsável é sempre a Valéria.' },
       confirmar: CONFIRMAR,
     }, required: ['titulo', 'cliente_id'] },
     async executar(args, ctx) {
@@ -368,27 +375,27 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const area = AREAS.find(a => a === args.area_direito) ?? 'civil'
       const valor = args.valor_causa === undefined || args.valor_causa === null ? null : Number(args.valor_causa)
       if (valor !== null && !Number.isFinite(valor)) throw new Error('valor_causa inválido.')
-      // Advogado responsável: o nome informado (precisa ser um só usuário ativo) ou, sem nome, quem está cadastrando
-      let responsavelId = ctx.userId
-      let responsavelNome = ctx.nome
-      const nomeResp = texto(args.advogado_responsavel, 120)
-      if (nomeResp) {
-        const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).in('role', ['advogado', 'gerente', 'socio']).ilike('nome', `%${nomeResp}%`).limit(5)
-        if (!perfis?.length) throw new Error(`Não encontrei advogado ativo com o nome "${nomeResp}".`)
-        if (perfis.length > 1) throw new Error(`Mais de um advogado com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
-        responsavelId = perfis[0].id
-        responsavelNome = perfis[0].nome
+      // Advogado responsável é sempre a Valéria; "quem cuida do caso" é opcional (um só usuário ativo)
+      let quemCuidaId: string | null = null
+      let quemCuidaNome: string | null = null
+      const nomeCuida = texto(args.quem_cuida, 120)
+      if (nomeCuida) {
+        const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).ilike('nome', `%${nomeCuida}%`).limit(5)
+        if (!perfis?.length) throw new Error(`Não encontrei usuário ativo com o nome "${nomeCuida}".`)
+        if (perfis.length > 1) throw new Error(`Mais de um usuário com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+        quemCuidaId = perfis[0].id
+        quemCuidaNome = perfis[0].nome
       }
       const dados = {
         titulo, cliente_id: clienteId, numero_processo: numero, area_direito: area, status: 'ativo', fase: texto(args.fase, 100),
         tribunal: texto(args.tribunal, 100), vara: texto(args.vara, 150), comarca: texto(args.comarca, 100), classe_processual: texto(args.classe_processual, 150),
         assunto: texto(args.assunto, 200), valor_causa: valor, data_distribuicao: dataOk(args.data_distribuicao),
-        observacoes: [texto(args.observacoes, 4000), marca(ctx.nome)].filter(Boolean).join('\n\n'), advogado_responsavel_id: responsavelId,
+        observacoes: [texto(args.observacoes, 4000), marca(ctx.nome)].filter(Boolean).join('\n\n'), advogado_responsavel_id: ADVOGADO_RESPONSAVEL_ID, advogado_caso_id: quemCuidaId,
       }
-      if (args.confirmar !== true) return previa({ cliente: cliente.nome, advogado_responsavel: responsavelNome, ...dados })
+      if (args.confirmar !== true) return previa({ cliente: cliente.nome, advogado_responsavel: ADVOGADO_RESPONSAVEL_NOME, quem_cuida: quemCuidaNome, ...dados })
       const { data: criado, error } = await ctx.db.from('processos').insert(dados).select('id').single()
       if (error) throw new Error(error.message)
-      return { gravado: true, id: criado.id, cliente: cliente.nome, advogado_responsavel: responsavelNome, ...dados }
+      return { gravado: true, id: criado.id, cliente: cliente.nome, advogado_responsavel: ADVOGADO_RESPONSAVEL_NOME, quem_cuida: quemCuidaNome, ...dados }
     },
   },
   {

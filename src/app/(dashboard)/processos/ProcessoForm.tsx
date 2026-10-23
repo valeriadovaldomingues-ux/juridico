@@ -6,6 +6,8 @@ import SearchableCombobox, { type SearchableComboboxOption } from '@/components/
 import { createClient } from '@/lib/supabase/client'
 import type { ParteProcesso } from '@/types'
 import { buildClienteLookupDescription } from '@/lib/processos/search'
+import { fetchUsuarioOptions } from '@/lib/search/remote'
+import { ADVOGADO_RESPONSAVEL_ID, ADVOGADO_RESPONSAVEL_NOME } from '@/lib/processos/responsavel'
 import ProcessoImportarDocumento from './ProcessoImportarDocumento'
 import {
   buildObservacoesImportacao,
@@ -96,7 +98,12 @@ export default function ProcessoForm({
     classe_processual: processo?.classe_processual ?? '',
     assunto: processo?.assunto ?? '',
     segredo_justica: processo?.segredo_justica === true ? 'true' : processo?.segredo_justica === false ? 'false' : '',
+    advogado_caso_id: processo?.advogado_caso_id ?? '',
   })
+
+  const [quemCuidaOption, setQuemCuidaOption] = useState<SearchableComboboxOption | null>(
+    processo?.advogado_caso?.id ? { value: processo.advogado_caso.id, label: processo.advogado_caso.nome } : null
+  )
 
   const [clienteSelecionado, setClienteSelecionado] = useState<SearchableComboboxOption | null>(
     buildClienteOptionFromProcessoCliente(processo?.cliente ?? null)
@@ -201,6 +208,9 @@ export default function ProcessoForm({
       valor_causa: form.valor_causa ? parseFloat(form.valor_causa.toString()) : null,
       data_distribuicao: form.data_distribuicao || null,
       observacoes: form.observacoes || null,
+      // O responsável é sempre a Valéria; o segundo campo diz quem cuida do caso.
+      advogado_responsavel_id: ADVOGADO_RESPONSAVEL_ID,
+      advogado_caso_id: form.advogado_caso_id || null,
     }
 
     // ── Salvar processo ──────────────────────────────────────────────────────
@@ -325,6 +335,31 @@ export default function ProcessoForm({
               <option value="arquivado">Arquivado</option>
               <option value="encerrado">Encerrado</option>
             </select>
+          </div>
+
+          <div>
+            <label className={labelClass}>Advogada responsável</label>
+            <input value={ADVOGADO_RESPONSAVEL_NOME} readOnly disabled className={`${inputClass} bg-[var(--color-surface-warm)] text-[var(--color-ink-2)]`} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Quem cuida do caso</label>
+            <SearchableCombobox
+              value={form.advogado_caso_id}
+              selectedOption={quemCuidaOption}
+              onChange={(value, option) => {
+                handleChange('advogado_caso_id', value)
+                setQuemCuidaOption(option)
+              }}
+              loadOptions={fetchUsuarioOptions}
+              placeholder="Selecionar quem cuida..."
+              searchPlaceholder="Digite para buscar na equipe"
+              emptyText="Digite para buscar na equipe."
+              minSearchLength={2}
+              maxResults={10}
+              allowClear
+              clearLabel="Ninguém definido"
+            />
           </div>
 
           <div>

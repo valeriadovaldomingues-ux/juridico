@@ -91,7 +91,7 @@ export const FERRAMENTAS: Ferramenta[] = [
       const id = String(args.id ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Id de processo inválido.')
       const [proc, partes, andamentos, prazos, agenda] = await Promise.all([
-        ctx.db.from('processos').select('id, numero_processo, titulo, status, area_direito, fase, tribunal, vara, comarca, classe_processual, assunto, valor_causa, data_distribuicao, observacoes, cliente:clientes!cliente_id(nome)').eq('id', id).maybeSingle(),
+        ctx.db.from('processos').select('id, numero_processo, titulo, status, area_direito, fase, tribunal, vara, comarca, classe_processual, assunto, valor_causa, data_distribuicao, observacoes, cliente:clientes!cliente_id(nome), advogado_caso:profiles!advogado_caso_id(nome)').eq('id', id).maybeSingle(),
         ctx.db.from('partes_processo').select('id, pessoa_nome, tipo_parte, documento').eq('processo_id', id).limit(30),
         ctx.db.from('processo_andamentos').select('data_andamento, tipo, titulo, descricao, origem').eq('processo_id', id).order('data_andamento', { ascending: false }).limit(15),
         ctx.db.from('prazos').select('titulo, tipo, data_final, prioridade').eq('processo_id', id).eq('status', 'pendente').order('data_final').limit(20),
@@ -101,7 +101,7 @@ export const FERRAMENTAS: Ferramenta[] = [
       if (!proc.data) throw new Error('Processo não encontrado.')
       const p = proc.data as Record<string, unknown>
       return {
-        processo: { ...p, observacoes: corta(p.observacoes, 800), cliente: (um(p.cliente as never) as { nome?: string } | null)?.nome ?? null },
+        processo: { ...p, observacoes: corta(p.observacoes, 800), cliente: (um(p.cliente as never) as { nome?: string } | null)?.nome ?? null, advogado_responsavel: 'Valéria do Val', quem_cuida_do_caso: (um(p.advogado_caso as never) as { nome?: string } | null)?.nome ?? null, advogado_caso: undefined },
         partes: partes.data ?? [],
         ultimos_andamentos: (andamentos.data ?? []).map((a: Record<string, unknown>) => ({ ...a, descricao: corta(a.descricao, 500) })),
         prazos_pendentes: prazos.data ?? [],
