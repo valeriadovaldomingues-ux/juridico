@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
 import { isUUID } from '@/lib/portal/validate'
@@ -71,5 +72,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (errCard) aviso = `Prazo salvo na Agenda, mas o card do Kanban não foi criado: ${errCard.message}`
   }
 
+  sincronizarGoogleEmSegundoPlano()
   return NextResponse.json({ id: item.id, aviso }, { status: 201 })
 }

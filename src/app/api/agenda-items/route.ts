@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import type { UserRole } from '@/types'
@@ -57,5 +58,6 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  sincronizarGoogleEmSegundoPlano()
   return NextResponse.json(data, { status: 201 })
 }
