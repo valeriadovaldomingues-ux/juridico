@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 
@@ -28,5 +29,6 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  sincronizarGoogleEmSegundoPlano() // apaga também o evento do Google, se houver
   return new NextResponse(null, { status: 204 })
 }

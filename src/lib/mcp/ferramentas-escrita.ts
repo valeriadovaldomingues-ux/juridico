@@ -1,4 +1,7 @@
 import type { Ferramenta } from './ferramentas'
+import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
+import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
+import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
 
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem está em MCP_USUARIOS_ESCRITA; (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
@@ -94,6 +97,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
         prioridade, processo_id: processo?.id ?? null, cliente_id: processo?.cliente_id ?? null, responsavel,
       }).select('id').single()
       if (error) throw new Error(error.message)
+      sincronizarGoogleEmSegundoPlano()
       return { gravado: true, id: criado.id, ...resumo }
     },
   },
@@ -131,6 +135,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       if (args.confirmar !== true) return previa(resumo)
       const { error: e2 } = await ctx.db.from('agenda_items').delete().eq('id', id)
       if (e2) throw new Error(e2.message)
+      sincronizarGoogleEmSegundoPlano()
       return { gravado: true, excluido: true, ...resumo }
     },
   },
@@ -200,6 +205,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       if (args.confirmar !== true) return previa({ compromisso_id: id, mudancas })
       const { error: e2 } = await ctx.db.from('agenda_items').update(novo).eq('id', id)
       if (e2) throw new Error(e2.message)
+      sincronizarGoogleEmSegundoPlano()
       return { gravado: true, compromisso_id: id, mudancas }
     },
   },
@@ -243,6 +249,25 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const { error: e2 } = await ctx.db.from('partes_processo').delete().eq('id', id)
       if (e2) throw new Error(e2.message)
       return { gravado: true, removida: true, ...resumo }
+    },
+  },
+  {
+    name: 'enviar_ao_google',
+    description: 'Envia UM compromisso (prazo ou audiência) ao Google Agenda pedvprazos, no formato do escritório. É o caminho para compromissos ANTIGOS, que não vão sozinhos. Já criados depois da ativação vão automaticamente. Duas etapas: sem confirmar=true só mostra como ficaria o evento.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, confirmar: CONFIRMAR }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de compromisso inválido.')
+      if (!googleAgendaConfigurado()) throw new Error('O Google Agenda ainda não foi configurado no sistema.')
+      const { data: item, error } = await ctx.db.from('agenda_items').select('id, titulo, tipo, status, data_inicio, hora_inicio, google_event_id').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!item) throw new Error('Compromisso não encontrado.')
+      if (!['prazo', 'prazo_processual', 'audiencia', 'pericia'].includes(item.tipo)) throw new Error('Só prazos e audiências/perícias vão para o Google Agenda.')
+      const resumo = { compromisso: `${item.tipo}: ${item.titulo} (${item.data_inicio}${item.hora_inicio ? ` ${String(item.hora_inicio).slice(0, 5)}` : ''})`, ja_no_google: !!item.google_event_id }
+      if (args.confirmar !== true) return previa(resumo)
+      const r = await enviarCompromissoAoGoogle(ctx.db, criarCalendario(), id)
+      if (!r.ok) throw new Error(r.erro)
+      return { gravado: true, ...resumo, google: r.acao, evento_id: r.eventoId }
     },
   },
   {

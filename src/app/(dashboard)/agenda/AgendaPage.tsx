@@ -200,6 +200,8 @@ export default function AgendaPage({
 
     setSaving(false)
     setModalOpen(false)
+    // Prazos/audiências vão para o Google Agenda (não faz nada se o Google não estiver configurado)
+    void fetch('/api/agenda-google/sync', { method: 'POST' }).catch(() => {})
   }
 
   async function handleDelete(item: AgendaItem) {

@@ -84,6 +84,7 @@ export default function ConectarClaude() {
           <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>alterar_advogado_responsavel</strong></li>
           <li><strong>adicionar_parte_processo</strong>, <strong>atualizar_parte_processo</strong> e <strong>remover_parte_processo</strong></li>
           <li><strong>atualizar_compromisso</strong> — corrige data, hora, responsável e vincula a um processo</li>
+          <li><strong>enviar_ao_google</strong> — manda um prazo/audiência antigo ao Google Agenda pedvprazos (os novos vão sozinhos)</li>
           <li><strong>tratar_publicacao</strong> — marca como tratada ou descartada</li>
         </ul>
         <p className="text-[12px] text-[#6b7280]">Antes de gravar, o Claude mostra o resumo e espera o seu &ldquo;sim&rdquo;. O que for gravado leva a marca &ldquo;registrado via Claude&rdquo;. Fora o compromisso criado por ele mesmo, <strong>nada é apagado</strong> por este conector.</p>
