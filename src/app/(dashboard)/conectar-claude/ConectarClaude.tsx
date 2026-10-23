@@ -81,7 +81,9 @@ export default function ConectarClaude() {
           <li><strong>criar_andamento</strong> — registra andamento no processo</li>
           <li><strong>criar_compromisso</strong>, <strong>concluir_compromisso</strong> e <strong>excluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis); só exclui o que o próprio conector criou por você</li>
           <li><strong>cadastrar_cliente</strong> e <strong>atualizar_cliente</strong></li>
-          <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>adicionar_parte_processo</strong></li>
+          <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>alterar_advogado_responsavel</strong></li>
+          <li><strong>adicionar_parte_processo</strong>, <strong>atualizar_parte_processo</strong> e <strong>remover_parte_processo</strong></li>
+          <li><strong>atualizar_compromisso</strong> — corrige data, hora, responsável e vincula a um processo</li>
           <li><strong>tratar_publicacao</strong> — marca como tratada ou descartada</li>
         </ul>
         <p className="text-[12px] text-[#6b7280]">Antes de gravar, o Claude mostra o resumo e espera o seu &ldquo;sim&rdquo;. O que for gravado leva a marca &ldquo;registrado via Claude&rdquo;. Fora o compromisso criado por ele mesmo, <strong>nada é apagado</strong> por este conector.</p>

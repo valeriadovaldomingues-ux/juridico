@@ -3,7 +3,7 @@ import type { Ferramenta } from './ferramentas'
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem está em MCP_USUARIOS_ESCRITA; (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
 // esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) só se apaga o que o próprio
-// conector criou pela mesma pessoa (excluir_compromisso).
+// conector criou pela mesma pessoa (excluir_compromisso) ou a ligação de uma parte com o processo (remover_parte_processo).
 
 const UUID = /^[0-9a-f-]{36}$/i
 const dataOk = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
@@ -132,6 +132,117 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const { error: e2 } = await ctx.db.from('agenda_items').delete().eq('id', id)
       if (e2) throw new Error(e2.message)
       return { gravado: true, excluido: true, ...resumo }
+    },
+  },
+  {
+    name: 'alterar_advogado_responsavel',
+    description: 'Troca o advogado responsável de um processo já cadastrado (pelo nome do advogado). Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    inputSchema: { type: 'object', properties: {
+      processo_id: { type: 'string' }, advogado: { type: 'string', description: 'Nome (ou parte do nome) do advogado responsável' }, confirmar: CONFIRMAR,
+    }, required: ['processo_id', 'advogado'] },
+    async executar(args, ctx) {
+      const id = String(args.processo_id ?? '')
+      const nome = texto(args.advogado, 120)
+      if (!UUID.test(id) || !nome) throw new Error('Informe o processo (id) e o nome do advogado.')
+      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, advogado_responsavel_id').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!proc) throw new Error('Processo não encontrado.')
+      const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).in('role', ['advogado', 'gerente', 'socio']).ilike('nome', `%${nome}%`).limit(5)
+      if (!perfis?.length) throw new Error(`Não encontrei advogado ativo com o nome "${nome}".`)
+      if (perfis.length > 1) throw new Error(`Mais de um advogado com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+      let antes: string | null = null
+      if (proc.advogado_responsavel_id) {
+        const { data: a } = await ctx.db.from('profiles').select('nome').eq('id', proc.advogado_responsavel_id).maybeSingle()
+        antes = a?.nome ?? null
+      }
+      const resumo = { processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), responsavel: { antes, depois: perfis[0].nome } }
+      if (args.confirmar !== true) return previa(resumo)
+      const { error: e2 } = await ctx.db.from('processos').update({ advogado_responsavel_id: perfis[0].id }).eq('id', id)
+      if (e2) throw new Error(e2.message)
+      return { gravado: true, ...resumo }
+    },
+  },
+  {
+    name: 'atualizar_compromisso',
+    description: 'Edita um compromisso da agenda (título, tipo, data, hora, prazo final, prioridade, responsável, descrição) e/ou o vincula a um processo. Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    inputSchema: { type: 'object', properties: {
+      id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, titulo: { type: 'string' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
+      data_inicio: { type: 'string', description: 'AAAA-MM-DD' }, hora_inicio: { type: 'string', description: 'HH:MM' }, prazo_final: { type: 'string', description: 'AAAA-MM-DD' },
+      prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] }, responsavel: { type: 'string' }, descricao: { type: 'string' },
+      processo_id: { type: 'string', description: 'Vincula ao processo (id). O cliente do compromisso passa a ser o do processo.' }, confirmar: CONFIRMAR,
+    }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de compromisso inválido.')
+      const novo: Record<string, unknown> = {}
+      const t = texto(args.titulo, 300); if (t) novo.titulo = t
+      if (args.tipo !== undefined) { const tp = TIPOS_AGENDA.find(x => x === args.tipo); if (!tp) throw new Error('tipo inválido (tarefa, prazo, audiencia ou evento).'); novo.tipo = tp }
+      if (args.data_inicio !== undefined) { const d = dataOk(args.data_inicio); if (!d) throw new Error('data_inicio: use AAAA-MM-DD.'); novo.data_inicio = d }
+      if (args.hora_inicio !== undefined) { const h = horaOk(args.hora_inicio); if (!h) throw new Error('hora_inicio: use HH:MM.'); novo.hora_inicio = h }
+      if (args.prazo_final !== undefined) { const d = dataOk(args.prazo_final); if (!d) throw new Error('prazo_final: use AAAA-MM-DD.'); novo.prazo_final = d }
+      if (args.prioridade !== undefined) { if (!['baixa', 'media', 'alta'].includes(String(args.prioridade))) throw new Error('prioridade inválida.'); novo.prioridade = args.prioridade }
+      const r = texto(args.responsavel, 200); if (r) novo.responsavel = r.split(' / ').map(n => n.trim()).filter(Boolean).slice(0, 2).join(' / ')
+      const d = texto(args.descricao, 2000); if (d) novo.descricao = `${d}\n\n${marca(ctx.nome)}`
+      let processo: { id: string; numero_processo: string | null; titulo: string | null; cliente_id: string | null } | null = null
+      if (args.processo_id !== undefined) {
+        if (!UUID.test(String(args.processo_id))) throw new Error('Id de processo inválido.')
+        const { data: p, error: ep } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', String(args.processo_id)).maybeSingle()
+        if (ep) throw new Error(ep.message)
+        if (!p) throw new Error('Processo não encontrado.')
+        processo = p; novo.processo_id = p.id; novo.cliente_id = p.cliente_id
+      }
+      if (Object.keys(novo).length === 0) throw new Error('Informe ao menos um campo para alterar.')
+      const colunas = Object.keys(novo).filter(k => k !== 'cliente_id')
+      const { data: atual, error } = await ctx.db.from('agenda_items').select(['id', ...colunas].join(', ')).eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!atual) throw new Error('Compromisso não encontrado.')
+      const mudancas = Object.fromEntries(colunas.map(k => [k, { antes: (atual as Record<string, unknown>)[k] ?? null, depois: k === 'processo_id' && processo ? `${processo.numero_processo ?? ''} ${processo.titulo ?? ''}`.trim() : novo[k] }]))
+      if (args.confirmar !== true) return previa({ compromisso_id: id, mudancas })
+      const { error: e2 } = await ctx.db.from('agenda_items').update(novo).eq('id', id)
+      if (e2) throw new Error(e2.message)
+      return { gravado: true, compromisso_id: id, mudancas }
+    },
+  },
+  {
+    name: 'atualizar_parte_processo',
+    description: 'Corrige uma parte de um processo (nome, tipo autor/reu/terceiro/outro, documento). Use o id da parte devolvido por ver_processo. Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    inputSchema: { type: 'object', properties: {
+      id: { type: 'string', description: 'Id da parte (de ver_processo)' }, nome: { type: 'string' },
+      tipo_parte: { type: 'string', enum: ['autor', 'reu', 'terceiro', 'outro'] }, documento: { type: 'string' }, confirmar: CONFIRMAR,
+    }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de parte inválido.')
+      const novo: Record<string, unknown> = {}
+      const n = texto(args.nome, 200); if (n) novo.pessoa_nome = n
+      if (args.tipo_parte !== undefined) { const tp = ['autor', 'reu', 'terceiro', 'outro'].find(x => x === args.tipo_parte); if (!tp) throw new Error('tipo_parte inválido (autor, reu, terceiro ou outro).'); novo.tipo_parte = tp }
+      const dc = texto(args.documento, 30); if (dc) novo.documento = dc
+      if (Object.keys(novo).length === 0) throw new Error('Informe ao menos um campo para alterar.')
+      const { data: atual, error } = await ctx.db.from('partes_processo').select(['id', 'processo_id', ...Object.keys(novo)].join(', ')).eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!atual) throw new Error('Parte não encontrada.')
+      const mudancas = Object.fromEntries(Object.entries(novo).map(([k, v]) => [k, { antes: (atual as Record<string, unknown>)[k] ?? null, depois: v }]))
+      if (args.confirmar !== true) return previa({ parte_id: id, mudancas })
+      const { error: e2 } = await ctx.db.from('partes_processo').update(novo).eq('id', id)
+      if (e2) throw new Error(e2.message)
+      return { gravado: true, parte_id: id, mudancas }
+    },
+  },
+  {
+    name: 'remover_parte_processo',
+    description: 'Remove uma parte de um processo (só a ligação da parte com o processo, não a pessoa). Use o id da parte devolvido por ver_processo. Duas etapas: sem confirmar=true só mostra o resumo.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Id da parte (de ver_processo)' }, confirmar: CONFIRMAR }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de parte inválido.')
+      const { data: parte, error } = await ctx.db.from('partes_processo').select('id, processo_id, pessoa_nome, tipo_parte, documento').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!parte) throw new Error('Parte não encontrada.')
+      const resumo = { remover_parte: { nome: parte.pessoa_nome, tipo_parte: parte.tipo_parte, documento: parte.documento ?? null }, processo_id: parte.processo_id }
+      if (args.confirmar !== true) return previa(resumo)
+      const { error: e2 } = await ctx.db.from('partes_processo').delete().eq('id', id)
+      if (e2) throw new Error(e2.message)
+      return { gravado: true, removida: true, ...resumo }
     },
   },
   {
