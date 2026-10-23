@@ -188,6 +188,8 @@ export interface Processo {
    * Ver: supabase/rbac_migration.sql — seção "Restrição por responsável"
    */
   advogado_responsavel_id: string | null
+  /** Quem cuida do caso no dia a dia (o responsável é sempre a Valéria). */
+  advogado_caso_id?: string | null
   tribunal: string | null
   comarca?: string | null
   vara: string | null

@@ -81,7 +81,7 @@ export default function ConectarClaude() {
           <li><strong>criar_andamento</strong> — registra andamento no processo</li>
           <li><strong>criar_compromisso</strong>, <strong>concluir_compromisso</strong> e <strong>excluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis); só exclui o que o próprio conector criou por você</li>
           <li><strong>cadastrar_cliente</strong> e <strong>atualizar_cliente</strong></li>
-          <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>alterar_advogado_responsavel</strong></li>
+          <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>definir_quem_cuida_do_caso</strong></li>
           <li><strong>adicionar_parte_processo</strong>, <strong>atualizar_parte_processo</strong> e <strong>remover_parte_processo</strong></li>
           <li><strong>atualizar_compromisso</strong> — corrige data, hora, responsável e vincula a um processo</li>
           <li><strong>enviar_ao_google</strong> — manda um prazo/audiência antigo ao Google Agenda pedvprazos (os novos vão sozinhos)</li>

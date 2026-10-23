@@ -63,14 +63,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const supabase = await createClient()
   const { data: processo } = await supabase
     .from('processos')
-    .select('id, cliente_id, titulo, numero_processo, advogado_responsavel_id, cliente:clientes!cliente_id(nome)')
+    .select('id, cliente_id, titulo, numero_processo, advogado_responsavel_id, advogado_caso_id, cliente:clientes!cliente_id(nome)')
     .eq('id', id).maybeSingle()
   if (!processo) return NextResponse.json({ error: 'Processo não encontrado.' }, { status: 404 })
   const clienteNome = (Array.isArray(processo.cliente) ? processo.cliente[0]?.nome : (processo.cliente as { nome?: string } | null)?.nome) ?? null
 
   const { data: equipeRaw } = await supabase.rpc('perfis_equipe')
   const nomeDe = new Map(((equipeRaw ?? []) as { id: string; nome: string }[]).map(p => [p.id, p.nome]))
-  const advogadoId: string | null = processo.advogado_responsavel_id ?? null
+  const advogadoId: string | null = processo.advogado_caso_id ?? processo.advogado_responsavel_id ?? null
 
   // 1) Andamento do processo (tipo Audiência) com o resumo e as obrigações do cliente.
   const linhasObrigacoes = obrigacoes.map(o => `• ${o.titulo}${o.valor ? ` — ${o.valor}` : ''}${o.data ? ` — até ${dataBR(o.data)}` : o.dataTexto ? ` — ${o.dataTexto}` : ''}`)
