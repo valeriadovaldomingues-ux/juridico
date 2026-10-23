@@ -1,4 +1,5 @@
 import { fonteDataJud } from './datajud'
+import { FONTE_DJEN } from './djen'
 import { FONTE_EPROC } from './eproc'
 import { FONTE_ESAJ } from './esaj'
 import { FONTE_PJE } from './pje'
@@ -28,6 +29,7 @@ export type {
 
 export function listarFontesMonitoramento(): FonteMonitoramento[] {
   return [
+    FONTE_DJEN,
     FONTE_TJMG_DJE,
     fonteDataJud(),
     FONTE_EPROC,

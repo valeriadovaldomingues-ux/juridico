@@ -73,6 +73,8 @@ export const FONTE_TRT3_MG: FonteMonitoramento = {
           orgao: pub.orgao,
           diario: pub.origem === 'trt3_djen' ? 'DJEN' : 'DEJT',
           data_publicacao: pub.data_publicacao,
+          // DEJT não tem o conceito de disponibilização separado — só o DJEN carrega esse campo.
+          data_disponibilizacao: (pub as { data_disponibilizacao?: string | null }).data_disponibilizacao ?? null,
           nome_pesquisado: pub.nome_pesquisado,
           texto_publicacao: pub.texto_publicacao,
           origem: pub.origem,
@@ -134,6 +136,7 @@ export const FONTE_TRT3_DJEN: FonteMonitoramento = {
           orgao: pub.orgao,
           diario: 'DJEN',
           data_publicacao: pub.data_publicacao,
+          data_disponibilizacao: pub.data_disponibilizacao,
           nome_pesquisado: pub.nome_pesquisado,
           texto_publicacao: pub.texto_publicacao,
           origem: pub.origem,

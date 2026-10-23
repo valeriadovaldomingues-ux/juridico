@@ -9,7 +9,7 @@ export type StatusTecnicoFonte =
 export interface DiagnosticoFontePendente {
   id: string
   tribunal: string
-  ramo: 'estadual' | 'federal' | 'trabalhista' | 'eproc' | 'datajud' | 'superior'
+  ramo: 'estadual' | 'federal' | 'trabalhista' | 'eproc' | 'datajud' | 'superior' | 'nacional'
   fonteProvavel: string
   status: StatusTecnicoFonte
   endpoint?: string
@@ -31,6 +31,19 @@ const TRFS_DJEN_ATIVOS = ['TRF1', 'TRF2', 'TRF3', 'TRF4', 'TRF5', 'TRF6']
 const SUPERIORES_DJEN_ATIVOS = ['STF', 'STJ', 'TST']
 
 export const MATRIZ_FONTES_MONITORAMENTO: DiagnosticoFontePendente[] = [
+  {
+    id: 'djen',
+    tribunal: 'Todos (CNJ)',
+    ramo: 'nacional',
+    fonteProvavel: 'DJEN — Diário de Justiça Eletrônico Nacional',
+    status: 'ativo',
+    endpoint: DJEN_ENDPOINT,
+    exigeCredencial: false,
+    validada: true,
+    capturaPublicacaoReal: true,
+    motivo: 'Fonte consolidada: consulta por OAB sem sigla de tribunal cobre todos os tribunais integrados, com paginação por count. O WAF do CNJ pode recusar IPs de datacenter (HTTP 403) — nesse caso a captura acontece pelo navegador do usuário autenticado, via a mesma API oficial (CORS aberto).',
+    proximaAcao: 'Manter cron diário best-effort e captura pelo navegador como caminho principal.',
+  },
   {
     id: 'tjmg-dje',
     tribunal: 'TJMG',

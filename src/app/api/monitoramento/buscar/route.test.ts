@@ -404,8 +404,10 @@ function supabaseComAdvogados(options?: { existing?: boolean; insertError?: bool
           }),
           insert: vi.fn().mockImplementation((payload: unknown) => {
             insertCalls.push({ table, payload })
-            return Promise.resolve({
-              error: options?.insertError ? { message: 'insert falhou' } : null,
+            const error = options?.insertError ? { message: 'insert falhou' } : null
+            // O client real devolve um builder encadeável (.select().single()).
+            return Object.assign(Promise.resolve({ error }), {
+              select: () => ({ single: () => Promise.resolve({ data: error ? null : { id: 'pub-teste' }, error }) }),
             })
           }),
         }
@@ -415,7 +417,9 @@ function supabaseComAdvogados(options?: { existing?: boolean; insertError?: bool
         return {
           insert: vi.fn().mockImplementation((payload: unknown) => {
             insertCalls.push({ table, payload })
-            return Promise.resolve({ error: null })
+            return Object.assign(Promise.resolve({ error: null }), {
+              select: () => ({ single: () => Promise.resolve({ data: { id: 'pub-teste' }, error: null }) }),
+            })
           }),
         }
       }
@@ -502,12 +506,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.sucesso).toBe(true)
     expect(body.total_novas).toBe(1)
     expect(body.total_encontradas).toBe(1)
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: undefined,
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 
@@ -563,12 +567,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TRT3/MG')
     expect(body.fontes[0].status).toBe('ativo')
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: '2026-05-18',
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 
@@ -604,12 +608,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TJSP')
     expect(body.fontes[0].status).toBe('ativo')
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: '2026-05-19',
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 
@@ -628,12 +632,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TJAC')
     expect(body.fontes[0].status).toBe('ativo')
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: '2026-05-19',
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 
@@ -652,12 +656,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('TRF1')
     expect(body.fontes[0].status).toBe('ativo')
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: '2026-05-19',
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 
@@ -676,12 +680,12 @@ describe('POST /api/monitoramento/buscar', () => {
     expect(body.total_novas).toBe(1)
     expect(body.fontes[0].fonte_nome).toBe('STJ')
     expect(body.fontes[0].status).toBe('ativo')
-    expect(fonte.executar).toHaveBeenCalledWith({
+    expect(fonte.executar).toHaveBeenCalledWith(expect.objectContaining({
       nomes: ['ADVOGADO TESTE'],
       processos: ['50000000020268130000'],
       oabs: ['MG123', '123/MG'],
       data: '2026-05-19',
-    })
+    }))
     expect(supabase.insertCalls.some(call => call.table === 'publicacoes')).toBe(true)
   })
 

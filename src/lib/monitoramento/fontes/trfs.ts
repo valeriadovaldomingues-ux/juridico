@@ -39,6 +39,7 @@ function fonteTRFDJEN(tribunal: string): FonteMonitoramento {
             orgao: pub.orgao,
             diario: 'DJEN',
             data_publicacao: pub.data_publicacao,
+            data_disponibilizacao: pub.data_disponibilizacao,
             nome_pesquisado: pub.nome_pesquisado,
             texto_publicacao: pub.texto_publicacao,
             origem: pub.origem,
