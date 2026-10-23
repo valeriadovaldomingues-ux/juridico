@@ -13,6 +13,8 @@ import AtaAudienciaModal from './AtaAudienciaModal'
 import NovoCompromissoModal from './NovoCompromissoModal'
 import EmailAtaModal from './EmailAtaModal'
 import EmailClienteModal from './EmailClienteModal'
+import HorasTab from './HorasTab'
+import RegistrarHorasModal from '@/components/horas/RegistrarHorasModal'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
@@ -147,11 +149,12 @@ interface DocumentoProcessoSimple {
   } | null
 }
 
-type TabAtiva = 'dados' | 'andamentos' | 'comunicacoes' | 'relatorios' | 'aurora_cliente' | 'documentos' | 'prazos' | 'observacoes'
+type TabAtiva = 'dados' | 'andamentos' | 'horas' | 'comunicacoes' | 'relatorios' | 'aurora_cliente' | 'documentos' | 'prazos' | 'observacoes'
 
 const TAB_OPTIONS: Array<{ id: TabAtiva; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
   { id: 'dados', label: 'Dados gerais', icon: ListChecks },
   { id: 'andamentos', label: 'Andamentos', icon: Clock3 },
+  { id: 'horas', label: 'Horas', icon: Clock3 },
   { id: 'comunicacoes', label: 'Comunicação', icon: MessageSquare },
   { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
   { id: 'aurora_cliente', label: 'Aurora Cliente', icon: Sparkles },
@@ -213,6 +216,8 @@ export default function ProcessoDetail({
 }) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<TabAtiva>('dados')
+  const [registrandoHoras, setRegistrandoHoras] = useState(false)
+  const [horasKey, setHorasKey] = useState(0)
   const [novoCompromisso, setNovoCompromisso] = useState<'prazo' | 'audiencia' | null>(null)
   const [andamentos, setAndamentos] = useState(andamentosIniciais)
   const [comunicacoes, setComunicacoes] = useState(comunicacoesIniciais)
@@ -233,6 +238,7 @@ export default function ProcessoDetail({
   const tabCount = {
     dados: 0,
     andamentos: andamentos.length,
+    horas: 0,
     comunicacoes: comunicacoes.length,
     relatorios: canViewRelatorio(role) ? relatorios.length : 0,
     aurora_cliente: auroraClienteHistorico.length,
@@ -280,13 +286,33 @@ export default function ProcessoDetail({
           <span className="text-[#d1d5db]">/</span>
           <h1 className="text-xl font-semibold text-[#1a1d23]">{processo.titulo}</h1>
         </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="flex items-center gap-2 px-4 py-2.5 border border-[#e5e7eb] text-sm font-medium text-[#374151] rounded-xl hover:bg-[#f9fafb] transition-colors"
-        >
-          <Edit size={14} /> Editar
-        </button>
+        <div className="flex items-center gap-2">
+          {role !== 'estagiario' && (
+            <button
+              onClick={() => setRegistrandoHoras(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#145A5B] text-white text-sm font-medium rounded-xl hover:bg-[#1B6E70] transition-colors"
+              title="Registrar as horas de uma tarefa neste processo"
+            >
+              <Clock3 size={14} /> Registrar horas
+            </button>
+          )}
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-[#e5e7eb] text-sm font-medium text-[#374151] rounded-xl hover:bg-[#f9fafb] transition-colors"
+          >
+            <Edit size={14} /> Editar
+          </button>
+        </div>
       </div>
+
+      {registrandoHoras && (
+        <RegistrarHorasModal
+          processo={{ id: processo.id, label: `${processo.numero_processo ? `${processo.numero_processo} — ` : ''}${processo.titulo}`, clienteNome: processo.cliente?.nome ?? null }}
+          podeValor={role === 'socio'}
+          onClose={() => setRegistrandoHoras(false)}
+          onSalvo={() => { setRegistrandoHoras(false); setHorasKey(k => k + 1); setTab('horas') }}
+        />
+      )}
 
       <div className="grid grid-cols-3 gap-4">
 
@@ -384,6 +410,10 @@ export default function ProcessoDetail({
                   setAndamentos={setAndamentos}
                   onNovoCompromisso={setNovoCompromisso}
                 />
+              )}
+
+              {tab === 'horas' && (
+                <HorasTab processoId={processo.id} role={role} recarregarKey={horasKey} onRegistrar={() => setRegistrandoHoras(true)} />
               )}
 
               {tab === 'comunicacoes' && role !== 'estagiario' && (
