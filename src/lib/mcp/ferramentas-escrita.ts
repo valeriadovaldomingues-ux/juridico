@@ -2,7 +2,8 @@ import type { Ferramenta } from './ferramentas'
 
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem está em MCP_USUARIOS_ESCRITA; (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
-// esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) nada é apagado.
+// esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) só se apaga o que o próprio
+// conector criou pela mesma pessoa (excluir_compromisso).
 
 const UUID = /^[0-9a-f-]{36}$/i
 const dataOk = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
@@ -115,6 +116,25 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
     },
   },
   {
+    name: 'excluir_compromisso',
+    description: 'Exclui um compromisso da agenda, mas SÓ um que foi criado por este conector pela própria pessoa (com a marca "registrado via Claude"), ainda pendente — serve para desfazer um lançamento errado ou de teste. Não apaga compromissos feitos pelo sistema ou por outras pessoas. Duas etapas: sem confirmar=true só mostra o resumo.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, confirmar: CONFIRMAR }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de compromisso inválido.')
+      const { data: item, error } = await ctx.db.from('agenda_items').select('id, titulo, tipo, status, data_inicio, descricao').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!item) throw new Error('Compromisso não encontrado.')
+      if (!String(item.descricao ?? '').includes(marca(ctx.nome))) throw new Error('Só posso excluir compromissos criados por este conector por você. Este foi criado de outra forma: exclua pela tela da agenda.')
+      if (item.status === 'concluido') throw new Error('Este compromisso já foi concluído; para não perder o histórico, não é excluído por aqui.')
+      const resumo = { excluir: `${item.tipo}: ${item.titulo} (${item.data_inicio})` }
+      if (args.confirmar !== true) return previa(resumo)
+      const { error: e2 } = await ctx.db.from('agenda_items').delete().eq('id', id)
+      if (e2) throw new Error(e2.message)
+      return { gravado: true, excluido: true, ...resumo }
+    },
+  },
+  {
     name: 'cadastrar_cliente',
     description: 'Cadastra um cliente novo (nome obrigatório). Recusa se já existir cliente com o mesmo CPF/CNPJ. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: {
@@ -194,6 +214,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       area_direito: { type: 'string', enum: [...AREAS], description: 'Padrão: civil' },
       fase: { type: 'string' }, tribunal: { type: 'string' }, vara: { type: 'string' }, comarca: { type: 'string' }, classe_processual: { type: 'string' },
       assunto: { type: 'string' }, valor_causa: { type: 'number' }, data_distribuicao: { type: 'string', description: 'AAAA-MM-DD' }, observacoes: { type: 'string' },
+      advogado_responsavel: { type: 'string', description: 'Nome do advogado responsável pelo processo (padrão: quem está cadastrando)' },
       confirmar: CONFIRMAR,
     }, required: ['titulo', 'cliente_id'] },
     async executar(args, ctx) {
@@ -211,16 +232,27 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const area = AREAS.find(a => a === args.area_direito) ?? 'civil'
       const valor = args.valor_causa === undefined || args.valor_causa === null ? null : Number(args.valor_causa)
       if (valor !== null && !Number.isFinite(valor)) throw new Error('valor_causa inválido.')
+      // Advogado responsável: o nome informado (precisa ser um só usuário ativo) ou, sem nome, quem está cadastrando
+      let responsavelId = ctx.userId
+      let responsavelNome = ctx.nome
+      const nomeResp = texto(args.advogado_responsavel, 120)
+      if (nomeResp) {
+        const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).in('role', ['advogado', 'gerente', 'socio']).ilike('nome', `%${nomeResp}%`).limit(5)
+        if (!perfis?.length) throw new Error(`Não encontrei advogado ativo com o nome "${nomeResp}".`)
+        if (perfis.length > 1) throw new Error(`Mais de um advogado com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+        responsavelId = perfis[0].id
+        responsavelNome = perfis[0].nome
+      }
       const dados = {
         titulo, cliente_id: clienteId, numero_processo: numero, area_direito: area, status: 'ativo', fase: texto(args.fase, 100),
         tribunal: texto(args.tribunal, 100), vara: texto(args.vara, 150), comarca: texto(args.comarca, 100), classe_processual: texto(args.classe_processual, 150),
         assunto: texto(args.assunto, 200), valor_causa: valor, data_distribuicao: dataOk(args.data_distribuicao),
-        observacoes: [texto(args.observacoes, 4000), marca(ctx.nome)].filter(Boolean).join('\n\n'), advogado_responsavel_id: ctx.userId,
+        observacoes: [texto(args.observacoes, 4000), marca(ctx.nome)].filter(Boolean).join('\n\n'), advogado_responsavel_id: responsavelId,
       }
-      if (args.confirmar !== true) return previa({ cliente: cliente.nome, ...dados })
+      if (args.confirmar !== true) return previa({ cliente: cliente.nome, advogado_responsavel: responsavelNome, ...dados })
       const { data: criado, error } = await ctx.db.from('processos').insert(dados).select('id').single()
       if (error) throw new Error(error.message)
-      return { gravado: true, id: criado.id, cliente: cliente.nome, ...dados }
+      return { gravado: true, id: criado.id, cliente: cliente.nome, advogado_responsavel: responsavelNome, ...dados }
     },
   },
   {
