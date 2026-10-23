@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import ProvidenciaModal from '@/components/kanban/ProvidenciaModal'
-import SearchableCombobox from '@/components/ui/SearchableCombobox'
+import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
 import { createClient } from '@/lib/supabase/client'
 import {
   AlertTriangle, CheckCircle2, XCircle, Search,
@@ -56,6 +56,20 @@ interface Publicacao {
 
 interface Processo { id: string; titulo: string; numero_processo?: string }
 interface Advogado { id: string; nome_completo: string; oab_numero: string; oab_uf: string }
+
+/** Procura no cadastro o processo que tem o mesmo número da publicação (para já vir preenchido ao vincular). */
+async function procurarProcessoPorNumero(numero: string): Promise<SearchableComboboxOption | null> {
+  const digitos = numero.replace(/\D/g, '')
+  if (digitos.length < 10) return null
+  for (const q of [numero, digitos]) {
+    try {
+      const opcoes = await fetchProcessoOptions(q, 6)
+      const achada = opcoes.find(o => [o.label, o.description ?? '', ...(o.keywords ?? [])].join(' ').replace(/\D/g, '').includes(digitos))
+      if (achada) return achada
+    } catch { /* sem pré-preenchimento */ }
+  }
+  return null
+}
 
 function buildProcessoLabel(processo: Processo) {
   return processo.numero_processo ? `${processo.numero_processo} — ${processo.titulo}` : processo.titulo
@@ -266,6 +280,15 @@ function QuickActions({
   const [showVincular, setShowVincular] = useState(false)
   const [processoSel, setProcessoSel]   = useState(pub.processo_id ?? '')
   const [saving,      setSaving]        = useState(false)
+  const [opcaoAuto,   setOpcaoAuto]     = useState<SearchableComboboxOption | null>(null)
+
+  // Ao abrir "Vincular": se o sistema já tem o processo desta publicação, a caixa vem preenchida
+  useEffect(() => {
+    if (!showVincular || processoSel || !pub.numero_processo) return
+    let ativo = true
+    procurarProcessoPorNumero(pub.numero_processo).then(o => { if (ativo && o) { setProcessoSel(o.value); setOpcaoAuto(o) } })
+    return () => { ativo = false }
+  }, [showVincular, processoSel, pub.numero_processo])
 
   async function vincular() {
     if (!processoSel) return
@@ -290,7 +313,7 @@ function QuickActions({
               value: processoSel,
               label: buildProcessoLabel(processos.find(p => p.id === processoSel)!),
               description: null,
-            } : null}
+            } : (opcaoAuto?.value === processoSel ? opcaoAuto : null)}
             placeholder="— Selecione —"
             searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
             helperText="Digite ao menos 2 caracteres."
@@ -460,6 +483,15 @@ function PublicacaoModal({
   const [vinculando,          setVinculando]          = useState(false)
   const [processoSelecionado, setProcessoSelecionado]  = useState(pub.processo_id ?? '')
   const [salvando,            setSalvando]             = useState(false)
+  const [opcaoAuto,           setOpcaoAuto]            = useState<SearchableComboboxOption | null>(null)
+
+  // Ao abrir "Vincular ao processo": se o sistema já tem o processo desta publicação, a caixa vem preenchida
+  useEffect(() => {
+    if (!vinculando || processoSelecionado || !pub.numero_processo) return
+    let ativo = true
+    procurarProcessoPorNumero(pub.numero_processo).then(o => { if (ativo && o) { setProcessoSelecionado(o.value); setOpcaoAuto(o) } })
+    return () => { ativo = false }
+  }, [vinculando, processoSelecionado, pub.numero_processo])
   const [showGerarPrazo,      setShowGerarPrazo]       = useState(false)
   const [analise,             setAnalise]              = useState<DetectionResult | null>(null)
   const [dataSugerida,        setDataSugerida]         = useState('')
@@ -647,7 +679,7 @@ function PublicacaoModal({
                   value: processoSelecionado,
                   label: buildProcessoLabel(processos.find(p => p.id === processoSelecionado)!),
                   description: null,
-                } : null}
+                } : (opcaoAuto?.value === processoSelecionado ? opcaoAuto : null)}
                 placeholder="— Selecione um processo —"
                 searchPlaceholder="Buscar processo por número, cliente ou parte contrária"
                 helperText="Digite ao menos 2 caracteres."
@@ -924,13 +956,46 @@ function AgendaQuickModal({
   const [hora,       setHora]       = useState('')
   const [processoId, setProcessoId] = useState(pub.processo_id ?? '')
   const [saving,     setSaving]     = useState(false)
+  const [tituloEditado, setTituloEditado] = useState(false)
+  const [partes, setPartes] = useState<{ clienteId: string | null; cliente: string | null; contrarias: string[] } | null>(null)
+
+  // Partes do processo (cliente x parte contrária): vão no título e na descrição do item da agenda
+  useEffect(() => {
+    if (!processoId) return
+    let ativo = true
+    const sb = createClient()
+    sb.from('processos')
+      .select('cliente_id, cliente:clientes!cliente_id(nome), partes_processo(pessoa_nome, tipo_parte)')
+      .eq('id', processoId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!ativo || !data) return
+        const d = data as unknown as { cliente_id: string | null; cliente: { nome?: string } | { nome?: string }[] | null; partes_processo: { pessoa_nome: string | null; tipo_parte: string | null }[] | null }
+        const cli = Array.isArray(d.cliente) ? d.cliente[0] : d.cliente
+        const contrarias = (d.partes_processo ?? []).filter(x => x.pessoa_nome && x.tipo_parte !== 'cliente').map(x => x.pessoa_nome as string)
+        setPartes({ clienteId: d.cliente_id, cliente: cli?.nome ?? null, contrarias })
+      })
+    return () => { ativo = false }
+  }, [processoId])
+
+  const textoPartes = partes && (partes.cliente || partes.contrarias.length)
+    ? [partes.cliente, partes.contrarias.join(', ')].filter(Boolean).join(' x ')
+    : ''
+
+  // Título sugerido passa a incluir as partes (enquanto você não editar o título à mão)
+  useEffect(() => {
+    if (tituloEditado || !textoPartes) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTitulo(`${tipo === 'prazo' ? 'PRAZO: ' : ''}${pub.tribunal ?? ''} ${pub.numero_processo ?? ''} — ${textoPartes}`.replace(/\s+/g, ' ').trim())
+  }, [textoPartes, tituloEditado, tipo, pub.tribunal, pub.numero_processo])
 
   async function save() {
     if (!titulo.trim()) return
     setSaving(true)
     await supabase.from('agenda_items').insert({
       titulo:      titulo.trim(),
-      descricao:   getTextoPublicacao(pub)?.slice(0, 500) ?? null,
+      descricao:   [textoPartes ? `Partes: ${textoPartes}` : null, getTextoPublicacao(pub)?.slice(0, 500)].filter(Boolean).join('\n\n') || null,
+      cliente_id:  partes?.clienteId ?? null,
       tipo,
       status:      'pendente',
       data_inicio: data,
@@ -958,7 +1023,8 @@ function AgendaQuickModal({
         <div className="px-6 py-4 space-y-3">
           <div>
             <label className="block text-[11px] font-semibold text-[#7a8899] uppercase tracking-wide mb-1.5">Título *</label>
-            <input className={inputCls} value={titulo} onChange={e => setTitulo(e.target.value)} />
+            <input className={inputCls} value={titulo} onChange={e => { setTitulo(e.target.value); setTituloEditado(true) }} />
+            {!processoId && <p className="mt-1 text-[11px] text-[#9aabb8]">Escolha o processo abaixo para o título e a descrição já trazerem as partes.</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

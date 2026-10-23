@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock3, Download, Loader2, Search } from 'lucide-react'
+import { Clock3, Download, Loader2, Plus, Search } from 'lucide-react'
+import RegistrarHorasModal from '@/components/horas/RegistrarHorasModal'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import { formatDurationMinutes } from '@/lib/agenda-time-entries'
@@ -16,7 +17,9 @@ function hoje() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function HorasPage() {
+export default function HorasPage({ podeRegistrar = true, podeValor = false }: { podeRegistrar?: boolean; podeValor?: boolean }) {
+  const [registrando, setRegistrando] = useState(false)
+  const [aviso, setAviso] = useState('')
   const [clienteId, setClienteId] = useState('')
   const [de, setDe] = useState(primeiroDiaDoMes())
   const [ate, setAte] = useState(hoje())
@@ -52,11 +55,24 @@ export default function HorasPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {registrando && (
+        <RegistrarHorasModal
+          podeValor={podeValor}
+          onClose={() => setRegistrando(false)}
+          onSalvo={e => { setRegistrando(false); setAviso(`Horas registradas${e.cliente?.nome ? ` para ${e.cliente.nome}` : ''}. Gere o relatório do cliente para ver.`); if (e.cliente_id && e.cliente_id === clienteId) buscar() }}
+        />
+      )}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">Relatórios</p>
         <h1 className="font-brand text-[34px] font-semibold text-[var(--color-ink)] tracking-tight leading-none flex items-center gap-2">
           <Clock3 size={26} className="text-[var(--color-copper)]" /> Horas por cliente
         </h1>
+        {podeRegistrar && (
+          <button onClick={() => { setAviso(''); setRegistrando(true) }} className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold text-white bg-[#1D5F60] hover:bg-[#27777A] rounded-xl">
+            <Plus size={14} /> Registrar horas
+          </button>
+        )}
+        {aviso && <p className="mt-3 text-[12px] text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg inline-block">{aviso}</p>}
         <p className="text-[13px] text-[var(--color-ink-3)] mt-2">
           As horas lançadas nos andamentos e na agenda, por cliente e período. O PDF mostra só as horas, para entregar ao cliente.
         </p>

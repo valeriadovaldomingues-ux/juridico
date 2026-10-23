@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
-import { normalizeCpfCnpj, escapeLike, detectDocSearchType } from '@/lib/cnpj'
+import { normalizeCpfCnpj, detectDocSearchType } from '@/lib/cnpj'
 import type { UserRole } from '@/types'
 
 const ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
@@ -43,7 +43,6 @@ export async function GET(req: NextRequest) {
   const supabase  = await createClient()
   const digits    = normalizeCpfCnpj(q)
   const docType   = detectDocSearchType(q)
-  const safe      = escapeLike(q)
 
   let query = supabase
     .from('clientes')
@@ -84,13 +83,26 @@ export async function GET(req: NextRequest) {
       query = query.or(`cnpj_raiz.ilike.%${digits}%,cpf_cnpj.ilike.%${digits}%`)
       break
 
-    default:
-      // Busca textual: nome, nome_fantasia, socio_representante
-      query = query.or(
-        `nome.ilike.%${safe}%,` +
-        `nome_fantasia.ilike.%${safe}%,` +
-        `socio_representante.ilike.%${safe}%`
-      )
+    default: {
+      // Busca textual sem acento/ç, palavras em qualquer ordem; o que começa com o texto vem primeiro.
+      const { data: ids, error: errIds } = await supabase.rpc('clientes_ids_busca', { q, lim: limit, tipo: tipo_contato || null })
+      if (errIds) {
+        console.error('[busca clientes]', errIds)
+        return NextResponse.json({ error: errIds.message }, { status: 500 })
+      }
+      const ordem = (ids ?? []) as string[]
+      if (ordem.length === 0) return NextResponse.json([])
+      const { data: linhas, error: errLinhas } = await supabase
+        .from('clientes')
+        .select('id, nome, nome_fantasia, cpf_cnpj, cnpj_raiz, tipo_pessoa, tipo_contato, socio_representante')
+        .in('id', ordem)
+      if (errLinhas) {
+        console.error('[busca clientes]', errLinhas)
+        return NextResponse.json({ error: errLinhas.message }, { status: 500 })
+      }
+      const porId = new Map((linhas ?? []).map(l => [l.id, l as ClienteBuscaResult]))
+      return NextResponse.json(ordem.map(id => porId.get(id)).filter(Boolean))
+    }
   }
 
   const { data, error } = await query

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { podeGerenciarLancamentoDespesa } from '@/lib/auth/despesas-acesso'
 import { createClient } from '@/lib/supabase/server'
+import { fornecedorDaDescricao } from '@/lib/financeiro/fornecedor'
+import { lerPagamento } from '@/lib/financeiro/forma-pagamento'
 
 export async function PUT(
   req: NextRequest,
@@ -29,6 +31,11 @@ export async function PUT(
     }
   }
 
+  const pag = body.tipo === 'despesa'
+    ? lerPagamento(body)
+    : { ok: true as const, dados: { forma_pagamento: null, parcelas_total: null, parcela_atual: null } }
+  if (!pag.ok) return NextResponse.json({ error: pag.erro }, { status: 400 })
+
   const { data, error } = await supabase
     .from('financeiro_lancamentos')
     .update({
@@ -42,6 +49,10 @@ export async function PUT(
       processo_id:  body.processo_id || null,
       status:       body.status,
       centro_custo: body.centro_custo || null,
+      fornecedor:   body.tipo === 'despesa' ? (String(body.fornecedor ?? '').trim() || fornecedorDaDescricao(String(body.descricao ?? '')) || null) : null,
+      forma_pagamento: pag.dados.forma_pagamento,
+      parcelas_total:  pag.dados.parcelas_total,
+      parcela_atual:   pag.dados.parcela_atual,
     })
     .eq('id', id)
     .select('*, cliente:clientes(id, nome), processo:processos(id, numero_processo, titulo)')

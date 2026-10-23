@@ -24,7 +24,11 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     .select('*, responsavel:profiles!responsavel_id(id, nome, role)')
     .order('nome', { ascending: true })
 
-  if (params.nome)       query = query.ilike('nome', `%${params.nome}%`)
+  if (params.nome?.trim()) {
+    // Sem acento/ç e em qualquer ordem das palavras (inclui inativos: esta lista mostra todos).
+    const { data: ids } = await supabase.rpc('clientes_ids_busca', { q: params.nome, lim: 1000, inativos: true })
+    query = query.in('id', ((ids ?? []) as string[]).length ? (ids as string[]) : ['00000000-0000-0000-0000-000000000000'])
+  }
   if (params.cpf_cnpj)   query = query.ilike('cpf_cnpj', `%${params.cpf_cnpj}%`)
   if (params.cidade)     query = query.ilike('cidade', `%${params.cidade}%`)
   if (params.tipo_contato) query = query.eq('tipo_contato', params.tipo_contato)
@@ -72,6 +76,13 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
             {clientes.length} registro{clientes.length !== 1 ? 's' : ''}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Link
+          href="/clientes/empresas-por-dono"
+          className="flex items-center gap-2 px-4 py-3 border border-[var(--color-border)] text-[var(--color-ink)] text-[13px] font-semibold rounded-xl hover:bg-white transition-colors"
+        >
+          Empresas por dono
+        </Link>
         <Link
           href="/clientes/novo"
           className="flex items-center gap-2 px-4 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
@@ -79,6 +90,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           <Plus size={15} />
           Novo Contato
         </Link>
+        </div>
         </div>
       </div>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">

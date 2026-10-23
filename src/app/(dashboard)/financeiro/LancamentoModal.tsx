@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FORMAS_PAGAMENTO, FORMAS_COM_PARCELAS, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import {
   fetchClienteOptions,
@@ -21,6 +22,19 @@ interface LancamentoForm {
   cliente_id:   string
   processo_id:  string
   centro_custo: string
+  /** Quem recebeu o pagamento (só despesa). Vazio = usa o nome da despesa. */
+  fornecedor:   string
+  /** Como foi/será pago (só despesa). */
+  forma_pagamento: FormaPagamento | ''
+  parcelas_total:  string
+  parcela_atual:   string
+  /** Crédito parcelado, ao criar: lança as parcelas seguintes nos meses seguintes. */
+  lancar_parcelas_seguintes: boolean
+  /** Pagamento recorrente/parcelado: um lançamento por mês, só ao criar. */
+  recorrente: boolean
+  recorrencia_qtd: string
+  /** true = o valor informado é o TOTAL (dividido nas parcelas); false = é o valor de cada parcela. */
+  recorrencia_valor_total: boolean
 }
 
 const FORM_VAZIO: LancamentoForm = {
@@ -34,6 +48,14 @@ const FORM_VAZIO: LancamentoForm = {
   cliente_id:   '',
   processo_id:  '',
   centro_custo: '',
+  fornecedor:   '',
+  forma_pagamento: '',
+  parcelas_total:  '',
+  parcela_atual:   '',
+  lancar_parcelas_seguintes: true,
+  recorrente: false,
+  recorrencia_qtd: '',
+  recorrencia_valor_total: false,
 }
 
 interface Props {
@@ -45,9 +67,11 @@ interface Props {
   onFechar:    () => void
   /** Trava o tipo (esconde o seletor) — usado em telas dedicadas, ex: /financeiro/despesas. */
   tipoFixo?:   'receita' | 'despesa'
+  /** Fornecedores já usados, para sugerir ao digitar. */
+  fornecedores?: string[]
 }
 
-export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFixo }: Props) {
+export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFixo, fornecedores = [] }: Props) {
   const [form,    setForm]    = useState<LancamentoForm>(tipoFixo ? { ...FORM_VAZIO, tipo: tipoFixo } : FORM_VAZIO)
   const [loading, setLoading] = useState(false)
   const [erro,    setErro]    = useState('')
@@ -65,6 +89,14 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
         cliente_id:   lancamento.cliente_id   ?? '',
         processo_id:  lancamento.processo_id  ?? '',
         centro_custo: lancamento.centro_custo ?? '',
+        fornecedor:   lancamento.fornecedor ?? '',
+        forma_pagamento: (lancamento.forma_pagamento ?? '') as LancamentoForm['forma_pagamento'],
+        parcelas_total:  lancamento.parcelas_total ? String(lancamento.parcelas_total) : '',
+        parcela_atual:   lancamento.parcela_atual ? String(lancamento.parcela_atual) : '',
+        lancar_parcelas_seguintes: true,
+        recorrente: false,
+        recorrencia_qtd: '',
+        recorrencia_valor_total: false,
         categoria:    lancamento.categoria    ?? '',
       })
     } else {
@@ -214,6 +246,24 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
             )}
           </div>
 
+          {form.tipo === 'despesa' ? (
+            <div>
+              <label className={labelCls}>Fornecedor</label>
+              <input
+                type="text"
+                list="fornecedores-sugeridos"
+                value={form.fornecedor}
+                onChange={e => set('fornecedor', e.target.value)}
+                placeholder={form.descricao.trim() ? `Em branco = ${form.descricao.trim()}` : 'Quem recebeu o pagamento'}
+                className={inputCls}
+              />
+              <datalist id="fornecedores-sugeridos">
+                {fornecedores.map(f => <option key={f} value={f} />)}
+              </datalist>
+              <p className="text-[11px] text-[#6b7280] mt-1">Preenchido sozinho pelo nome da despesa quando você não informar.</p>
+            </div>
+          ) : (
+          <>
           {/* Cliente */}
           <div>
             <label className={labelCls}>Cliente</label>
@@ -257,6 +307,80 @@ export default function LancamentoModal({ lancamento, onSalvar, onFechar, tipoFi
               allowClear
             />
           </div>
+
+          </>
+          )}
+
+          {/* Forma de pagamento (só despesa) */}
+          {form.tipo === 'despesa' && (
+            <div className="space-y-3 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3">
+              <div>
+                <label className={labelCls}>Forma de pagamento</label>
+                <select
+                  value={form.forma_pagamento}
+                  onChange={e => set('forma_pagamento', e.target.value as LancamentoForm['forma_pagamento'])}
+                  className={inputCls}
+                >
+                  <option value="">— Não informada —</option>
+                  {FORMAS_PAGAMENTO.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </div>
+              {form.forma_pagamento && FORMAS_COM_PARCELAS.includes(form.forma_pagamento as FormaPagamento) && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Total de parcelas</label>
+                      <input type="number" min="1" max="60" value={form.parcelas_total} onChange={e => set('parcelas_total', e.target.value)} placeholder="Ex: 10" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Parcela deste mês</label>
+                      <input type="number" min="1" max="60" value={form.parcela_atual} onChange={e => set('parcela_atual', e.target.value)} placeholder="Ex: 3" className={inputCls} />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#6b7280]">O valor acima é o da <strong>parcela</strong>, não o total da compra.</p>
+                  {!isEdicao && Number(form.parcelas_total) > 1 && Number(form.parcela_atual || 1) < Number(form.parcelas_total) && (
+                    <label className="flex items-start gap-2 text-[12px] text-[#374151] cursor-pointer">
+                      <input type="checkbox" checked={form.lancar_parcelas_seguintes} onChange={e => set('lancar_parcelas_seguintes', e.target.checked)} className="mt-0.5 rounded border-[#d1d5db]" />
+                      <span>Lançar também as próximas parcelas, uma em cada mês seguinte (da {form.parcela_atual || 1}ª à {form.parcelas_total}ª).</span>
+                    </label>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Pagamento recorrente / parcelado (só ao criar; no crédito parcelado vale o parcelamento do crédito) */}
+          {!isEdicao && !(form.tipo === 'despesa' && form.forma_pagamento === 'credito') && (
+            <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 space-y-3">
+              <label className="flex items-center gap-2 text-[13px] font-medium text-[#374151] cursor-pointer">
+                <input type="checkbox" checked={form.recorrente} onChange={e => set('recorrente', e.target.checked)} className="rounded border-[#d1d5db]" />
+                Pagamento recorrente / parcelado
+              </label>
+              {form.recorrente && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Quantos meses / parcelas</label>
+                      <input type="number" min="2" max="60" value={form.recorrencia_qtd} onChange={e => set('recorrencia_qtd', e.target.value)} placeholder="Ex: 6" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>O valor informado é</label>
+                      <select value={form.recorrencia_valor_total ? 'total' : 'parcela'} onChange={e => set('recorrencia_valor_total', e.target.value === 'total')} className={inputCls}>
+                        <option value="parcela">De cada mês / parcela</option>
+                        <option value="total">O total (dividir)</option>
+                      </select>
+                    </div>
+                  </div>
+                  {(() => {
+                    const q = Number(form.recorrencia_qtd), v = parseFloat(form.valor)
+                    if (!Number.isInteger(q) || q < 2 || !(v > 0)) return <p className="text-[11px] text-[#6b7280]">Será lançado um por mês, no mesmo dia do vencimento acima.</p>
+                    const cada = form.recorrencia_valor_total ? v / q : v
+                    return <p className="text-[11px] text-[#6b7280]">Serão {q} lançamentos mensais{form.recorrencia_valor_total ? ' de cerca de' : ' de'} <strong>{cada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong> (total {(form.recorrencia_valor_total ? v : v * q).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}), a partir da data de vencimento. Só o primeiro herda o status informado; os demais ficam pendentes.</p>
+                  })()}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Centro de custo */}
           <div>

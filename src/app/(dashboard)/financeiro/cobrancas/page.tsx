@@ -29,23 +29,44 @@ export default async function CobrancasRoute() {
   const { profile } = await requireRole(['socio'])
   const supabase = await createClient()
 
-  const [{ data: cobrancas }, { data: clientes }, { data: processos }] = await Promise.all([
+  // Só clientes de boleto (os da grade "Receita Partido") e quem já tem cobrança. A lista completa passava
+  // de 1.000 clientes e o limite do banco cortava a lista na letra M.
+  const [{ data: cobrancas }, { data: daGrade }] = await Promise.all([
     supabase
       .from('cobrancas')
       .select('*, cliente:clientes(id, nome, cpf_cnpj, email), processo:processos(id, numero_processo, titulo)')
       .order('data_vencimento', { ascending: false })
       .limit(500),
     supabase
-      .from('clientes')
-      .select('id, nome, cpf_cnpj, email, tipo_pessoa, cep, endereco, numero, complemento, bairro, cidade, uf')
-      .eq('ativo', true)
-      .order('nome'),
-    supabase
-      .from('processos')
-      .select('id, numero_processo, titulo, cliente_id')
-      .in('status', ['ativo', 'suspenso'])
-      .order('titulo'),
+      .from('grade_pagamento_clientes')
+      .select('cliente_id')
+      .eq('forma_pagamento', 'boleto'),
   ])
+
+  const idsClientes = [...new Set([
+    ...(daGrade ?? []).map(g => g.cliente_id as string | null),
+    ...(cobrancas ?? []).map(c => c.cliente_id as string | null),
+  ].filter((id): id is string => !!id))]
+
+  const { data: clientes } = idsClientes.length === 0
+    ? { data: [] as ClienteOpcao[] }
+    : await supabase
+        .from('clientes')
+        .select('id, nome, cpf_cnpj, email, tipo_pessoa, cep, endereco, numero, complemento, bairro, cidade, uf')
+        .in('id', idsClientes)
+        .eq('ativo', true)
+        .order('nome')
+
+  // Processos só dos clientes da lista (o total de processos ativos passa de 1.000).
+  const { data: processos } = idsClientes.length === 0
+    ? { data: [] as ProcessoOpcao[] }
+    : await supabase
+        .from('processos')
+        .select('id, numero_processo, titulo, cliente_id')
+        .in('cliente_id', idsClientes)
+        .in('status', ['ativo', 'suspenso'])
+        .order('titulo')
+        .limit(1000)
 
   return (
     <CobrancasPage

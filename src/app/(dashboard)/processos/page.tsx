@@ -25,11 +25,19 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
     buscaLimitada = lista.length >= 300
     query = query.in('id', lista.length > 0 ? lista : ['00000000-0000-0000-0000-000000000000'])
   }
+  // Encerrados e arquivados ficam ocultos por padrão (pedido da Valéria, 13/10/2026). Aparecem se a
+  // pessoa marcar "Ver encerrados e arquivados", ou quando está procurando (texto, nº) ou filtrando
+  // por um status — aí a lista tem que achar o processo mesmo que ele esteja encerrado.
+  const verEncerrados = params.encerrados === '1'
+  const procurando = !!(busca || params.numero || params.status)
+  if (!verEncerrados && !procurando) query = query.not('status', 'in', '("encerrado","arquivado")')
   if (params.numero) query = query.ilike('numero_processo', `%${params.numero}%`)
   if (params.area_direito) query = query.eq('area_direito', params.area_direito)
   if (params.status) query = query.eq('status', params.status)
 
   const { data: processos } = await query
+  const { count: ocultos } = await supabase
+    .from('processos').select('id', { count: 'exact', head: true }).in('status', ['encerrado', 'arquivado'])
 
   return (
     <div className="internal-page space-y-6 max-w-7xl">
@@ -59,7 +67,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
-        <ProcessosTable processos={processos ?? []} />
+        <ProcessosTable processos={processos ?? []} totalEncerrados={ocultos ?? 0} />
       </div>
     </div>
   )

@@ -18,7 +18,7 @@ const labelCls = 'block text-[11px] font-semibold text-[#6b7280] uppercase track
 export default function AtaAudienciaModal({ processoId, onFechar, onSalvo }: {
   processoId: string
   onFechar: () => void
-  onSalvo: () => void
+  onSalvo: (ataId: string) => void
 }) {
   const inputArquivo = useRef<HTMLInputElement>(null)
   const [etapa, setEtapa] = useState<Etapa>('ata')
@@ -76,7 +76,7 @@ export default function AtaAudienciaModal({ processoId, onFechar, onSalvo }: {
     const avisos: string[] = [...(corpo.avisos ?? [])]
     if (corpo.sem_data > 0) avisos.push(`${corpo.sem_data} obrigação(ões) do cliente sem data certa ficaram só no andamento (não entram na Agenda).`)
     if (avisos.length) alert(avisos.join('\n'))
-    onSalvo()
+    onSalvo(corpo.id as string)
   }
 
   const editarOb = (i: number, p: Partial<LinhaObrigacao>) => setObrigacoes(prev => prev.map((l, idx) => idx === i ? { ...l, ...p } : l))

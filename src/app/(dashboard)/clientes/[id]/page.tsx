@@ -39,7 +39,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
 
   const { data: cliente } = await supabase
     .from('clientes')
-    .select('*, responsavel:profiles!responsavel_id(id, nome, role)')
+    .select('*, responsavel:profiles!responsavel_id(id, nome, role), dono:clientes!dono_id(id, nome)')
     .eq('id', id)
     .single()
 
@@ -59,6 +59,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     { data: tarefas },
     { data: agenda },
     contatos,
+    { data: empresasDoDono },
   ] = await Promise.all([
     supabase
       .from('contact_interactions')
@@ -85,6 +86,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       .limit(20),
 
     listClienteContatos(id),
+    supabase.from('clientes').select('id, nome, cpf_cnpj').eq('dono_id', id).order('nome'),
   ])
 
   return (
@@ -96,6 +98,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         tarefas={tarefas ?? []}
         agenda={agenda ?? []}
         contatos={contatos ?? []}
+        empresasDoDono={(empresasDoDono ?? []) as { id: string; nome: string; cpf_cnpj: string | null }[]}
         canEditContatos={canEditClienteContatos(session.profile.role)}
       />
     </div>

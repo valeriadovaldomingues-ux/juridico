@@ -46,3 +46,9 @@ create trigger reunioes_pedv_imutavel_trg
 alter table public.kanban_tasks
   add column if not exists reuniao_id uuid references public.reunioes_pedv(id) on delete set null;
 create index if not exists kanban_tasks_reuniao_idx on public.kanban_tasks (reuniao_id) where reuniao_id is not null;
+
+-- 09/10/2026: o arquivo original da ata (Word/PDF) fica guardado e todos podem baixar.
+alter table public.reunioes_pedv
+  add column if not exists arquivo_path text,
+  add column if not exists arquivo_nome text;
+-- (o trigger reunioes_pedv_imutavel passou a incluir arquivo_path/arquivo_nome na comparação)

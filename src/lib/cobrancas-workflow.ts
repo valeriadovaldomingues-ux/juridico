@@ -653,6 +653,66 @@ export async function deleteCobrancaAction(input: {
   return ok(200, { id: cobranca.id })
 }
 
+/**
+ * Cancela a cobrança. Se já foi emitida no Inter, cancela o boleto/Pix no banco PRIMEIRO; só marca como
+ * cancelada aqui se o banco aceitou (senão o boleto continuaria valendo sem ninguém saber). Só sócio.
+ */
+export async function cancelCobrancaAction(input: {
+  role: UserRole
+  userId: string
+  store: CobrancasStore
+  inter: { cancelInterCharge(interCobrancaId: string, motivo?: string): Promise<unknown> }
+  id: string
+  motivo?: string | null
+}): Promise<ActionResult<Cobranca>> {
+  if (input.role !== 'socio') return fail('Apenas socios podem cancelar cobrancas.', 403)
+
+  const cobranca = await input.store.findCobrancaById(input.id)
+  if (!cobranca) return fail('Cobranca nao encontrada.', 404)
+  if (cobranca.status === 'paga') return fail('Cobranca ja paga: nao pode ser cancelada.', 409)
+  if (cobranca.status === 'cancelada') return fail('Esta cobranca ja esta cancelada.', 409)
+
+  const motivo = input.motivo?.trim() || null
+  let respostaInter: unknown = null
+  if (cobranca.inter_cobranca_id) {
+    try {
+      respostaInter = await input.inter.cancelInterCharge(cobranca.inter_cobranca_id, motivo ?? 'Cancelado pelo PEDV')
+    } catch (error) {
+      const message = error instanceof Error ? sanitizeInterError(error.message) : 'Falha desconhecida ao cancelar no Inter.'
+      await input.store.insertLog({
+        cobranca_id: cobranca.id,
+        acao: 'erro_cancelamento_inter',
+        detalhe: message,
+        usuario_id: input.userId,
+      })
+      return fail(`O Banco Inter nao aceitou o cancelamento: ${message}. A cobranca continua como estava.`, 502)
+    }
+  }
+
+  const updated = await input.store.updateCharge(cobranca.id, {
+    status: 'cancelada',
+    ...(cobranca.inter_cobranca_id ? { inter_status: 'cancelada' } : {}),
+  })
+  if (!updated) return fail('O banco cancelou, mas nao consegui atualizar a cobranca aqui. Use "Atualizar status no Inter".', 500)
+
+  await input.store.insertEvent({
+    cobranca_id: cobranca.id,
+    tipo: 'cancelamento',
+    status_anterior: cobranca.status,
+    status_novo: 'cancelada',
+    payload: { motivo, inter: respostaInter ?? null },
+    created_by: input.userId,
+  })
+  await input.store.insertLog({
+    cobranca_id: cobranca.id,
+    acao: 'cancelamento',
+    detalhe: motivo,
+    payload: { motivo, inter_cobranca_id: cobranca.inter_cobranca_id ?? null },
+    usuario_id: input.userId,
+  })
+  return ok(200, updated)
+}
+
 export async function handleInterWebhookAction(input: {
   store: CobrancasStore
   rawBody: string

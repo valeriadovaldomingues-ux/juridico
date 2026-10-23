@@ -13,9 +13,9 @@
 // até que a integração seja conectada pela tela de Configurações.
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { syncTrelloBoard } from '@/lib/trello/sync'
+import { liberarSincronizacoesTravadas, syncTrelloBoard } from '@/lib/trello/sync'
 
-export const maxDuration = 120
+export const maxDuration = 300
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -42,6 +42,8 @@ export async function GET(request: Request) {
   if (!integration) {
     return Response.json({ erro: 'Nenhuma integração configurada' }, { status: 404 })
   }
+
+  await liberarSincronizacoesTravadas(supabase, integration.id)
 
   const { data: running } = await supabase
     .from('trello_sync_logs')

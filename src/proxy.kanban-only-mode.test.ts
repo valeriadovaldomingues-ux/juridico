@@ -95,25 +95,36 @@ beforeEach(() => {
 })
 
 describe('KANBAN_ONLY_MODE — perfis não-sócio restritos ao Kanban', () => {
-  it.each(['advogado', 'gerente', 'administrativo', 'estagiario'])(
-    '%s em /processos → redirect para /kanban',
-    async (role) => {
-      asUser(role)
-      expectRedirect(await proxy(req('/processos')), '/kanban')
-    },
-  )
+  it('administrativo em /processos → redirect para /kanban', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/processos')), '/kanban')
+  })
 
-  it.each(['advogado', 'gerente', 'administrativo', 'estagiario'])(
-    '%s em /dashboard → redirect para /kanban',
-    async (role) => {
-      asUser(role)
-      expectRedirect(await proxy(req('/dashboard')), '/kanban')
-    },
-  )
+  it('administrativo em /dashboard → redirect para /kanban', async () => {
+    asUser('administrativo')
+    expectRedirect(await proxy(req('/dashboard')), '/kanban')
+  })
 
-  it('gerente em /financeiro → redirect para /kanban (não /dashboard)', async () => {
+  // 13/10/2026: advogados, gerente e estagiário têm o mesmo acesso da Débora.
+  it.each(['advogado', 'gerente', 'estagiario'])('%s passa em /processos, /dashboard, /agenda e /reunioes', async (role) => {
+    asUser(role)
+    for (const rota of ['/processos', '/dashboard', '/agenda', '/reunioes', '/horas']) {
+      expectPassThru(await proxy(req(rota)))
+    }
+  })
+
+  it.each([
+    ['advogado', '/documentos'], ['advogado', '/monitoramento'], ['advogado', '/ia-juridica'],
+    ['gerente', '/documentos'], ['gerente', '/relatorios'], ['gerente', '/importar'], ['gerente', '/automacoes'],
+    ['estagiario', '/documentos'],
+  ])('%s em %s → redirect para /dashboard (fora do escopo liberado)', async (role, rota) => {
+    asUser(role)
+    expectRedirect(await proxy(req(rota)), '/dashboard')
+  })
+
+  it('gerente em /financeiro → redirect para /dashboard (rota só do sócio)', async () => {
     asUser('gerente')
-    expectRedirect(await proxy(req('/financeiro')), '/kanban')
+    expectRedirect(await proxy(req('/financeiro')), '/dashboard')
   })
 
   it.each(['advogado', 'gerente', 'administrativo', 'comercial', 'estagiario'])(
@@ -171,8 +182,8 @@ describe('KANBAN_ONLY_MODE — /inpi isento por ROTA (todo mundo vê, 22/09/2026
     expectPassThru(await proxy(req('/inpi/algumacoisa')))
   })
 
-  it('advogado em /processos continua redirecionando pro /kanban (isenção é só do /inpi)', async () => {
-    asUser('advogado')
+  it('administrativo em /processos continua redirecionando pro /kanban (isenção é só do /inpi)', async () => {
+    asUser('administrativo')
     expectRedirect(await proxy(req('/processos')), '/kanban')
   })
 })

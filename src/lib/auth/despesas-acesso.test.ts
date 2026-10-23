@@ -29,7 +29,7 @@ describe('podeGerenciarLancamentoDespesa', () => {
     expect(podeGerenciarLancamentoDespesa('x', 'gerente', 'despesa')).toBe(true)
   })
 
-  it('usuário extra só pode gerenciar lançamentos do tipo despesa', () => {
+  it('Célio só gerencia lançamentos do tipo despesa (receitas ficam de fora, 13/10/2026)', () => {
     expect(podeGerenciarLancamentoDespesa(CELIO_ID, 'administrativo', 'despesa')).toBe(true)
     expect(podeGerenciarLancamentoDespesa(CELIO_ID, 'administrativo', 'receita')).toBe(false)
   })

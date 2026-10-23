@@ -28,6 +28,7 @@ import {
   type DbClient,
 } from '@/lib/monitoramento/persistencia'
 import { notificarRoles } from '@/lib/notificacoes'
+import { publicacaoAnteriorADataMinima } from '@/lib/monitoramento/data-minima'
 import type { UserRole } from '@/types'
 
 const ROLES_NOTIFICACAO: UserRole[] = ['advogado', 'gerente', 'socio']
@@ -100,6 +101,11 @@ async function persistirResultado(
   onInserida?: (pub: PublicacaoCapturada) => void,
 ): Promise<void> {
   for (const pub of resultado.publicacoes) {
+    // Só de hoje para a frente (ver data-minima.ts): o que for mais antigo não entra.
+    if (publicacaoAnteriorADataMinima(pub.data_publicacao)) {
+      resultado.ignoradas++
+      continue
+    }
     const status = await inserirPublicacao(supabase, pub, mapaProcessos).catch(error => {
       console.warn('[monitoramento] Erro inesperado ao inserir publicação:', {
         fonte: pub.fonte_id,

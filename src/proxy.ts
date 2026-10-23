@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
-import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
+import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
 
 // ── Service client para leitura de profiles no middleware ─────────────────────
 //
@@ -131,7 +131,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/nr1-sem-risco') ||
     // Rotinas agendadas da Vercel chegam sem sessão; cada rota se protege sozinha
     // (CRON_SECRET) ou é inofensiva (keepalive). Antes eram redirecionadas ao /login.
-    pathname.startsWith('/api/cron')
+    pathname.startsWith('/api/cron') ||
+    // Conector MCP do PEDV: o Claude chama com chave pessoal (Bearer), sem sessão; a rota valida a chave.
+    pathname === '/api/mcp'
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
@@ -205,7 +207,8 @@ export async function proxy(request: NextRequest) {
       isInternalPath && !pathname.startsWith('/kanban') &&
       !KANBAN_ONLY_EXTRA_ROUTES.some(r => pathname.startsWith(r)) &&
       !isRotaDespesasLiberadaPorUsuario(pathname, user.id) &&
-      !usuarioLiberadoDoModoRestrito(user.id)
+      !usuarioLiberadoDoModoRestrito(user.id, role) &&
+      !rotaLiberadaParaUsuario(pathname, user.id, role)
     ) {
       const url = request.nextUrl.clone()
       url.pathname = '/kanban'
@@ -213,7 +216,7 @@ export async function proxy(request: NextRequest) {
     }
 
     // 3a-usuario. Rotas bloqueadas só para esta pessoa (ver acesso-por-usuario.ts).
-    if (isInternalPath && rotaBloqueadaParaUsuario(pathname, user.id)) {
+    if (isInternalPath && rotaBloqueadaParaUsuario(pathname, user.id, role)) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
@@ -242,7 +245,7 @@ export async function proxy(request: NextRequest) {
 
     // 3d. Rotas restritas: verifica papel e conta ativa
     if (isSensitive && role !== 'cliente') {
-      if (!role || !ativo || (!routeAllowed(role, pathname) && !isRotaDespesasLiberadaPorUsuario(pathname, user.id))) {
+      if (!role || !ativo || (!routeAllowed(role, pathname) && !isRotaDespesasLiberadaPorUsuario(pathname, user.id) && !rotaLiberadaParaUsuario(pathname, user.id, role))) {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard'
         return NextResponse.redirect(url)

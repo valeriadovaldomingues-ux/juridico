@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: mockCreateClient,
 }))
 
-import { syncTrelloBoard, idsParaArquivar } from './sync'
+import { syncTrelloBoard, idsParaArquivar, liberarSincronizacoesTravadas } from './sync'
 
 function cartao(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -229,5 +229,23 @@ describe('syncTrelloBoard — posição da lista e cards que sumiram do Trello',
     ]
     expect(idsParaArquivar(existentes, new Set(['trello-1']))).toEqual(['b'])
     expect(idsParaArquivar(existentes, new Set(['trello-1', 'trello-2']))).toEqual([])
+  })
+})
+
+describe('liberarSincronizacoesTravadas', () => {
+  it('marca como erro as sincronizações "em andamento" mais antigas que o limite', async () => {
+    const chamadas: Array<[string, unknown[]]> = []
+    const cadeia = {
+      eq: (...a: unknown[]) => { chamadas.push(['eq', a]); return cadeia },
+      lt: (...a: unknown[]) => { chamadas.push(['lt', a]); return Promise.resolve({ error: null }) },
+    }
+    let payload: Record<string, unknown> = {}
+    const fake = { from: () => ({ update: (p: Record<string, unknown>) => { payload = p; return cadeia } }) }
+    await liberarSincronizacoesTravadas(fake, 'integ-1', 10)
+    expect(payload.status).toBe('erro')
+    expect(chamadas).toContainEqual(['eq', ['status', 'em_andamento']])
+    const lt = chamadas.find(c => c[0] === 'lt')!
+    expect(lt[1][0]).toBe('started_at')
+    expect(Date.now() - new Date(lt[1][1] as string).getTime()).toBeGreaterThanOrEqual(10 * 60_000 - 1000)
   })
 })

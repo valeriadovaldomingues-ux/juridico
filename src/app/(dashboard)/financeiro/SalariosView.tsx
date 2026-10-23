@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, Users, X, Loader2, FileDown, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Users, X, Loader2, FileDown, AlertTriangle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -113,6 +113,23 @@ export default function SalariosView({ mesInicial, funcionariosIniciais }: Props
 
   function abrirEdicao(f: FuncionarioFolha) { setEditando(f) }
 
+  const [apagando, setApagando] = useState<string | null>(null)
+
+  /** Lixeirinha: cancela a folha do mês (e os recibos dela) quando foi lançada errada. */
+  async function apagarFolha(f: FuncionarioFolha) {
+    if (!f.folha) return
+    if (!window.confirm(`Apagar a folha de ${f.nome} de ${mesLabel(mes)}?\n\nOs recibos desse mês deixam de poder ser gerados até você lançar de novo. Isso não dá para desfazer.`)) return
+    setApagando(f.profile_id)
+    const res = await fetch(`/api/financeiro/folha-pagamento?profile_id=${encodeURIComponent(f.profile_id)}&mes=${encodeURIComponent(mes)}`, { method: 'DELETE' })
+    setApagando(null)
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}))
+      alert(corpo.error ?? 'Não foi possível apagar.')
+      return
+    }
+    setFuncionarios(prev => prev.map(x => x.profile_id === f.profile_id ? { ...x, folha: null } : x))
+  }
+
   function aplicarSalvo(folha: Folha) {
     setFuncionarios(prev => prev.map(f => f.profile_id === folha.profile_id ? { ...f, folha } : f))
     setEditando(null)
@@ -183,11 +200,17 @@ export default function SalariosView({ mesInicial, funcionariosIniciais }: Props
                       <td className="px-4 py-2.5">
                         <BotoesRecibo funcionario={f} mes={mes} />
                       </td>
-                      <td className="px-2 py-2.5">
+                      <td className="px-2 py-2.5 whitespace-nowrap">
                         <button onClick={() => abrirEdicao(f)} title="Editar folha"
                           className="p-1.5 rounded-lg text-[#9ca3af] hover:text-[#1D5F60] hover:bg-[#f0f7f7] transition-colors">
                           <Pencil size={13} />
                         </button>
+                        {f.folha && (
+                          <button onClick={() => apagarFolha(f)} disabled={apagando === f.profile_id} title="Apagar a folha deste mês (cancela os recibos)"
+                            className="p-1.5 rounded-lg text-[#9ca3af] hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                            {apagando === f.profile_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )
@@ -364,6 +387,13 @@ function FolhaModal({ funcionario, mes, onFechar, onSalvo }: {
           {erro && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
 
           <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => { if (window.confirm('Limpar todos os campos deste formulário? (Só apaga o que está na tela; nada é salvo até você clicar em Salvar.)')) setForm(FOLHA_VAZIA(funcionario.profile_id, mes)) }}
+              title="Zera todos os campos do formulário"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium text-[#a93226] border border-[#f1c9c4] rounded-xl hover:bg-red-50 transition-colors">
+              <Trash2 size={13} /> Limpar
+            </button>
             <button onClick={onFechar} className="flex-1 py-2.5 text-[13px] font-medium text-[#6b7280] border border-[#e5e7eb] rounded-xl hover:bg-[#f9fafb] transition-colors">
               Cancelar
             </button>
@@ -411,9 +441,9 @@ function BotoesRecibo({ funcionario, mes }: { funcionario: FuncionarioFolha; mes
   if (funcionario.tipoRecibo === 'funcionario_dividido') {
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
-        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'transporte')}>Transporte</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Salário</BotaoRecibo>
         <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'alimentacao')}>Alimentação</BotaoRecibo>
-        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes)}>Resto</BotaoRecibo>
+        <BotaoRecibo onClick={() => abrirRecibo(funcionario.profile_id, mes, 'transporte')}>Transporte</BotaoRecibo>
       </div>
     )
   }

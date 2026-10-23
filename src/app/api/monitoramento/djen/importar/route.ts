@@ -23,6 +23,7 @@ import {
   type AdvogadoMonitoradoRow,
 } from '@/lib/monitoramento/executar-busca'
 import { vincularProcesso } from '@/lib/monitoramento/persistencia'
+import { publicacaoAnteriorADataMinima } from '@/lib/monitoramento/data-minima'
 import type { ConsultaDJEN, TipoConsultaDJEN } from '@/lib/monitoramento/djen/types'
 import type { PublicacaoCapturada } from '@/lib/monitoramento/fontes'
 import type { UserRole } from '@/types'
@@ -198,6 +199,9 @@ export async function POST(request: Request) {
         { consulta, item: itemBruto },
         dataFallback,
       )
+
+      // Só de hoje para a frente (ver data-minima.ts)
+      if (publicacaoAnteriorADataMinima(capturada.data_publicacao)) continue
 
       const status = await inserirPublicacao(supabase, capturada, mapaProcessos).catch(() => 'falha' as const)
       if (status === 'inserida') {

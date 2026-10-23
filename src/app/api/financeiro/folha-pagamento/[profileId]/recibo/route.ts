@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { podeAcessarSalarios } from '@/lib/auth/financeiro-acesso'
 import {
-  corpoReciboAdvogado, corpoReciboBeneficio, corpoReciboEstagiario, corpoReciboFuncionario,
+  corpoReciboAdvogado, corpoReciboBeneficio, corpoReciboEstagiario, corpoReciboFuncionario, corpoReciboSalario,
   gerarReciboPdfBytes, type DadosPessoais, type TipoBeneficio,
 } from '@/lib/recibos/pdf'
 
@@ -17,8 +19,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ profileId: string }> },
 ) {
-  const auth = await apiGuard(['socio'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
+  if (!podeAcessarSalarios(auth.userId, auth.role)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const { profileId } = await params
   const mes = req.nextUrl.searchParams.get('mes')
@@ -65,8 +68,10 @@ export async function GET(
   } else if (dadosRow.tipo_recibo === 'funcionario_dividido') {
     const resto = Number(folha.salario_base) + Number(folha.extra) + Number(folha.partido_3_5) + Number(folha.partido_20)
       + Number(folha.gratificacao) + Number(folha.ferias_um_terco) - Number(folha.desconto) - Number(folha.adiantamento)
-    corpo = corpoReciboFuncionario(dados, resto, mes)
-    sufixoArquivo = '-funcionarios-e-terceiros'
+    // Salário (CLT): transporte e alimentação saem em recibos próprios.
+    const comVerbas = Number(folha.extra) + Number(folha.partido_3_5) + Number(folha.partido_20) + Number(folha.gratificacao) + Number(folha.ferias_um_terco) > 0
+    corpo = corpoReciboSalario(dados, resto, mes, comVerbas)
+    sufixoArquivo = '-salario'
   } else {
     corpo = corpoReciboFuncionario(dados, total, mes)
   }

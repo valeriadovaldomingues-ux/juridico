@@ -5,11 +5,18 @@
  *   OPENAI_API_KEY   — obrigatória (ou AI_API_KEY como alias compatível)
  *   OPENAI_MODEL     — opcional, padrão "gpt-4o-mini"
  *   OPENAI_BASE_URL  — opcional, permite usar Azure OpenAI / proxies compatíveis
+ *
+ * Ou, para usar o Claude (Anthropic): ANTHROPIC_API_KEY (+ ANTHROPIC_MODEL opcional). Com ela definida,
+ * toda a IA passa a usar o Claude; AI_PROVIDER=openai força a OpenAI. Ver ./anthropic.ts.
  */
 
 import OpenAI from 'openai'
+import { anthropicCompletar, anthropicStream, modeloAnthropic, usaAnthropic } from './anthropic'
 
 export const AI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini'
+
+/** Modelo em uso (Claude ou OpenAI), para mensagens e logs. */
+export function modeloEmUso(): string { return usaAnthropic() ? modeloAnthropic() : AI_MODEL }
 
 let _client: OpenAI | null = null
 
@@ -38,6 +45,17 @@ export function streamTexto(
   opts?: { maxTokens?: number; temperature?: number },
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder()
+  if (usaAnthropic()) {
+    return new ReadableStream({
+      async start(controller) {
+        try {
+          const leitor = (await anthropicStream(messages, { maxTokens: opts?.maxTokens ?? 4096, temperature: opts?.temperature ?? 0.7 })).getReader()
+          for (;;) { const { done, value } = await leitor.read(); if (done) break; controller.enqueue(value) }
+          controller.close()
+        } catch (err) { controller.error(err) }
+      },
+    })
+  }
   const client  = getClient()
 
   return new ReadableStream({
@@ -73,6 +91,7 @@ export async function streamTextoPreflight(
   opts?: { maxTokens?: number; temperature?: number },
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder()
+  if (usaAnthropic()) return anthropicStream(messages, { maxTokens: opts?.maxTokens ?? 4096, temperature: opts?.temperature ?? 0.7 })
   const client  = getClient()
   const stream  = await client.chat.completions.create({
     model:       AI_MODEL,
@@ -107,6 +126,7 @@ export async function completarTexto(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
   opts?: { maxTokens?: number; temperature?: number },
 ): Promise<string> {
+  if (usaAnthropic()) return anthropicCompletar(messages, { maxTokens: opts?.maxTokens ?? 3072, temperature: opts?.temperature ?? 0.5 })
   const client = getClient()
   const res = await client.chat.completions.create({
     model:       AI_MODEL,
@@ -125,6 +145,7 @@ export async function completarJSON(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
   opts?: { temperature?: number },
 ): Promise<string> {
+  if (usaAnthropic()) return anthropicCompletar(messages, { maxTokens: 4096, temperature: opts?.temperature ?? 0.3, json: true })
   const client = getClient()
   const res = await client.chat.completions.create({
     model:           AI_MODEL,

@@ -6,9 +6,8 @@ import {
   Pencil, Trash2, Search, Wallet,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
-import SearchableCombobox from '@/components/ui/SearchableCombobox'
-import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from '../LancamentoModal'
+import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -24,6 +23,10 @@ interface Despesa {
   cliente_id:   string | null
   processo_id:  string | null
   centro_custo: string | null
+  fornecedor?:  string | null
+  forma_pagamento?: FormaPagamento | null
+  parcelas_total?:  number | null
+  parcela_atual?:   number | null
   created_at:   string
   cliente:  { id: string; nome: string } | null
   processo: { id: string; numero_processo: string | null; titulo: string } | null
@@ -90,7 +93,10 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
   const [mesEspecifico, setMesEspecifico] = useState(() => new Date().toISOString().slice(0, 7))
   const [anoEspecifico, setAnoEspecifico] = useState(() => String(new Date().getFullYear()))
   const [filtStatus,    setFiltStatus]    = useState('')
-  const [filtCliente,   setFiltCliente]   = useState('')
+  const fornecedoresUsados = useMemo(
+    () => Array.from(new Set(despesas.map(d => d.fornecedor).filter((f): f is string => !!f))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [despesas],
+  )
 
   const agora = new Date()
   const hoje = agora.toISOString().slice(0, 10)
@@ -106,12 +112,11 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
   const filtrados = useMemo(() => {
     return despesas.filter(d => {
       if (filtStatus  && d.status !== filtStatus)      return false
-      if (filtCliente && d.cliente_id !== filtCliente) return false
-      if (busca && !d.descricao.toLowerCase().includes(busca.toLowerCase()) && !(d.categoria ?? '').toLowerCase().includes(busca.toLowerCase())) return false
+      if (busca && ![d.descricao, d.categoria, d.fornecedor].filter(Boolean).join(' ').toLowerCase().includes(busca.toLowerCase())) return false
       if (!filtrarPorPeriodo(d.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
       return true
     })
-  }, [despesas, filtStatus, filtCliente, busca, periodo, mesEspecifico, anoEspecifico])
+  }, [despesas, filtStatus, busca, periodo, mesEspecifico, anoEspecifico])
 
   const metricas = useMemo(() => {
     const total    = despesas.reduce((s, d) => s + d.valor, 0)
@@ -133,10 +138,14 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
       valor:        parseFloat(form.valor),
       vencimento:   form.vencimento,
       pagamento_em: form.pagamento_em || null,
-      cliente_id:   form.cliente_id  || null,
-      processo_id:  form.processo_id || null,
+      fornecedor:   form.fornecedor?.trim() || null,
       status:       form.status,
       centro_custo: form.centro_custo || null,
+      forma_pagamento: form.forma_pagamento || null,
+      parcelas_total:  form.parcelas_total || null,
+      parcela_atual:   form.parcela_atual || null,
+      lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
+      recorrencia: form.recorrente && !editando ? { quantidade: Number(form.recorrencia_qtd), valor_total: !!form.recorrencia_valor_total } : undefined,
     }
 
     if (editando) {
@@ -161,8 +170,8 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
         const err = await res.json().catch(() => ({}))
         return err.error ?? 'Erro ao criar'
       }
-      const novo = await res.json()
-      setDespesas(prev => [novo, ...prev])
+      const { parcelas_extras: extras = [], ...novo } = await res.json()
+      setDespesas(prev => [...extras, novo, ...prev])
     }
 
     fecharModal()
@@ -244,7 +253,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
           <div className="space-y-1.5">
             {boletosNaoPagos.slice(0, 8).map(d => (
               <div key={d.id} className="flex items-center justify-between text-[12px] bg-white/60 rounded-lg px-3 py-2">
-                <span className="text-[#374151] truncate">{d.descricao}{d.cliente ? ` · ${d.cliente.nome}` : ''}</span>
+                <span className="text-[#374151] truncate">{d.descricao}{d.fornecedor && d.fornecedor !== d.descricao ? ` · ${d.fornecedor}` : ''}</span>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={cn('font-medium', d.vencimento < hoje ? 'text-[#a93226]' : 'text-[#8a6000]')}>
                     Vence {formatDate(d.vencimento)}
@@ -272,7 +281,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
               type="text"
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder="Buscar descrição…"
+              placeholder="Buscar descrição ou fornecedor…"
               className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8]"
             />
           </div>
@@ -292,19 +301,6 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
             { value: 'vencido',   label: 'Vencido'   },
             { value: 'cancelado', label: 'Cancelado' },
           ]} />
-          <div className="min-w-[220px] max-w-sm flex-1">
-            <SearchableCombobox
-              value={filtCliente}
-              onChange={value => setFiltCliente(value)}
-              loadOptions={async (query) => fetchClienteOptions(query, 10)}
-              placeholder="Todos os clientes"
-              searchPlaceholder="Buscar cliente…"
-              helperText="Digite ao menos 2 caracteres."
-              emptyText="Digite para buscar clientes."
-              noResultsText="Nenhum resultado encontrado."
-              allowClear
-            />
-          </div>
           <span className="ml-auto text-[11px] text-[#9ca3af]">{filtrados.length} registros</span>
         </div>
 
@@ -318,7 +314,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
           <table className="w-full">
             <thead><tr className="bg-[#f9fafb] border-b border-[#f3f4f6]">
               <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Descrição</th>
-              <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Cliente</th>
+              <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Fornecedor</th>
               <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Vencimento</th>
               <th className="text-left  text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Status</th>
               <th className="text-right text-[11px] font-semibold text-[#a8b3c4] uppercase tracking-wider py-2.5 px-4">Valor</th>
@@ -331,9 +327,9 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
                   <tr key={d.id} className="border-b border-[#f9fafb] last:border-0 hover:bg-[#fafbfb]">
                     <td className="px-4 py-3 text-[13px] text-[#374151]">
                       {d.descricao}
-                      {d.categoria && <span className="block text-[11px] text-[#9ca3af]">{d.categoria}</span>}
+                      {(d.categoria || rotuloPagamento(d)) && <span className="block text-[11px] text-[#9ca3af]">{[d.categoria, rotuloPagamento(d)].filter(Boolean).join(' · ')}</span>}
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-[#374151]">{d.cliente?.nome ?? '—'}</td>
+                    <td className="px-4 py-3 text-[13px] text-[#374151]">{d.fornecedor || d.descricao}</td>
                     <td className="px-4 py-3 text-[13px] text-[#374151]">{formatDate(d.vencimento)}</td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold', cfg.bg, cfg.text)}>
@@ -376,6 +372,7 @@ export default function DespesasPage({ despesas: inicial, podeExcluir }: Props) 
       {modalAberto && (
         <LancamentoModal
           tipoFixo="despesa"
+          fornecedores={fornecedoresUsados}
           lancamento={editando as any}
           onSalvar={handleSalvar}
           onFechar={fecharModal}

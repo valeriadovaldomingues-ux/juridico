@@ -1,19 +1,24 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Plus, TrendingUp, TrendingDown, Clock, AlertCircle,
-  Pencil, Trash2, CheckCircle2, ChevronDown, Search,
-  Wallet, BarChart3, ListFilter, Banknote,
+  Pencil, Trash2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search,
+  Wallet, BarChart3, ListFilter, Banknote, Send,
 } from 'lucide-react'
+import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { can } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import LancamentoModal from './LancamentoModal'
+import RelatorioDespesasView from './RelatorioDespesasView'
+import PedidosPagamentoView from './PedidosPagamentoView'
 import SalariosView, { type FuncionarioFolha } from './SalariosView'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
+import ReceberPartidoMes from './ReceberPartidoMes'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +37,10 @@ interface Lancamento {
   cliente_id:   string | null
   processo_id:  string | null
   centro_custo: string | null
+  fornecedor?:  string | null
+  forma_pagamento?: FormaPagamento | null
+  parcelas_total?:  number | null
+  parcela_atual?:   number | null
   created_at:   string
   cliente:  { id: string; nome: string } | null
   processo: { id: string; numero_processo: string | null; titulo: string } | null
@@ -43,6 +52,12 @@ interface Props {
   mesFolhaAtual: string
   gradePagamento: ItemGrade[]
   role:         UserRole
+  /** Liberado individualmente no Financeiro (ex.: Célio): pode lançar e editar, mas não apagar. */
+  acessoCompleto?: boolean
+  /** Aba de Salários/folha: só sócio. */
+  verSalarios?: boolean
+  /** Se informado, só estas abas aparecem (ex.: Célio: despesas, a pagar, salários). */
+  abasPermitidas?: Aba[]
 }
 
 // ─── Config de status ────────────────────────────────────────────────────────
@@ -54,7 +69,7 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos' | 'rel_despesas'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
@@ -62,7 +77,9 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'despesas',    label: 'Despesas',        icon: TrendingDown },
   { id: 'salarios',    label: 'Salários',        icon: Banknote    },
   { id: 'receber',     label: 'A Receber',       icon: Clock       },
+  { id: 'pedidos',     label: 'Pedidos a pagar', icon: Send        },
   { id: 'pagar',       label: 'A Pagar',         icon: TrendingDown },
+  { id: 'rel_despesas', label: 'Relatório de despesas', icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
   { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
 ]
@@ -106,11 +123,26 @@ function filtrarPorPeriodo(vencimento: string, periodo: string, mesEspecifico: s
   }
 }
 
+const MESES_ROTULO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+/** "2026-10" → "outubro de 2026". */
+function rotuloMes(ym: string): string {
+  const [a, m] = ym.split('-').map(Number)
+  return `${MESES_ROTULO[(m || 1) - 1]} de ${a}`
+}
+
+function somarMesYM(ym: string, delta: number): string {
+  const [a, m] = ym.split('-').map(Number)
+  const t = (a * 12 + (m - 1)) + delta
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+}
+
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true, abasPermitidas }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
-  const [aba,         setAba]         = useState<Aba>('grade')
+  const router = useRouter()
+  const [aba,         setAba]         = useState<Aba>(abasPermitidas?.[0] ?? 'grade')
   const [modalAberto, setModalAberto] = useState(false)
   const [editando,    setEditando]    = useState<Lancamento | null>(null)
   const [excluindo,   setExcluindo]   = useState<string | null>(null)
@@ -123,9 +155,40 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
   const [filtStatus,    setFiltStatus]    = useState('')
   const [filtCliente,   setFiltCliente]   = useState('')
 
-  const podeCriar  = can(role, 'financeiro', 'create')
-  const podeEditar = can(role, 'financeiro', 'edit')
+  const podeCriar  = acessoCompleto || can(role, 'financeiro', 'create')
+  const podeEditar = acessoCompleto || can(role, 'financeiro', 'edit')
   const podeExcluir= can(role, 'financeiro', 'delete')
+
+  function mudarAba(nova: Aba) {
+    setAba(nova)
+  }
+
+  /** Mês escolhido no período (para a Receita Partido em A Receber); null se o período não é um único mês. */
+  const mesDoPeriodo: string | null = periodo === 'este-mes' ? new Date().toISOString().slice(0, 7)
+    : periodo === 'mes-anterior' ? somarMesYM(new Date().toISOString().slice(0, 7), -1)
+    : periodo === 'mes-especifico' && mesEspecifico ? mesEspecifico : null
+
+  /** Setas ‹ › do período: andam de mês em mês (ou de ano em ano, se o período for um ano). */
+  function navegarPeriodo(delta: number) {
+    const agora = new Date().toISOString().slice(0, 7)
+    if (periodo === 'ano' || periodo === 'ano-especifico') {
+      const base = periodo === 'ano' ? new Date().getFullYear() : Number(anoEspecifico) || new Date().getFullYear()
+      setAnoEspecifico(String(base + delta))
+      setPeriodo('ano-especifico')
+      return
+    }
+    const base = periodo === 'mes-anterior' ? somarMesYM(agora, -1) : periodo === 'mes-especifico' && mesEspecifico ? mesEspecifico : agora
+    setMesEspecifico(somarMesYM(base, delta))
+    setPeriodo('mes-especifico')
+  }
+
+  const rotuloPeriodo = periodo === 'todos' ? 'Todo o período'
+    : periodo === 'ano' ? String(new Date().getFullYear())
+    : periodo === 'ano-especifico' ? (anoEspecifico || '—')
+    : periodo === 'mes-especifico' ? (mesEspecifico ? rotuloMes(mesEspecifico) : '—')
+    : periodo === 'mes-anterior' ? rotuloMes(somarMesYM(new Date().toISOString().slice(0, 7), -1))
+    : periodo === 'este-mes' ? rotuloMes(new Date().toISOString().slice(0, 7))
+    : 'Últimos 3 meses'
 
   // ── Dados filtrados ──────────────────────────────────────────────────────
 
@@ -140,16 +203,23 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       // Filtros extras
       if (filtStatus  && l.status !== filtStatus)              return false
       if (filtCliente && l.cliente_id !== filtCliente)         return false
-      if (busca       && !l.descricao.toLowerCase().includes(busca.toLowerCase()) && !(l.categoria ?? '').toLowerCase().includes(busca.toLowerCase())) return false
+      if (busca) {
+        const q = busca.toLowerCase()
+        const alvo = [l.descricao, l.categoria, l.fornecedor, l.cliente?.nome].filter(Boolean).join(' ').toLowerCase()
+        if (!alvo.includes(q)) return false
+      }
 
-      // "A Receber"/"A Pagar" mostram tudo que está pendente, independente do mês —
-      // o filtro de período só se aplica às demais abas (senão o contador da aba
-      // (que soma sem filtro de período) fica inconsistente com a lista mostrada).
-      if (aba !== 'receber' && aba !== 'pagar' && !filtrarPorPeriodo(l.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
+      // "A Receber"/"A Pagar" também andam por mês (setas ‹ ›); ao entrar nelas o período é "Todo o período".
+      if (!filtrarPorPeriodo(l.vencimento, periodo, mesEspecifico, anoEspecifico)) return false
 
       return true
     })
   }, [lancamentos, aba, filtStatus, filtCliente, busca, periodo, mesEspecifico, anoEspecifico])
+
+  const fornecedoresUsados = useMemo(
+    () => Array.from(new Set(lancamentos.map(l => l.fornecedor).filter((f): f is string => !!f))).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [lancamentos],
+  )
 
   // ── Métricas ────────────────────────────────────────────────────────────
 
@@ -204,6 +274,12 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       processo_id:  form.processo_id || null,
       status:       form.status,
       centro_custo: form.centro_custo || null,
+      fornecedor:   form.tipo === 'despesa' ? (form.fornecedor?.trim() || null) : null,
+      forma_pagamento: form.tipo === 'despesa' ? (form.forma_pagamento || null) : null,
+      parcelas_total:  form.tipo === 'despesa' ? (form.parcelas_total || null) : null,
+      parcela_atual:   form.tipo === 'despesa' ? (form.parcela_atual || null) : null,
+      lancar_parcelas_seguintes: !!form.lancar_parcelas_seguintes,
+      recorrencia: form.recorrente && !editando ? { quantidade: Number(form.recorrencia_qtd), valor_total: !!form.recorrencia_valor_total } : undefined,
     }
 
     if (editando) {
@@ -228,8 +304,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         const err = await res.json().catch(() => ({}))
         return err.error ?? 'Erro ao criar'
       }
-      const novo = await res.json()
-      setLancamentos(prev => [novo, ...prev])
+      const { parcelas_extras: extras = [], ...novo } = await res.json()
+      setLancamentos(prev => [...extras, novo, ...prev])
     }
 
     fecharModal()
@@ -287,13 +363,13 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       </div>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className={cn('grid gap-4', abasPermitidas ? 'grid-cols-2' : 'grid-cols-4')}>
         {[
           { label: 'Recebido',  value: metricas.recebido, icon: TrendingUp,   iconBg: 'bg-[#e6f4ee]', iconCl: 'text-[#2ecc71]', textCl: 'text-[#1a7a45]' },
           { label: 'Pago',      value: metricas.despPago, icon: TrendingDown,  iconBg: 'bg-[#fde8e8]', iconCl: 'text-[#e74c3c]', textCl: 'text-[#a93226]' },
           { label: 'A Receber', value: metricas.aReceber, icon: Clock,         iconBg: 'bg-[#e8f0fb]', iconCl: 'text-[#3498db]', textCl: 'text-[#1a4d9e]' },
           { label: 'Vencidos',  value: metricas.vencidos, icon: AlertCircle,   iconBg: 'bg-[#fde8e8]', iconCl: 'text-[#e74c3c]', textCl: 'text-[#a93226]' },
-        ].map(m => {
+        ].filter(m => !abasPermitidas || (m.label !== 'Recebido' && m.label !== 'A Receber')).map(m => {
           const Icon = m.icon
           return (
             <div key={m.label} className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -311,30 +387,17 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         })}
       </div>
 
-      {/* Saldo */}
-      <div className={cn(
-        'rounded-lg border px-5 py-3.5 flex items-center justify-between',
-        metricas.saldo >= 0 ? 'bg-[#e6f4ee] border-[#b8dfc9]' : 'bg-[#fde8e8] border-[#f5c6c6]',
-      )}>
-        <p className={`text-[13px] font-semibold ${metricas.saldo >= 0 ? 'text-[#1a7a45]' : 'text-[#a93226]'}`}>
-          Saldo geral (recebido − despesas pagas)
-        </p>
-        <p className={`text-[18px] font-bold tabular-nums ${metricas.saldo >= 0 ? 'text-[#1a7a45]' : 'text-[#a93226]'}`}>
-          {metricas.saldo >= 0 ? '+' : '−'} {formatCurrency(Math.abs(metricas.saldo))}
-        </p>
-      </div>
-
       {/* Abas */}
       <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         <div className="flex border-b border-[#f3f4f6]">
-          {ABAS.map(a => {
+          {ABAS.filter(a => (a.id !== 'salarios' || verSalarios) && (!abasPermitidas || abasPermitidas.includes(a.id))).map(a => {
             const Icon = a.icon
             const ativo = aba === a.id
             return (
               <button
                 key={a.id}
-                onClick={() => setAba(a.id)}
+                onClick={() => mudarAba(a.id)}
                 className={cn(
                   'flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-all border-b-2 -mb-px',
                   ativo
@@ -363,7 +426,11 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
         </div>
 
         {/* Conteúdo das abas */}
-        {aba === 'relatorios' ? (
+        {aba === 'pedidos' ? (
+          <PedidosPagamentoView podeDecidir={role === 'socio'} onDespesaCriada={() => router.refresh()} />
+        ) : aba === 'rel_despesas' ? (
+          <RelatorioDespesasView podeVerReferencia={role === 'socio'} />
+        ) : aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
         ) : aba === 'salarios' ? (
           <SalariosView mesInicial={mesFolhaAtual} funcionariosIniciais={funcionarios} />
@@ -379,13 +446,18 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                   type="text"
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
-                  placeholder="Buscar descrição…"
+                  placeholder={aba === 'despesas' || aba === 'pagar' ? 'Buscar descrição ou fornecedor…' : 'Buscar descrição…'}
                   className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-white border border-[#e5e7eb] rounded-lg outline-none focus:border-[#1D5F60] text-[#374151] placeholder:text-[#c5cdd8]"
                 />
               </div>
 
-              {aba !== 'receber' && aba !== 'pagar' && (
+              {(
                 <>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => navegarPeriodo(-1)} title="Anterior" className="p-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]"><ChevronLeft size={13} /></button>
+                    <span className="px-2 text-[12px] font-medium text-[#1D5F60] min-w-[130px] text-center capitalize">{rotuloPeriodo}</span>
+                    <button onClick={() => navegarPeriodo(1)} title="Próximo" className="p-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]"><ChevronRight size={13} /></button>
+                  </div>
                   <SelectFiltro
                     value={periodo}
                     onChange={setPeriodo}
@@ -425,6 +497,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 />
               )}
 
+              {aba !== 'despesas' && aba !== 'pagar' && (
               <div className="min-w-[240px] max-w-sm flex-1">
                 <SearchableCombobox
                   value={filtCliente}
@@ -439,8 +512,12 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                   clearLabel="Todos os clientes"
                 />
               </div>
+              )}
 
               <span className="text-[11px] text-[#9ca3af] ml-auto shrink-0">
+                {(aba === 'receitas' || aba === 'despesas' || aba === 'receber' || aba === 'pagar') && filtrados.length > 0 && (
+                  <strong className="mr-2 text-[#374151]">Total: {formatCurrency(filtrados.filter(l => l.tipo === (aba === 'receitas' || aba === 'receber' ? 'receita' : 'despesa') && l.status !== 'cancelado').reduce((a, l) => a + l.valor, 0))}</strong>
+                )}
                 {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -455,7 +532,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 <thead>
                   <tr className="bg-[#f9fafb] border-b border-[#f3f4f6]">
                     <Th first>Descrição</Th>
-                    <Th>Cliente / Processo</Th>
+                    <Th>{aba === 'despesas' || aba === 'pagar' ? 'Fornecedor' : 'Cliente / Fornecedor'}</Th>
                     <Th>Vencimento</Th>
                     <Th>Tipo</Th>
                     <Th>Valor</Th>
@@ -474,20 +551,22 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                       <tr key={l.id} className="border-b border-[#f5f7fa] last:border-0 hover:bg-[#fafbfb] transition-colors group">
                         <td className="px-5 py-3.5">
                           <p className="text-[13px] font-medium text-[#0f1923]">{l.descricao}</p>
-                          {l.categoria && (
-                            <p className="text-[11px] text-[#a8b3c4] mt-0.5">{l.categoria}</p>
+                          {(l.categoria || rotuloPagamento(l)) && (
+                            <p className="text-[11px] text-[#a8b3c4] mt-0.5">{[l.categoria, rotuloPagamento(l)].filter(Boolean).join(' · ')}</p>
                           )}
                         </td>
                         <td className="px-4 py-3.5">
-                          {l.cliente ? (
+                          {l.tipo === 'despesa' ? (
+                            <p className="text-[12px] text-[#374151]">{l.fornecedor || l.descricao}</p>
+                          ) : l.cliente ? (
                             <p className="text-[12px] text-[#374151]">{l.cliente.nome}</p>
                           ) : null}
-                          {l.processo ? (
+                          {l.tipo !== 'despesa' && l.processo ? (
                             <p className="text-[11px] text-[#9ca3af] mt-0.5 truncate max-w-[160px]">
                               {l.processo.numero_processo ?? l.processo.titulo}
                             </p>
                           ) : null}
-                          {!l.cliente && !l.processo && <span className="text-[12px] text-[#c5cdd8]">—</span>}
+                          {l.tipo !== 'despesa' && !l.cliente && !l.processo && <span className="text-[12px] text-[#c5cdd8]">—</span>}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className={cn('text-[12px]', vencido ? 'text-red-600 font-medium' : 'text-[#374151]')}>
@@ -560,6 +639,13 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 </tbody>
               </table>
             )}
+
+            {/* A Receber: Receita Partido do mês escolhido (clientes de boleto que ainda não pagaram) */}
+            {aba === 'receber' && gradePagamento.length > 0 && (
+              mesDoPeriodo
+                ? <ReceberPartidoMes itens={gradePagamento} mes={mesDoPeriodo} />
+                : <p className="px-5 py-4 border-t border-[#f3f4f6] text-[12px] text-[#9ca3af]">Escolha um mês nas setas ‹ › para ver também a Receita Partido a receber.</p>
+            )}
           </>
         )}
       </div>
@@ -567,6 +653,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       {/* Modal */}
       {modalAberto && (
         <LancamentoModal
+          tipoFixo={acessoCompleto ? 'despesa' : undefined}
+          fornecedores={fornecedoresUsados}
           lancamento={editando
             ? {
                 id:           editando.id,
@@ -580,6 +668,10 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
                 cliente_id:   editando.cliente_id ?? '',
                 processo_id:  editando.processo_id ?? '',
                 centro_custo: editando.centro_custo ?? '',
+                fornecedor:   editando.fornecedor ?? '',
+                forma_pagamento: editando.forma_pagamento ?? '',
+                parcelas_total:  editando.parcelas_total ? String(editando.parcelas_total) : '',
+                parcela_atual:   editando.parcela_atual ? String(editando.parcela_atual) : '',
               }
             : null}
           onSalvar={handleSalvar}
@@ -683,13 +775,6 @@ function RelatoriosView({ metricas }: { metricas: Metricas }) {
         </div>
       </div>
 
-      {/* Preparação futura: integração de pagamentos */}
-      <div className="border border-dashed border-[#e5e7eb] rounded-xl p-4">
-        <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-1">Em breve</p>
-        <p className="text-[12px] text-[#c5cdd8]">
-          Geração de boletos e cobranças via PIX — estrutura de dados preparada para integração futura com gateways de pagamento.
-        </p>
-      </div>
     </div>
   )
 }

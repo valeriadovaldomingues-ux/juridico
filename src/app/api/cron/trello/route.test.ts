@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockCreateServiceClient, mockSyncTrelloBoard } = vi.hoisted(() => ({
+const { mockCreateServiceClient, mockSyncTrelloBoard, mockLiberar } = vi.hoisted(() => ({
   mockCreateServiceClient: vi.fn(),
   mockSyncTrelloBoard: vi.fn(),
+  mockLiberar: vi.fn(),
 }))
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -11,6 +12,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 vi.mock('@/lib/trello/sync', () => ({
   syncTrelloBoard: mockSyncTrelloBoard,
+  liberarSincronizacoesTravadas: mockLiberar,
 }))
 
 import { GET } from './route'
@@ -52,6 +54,7 @@ function supabaseFake(options: { integration?: { id: string } | null; running?: 
 beforeEach(() => {
   mockCreateServiceClient.mockReset()
   mockSyncTrelloBoard.mockReset()
+  mockLiberar.mockReset()
   mockCreateServiceClient.mockReturnValue(supabaseFake())
   delete process.env.CRON_SECRET
 })
@@ -100,5 +103,13 @@ describe('GET /api/cron/trello', () => {
     expect(res.status).toBe(200)
     expect(body).toMatchObject({ success: true, cards_criados: 1 })
     expect(mockSyncTrelloBoard).toHaveBeenCalledWith('integ-1', null, supabase)
+  })
+
+  it('libera sincronizações presas antes de checar se há alguma em andamento', async () => {
+    process.env.CRON_SECRET = 'segredo'
+    mockSyncTrelloBoard.mockResolvedValue({ success: true })
+    const res = await GET(request({ authorization: 'Bearer segredo' }))
+    expect(res.status).toBe(200)
+    expect(mockLiberar).toHaveBeenCalledWith(expect.anything(), 'integ-1')
   })
 })
