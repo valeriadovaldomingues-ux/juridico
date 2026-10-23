@@ -23,9 +23,9 @@ describe('protocolo MCP', () => {
     expect(negada?.error?.code).toBe(-32602)
     const escrita = await responderMcp({ jsonrpc: '2.0', id: 8, method: 'tools/list' }, { ...ctx, podeEscrever: true })
     const nomes = (escrita?.result as { tools: { name: string }[] }).tools.map(t => t.name)
-    expect(nomes).toEqual(expect.arrayContaining(['criar_andamento', 'criar_compromisso', 'concluir_compromisso', 'excluir_compromisso', 'cadastrar_cliente', 'atualizar_cliente', 'cadastrar_processo', 'atualizar_processo', 'adicionar_parte_processo', 'tratar_publicacao']))
+    expect(nomes).toEqual(expect.arrayContaining(['criar_andamento', 'criar_compromisso', 'concluir_compromisso', 'excluir_compromisso', 'alterar_advogado_responsavel', 'atualizar_compromisso', 'atualizar_parte_processo', 'cadastrar_cliente', 'atualizar_cliente', 'cadastrar_processo', 'atualizar_processo', 'adicionar_parte_processo', 'tratar_publicacao']))
     // A única exclusão é a de compromissos criados pelo próprio conector
-    expect(nomes.filter(n => /apagar|excluir|deletar/.test(n))).toEqual(['excluir_compromisso'])
+    expect(nomes.filter(n => /apagar|excluir|deletar|remover/.test(n)).sort()).toEqual(['excluir_compromisso', 'remover_parte_processo'])
   })
   it('gravação sem confirmar=true só devolve o resumo (nada é gravado)', async () => {
     const inserts: unknown[] = []
