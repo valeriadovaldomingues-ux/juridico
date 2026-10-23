@@ -45,6 +45,12 @@ const PRAZO_PATTERNS = [
   /contrarraz[oõ]es?\s+(?:em|no\s+prazo\s+de)\s+(\d+)\s*dias?/gi,
   // "no prazo de X dias" / "prazo de X dias" / "em X dias" (genérico, word boundary)
   /\b(?:no prazo de|prazo de|em)\s+(\d{1,3})\s+dias?\b/gi,
+  // Atos que abrem prazo sem dizer o número de dias (comum na Justiça do Trabalho / PJe):
+  // "para apresentar resposta ao recurso", "para oferecer contrarrazões", "intimado para se manifestar"
+  /\b(?:para|a\s+fim\s+de)\s+(?:apresentar|oferecer|ofertar|ofertar)\s+(?:resposta|contrarraz[oõ]es|contesta[cç][aã]o|defesa|manifesta[cç][aã]o|r[eé]plica|impugna[cç][aã]o|embargos|recurso)\b/gi,
+  /\bapresentar\s+(?:resposta|contrarraz[oõ]es|contesta[cç][aã]o|r[eé]plica|impugna[cç][aã]o)\b/gi,
+  /\bintimad[oa]s?\b[^.]{0,80}\bpara\s+(?:se\s+)?(?:manifest|apresent|cumpr|recolh|comprov|pag|juntar|emend|regulariz)\w*/gi,
+  /\bvista\s+(?:[àa]|ao)\s+(?:parte|reclamante|reclamad[ao]|recorrente|recorrid[ao]|exequente|executad[ao]|embargante|embargad[ao])\b/gi,
   // Providência terms
   /\b(?:intime-se|cite-se|notifique-se|cumpra-se|diligencie-se|certifique-se)\b/gi,
 ]
