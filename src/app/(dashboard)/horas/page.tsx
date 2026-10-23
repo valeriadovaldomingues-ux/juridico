@@ -4,10 +4,10 @@ import HorasPage from './HorasPage'
 export const metadata = { title: 'Horas — PEDV' }
 
 export default async function Page() {
-  await requireRole(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
+  const { profile } = await requireRole(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
   return (
     <div className="internal-page">
-      <HorasPage />
+      <HorasPage podeRegistrar={profile.role !== 'estagiario'} podeValor={profile.role === 'socio'} />
     </div>
   )
 }
