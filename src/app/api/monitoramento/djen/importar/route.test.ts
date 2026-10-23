@@ -45,7 +45,7 @@ function request(body: unknown) {
 function itemDJEN(id: number) {
   return {
     id,
-    data_disponibilizacao: '2026-08-03',
+    data_disponibilizacao: '2026-10-14',
     siglaTribunal: 'TJMG',
     texto: 'Intimação de teste para manifestação.',
     numeroprocessocommascara: '3587182-05.2025.8.13.0000',
@@ -119,7 +119,7 @@ describe('POST /api/monitoramento/djen/importar', () => {
     mockCreateClient.mockResolvedValue(supabase)
 
     const res = await POST(request({
-      periodo: { inicio: '2026-08-01', fim: '2026-08-04' },
+      periodo: { inicio: '2026-10-13', fim: '2026-10-15' },
       resultados: [
         { consulta: { tipo: 'oab', termo: 'MG98185' }, items: [itemDJEN(1), itemDJEN(1)] },
       ],
