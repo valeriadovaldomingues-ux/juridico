@@ -4,7 +4,7 @@ import { FERRAMENTAS } from './ferramentas'
 // Colunas que a tabela processos realmente tem (as do formulário de processos). Se uma ferramenta pedir outra,
 // a consulta quebra em produção ("column processos.xxx does not exist") — este teste pega antes.
 const COLUNAS_PROCESSOS = new Set([
-  'id', 'titulo', 'numero_processo', 'area_direito', 'status', 'fase', 'cliente_id', 'advogado_responsavel_id', 'tribunal', 'vara',
+  'id', 'titulo', 'numero_processo', 'area_direito', 'status', 'fase', 'cliente_id', 'advogado_responsavel_id', 'advogado_caso_id', 'tribunal', 'vara',
   'valor_causa', 'data_distribuicao', 'observacoes', 'comarca', 'classe_processual', 'assunto', 'segredo_justica', 'created_at',
 ])
 

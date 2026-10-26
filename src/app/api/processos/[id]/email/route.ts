@@ -17,13 +17,13 @@ async function carregar(id: string, userId: string) {
   const supabase = await createClient()
   const { data: processo } = await supabase
     .from('processos')
-    .select('id, cliente_id, titulo, numero_processo, advogado_responsavel_id, cliente:clientes!cliente_id(nome, email)')
+    .select('id, cliente_id, titulo, numero_processo, advogado_responsavel_id, advogado_caso_id, cliente:clientes!cliente_id(nome, email)')
     .eq('id', id).maybeSingle()
   if (!processo) return null
   const cliente = (Array.isArray(processo.cliente) ? processo.cliente[0] : processo.cliente) as { nome?: string; email?: string | null } | null
   const { data: advogado } = await createServiceClient()
     .from('profiles').select('nome, email')
-    .eq('id', processo.advogado_responsavel_id ?? userId).maybeSingle()
+    .eq('id', processo.advogado_caso_id ?? processo.advogado_responsavel_id ?? userId).maybeSingle()
   return { supabase, processo, cliente, advogado }
 }
 
@@ -45,7 +45,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .select('id, enviado_em, para, assunto, status')
     .eq('processo_id', id).order('enviado_em', { ascending: false }).limit(8)
 
-  const { copias, erro: erroCopia } = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId)
+  const { copias, erro: erroCopia } = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId, ctx.processo.advogado_caso_id ?? null)
   return NextResponse.json({
     para: ctx.cliente?.email ? [ctx.cliente.email] : [],
     cc: [],
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!ctx) return NextResponse.json({ error: 'Processo não encontrado.' }, { status: 404 })
 
   // O advogado responsável e quem envia sempre vão em cópia (decidido aqui, não no formulário).
-  const obrig = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId)
+  const obrig = await copiaObrigatoria(ctx.processo.advogado_responsavel_id ?? null, auth.userId, ctx.processo.advogado_caso_id ?? null)
   if (obrig.erro) return NextResponse.json({ error: obrig.erro }, { status: 400 })
   const ccFinal = juntarCopias(obrig.copias.map(c => c.email), cc.validos, para.validos)
 

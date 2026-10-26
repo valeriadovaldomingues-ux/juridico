@@ -6,7 +6,7 @@ import { AlertCircle, CheckCircle2, Copy, Loader2, Mail, Paperclip, X } from 'lu
 interface Rascunho {
   para: string[]
   cc: string[]
-  cc_obrigatorios: { papel: 'responsavel' | 'remetente'; nome: string | null; email: string }[]
+  cc_obrigatorios: { papel: 'responsavel' | 'caso' | 'remetente'; nome: string | null; email: string }[]
   erro_copia: string | null
   assunto: string
   corpo: string
@@ -105,7 +105,7 @@ export default function EmailClienteModal({ processoId, onFechar }: { processoId
                 <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] text-red-700"><AlertCircle size={14} className="mt-0.5 shrink-0" />{rascunho.erro_copia}</p>
               )}
               <p className="rounded-lg bg-[#f0f7f7] px-3 py-2 text-[12px] text-[#1D5F60]">
-                Sempre em cópia (não dá para tirar): {rascunho.cc_obrigatorios.length === 0 ? '—' : rascunho.cc_obrigatorios.map(c => `${c.nome ?? c.email} — ${c.papel === 'responsavel' ? 'advogado responsável' : 'quem envia'}`).join(' · ')}
+                Sempre em cópia (não dá para tirar): {rascunho.cc_obrigatorios.length === 0 ? '—' : rascunho.cc_obrigatorios.map(c => `${c.nome ?? c.email} — ${c.papel === 'responsavel' ? 'advogado responsável' : c.papel === 'caso' ? 'quem cuida do caso' : 'quem envia'}`).join(' · ')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label className={labelCls}>Para (cliente)</label><input value={para} onChange={e => setPara(e.target.value)} className={inputCls} placeholder="email@cliente.com" /></div>

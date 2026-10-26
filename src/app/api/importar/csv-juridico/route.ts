@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
+import { ADVOGADO_RESPONSAVEL_ID } from '@/lib/processos/responsavel'
 
 // ─── Tipos de entrada ─────────────────────────────────────────────────────────
 
@@ -202,16 +203,17 @@ export async function POST(req: NextRequest) {
     .filter(Boolean)
   const numerosUnicos = [...new Set(numerosCSV)]
 
-  const processoExistenteMap = new Map<string, { id: string; advogado_responsavel_id: string | null; observacoes: string | null }>()
+  const processoExistenteMap = new Map<string, { id: string; advogado_responsavel_id: string | null; advogado_caso_id: string | null; observacoes: string | null }>()
   if (numerosUnicos.length > 0) {
     const { data: procDB } = await supabase
       .from('processos')
-      .select('id, numero_processo, advogado_responsavel_id, observacoes')
+      .select('id, numero_processo, advogado_responsavel_id, advogado_caso_id, observacoes')
       .in('numero_processo', numerosUnicos)
     for (const p of procDB ?? []) {
       processoExistenteMap.set((p.numero_processo ?? '').trim(), {
         id:                      p.id,
         advogado_responsavel_id: p.advogado_responsavel_id,
+        advogado_caso_id:        p.advogado_caso_id,
         observacoes:             p.observacoes,
       })
     }
@@ -325,8 +327,11 @@ export async function POST(req: NextRequest) {
       if (!dryRun) {
         // Atualiza apenas campos que estavam vazios
         const updates: Record<string, unknown> = {}
-        if (!existente.advogado_responsavel_id && responsavelId) {
-          updates.advogado_responsavel_id = responsavelId
+        if (existente.advogado_responsavel_id !== ADVOGADO_RESPONSAVEL_ID) {
+          updates.advogado_responsavel_id = ADVOGADO_RESPONSAVEL_ID
+        }
+        if (!existente.advogado_caso_id && responsavelId) {
+          updates.advogado_caso_id = responsavelId
         }
         if (!existente.observacoes && observacoes) {
           updates.observacoes = observacoes
@@ -356,7 +361,8 @@ export async function POST(req: NextRequest) {
             area_direito:            areaDireito,
             status:                  processoStatus,
             cliente_id:              clienteId,
-            advogado_responsavel_id: responsavelId,
+            advogado_responsavel_id: ADVOGADO_RESPONSAVEL_ID,
+            advogado_caso_id:        responsavelId,
             tribunal,
             observacoes,
           })
@@ -377,7 +383,8 @@ export async function POST(req: NextRequest) {
         if (numProcesso) {
           processoExistenteMap.set(numProcesso, {
             id: novoProc.id,
-            advogado_responsavel_id: responsavelId,
+            advogado_responsavel_id: ADVOGADO_RESPONSAVEL_ID,
+            advogado_caso_id: responsavelId,
             observacoes,
           })
         }

@@ -20,6 +20,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Cliente } from '@/types'
 import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
 import { fetchUsuarioOptions } from '@/lib/search/remote'
+import { ADVOGADO_RESPONSAVEL_NOME } from '@/lib/processos/responsavel'
 import {
   ANDAMENTO_ORIGEM_LABELS,
   ANDAMENTO_ORIGENS,
@@ -380,6 +381,8 @@ export default function ProcessoDetail({
                   <div className="bg-white rounded-lg border border-[#e5e7eb] p-6">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       <Field label="Número do Processo" value={processo.numero_processo} mono />
+                      <Field label="Advogada responsável" value={ADVOGADO_RESPONSAVEL_NOME} />
+                      <Field label="Quem cuida do caso"   value={processo.advogado_caso?.nome ?? null} />
                       <Field label="Área do Direito"     value={areaLabels[processo.area_direito] ?? processo.area_direito} />
                       <Field label="Tribunal"             value={processo.tribunal} />
                       <Field label="Comarca"              value={processo.comarca} />
@@ -462,7 +465,7 @@ export default function ProcessoDetail({
             <NovoCompromissoModal
               processoId={processo.id}
               tipo={novoCompromisso}
-              advogadoId={processo.advogado_responsavel_id ?? null}
+              advogadoId={processo.advogado_caso_id ?? processo.advogado_responsavel_id ?? null}
               onFechar={() => setNovoCompromisso(null)}
               onSalvo={() => { setNovoCompromisso(null); router.refresh() }}
             />

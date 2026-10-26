@@ -10,7 +10,7 @@ export default async function ProcessoPage({ params }: { params: Promise<{ id: s
 
   const { data: processo } = await supabase
     .from('processos')
-    .select('*, cliente:clientes(id, nome, email, celular, telefone)')
+    .select('*, cliente:clientes(id, nome, email, celular, telefone), advogado_caso:profiles!advogado_caso_id(id, nome)')
     .eq('id', id)
     .single()
 
