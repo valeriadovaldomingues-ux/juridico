@@ -110,6 +110,43 @@ export const FERRAMENTAS: Ferramenta[] = [
     },
   },
   {
+    name: 'horas_lancadas',
+    description: 'Horas já lançadas na aba Horas, para conferir antes de lançar de novo (evita duplicidade). Filtra por processo, por pessoa e por período. Não mostra valores em dinheiro.',
+    inputSchema: { type: 'object', properties: {
+      processo_id: { type: 'string', description: 'Id do processo (de buscar_processos)' },
+      responsavel: { type: 'string', description: 'Parte do nome de quem lançou/trabalhou' },
+      de: { type: 'string', description: 'Data inicial AAAA-MM-DD (padrão: 30 dias atrás)' }, ate: { type: 'string', description: 'Data final AAAA-MM-DD (padrão: hoje)' },
+    } },
+    async executar(args, ctx) {
+      const ate = dataOk(args.ate) ?? hoje()
+      const de = dataOk(args.de) ?? soma(ate, -30)
+      let q = ctx.db.from('agenda_time_entries')
+        .select('id, inicio_em, descricao_atividade, cobravel, usa_duracao_manual, duracao_manual_minutos, duracao_calculada_minutos, processo:processos(id, numero_processo, titulo), cliente:clientes(nome), agenda_item:agenda_items(responsavel)')
+        .gte('inicio_em', `${de}T00:00:00-03:00`).lte('inicio_em', `${ate}T23:59:59-03:00`).order('inicio_em', { ascending: false }).limit(200)
+      const processoId = String(args.processo_id ?? '')
+      if (processoId) {
+        if (!/^[0-9a-f-]{36}$/i.test(processoId)) throw new Error('Id de processo inválido.')
+        q = q.eq('processo_id', processoId)
+      }
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
+      const nome = String(args.responsavel ?? '').trim().toLowerCase()
+      const linhas: { responsavel: string | null; minutos: number; [k: string]: unknown }[] = (data ?? []).map((e: Record<string, unknown>) => {
+        const item = um(e.agenda_item as never) as { responsavel?: string } | null
+        const proc = um(e.processo as never) as { id?: string; numero_processo?: string; titulo?: string } | null
+        const minutos = Number((e.usa_duracao_manual ? e.duracao_manual_minutos : e.duracao_calculada_minutos) ?? 0)
+        return {
+          id: e.id, data: String(e.inicio_em ?? '').slice(0, 10), responsavel: item?.responsavel ?? null, descricao: e.descricao_atividade,
+          minutos, tempo: `${Math.floor(minutos / 60)}h${String(minutos % 60).padStart(2, '0')}`, cobravel: e.cobravel,
+          processo_id: proc?.id ?? null, processo: proc ? `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim() : null,
+          cliente: (um(e.cliente as never) as { nome?: string } | null)?.nome ?? null,
+        }
+      }).filter((l: { responsavel: string | null }) => !nome || String(l.responsavel ?? '').toLowerCase().includes(nome))
+      const total = linhas.reduce((t, l) => t + l.minutos, 0)
+      return { periodo: { de, ate }, total_minutos: total, total: `${Math.floor(total / 60)}h${String(total % 60).padStart(2, '0')}`, lancamentos: linhas }
+    },
+  },
+  {
     name: 'publicacoes',
     description: 'Publicações capturadas (DJEN etc.) nos últimos dias, com prazo/audiência detectados e o processo vinculado. Pode filtrar por texto.',
     inputSchema: { type: 'object', properties: {
