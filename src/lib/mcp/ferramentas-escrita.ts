@@ -3,6 +3,8 @@ import { ADVOGADO_RESPONSAVEL_ID, ADVOGADO_RESPONSAVEL_NOME } from '@/lib/proces
 import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
 import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
+import { lerTempo } from '@/lib/horas/lancar'
+import { createAgendaTimeEntryPayload } from '@/lib/agenda-time-entries'
 
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem está em MCP_USUARIOS_ESCRITA; (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
@@ -451,6 +453,108 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       if (args.confirmar !== true) return previa(resumo)
       const { data: criada, error } = await ctx.db.from('partes_processo').insert(dados).select('id').single()
       if (error) throw new Error(error.message)
+      return { gravado: true, id: criada.id, ...resumo }
+    },
+  },
+  {
+    name: 'lancar_horas',
+    description: 'Lança tempo gasto na aba Horas (timesheet) de um processo, com data, responsável, descrição e tempo (informe `minutos`, ou `horas`+`minutos`, ou `inicio`+`fim`). Pode ser ligado a um andamento (andamento_id). Antes de gravar, confere se já existe lançamento parecido no mesmo processo e dia — use horas_lancadas para ver o que já foi lançado. Duas etapas: sem confirmar=true só mostra o resumo.',
+    inputSchema: { type: 'object', properties: {
+      processo_id: { type: 'string', description: 'Id do processo (de buscar_processos)' },
+      descricao: { type: 'string', description: 'O que foi feito' },
+      data: { type: 'string', description: 'AAAA-MM-DD (padrão: hoje)' },
+      horas: { type: 'number', description: 'Horas inteiras (use com minutos)' }, minutos: { type: 'number', description: 'Minutos (0 a 59 se houver horas; senão o total de minutos)' },
+      inicio: { type: 'string', description: 'HH:MM (alternativa à duração)' }, fim: { type: 'string', description: 'HH:MM' },
+      responsavel: { type: 'string', description: 'Nome de quem trabalhou (padrão: quem está pedindo)' },
+      andamento_id: { type: 'string', description: 'Id do andamento a que este tempo se refere (opcional)' },
+      cobravel: { type: 'boolean', description: 'Padrão: true' },
+      permitir_duplicado: { type: 'boolean', description: 'Só use se o usuário confirmar que é outro lançamento, mesmo havendo um parecido' },
+      confirmar: CONFIRMAR,
+    }, required: ['processo_id', 'descricao'] },
+    async executar(args, ctx) {
+      const processoId = String(args.processo_id ?? '')
+      const descricao = texto(args.descricao, 300)
+      if (!UUID.test(processoId) || !descricao) throw new Error('Informe o processo (id) e a descrição do que foi feito.')
+      const data = dataOk(args.data) ?? new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+      let entrada: Parameters<typeof lerTempo>[0]
+      if (typeof args.inicio === 'string' || typeof args.fim === 'string') {
+        entrada = { data, modo: 'periodo', inicio: args.inicio, fim: args.fim }
+      } else {
+        let h = Number(args.horas ?? 0)
+        let m = Number(args.minutos ?? 0)
+        if (!args.horas && m >= 60) { h = Math.floor(m / 60); m = m % 60 } // "90 minutos" vira 1h30
+        entrada = { data, modo: 'duracao', horas: h, minutos: m }
+      }
+      const tempo = lerTempo(entrada)
+      if (!tempo.ok) throw new Error(tempo.erro)
+
+      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', processoId).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!proc) throw new Error('Processo não encontrado.')
+      if (!proc.cliente_id) throw new Error('O processo não tem cliente cadastrado; as horas são lançadas por cliente.')
+
+      let andamentoId: string | null = null
+      if (args.andamento_id !== undefined && args.andamento_id !== null && args.andamento_id !== '') {
+        andamentoId = String(args.andamento_id)
+        const { data: and } = UUID.test(andamentoId)
+          ? await ctx.db.from('processo_andamentos').select('id, titulo').eq('id', andamentoId).eq('processo_id', processoId).maybeSingle()
+          : { data: null }
+        if (!and) throw new Error('Andamento não encontrado neste processo.')
+      }
+
+      let respId = ctx.userId
+      let respNome = ctx.nome
+      const nomeResp = texto(args.responsavel, 120)
+      if (nomeResp) {
+        const { data: perfis } = await ctx.db.from('profiles').select('id, nome').eq('ativo', true).ilike('nome', `%${nomeResp}%`).limit(5)
+        if (!perfis?.length) throw new Error(`Não encontrei usuário ativo com o nome "${nomeResp}".`)
+        if (perfis.length > 1) throw new Error(`Mais de um usuário com esse nome: ${perfis.map((p: { nome: string }) => p.nome).join(', ')}. Informe o nome completo.`)
+        respId = perfis[0].id
+        respNome = perfis[0].nome
+      }
+
+      // Duplicidade: mesmo processo, mesmo dia, mesmo responsável e mesmo tempo (ou mesma descrição)
+      const { data: doDia } = await ctx.db.from('agenda_time_entries')
+        .select('id, descricao_atividade, usa_duracao_manual, duracao_manual_minutos, duracao_calculada_minutos, agenda_item:agenda_items(responsavel)')
+        .eq('processo_id', processoId).gte('inicio_em', `${data}T00:00:00-03:00`).lte('inicio_em', `${data}T23:59:59-03:00`).limit(50)
+      const semelhantes = (doDia ?? []).filter((e: Record<string, unknown>) => {
+        const min = e.usa_duracao_manual ? e.duracao_manual_minutos : e.duracao_calculada_minutos
+        const item = Array.isArray(e.agenda_item) ? e.agenda_item[0] : e.agenda_item
+        const mesmoResp = ((item as { responsavel?: string } | null)?.responsavel ?? '') === respNome
+        const mesmaDesc = String(e.descricao_atividade ?? '').trim().toLowerCase() === descricao.toLowerCase()
+        return mesmoResp && (mesmaDesc || min === tempo.tempo.minutos)
+      }).map((e: Record<string, unknown>) => ({ id: e.id, descricao: e.descricao_atividade, minutos: e.usa_duracao_manual ? e.duracao_manual_minutos : e.duracao_calculada_minutos }))
+
+      const cobravel = args.cobravel === undefined ? true : Boolean(args.cobravel)
+      const resumo: Record<string, unknown> = {
+        processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), data, responsavel: respNome, descricao,
+        tempo: `${Math.floor(tempo.tempo.minutos / 60)}h${String(tempo.tempo.minutos % 60).padStart(2, '0')}`, minutos: tempo.tempo.minutos, cobravel,
+        andamento_id: andamentoId,
+      }
+      if (semelhantes.length) {
+        resumo.possivel_duplicidade = semelhantes
+        if (args.permitir_duplicado !== true) {
+          return { ...previa(resumo), aviso: 'JÁ EXISTE lançamento parecido neste processo e dia (veja possivel_duplicidade). Não grave sem o usuário confirmar que é outro lançamento; se confirmar, chame com permitir_duplicado=true.' }
+        }
+      }
+      if (args.confirmar !== true) return previa(resumo)
+
+      const obs = [andamentoId ? `Ligado ao andamento ${andamentoId}` : null, marca(ctx.nome)].filter(Boolean).join('\n')
+      const { data: item, error: e1 } = await ctx.db.from('agenda_items').insert({
+        titulo: descricao, descricao: `${obs}\n\n[lançado no controle de horas]`, tipo: 'tarefa', status: 'concluido',
+        data_inicio: data, prioridade: 'media', processo_id: processoId, cliente_id: proc.cliente_id, responsavel: respNome,
+      }).select('id').single()
+      if (e1 || !item) throw new Error(e1?.message ?? 'Não foi possível registrar.')
+      const payload = createAgendaTimeEntryPayload({
+        agenda_item_id: item.id, cliente_id: proc.cliente_id, processo_id: processoId, descricao_atividade: descricao, observacoes: obs,
+        inicio_em: tempo.tempo.inicio_em, fim_em: tempo.tempo.fim_em, duracao_manual_minutos: tempo.tempo.duracao_manual_minutos,
+        usa_duracao_manual: tempo.tempo.usa_duracao_manual, cobravel,
+      })
+      const { data: criada, error: e2 } = await ctx.db.from('agenda_time_entries').insert({ ...payload, criado_por: respId }).select('id').single()
+      if (e2 || !criada) {
+        await ctx.db.from('agenda_items').delete().eq('id', item.id) // desfaz a tarefa criada
+        throw new Error(e2?.message ?? 'Não foi possível registrar o tempo.')
+      }
       return { gravado: true, id: criada.id, ...resumo }
     },
   },

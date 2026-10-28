@@ -14,7 +14,7 @@ describe('protocolo MCP', () => {
   it('lista só ferramentas de leitura', async () => {
     const r = await responderMcp({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx)
     const nomes = (r?.result as { tools: { name: string }[] }).tools.map(t => t.name)
-    expect(nomes).toEqual(['agenda', 'prazos', 'buscar_processos', 'ver_processo', 'publicacoes'])
+    expect(nomes).toEqual(['agenda', 'prazos', 'buscar_processos', 'ver_processo', 'horas_lancadas', 'publicacoes'])
   })
   it('só quem pode escrever vê (e usa) as ferramentas de gravação', async () => {
     const leitura = await responderMcp({ jsonrpc: '2.0', id: 6, method: 'tools/list' }, ctx)
@@ -23,7 +23,7 @@ describe('protocolo MCP', () => {
     expect(negada?.error?.code).toBe(-32602)
     const escrita = await responderMcp({ jsonrpc: '2.0', id: 8, method: 'tools/list' }, { ...ctx, podeEscrever: true })
     const nomes = (escrita?.result as { tools: { name: string }[] }).tools.map(t => t.name)
-    expect(nomes).toEqual(expect.arrayContaining(['criar_andamento', 'criar_compromisso', 'concluir_compromisso', 'excluir_compromisso', 'enviar_ao_google', 'definir_quem_cuida_do_caso', 'atualizar_compromisso', 'atualizar_parte_processo', 'cadastrar_cliente', 'atualizar_cliente', 'cadastrar_processo', 'atualizar_processo', 'adicionar_parte_processo', 'tratar_publicacao']))
+    expect(nomes).toEqual(expect.arrayContaining(['criar_andamento', 'criar_compromisso', 'concluir_compromisso', 'excluir_compromisso', 'enviar_ao_google', 'definir_quem_cuida_do_caso', 'atualizar_compromisso', 'atualizar_parte_processo', 'cadastrar_cliente', 'atualizar_cliente', 'cadastrar_processo', 'atualizar_processo', 'adicionar_parte_processo', 'tratar_publicacao', 'lancar_horas']))
     // A única exclusão é a de compromissos criados pelo próprio conector
     expect(nomes.filter(n => /apagar|excluir|deletar|remover/.test(n)).sort()).toEqual(['excluir_compromisso', 'remover_parte_processo'])
   })
