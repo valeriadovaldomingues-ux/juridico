@@ -14,6 +14,7 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { liberarSincronizacoesTravadas, syncTrelloBoard } from '@/lib/trello/sync'
+import { notificarRoles } from '@/lib/notificacoes'
 
 export const maxDuration = 300
 
@@ -61,6 +62,13 @@ export async function GET(request: Request) {
     return Response.json(resultado)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro na sincronização'
+    // Não falha em silêncio: avisa os sócios no sistema (uma vez por dia, enquanto não for lida)
+    await notificarRoles(['socio'], {
+      title: 'Falha na sincronização com o Trello',
+      message: `O Kanban pode estar desatualizado. ${msg}`.slice(0, 300),
+      type: 'critical',
+      link: '/integracoes/trello',
+    }).catch(() => 0)
     return Response.json({ erro: msg }, { status: 500 })
   }
 }
