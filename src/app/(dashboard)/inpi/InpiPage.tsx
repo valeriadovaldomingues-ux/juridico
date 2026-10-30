@@ -37,11 +37,12 @@ type FormValues = {
   data_deposito: string
   observacoes: string
   prorrogacoes: string
+  status: InpiStatus
 }
 
 const emptyForm: FormValues = {
   cliente_id: '', numero_processo: '', tipo: 'marca', titulo: '',
-  natureza: '', classe_nice: '', procurador: '', data_deposito: '', observacoes: '', prorrogacoes: '0',
+  natureza: '', classe_nice: '', procurador: '', data_deposito: '', observacoes: '', prorrogacoes: '0', status: 'em_andamento',
 }
 
 const statusCfg: Record<InpiStatus, { label: string; chip: string; dot: string; icon: React.ElementType }> = {
@@ -159,7 +160,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     const res = await fetch('/api/inpi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, cliente_id: form.cliente_id || null }),
+      body: JSON.stringify({ ...form, status: undefined, cliente_id: form.cliente_id || null }),
     })
     const data = await res.json().catch(() => ({}))
     setSaving(false)
@@ -219,6 +220,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
       data_deposito: selected.data_deposito ?? '',
       observacoes: selected.observacoes ?? '',
       prorrogacoes: String(selected.prorrogacoes ?? 0),
+      status: selected.status,
     })
     setModal('editar')
   }
@@ -249,8 +251,8 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
     }
   }
 
-  async function abrirAndamento() {
-    setAndForm({ ...ANDAMENTO_VAZIO, data_andamento: new Date().toISOString().slice(0, 10) })
+  async function abrirAndamento(preset: Partial<typeof ANDAMENTO_VAZIO> = {}) {
+    setAndForm({ ...ANDAMENTO_VAZIO, data_andamento: new Date().toISOString().slice(0, 10), ...preset })
     setAndModal(true)
     if (equipe.length === 0) {
       const { data } = await createClient().rpc('perfis_equipe')
@@ -407,7 +409,14 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
               </div>
 
               {selected.status === 'concedido' && selected.data_concessao && (
-                <DecenioCard processo={selected} />
+                <DecenioCard
+                  processo={selected}
+                  onDecenioPago={podeCriar ? () => abrirAndamento({
+                    tipo: 'prorrogacao',
+                    titulo: 'Decênio pago — prorrogação do registro',
+                    prorrogacao_deferida: true,
+                  }) : undefined}
+                />
               )}
 
               <div className="rounded-lg bg-[#F7F9F9] border border-[#e8edf2] p-3 space-y-2">
@@ -442,7 +451,7 @@ export default function InpiPage({ initialProcessos, clientes, role }: Props) {
                   {podeCriar && (
                     <div className="flex items-center gap-2">
                       <button onClick={() => setMovModal(true)} className="text-[12px] text-[#145A5B] font-medium hover:underline" title="Lançar à mão uma publicação da RPI">+ Publicação (RPI)</button>
-                      <button onClick={abrirAndamento} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0F3D3E] text-white text-[12px] font-medium hover:bg-[#145A5B]">
+                      <button onClick={() => abrirAndamento()} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0F3D3E] text-white text-[12px] font-medium hover:bg-[#145A5B]">
                         <Plus size={13} /> Andamento
                       </button>
                     </div>
@@ -690,7 +699,7 @@ function DecenioBadge({ processo }: { processo: InpiProcesso }) {
   return <span className="text-[12px] text-[#7a8899]">{formatDate(d.vencimento.toISOString())}</span>
 }
 
-function DecenioCard({ processo }: { processo: InpiProcesso }) {
+function DecenioCard({ processo, onDecenioPago }: { processo: InpiProcesso; onDecenioPago?: () => void }) {
   if (!processo.data_concessao) return null
   const d = calcularDecenio(processo.data_concessao, processo.prorrogacoes)
   if (processo.nao_acompanhar) {
@@ -719,6 +728,11 @@ function DecenioCard({ processo }: { processo: InpiProcesso }) {
               ? `Faltam ${d.diasRestantes} dias — já pode pedir a renovação.`
               : `Faltam ${d.diasRestantes} dias (renovação abre 1 ano antes do vencimento).`}
       </p>
+      {onDecenioPago && (d.expirado || d.janelaMulta || d.janelaRenovacao) && (
+        <button onClick={onDecenioPago} className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-[#d8dee8] text-[12px] font-medium text-[#0F3D3E] hover:bg-[#F7F9F9]">
+          <CheckCircle2 size={13} /> O decênio já foi pago — registrar renovação
+        </button>
+      )}
     </div>
   )
 }
@@ -782,6 +796,13 @@ function ProcessoForm({ form, setForm, clientes, editando }: {
         <span className="text-[12px] font-medium text-[#34495e]">Observações</span>
         <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
       </label>
+      {editando && <label className="block space-y-1">
+        <span className="text-[12px] font-medium text-[#34495e]">Situação do processo</span>
+        <select value={form.status} onChange={e => setForm(prev => ({ ...prev, status: e.target.value as InpiStatus }))} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white">
+          {Object.entries(INPI_STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <span className="block text-[11px] text-[#7a8899]">Corrija aqui se o processo está ativo mas aparece como extinto ou vencido.</span>
+      </label>}
       {editando && <label className="block space-y-1">
         <span className="text-[12px] font-medium text-[#34495e]">Prorrogações (decênios) já concedidas</span>
         <input type="number" min={0} max={5} value={form.prorrogacoes} onChange={e => set('prorrogacoes', e.target.value)} className="w-28 px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
+import { INPI_STATUS_LABEL } from '@/types/inpi'
 import type { UserRole } from '@/types'
 
 const VIEW_ALLOWED: UserRole[] = ['estagiario', 'comercial', 'administrativo', 'advogado', 'gerente', 'socio']
@@ -48,6 +49,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.nao_acompanhar = body.nao_acompanhar
     updates.nao_acompanhar_em = body.nao_acompanhar ? new Date().toISOString() : null
     updates.nao_acompanhar_motivo = body.nao_acompanhar ? (String(body.nao_acompanhar_motivo ?? '').trim() || null) : null
+  }
+
+  if ('status' in updates && !(String(updates.status) in INPI_STATUS_LABEL)) {
+    return NextResponse.json({ error: 'Situação inválida.' }, { status: 400 })
   }
 
   if ('prorrogacoes' in updates) {
