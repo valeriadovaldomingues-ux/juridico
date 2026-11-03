@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core'
-import { EyeOff } from 'lucide-react'
+import { EyeOff, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getKanbanTasks,
@@ -107,17 +107,26 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   const colorMap: Record<string, string> = {}
   profiles.forEach((p, i) => { colorMap[p.id] = getUserColor(p, i) })
 
-  // ── Carregamento inicial ────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
+  // ── Carregamento ────────────────────────────────────────────────────────────
+  // Cada chamada invalida as anteriores (cargaRef). A recarga silenciosa (depois de sincronizar com o Trello)
+  // não troca o quadro por "Carregando…" e é descartada se alguém estiver editando ou arrastando um cartão.
+  const cargaRef = useRef(0)
+  const emEdicaoRef = useRef(false)
+  emEdicaoRef.current = modalTask !== undefined || activeTask !== null
+
+  const carregar = useCallback(async (silencioso: boolean) => {
+    const minha = ++cargaRef.current
+    const cancelled = () => minha !== cargaRef.current
 
     async function load() {
-      setLoading(true)
-      setErro('')
+      if (!silencioso) {
+        setLoading(true)
+        setErro('')
+      }
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { if (!cancelled) setErro('Usuário não autenticado.'); return }
+        if (!user) { if (!cancelled() && !silencioso) setErro('Usuário não autenticado.'); return }
 
         const [tasksData, profilesResult, processosResult] = await Promise.all([
           getKanbanTasks(),
@@ -131,7 +140,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
             .order('titulo'),
         ])
 
-        if (cancelled) return
+        if (cancelled() || (silencioso && emEdicaoRef.current)) return
 
         const allProfiles = ((profilesResult.data ?? []) as KanbanProfile[])
           .slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
@@ -159,7 +168,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           const { data: mapeadas } = await supabase
             .from('trello_list_mappings')
             .select('trello_list_id, trello_list_name, profile_id, kanban_status, posicao')
-          if (!cancelled) {
+          if (!cancelled()) {
             setListasMapeadas((mapeadas ?? []).map((m: { trello_list_id: string; trello_list_name: string | null; profile_id: string | null; kanban_status: string; posicao: number | null }) => ({
               id: m.trello_list_id, nome: m.trello_list_name ?? '', pos: m.posicao, profileId: m.profile_id, status: m.kanban_status,
             })).filter(m => m.nome))
@@ -167,15 +176,62 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
         }
       } catch (err) {
         console.error('[KanbanBoard] erro ao carregar:', err)
-        if (!cancelled) setErro('Erro ao carregar o Kanban. Tente recarregar a página.')
+        if (!cancelled() && !silencioso) setErro('Erro ao carregar o Kanban. Tente recarregar a página.')
       } finally {
-        if (!cancelled) setLoading(false)
+        // Também na recarga silenciosa: ela pode ter invalidado a carga inicial ainda em andamento
+        if (!cancelled()) setLoading(false)
       }
     }
 
-    load()
-    return () => { cancelled = true }
+    await load()
   }, [view])
+
+  useEffect(() => {
+    carregar(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- o contador não aponta para um nó do DOM; queremos o valor atual
+    return () => { cargaRef.current++ }
+  }, [carregar])
+
+  // ── Sincronização com o Trello ──────────────────────────────────────────────
+  // O agendamento do GitHub dispara só 2–3 vezes por dia; por isso o quadro pede a atualização ao abrir,
+  // ao voltar para a aba e no botão. O servidor limita a frequência, então chamar à toa é barato.
+  const [sincronizando, setSincronizando] = useState(false)
+  const [atualizadoEm,  setAtualizadoEm]  = useState<Date | null>(null)
+  const [avisoSync,     setAvisoSync]     = useState('')
+  const sincronizandoRef = useRef(false)
+  const ultimaTentativaRef = useRef(0)
+
+  const sincronizar = useCallback(async (manual: boolean) => {
+    if (sincronizandoRef.current) return
+    sincronizandoRef.current = true
+    ultimaTentativaRef.current = Date.now()
+    setSincronizando(true)
+    setAvisoSync('')
+    try {
+      const res = await fetch('/api/kanban/sincronizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manual }),
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      await carregar(true)
+      setAtualizadoEm(new Date())
+    } catch {
+      setAvisoSync('Não foi possível atualizar do Trello agora.')
+    } finally {
+      sincronizandoRef.current = false
+      setSincronizando(false)
+    }
+  }, [carregar])
+
+  useEffect(() => {
+    sincronizar(false)
+    function aoVoltarParaAba() {
+      if (document.visibilityState === 'visible' && Date.now() - ultimaTentativaRef.current > 2 * 60_000) sincronizar(false)
+    }
+    document.addEventListener('visibilitychange', aoVoltarParaAba)
+    return () => document.removeEventListener('visibilitychange', aoVoltarParaAba)
+  }, [sincronizar])
 
   // Sincroniza as colunas do escritório quando tasks ou profiles mudam
   useEffect(() => {
@@ -400,6 +456,21 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
             Ocultar quem não tem tarefas
           </label>
           <div className="flex items-center gap-2">
+            {(atualizadoEm || avisoSync) && (
+              <span className={`text-[11px] ${avisoSync ? 'text-red-600' : 'text-[var(--color-ink-3)]'}`}>
+                {avisoSync || `Atualizado às ${atualizadoEm!.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => sincronizar(true)}
+              disabled={sincronizando}
+              className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink-2)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)] disabled:opacity-60"
+              title="Busca no Trello as mudanças mais recentes e atualiza o quadro"
+            >
+              <RefreshCw size={12} className={sincronizando ? 'animate-spin' : ''} />
+              {sincronizando ? 'Atualizando…' : 'Atualizar do Trello'}
+            </button>
             <button
               type="button"
               onClick={() => salvarRecolhidas([
