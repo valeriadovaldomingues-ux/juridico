@@ -4,7 +4,7 @@ import type { EventoGoogle } from './agenda-evento'
 
 // Cliente mínimo do Google Calendar (API REST) com conta de serviço — sem SDK. A agenda pedvprazos@gmail.com precisa estar
 // compartilhada com o e-mail da conta de serviço ("Fazer alterações em eventos").
-// Variáveis: GOOGLE_CALENDAR_SA_JSON (JSON da chave), GOOGLE_CALENDAR_ID (padrão pedvprazos@gmail.com).
+// Variáveis: GOOGLE_CALENDAR_SA_JSON (JSON da chave, puro ou em base64), GOOGLE_CALENDAR_ID (padrão pedvprazos@gmail.com).
 
 type Env = Record<string, string | undefined>
 const ESCOPO = 'https://www.googleapis.com/auth/calendar'
@@ -14,11 +14,29 @@ export function googleAgendaConfigurado(env: Env = process.env): boolean {
   return !!env.GOOGLE_CALENDAR_SA_JSON
 }
 
+type ContaDeServico = { client_email?: string; private_key?: string }
+
+/**
+ * Lê GOOGLE_CALENDAR_SA_JSON. Aceita o JSON puro ou ele codificado em base64 (uma linha só), que sobrevive a campos de
+ * variável que reformatam o texto colado (tabulações, quebras de linha). O erro nunca cita o conteúdo: é uma chave privada.
+ */
+export function lerContaDeServico(bruto: string | undefined): ContaDeServico {
+  const texto = (bruto ?? '').trim()
+  const candidatos = [texto, Buffer.from(texto, 'base64').toString('utf8')]
+  for (const c of candidatos) {
+    try {
+      const j = JSON.parse(c) as unknown
+      if (j && typeof j === 'object') return j as ContaDeServico
+    } catch { /* tenta o próximo formato */ }
+  }
+  throw new Error('GOOGLE_CALENDAR_SA_JSON não é um JSON válido nem JSON em base64.')
+}
+
 let cache: { token: string; expira: number } | null = null
 
 async function tokenAcesso(env: Env): Promise<string> {
   if (cache && cache.expira > Date.now() + 60_000) return cache.token
-  const sa = JSON.parse(env.GOOGLE_CALENDAR_SA_JSON ?? '{}') as { client_email?: string; private_key?: string }
+  const sa = lerContaDeServico(env.GOOGLE_CALENDAR_SA_JSON)
   if (!sa.client_email || !sa.private_key) throw new Error('GOOGLE_CALENDAR_SA_JSON inválido (faltam client_email/private_key).')
   const agora = Math.floor(Date.now() / 1000)
   const cab = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
