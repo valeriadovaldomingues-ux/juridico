@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 const { mockApiGuard, mockCreateClient } = vi.hoisted(() => ({
   mockApiGuard: vi.fn(),
@@ -9,131 +9,99 @@ const { mockApiGuard, mockCreateClient } = vi.hoisted(() => ({
 vi.mock('@/lib/auth/api-guard', () => ({ apiGuard: mockApiGuard }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: mockCreateClient }))
 
-import { GET, POST } from './route'
+import { POST } from './route'
 
-function makeQueryResult(result: { data: unknown; error: unknown }) {
-  const chain: any = {
-    select: vi.fn(() => chain),
-    insert: vi.fn(() => chain),
-    update: vi.fn(() => chain),
-    delete: vi.fn(() => chain),
-    eq: vi.fn(() => chain),
-    order: vi.fn(() => chain),
-    single: vi.fn(async () => result),
-    then: (resolve: (value: { data: unknown; error: unknown }) => void) => Promise.resolve(result).then(resolve),
+const params = { params: Promise.resolve({ id: 'proc-1' }) }
+const andamento = { id: 'and-1', titulo: 'Petição juntada', descricao: null, responsavel_id: null }
+
+function requisicao(corpo: Record<string, unknown>) {
+  return new NextRequest('http://localhost/api/processos/proc-1/andamentos', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ titulo: 'Petição juntada', tipo: 'outro', ...corpo }),
+  })
+}
+
+/** Banco falso: o andamento é gravado; a criação do item na Agenda pode falhar; o "desfazer" devolve `desfeito`. */
+function criarBanco({ agendaFalha, desfeito = [{ id: 'and-1' }] }: { agendaFalha?: string; desfeito?: { id: string }[] } = {}) {
+  const tabelas: Record<string, Record<string, unknown>> = {
+    processo_andamentos: {
+      insert: () => ({ select: () => ({ single: async () => ({ data: andamento, error: null }) }) }),
+      delete: () => ({ eq: () => ({ select: async () => ({ data: desfeito, error: null }) }) }),
+    },
+    processos: {
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { cliente_id: 'cli-1', titulo: 'Proc', numero_processo: '1' } }) }) }),
+    },
+    agenda_items: {
+      insert: () => ({ select: () => ({ single: async () => (agendaFalha
+        ? { data: null, error: { message: agendaFalha } }
+        : { data: { id: 'item-1' }, error: null }) }) }),
+      delete: () => ({ eq: async () => ({ error: null }) }),
+    },
+    agenda_time_entries: { insert: async () => ({ error: null }) },
   }
-  return chain
+  return {
+    from: vi.fn((tabela: string) => tabelas[tabela]),
+    rpc: vi.fn(async () => ({ data: [] })),
+  }
 }
 
 beforeEach(() => {
   mockApiGuard.mockReset()
   mockCreateClient.mockReset()
+  mockApiGuard.mockResolvedValue({ role: 'advogado', userId: 'user-1' })
 })
 
-describe('processo andamentos api', () => {
-  it('bloqueia perfis sem acesso', async () => {
-    mockApiGuard.mockResolvedValue(NextResponse.json({ error: 'Sem permissão' }, { status: 403 }))
+describe('POST /api/processos/[id]/andamentos — tempo obrigatório', () => {
+  it('recusa andamento sem tempo, sem tocar no banco', async () => {
+    const res = await POST(requisicao({}), params)
 
-    const res = await GET(new Request('http://localhost/api/processos/p1/andamentos'), {
-      params: Promise.resolve({ id: 'p1' }),
-    } as any)
-
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toMatch(/tempo gasto/i)
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
-  it('lista andamentos em ordem decrescente', async () => {
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid' })
-    const query = makeQueryResult({
-      data: [
-        {
-          id: 'a1',
-          processo_id: 'p1',
-          data_andamento: '2026-06-01T10:15:00Z',
-          tipo: 'decisao',
-          titulo: 'Sentença',
-          descricao: null,
-          origem: 'tribunal',
-          responsavel_id: null,
-          criado_por: 'uid',
-          created_at: '2026-06-01T10:15:00Z',
-          updated_at: '2026-06-01T10:15:00Z',
-        },
-      ],
-      error: null,
-    })
-    mockCreateClient.mockResolvedValue({ from: vi.fn(() => query) })
+  it('recusa bloco de tempo vazio', async () => {
+    const res = await POST(requisicao({ tempo: {} }), params)
 
-    const res = await GET(new Request('http://localhost/api/processos/p1/andamentos'), {
-      params: Promise.resolve({ id: 'p1' }),
-    } as any)
-    const body = await res.json()
-
-    expect(res.status).toBe(200)
-    expect(body).toHaveLength(1)
-    expect(query.eq).toHaveBeenCalledWith('processo_id', 'p1')
-    expect(query.order).toHaveBeenCalledWith('data_andamento', { ascending: false })
+    expect(res.status).toBe(400)
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 
-  it('cria andamento manual', async () => {
-    mockApiGuard.mockResolvedValue({ role: 'socio', userId: 'uid' })
-    const query = makeQueryResult({
-      data: {
-        id: 'a1',
-        processo_id: 'p1',
-        data_andamento: '2026-06-01T10:15:00.000Z',
-        tipo: 'decisao',
-        titulo: 'Sentença',
-        descricao: 'Descrição',
-        origem: 'tribunal',
-        responsavel_id: 'resp',
-        criado_por: 'uid',
-        created_at: '2026-06-01T10:15:00Z',
-        updated_at: '2026-06-01T10:15:00Z',
-      },
-      error: null,
-    })
-    mockCreateClient.mockResolvedValue({ from: vi.fn(() => query) })
+  it('recusa tempo inválido (duração zero)', async () => {
+    const res = await POST(requisicao({ tempo: { duracao_minutos: 0 } }), params)
 
-    const res = await POST(
-      new Request('http://localhost/api/processos/p1/andamentos', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          titulo: 'Sentença',
-          descricao: 'Descrição',
-          tipo: 'decisao',
-          origem: 'tribunal',
-          responsavel_id: 'resp',
-          data_andamento: '2026-06-01T10:15:00Z',
-        }),
-      }),
-      { params: Promise.resolve({ id: 'p1' }) } as any,
-    )
+    expect(res.status).toBe(400)
+    expect(mockCreateClient).not.toHaveBeenCalled()
+  })
+
+  it('salva o andamento e lança o tempo quando a duração é informada', async () => {
+    const banco = criarBanco()
+    mockCreateClient.mockResolvedValue(banco)
+
+    const res = await POST(requisicao({ tempo: { duracao_minutos: 45 } }), params)
 
     expect(res.status).toBe(201)
-    expect(query.insert).toHaveBeenCalledWith(expect.objectContaining({
-      processo_id: 'p1',
-      titulo: 'Sentença',
-      criado_por: 'uid',
-    }))
+    expect(await res.json()).toMatchObject({ id: 'and-1', tempo_lancado: true, tempo_aviso: null })
+    expect(banco.from).toHaveBeenCalledWith('agenda_time_entries')
   })
 
-  it('permite estagiário criar apenas observação', async () => {
-    mockApiGuard.mockResolvedValue({ role: 'estagiario', userId: 'uid' })
+  it('desfaz o andamento quando o tempo não pôde ser lançado', async () => {
+    const banco = criarBanco({ agendaFalha: 'sem permissão' })
+    mockCreateClient.mockResolvedValue(banco)
 
-    const res = await POST(
-      new Request('http://localhost/api/processos/p1/andamentos', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          titulo: 'Rascunho',
-          tipo: 'decisao',
-          data_andamento: '2026-06-01T10:15:00Z',
-        }),
-      }),
-      { params: Promise.resolve({ id: 'p1' }) } as any,
-    )
+    const res = await POST(requisicao({ tempo: { duracao_minutos: 45 } }), params)
 
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(500)
+    expect((await res.json()).error).toMatch(/andamento não foi salvo/i)
+  })
+
+  it('avisa, em vez de afirmar que desfez, quando não conseguiu apagar o andamento', async () => {
+    mockCreateClient.mockResolvedValue(criarBanco({ agendaFalha: 'sem permissão', desfeito: [] }))
+
+    const res = await POST(requisicao({ tempo: { duracao_minutos: 45 } }), params)
+
+    expect(res.status).toBe(201)
+    expect(await res.json()).toMatchObject({ tempo_lancado: false, tempo_aviso: expect.stringMatching(/tempo não foi lançado/i) })
   })
 })
