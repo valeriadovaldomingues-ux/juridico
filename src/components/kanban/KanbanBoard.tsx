@@ -54,6 +54,12 @@ function lerRecolhidas(): string[] {
 
 interface Processo { id: string; titulo: string; numero_processo?: string | null }
 
+// O quadro do escritório é o espelho do Trello (a equipe trabalha lá): mostra só os cartões que vieram de lá.
+// Tarefas da Agenda, de publicações e manuais ficam no "Meu quadro" e nas suas próprias telas.
+function doQuadro(view: 'personal' | 'office', tasks: KanbanTask[]): KanbanTask[] {
+  return view === 'office' ? tasks.filter(t => t.origem === 'trello') : tasks
+}
+
 export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // ── Estado dos dados ────────────────────────────────────────────────────────
   const [tasks,       setTasks]       = useState<KanbanTask[]>([])
@@ -69,7 +75,6 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // undefined = fechado | null = novo | KanbanTask = edição
   const [modalTask,          setModalTask]          = useState<KanbanTask | null | undefined>(undefined)
   const [modalDefaultStatus, setModalDefaultStatus] = useState<KanbanStatus>('a_fazer')
-  const [modalDefaultResponsavel, setModalDefaultResponsavel] = useState<string | undefined>(undefined)
 
   // ── Estado do DnD ───────────────────────────────────────────────────────────
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null)
@@ -146,7 +151,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           .slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
         const allProcessos = (processosResult.data ?? []) as Processo[]
 
-        setTasks(tasksData as KanbanTask[])
+        setTasks(doQuadro(view, tasksData as KanbanTask[]))
         setProfiles(allProfiles)
         setProcessos(allProcessos)
 
@@ -163,7 +168,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
         })
 
         if (view === 'office') {
-          setOfficeCols(getOfficeColumns(tasksData as KanbanTask[], allProfiles))
+          setOfficeCols(getOfficeColumns(doQuadro(view, tasksData as KanbanTask[]), allProfiles))
           // Listas do Trello mapeadas (para mostrar também as vazias, na ordem do Trello)
           const { data: mapeadas } = await supabase
             .from('trello_list_mappings')
@@ -257,9 +262,9 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     } catch (err) {
       console.error('[KanbanBoard] erro ao excluir tarefa:', err)
       // Recarrega para consistência
-      getKanbanTasks().then(data => setTasks(data as KanbanTask[]))
+      getKanbanTasks().then(data => setTasks(doQuadro(view, data as KanbanTask[])))
     }
-  }, [])
+  }, [view])
 
   // Arquivar cards concluídos (qualquer perfil): saem do quadro e ficam em "Ver arquivadas".
   const handleArchive = useCallback(async (ids: string[]) => {
@@ -277,9 +282,9 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     } catch (err) {
       console.error('[KanbanBoard] erro ao arquivar:', err)
       // Recarrega para refletir o que realmente foi arquivado
-      getKanbanTasks().then(data => setTasks(data as KanbanTask[]))
+      getKanbanTasks().then(data => setTasks(doQuadro(view, data as KanbanTask[])))
     }
-  }, [])
+  }, [view])
 
   // Trocar o status direto no card (quadro estilo Trello, sem colunas de status).
   const handleStatusChange = useCallback((task: KanbanTask, status: KanbanStatus) => {
@@ -293,12 +298,6 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
       body:    JSON.stringify({ status }),
     }).then(res => { if (!res.ok) setTasks(anterior) }).catch(() => setTasks(anterior))
   }, [tasks])
-
-  const handleAddParaPessoa = useCallback((responsavelId?: string) => {
-    setModalDefaultStatus('a_fazer')
-    setModalDefaultResponsavel(responsavelId)
-    setModalTask(null)
-  }, [])
 
   const handleAddTask = useCallback((status: KanbanStatus) => {
     setModalDefaultStatus(status)
@@ -521,7 +520,6 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 onDelete={handleDelete}
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
-                onAdd={() => handleAddParaPessoa(item.col.profile.id)}
                 recolhida={recolhidas.includes(item.col.profile.id)}
                 onToggleRecolher={() => alternarRecolhida(item.col.profile.id)}
               />
@@ -553,7 +551,6 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
                 onDelete={handleDelete}
                 onArchive={handleArchive}
                 onStatusChange={handleStatusChange}
-                onAdd={() => handleAddParaPessoa(undefined)}
                 recolhida={recolhidas.includes('__unassigned__')}
                 onToggleRecolher={() => alternarRecolhida('__unassigned__')}
               />
@@ -580,7 +577,6 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
           task={modalTask}
           profiles={profiles}
           processos={processos}
-          defaultResponsavelId={modalDefaultResponsavel}
           defaultStatus={modalDefaultStatus}
           onClose={() => setModalTask(undefined)}
           onSave={handleSave}
