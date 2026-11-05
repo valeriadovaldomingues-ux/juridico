@@ -21,6 +21,23 @@ const AREAS = ['civil', 'trabalhista', 'criminal', 'tributario', 'previdenciario
 const TIPOS_AGENDA = ['tarefa', 'prazo', 'audiencia', 'evento'] as const
 const TIPOS_ANDAMENTO = ['peticao', 'decisao', 'despacho', 'audiencia', 'prazo', 'publicacao', 'juntada', 'contato_cliente', 'observacao', 'documento', 'outro'] as const
 
+// Tempo gasto a partir dos argumentos da ferramenta: `inicio`+`fim`, ou `horas`+`minutos`, ou só `minutos` (90 vira 1h30).
+function lerTempoDosArgumentos(args: Record<string, unknown>, data: string) {
+  let entrada: Parameters<typeof lerTempo>[0]
+  if (typeof args.inicio === 'string' || typeof args.fim === 'string') {
+    entrada = { data, modo: 'periodo', inicio: args.inicio, fim: args.fim }
+  } else {
+    let h = Number(args.horas ?? 0)
+    let m = Number(args.minutos ?? 0)
+    if (!args.horas && m >= 60) { h = Math.floor(m / 60); m = m % 60 }
+    entrada = { data, modo: 'duracao', horas: h, minutos: m }
+  }
+  return lerTempo(entrada)
+}
+
+const hojeBrasilia = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+const formatarTempo = (minutos: number) => `${Math.floor(minutos / 60)}h${String(minutos % 60).padStart(2, '0')}`
+
 function previa(resumo: Record<string, unknown>) {
   return {
     confirmacao_necessaria: true,
@@ -34,12 +51,15 @@ const CONFIRMAR = { type: 'boolean', description: 'false/ausente = só mostra o 
 export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   {
     name: 'criar_andamento',
-    description: 'Registra um andamento no histórico de um processo. Duas etapas: sem confirmar=true só mostra o resumo.',
+    description: 'Registra um andamento no histórico de um processo. O TEMPO GASTO é obrigatório (informe `minutos`, ou `horas`+`minutos`, ou `inicio`+`fim`): ao gravar, o tempo é lançado na aba Horas do cliente e vira tarefa concluída na Agenda. Se o tempo não puder ser lançado, o andamento também não é salvo. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: {
       processo_id: { type: 'string', description: 'Id do processo (de buscar_processos)' },
       titulo: { type: 'string' }, descricao: { type: 'string' },
       tipo: { type: 'string', enum: [...TIPOS_ANDAMENTO], description: 'Padrão: observacao' },
-      data: { type: 'string', description: 'AAAA-MM-DD (padrão: hoje)' }, confirmar: CONFIRMAR,
+      data: { type: 'string', description: 'AAAA-MM-DD (padrão: hoje)' },
+      horas: { type: 'number', description: 'Horas inteiras (use com minutos)' }, minutos: { type: 'number', description: 'Minutos (0 a 59 se houver horas; senão o total de minutos)' },
+      inicio: { type: 'string', description: 'HH:MM (alternativa à duração)' }, fim: { type: 'string', description: 'HH:MM' },
+      confirmar: CONFIRMAR,
     }, required: ['processo_id', 'titulo'] },
     async executar(args, ctx) {
       const processoId = String(args.processo_id ?? '')
@@ -47,22 +67,51 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       if (!UUID.test(processoId) || !titulo) throw new Error('Informe o processo (id) e o título.')
       const tipo = TIPOS_ANDAMENTO.includes(args.tipo as never) ? String(args.tipo) : 'observacao'
       const data = dataOk(args.data)
-      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo').eq('id', processoId).maybeSingle()
+      const dia = data ?? hojeBrasilia()
+      const informouTempo = [args.inicio, args.fim, args.horas, args.minutos].some(v => v !== undefined && v !== null && v !== '')
+      if (!informouTempo) throw new Error('Informe o tempo gasto neste andamento (minutos, horas+minutos, ou inicio+fim): ele é obrigatório para salvar.')
+      const tempo = lerTempoDosArgumentos(args, dia)
+      if (!tempo.ok) throw new Error(tempo.erro)
+      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', processoId).maybeSingle()
       if (error) throw new Error(error.message)
       if (!proc) throw new Error('Processo não encontrado.')
       const descricao = [texto(args.descricao, 4000), marca(ctx.nome)].filter(Boolean).join('\n\n')
-      const resumo = { processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), tipo, titulo, descricao, data: data ?? 'hoje' }
+      const resumo = {
+        processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), tipo, titulo, descricao, data: data ?? 'hoje',
+        tempo: formatarTempo(tempo.tempo.minutos), minutos: tempo.tempo.minutos,
+      }
       if (args.confirmar !== true) return previa(resumo)
       const { data: criado, error: e2 } = await ctx.db.from('processo_andamentos').insert({
         processo_id: processoId, tipo, titulo, descricao, origem: 'manual',
         data_andamento: data ? `${data}T12:00:00-03:00` : new Date().toISOString(), responsavel_id: ctx.userId, criado_por: ctx.userId,
       }).select('id').single()
       if (e2) throw new Error(e2.message)
-      return { gravado: true, id: criado.id, ...resumo }
+
+      // Tempo e andamento andam juntos: se o tempo falhar, desfaz o andamento (como na tela do processo).
+      const desfazer = async (motivo: string): Promise<never> => {
+        await ctx.db.from('processo_andamentos').delete().eq('id', criado.id)
+        throw new Error(`O tempo não foi lançado, então o andamento não foi salvo: ${motivo}`)
+      }
+      const { data: item, error: e3 } = await ctx.db.from('agenda_items').insert({
+        titulo, descricao, tipo: 'tarefa', status: 'concluido', data_inicio: dia, prioridade: 'media',
+        processo_id: processoId, cliente_id: proc.cliente_id ?? null, responsavel: ctx.nome, andamento_id: criado.id, source: 'manual',
+      }).select('id').single()
+      if (e3 || !item) return desfazer(e3?.message ?? 'não foi possível criar o item na agenda')
+      const payload = createAgendaTimeEntryPayload({
+        agenda_item_id: item.id, cliente_id: proc.cliente_id ?? null, processo_id: processoId, descricao_atividade: titulo,
+        inicio_em: tempo.tempo.inicio_em, fim_em: tempo.tempo.fim_em, duracao_manual_minutos: tempo.tempo.duracao_manual_minutos,
+        usa_duracao_manual: tempo.tempo.usa_duracao_manual, cobravel: true,
+      })
+      const { error: e4 } = await ctx.db.from('agenda_time_entries').insert({ ...payload, criado_por: ctx.userId })
+      if (e4) {
+        await ctx.db.from('agenda_items').delete().eq('id', item.id)
+        return desfazer(e4.message)
+      }
+      return { gravado: true, id: criado.id, tempo_lancado: true, ...resumo }
     },
   },
   {
-    name: 'criar_compromisso',
+        name: 'criar_compromisso',
     description: 'Cria um compromisso na agenda (tarefa, prazo, audiência ou evento), opcionalmente ligado a um processo. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: {
       titulo: { type: 'string', description: 'SÓ a descrição do ato (ex.: "Protocolar contestação e documentos"). NÃO repita tipo, cliente, partes nem nº do processo: ao ir para o Google Agenda o sistema já monta "TIPO - CLIENTE x PARTE - Nº - ato"' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
@@ -475,17 +524,8 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const processoId = String(args.processo_id ?? '')
       const descricao = texto(args.descricao, 300)
       if (!UUID.test(processoId) || !descricao) throw new Error('Informe o processo (id) e a descrição do que foi feito.')
-      const data = dataOk(args.data) ?? new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
-      let entrada: Parameters<typeof lerTempo>[0]
-      if (typeof args.inicio === 'string' || typeof args.fim === 'string') {
-        entrada = { data, modo: 'periodo', inicio: args.inicio, fim: args.fim }
-      } else {
-        let h = Number(args.horas ?? 0)
-        let m = Number(args.minutos ?? 0)
-        if (!args.horas && m >= 60) { h = Math.floor(m / 60); m = m % 60 } // "90 minutos" vira 1h30
-        entrada = { data, modo: 'duracao', horas: h, minutos: m }
-      }
-      const tempo = lerTempo(entrada)
+      const data = dataOk(args.data) ?? hojeBrasilia()
+      const tempo = lerTempoDosArgumentos(args, data)
       if (!tempo.ok) throw new Error(tempo.erro)
 
       const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', processoId).maybeSingle()
@@ -528,7 +568,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const cobravel = args.cobravel === undefined ? true : Boolean(args.cobravel)
       const resumo: Record<string, unknown> = {
         processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), data, responsavel: respNome, descricao,
-        tempo: `${Math.floor(tempo.tempo.minutos / 60)}h${String(tempo.tempo.minutos % 60).padStart(2, '0')}`, minutos: tempo.tempo.minutos, cobravel,
+        tempo: formatarTempo(tempo.tempo.minutos), minutos: tempo.tempo.minutos, cobravel,
         andamento_id: andamentoId,
       }
       if (semelhantes.length) {
