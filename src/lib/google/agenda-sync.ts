@@ -2,7 +2,7 @@
 // compromisso (agenda_items.google_event_id) para editar e apagar depois. Nada é enviado em massa: o envio automático só vale
 // para compromissos criados a partir de GOOGLE_AGENDA_SYNC_DESDE; os antigos só vão um a um (enviarCompromissoAoGoogle).
 
-import { escolherHorarioPrazo, eventoJaExiste, hashEvento, montarEvento, tipoVaiParaGoogle, type CompromissoParaGoogle, type ContextoProcesso, type EventoGoogle, type Ocupado } from './agenda-evento'
+import { diaAnterior, ehEventoDeAudiencia, ehPrazoDeContestacao, escolherHorarioPrazo, escolherHorarioVespera, eventoJaExiste, hashEvento, montarEvento, tipoVaiParaGoogle, type CompromissoParaGoogle, type ContextoProcesso, type EventoGoogle, type Ocupado } from './agenda-evento'
 
 type Db = { from: (t: string) => any }  // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -71,19 +71,37 @@ export async function enviarCompromissoAoGoogle(db: Db, cal: Calendario, itemId:
   const hashAtual = hashEvento({ ...base, hora: item.hora_inicio ? String(item.hora_inicio).slice(0, 5) : null })
   if (item.google_event_id && item.google_hash === hashAtual) return { ok: true, acao: 'sem_mudanca', eventoId: item.google_event_id }
 
-  const doDia = await cal.eventosDoDia(base.dia)
+  // Contestação com prazo final no dia de uma audiência do mesmo processo: o evento vai para a véspera, até as 18:00
+  let diaEvento = base.dia
+  let vespera = false
+  if (base.modo === 'prazo' && item.processo_id && ehPrazoDeContestacao(item.titulo)) {
+    const { data: audiencias } = await db.from('agenda_items').select('id').eq('processo_id', item.processo_id).in('tipo', ['audiencia', 'pericia']).eq('data_inicio', base.dia).limit(1)
+    if (audiencias?.length) { vespera = true; diaEvento = diaAnterior(base.dia) }
+  }
+  const doDia = await cal.eventosDoDia(diaEvento)
   let evento = base
   if (base.modo === 'prazo') {
     if (!item.google_event_id) {
-      const ja = eventoJaExiste(doDia, ctx.numero_processo)
+      // eventos do dia que já pertencem a OUTRO compromisso do PEDV (ex.: a audiência) nunca são "o mesmo prazo"
+      const ids = doDia.map(e => e.id).filter((x): x is string => !!x)
+      const { data: ocupadosPorOutros } = ids.length
+        ? await db.from('agenda_items').select('google_event_id').in('google_event_id', ids).neq('id', itemId)
+        : { data: [] }
+      const ja = eventoJaExiste(doDia, ctx.numero_processo, (ocupadosPorOutros ?? []).map((x: { google_event_id: string }) => x.google_event_id))
       if (ja) { // já está no Google: só vincula, não duplica
         await db.from('agenda_items').update({ google_event_id: ja.id, google_hash: hashAtual, google_synced_at: new Date().toISOString(), google_sync_erro: null }).eq('id', itemId)
         return { ok: true, acao: 'vinculado', eventoId: ja.id }
       }
     }
-    const h = escolherHorarioPrazo(ocupadosDoDia(doDia, item.google_event_id), base.duracaoMin)
-    if (!h) { const erro = 'Sem horário livre na madrugada desse dia.'; await db.from('agenda_items').update({ google_sync_erro: erro }).eq('id', itemId); return { ok: false, erro } }
-    evento = { ...base, start: { dateTime: `${base.dia}T${h.inicio}:00`, timeZone: base.start.timeZone }, end: { dateTime: `${base.dia}T${h.fim}:00`, timeZone: base.end.timeZone } }
+    // se há audiência nesse dia, o prazo tem de ficar num horário anterior ao início dela
+    const inicios = doDia.filter(e => ehEventoDeAudiencia(e.summary)).map(e => hhmmDe(e.start?.dateTime)).filter((x): x is string => !!x)
+      .map(x => Number(x.slice(0, 2)) * 60 + Number(x.slice(3, 5)))
+    const limite = inicios.length ? Math.min(...inicios) : null
+    const h = vespera
+      ? escolherHorarioVespera(ocupadosDoDia(doDia, item.google_event_id), base.duracaoMin)
+      : escolherHorarioPrazo(ocupadosDoDia(doDia, item.google_event_id), base.duracaoMin, 5, limite)
+    if (!h) { const erro = vespera ? 'Sem horário livre na véspera da audiência (até 18:00).' : limite !== null ? 'Sem horário livre antes da audiência desse dia.' : 'Sem horário livre na madrugada desse dia.'; await db.from('agenda_items').update({ google_sync_erro: erro }).eq('id', itemId); return { ok: false, erro } }
+    evento = { ...base, start: { dateTime: `${diaEvento}T${h.inicio}:00`, timeZone: base.start.timeZone }, end: { dateTime: `${diaEvento}T${h.fim}:00`, timeZone: base.end.timeZone } }
   }
 
   try {

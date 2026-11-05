@@ -103,18 +103,30 @@ export function montarEvento(item: CompromissoParaGoogle, ctx: ContextoProcesso)
   }
 }
 
+/** Contestação: deve ser protocolada antes da audiência. */
+export const ehPrazoDeContestacao = (titulo?: string | null) => /contesta/i.test(titulo ?? '')
+
+/** Dia anterior (AAAA-MM-DD). */
+export function diaAnterior(dia: string): string {
+  const d = new Date(`${dia}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
 export interface Ocupado { inicio: string; fim: string } // HH:MM no dia
 
 const min = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))
 
 /**
  * Horário do PRAZO na madrugada: início em :00, :20 ou :40, 10 min de duração, com folga de pelo menos 5 min dos eventos
- * já existentes no dia. Procura de 00:00 em diante (até 06:00).
+ * já existentes no dia. Procura de 00:00 em diante (até 06:00). `limiteMin` (minutos desde 00:00) = início da audiência do dia.
  */
-export function escolherHorarioPrazo(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5): { inicio: string; fim: string } | null {
+export function escolherHorarioPrazo(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5, limiteMin: number | null = null): { inicio: string; fim: string } | null {
   for (let t = 0; t < 6 * 60; t += 20) {
     const ini = t
     const fim = t + duracaoMin
+    // prazo no mesmo dia da audiência: tem de terminar (com folga) antes de ela começar
+    if (limiteMin !== null && fim + folgaMin > limiteMin) break
     const conflita = ocupados.some(o => ini < min(o.fim) + folgaMin && fim + folgaMin > min(o.inicio))
     if (!conflita) {
       const f = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -129,10 +141,34 @@ export function hashEvento(e: Pick<EventoGoogle, 'summary' | 'description' | 'lo
   return createHash('sha1').update(JSON.stringify([e.summary, e.description, e.location ?? '', e.dia, e.modo, e.modo === 'audiencia' ? e.hora ?? '' : ''])).digest('hex').slice(0, 16)
 }
 
-/** O evento já existe no Google? (mesmo dia e mesmo número de processo no título ou na descrição) */
-export function eventoJaExiste(existentes: { id?: string; summary?: string; description?: string }[], numeroProcesso: string | null | undefined): { id: string } | null {
+/** Título de evento de audiência/perícia (o prazo nunca é o mesmo evento que ela). */
+export const ehEventoDeAudiencia = (summary?: string) => /^\s*(audi[eê]ncia|per[ií]cia)/i.test(summary ?? '')
+
+/**
+ * O evento já existe no Google? (mesmo dia e mesmo número de processo no título ou na descrição)
+ * Serve só para não duplicar um prazo lançado antes direto no Google. Nunca vale: evento que já pertence a outro compromisso
+ * do PEDV (`ignorarIds`) nem evento de audiência/perícia — o prazo "protocolar contestação" cai no dia da audiência do mesmo
+ * processo e, sem essa regra, assumia o evento da audiência e o sobrescrevia ao ser editado.
+ */
+export function eventoJaExiste(existentes: { id?: string; summary?: string; description?: string }[], numeroProcesso: string | null | undefined, ignorarIds: readonly string[] = []): { id: string } | null {
   const dig = (numeroProcesso ?? '').replace(/\D/g, '')
   if (dig.length < 15) return null
-  const achado = existentes.find(e => `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
+  const achado = existentes.find(e =>
+    !(e.id && ignorarIds.includes(e.id)) &&
+    !ehEventoDeAudiencia(e.summary) &&
+    `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
   return achado?.id ? { id: achado.id } : null
+}
+
+/**
+ * Horário do prazo de contestação na véspera da audiência: 10 min terminando às 18:00 (17:50–18:00); se estiver ocupado,
+ * recua de 20 em 20 min (17:30, 17:10…) até as 08:00, sempre com folga dos eventos já existentes.
+ */
+export function escolherHorarioVespera(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5, fimMax = 18 * 60): { inicio: string; fim: string } | null {
+  const f = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  for (let fim = fimMax; fim - duracaoMin >= 8 * 60; fim -= 20) {
+    const ini = fim - duracaoMin
+    if (!ocupados.some(o => ini < min(o.fim) + folgaMin && fim + folgaMin > min(o.inicio))) return { inicio: f(ini), fim: f(fim) }
+  }
+  return null
 }
