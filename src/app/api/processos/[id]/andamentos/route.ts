@@ -80,9 +80,12 @@ export async function POST(
     return NextResponse.json({ error: 'Data do andamento inválida' }, { status: 400 })
   }
 
-  // Tempo gasto (opcional): validado ANTES de gravar, para não salvar andamento com tempo inválido.
+  // Tempo gasto (obrigatório): validado ANTES de gravar, para não salvar andamento sem tempo ou com tempo inválido.
   const tempoResultado = normalizarTempo((body as { tempo?: TempoEntrada }).tempo, dataAndamento.toISOString())
-  if (tempoResultado && !tempoResultado.ok) {
+  if (!tempoResultado) {
+    return NextResponse.json({ error: 'Informe o tempo gasto neste andamento: ele é obrigatório para salvar.' }, { status: 400 })
+  }
+  if (!tempoResultado.ok) {
     return NextResponse.json({ error: tempoResultado.erro }, { status: 400 })
   }
 
@@ -110,64 +113,67 @@ export async function POST(
     return NextResponse.json({ error: error?.message ?? 'Erro ao criar andamento' }, { status: 400 })
   }
 
-  // Com tempo informado: cria o item concluído na Agenda (ligado ao processo/cliente/andamento)
-  // e o lançamento de horas — entra no relatório de horas por cliente. Falha aqui não desfaz o
-  // andamento (já salvo): devolve o aviso para a tela mostrar.
+  // Cria o item concluído na Agenda (ligado ao processo/cliente/andamento) e o lançamento de horas —
+  // entra no relatório de horas por cliente. O tempo é obrigatório: se não for lançado, o andamento
+  // recém-criado é desfeito e a tela mostra o erro (só cai no aviso se nem o desfazer for possível).
   let tempoAviso: string | null = null
-  if (tempoResultado?.ok) {
-    try {
-      const t = tempoResultado.tempo
-      const { data: processo } = await supabase
-        .from('processos').select('cliente_id, titulo, numero_processo').eq('id', id).maybeSingle()
-      const { data: equipe } = await supabase.rpc('perfis_equipe')
-      const quemFez = (equipe as { id: string; nome: string }[] | null)
-        ?.find(p => p.id === (data.responsavel_id ?? auth.userId))?.nome ?? null
-      const inicio = dataHoraBrasilia(t.inicio_em)
-      const fim = t.fim_em ? dataHoraBrasilia(t.fim_em) : null
+  try {
+    const t = tempoResultado.tempo
+    const { data: processo } = await supabase
+      .from('processos').select('cliente_id, titulo, numero_processo').eq('id', id).maybeSingle()
+    const { data: equipe } = await supabase.rpc('perfis_equipe')
+    const quemFez = (equipe as { id: string; nome: string }[] | null)
+      ?.find(p => p.id === (data.responsavel_id ?? auth.userId))?.nome ?? null
+    const inicio = dataHoraBrasilia(t.inicio_em)
+    const fim = t.fim_em ? dataHoraBrasilia(t.fim_em) : null
 
-      const { data: item, error: itemErr } = await supabase
-        .from('agenda_items')
-        .insert({
-          titulo: data.titulo,
-          descricao: data.descricao,
-          tipo: 'tarefa',
-          status: 'concluido',
-          data_inicio: inicio.data,
-          hora_inicio: inicio.hora,
-          data_fim: fim ? fim.data : null,
-          hora_fim: fim ? fim.hora : null,
-          processo_id: id,
-          cliente_id: processo?.cliente_id ?? null,
-          responsavel: quemFez,
-          andamento_id: data.id,
-          source: 'manual',
-        })
-        .select('id')
-        .single()
-      if (itemErr || !item) throw new Error(itemErr?.message ?? 'não foi possível criar o item na agenda')
-
-      const payload = createAgendaTimeEntryPayload({
-        agenda_item_id: item.id,
-        cliente_id: processo?.cliente_id ?? null,
+    const { data: item, error: itemErr } = await supabase
+      .from('agenda_items')
+      .insert({
+        titulo: data.titulo,
+        descricao: data.descricao,
+        tipo: 'tarefa',
+        status: 'concluido',
+        data_inicio: inicio.data,
+        hora_inicio: inicio.hora,
+        data_fim: fim ? fim.data : null,
+        hora_fim: fim ? fim.hora : null,
         processo_id: id,
-        descricao_atividade: data.titulo,
-        inicio_em: t.inicio_em,
-        fim_em: t.fim_em,
-        duracao_manual_minutos: t.duracao_manual_minutos,
-        usa_duracao_manual: t.usa_duracao_manual,
-        cobravel: t.cobravel,
+        cliente_id: processo?.cliente_id ?? null,
+        responsavel: quemFez,
+        andamento_id: data.id,
+        source: 'manual',
       })
-      const { error: entryErr } = await supabase
-        .from('agenda_time_entries')
-        .insert({ ...payload, criado_por: auth.userId })
-      if (entryErr) {
-        await supabase.from('agenda_items').delete().eq('id', item.id)
-        throw new Error(entryErr.message)
-      }
-    } catch (err) {
-      tempoAviso = `Andamento salvo, mas o tempo não foi lançado: ${err instanceof Error ? err.message : 'erro desconhecido'}`
+      .select('id')
+      .single()
+    if (itemErr || !item) throw new Error(itemErr?.message ?? 'não foi possível criar o item na agenda')
+
+    const payload = createAgendaTimeEntryPayload({
+      agenda_item_id: item.id,
+      cliente_id: processo?.cliente_id ?? null,
+      processo_id: id,
+      descricao_atividade: data.titulo,
+      inicio_em: t.inicio_em,
+      fim_em: t.fim_em,
+      duracao_manual_minutos: t.duracao_manual_minutos,
+      usa_duracao_manual: t.usa_duracao_manual,
+      cobravel: t.cobravel,
+    })
+    const { error: entryErr } = await supabase
+      .from('agenda_time_entries')
+      .insert({ ...payload, criado_por: auth.userId })
+    if (entryErr) {
+      await supabase.from('agenda_items').delete().eq('id', item.id)
+      throw new Error(entryErr.message)
     }
+  } catch (err) {
+    const motivo = err instanceof Error ? err.message : 'erro desconhecido'
+    const { data: desfeito } = await supabase.from('processo_andamentos').delete().eq('id', data.id).select('id')
+    if (desfeito && desfeito.length > 0) {
+      return NextResponse.json({ error: `O tempo não foi lançado, então o andamento não foi salvo: ${motivo}` }, { status: 500 })
+    }
+    tempoAviso = `Andamento salvo, mas o tempo não foi lançado: ${motivo}`
   }
 
-  return NextResponse.json({ ...data, tempo_aviso: tempoAviso, tempo_lancado: !!tempoResultado?.ok && !tempoAviso }, { status: 201 })
+  return NextResponse.json({ ...data, tempo_aviso: tempoAviso, tempo_lancado: !tempoAviso }, { status: 201 })
 }
