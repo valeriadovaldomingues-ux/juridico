@@ -7,7 +7,7 @@
  * Uso exclusivo em client components — chama /api/kanban-tasks via fetch.
  */
 
-import type { KanbanTask, KanbanStatus, KanbanProfile } from '@/types/kanban'
+import type { KanbanTask, KanbanStatus, KanbanProfile, KanbanPrioridade } from '@/types/kanban'
 import { STATUS_ORDER } from '@/types/kanban'
 
 // ─── Tipos de saída ───────────────────────────────────────────────────────────
@@ -69,8 +69,30 @@ export function getPersonalColumns(
     label: STATUS_LABELS[status],
     tasks: mine
       .filter(t => t.status === status)
-      .sort((a, b) => a.ordem - b.ordem),
+      .sort(compararTarefas),
   }))
+}
+
+const PESO_PRIORIDADE: Record<KanbanPrioridade, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 }
+
+/**
+ * Ordem das tarefas dentro de uma coluna: concluídas por último; depois vencimento mais antigo primeiro (as vencidas
+ * ficam no topo) e, sem data, no fim; empate por prioridade (urgente → baixa); por fim a ordem manual (`ordem`).
+ */
+export function compararTarefas(a: KanbanTask, b: KanbanTask): number {
+  const fimA = a.status === 'concluido' ? 1 : 0
+  const fimB = b.status === 'concluido' ? 1 : 0
+  if (fimA !== fimB) return fimA - fimB
+  const dataA = a.data?.slice(0, 10) ?? null
+  const dataB = b.data?.slice(0, 10) ?? null
+  if (dataA !== dataB) {
+    if (!dataA) return 1
+    if (!dataB) return -1
+    return dataA < dataB ? -1 : 1
+  }
+  const prio = PESO_PRIORIDADE[a.prioridade] - PESO_PRIORIDADE[b.prioridade]
+  if (prio) return prio
+  return a.ordem - b.ordem
 }
 
 /**
@@ -85,7 +107,7 @@ export function getOfficeColumns(
     profile,
     tasks: tasks
       .filter(t => t.responsavel_id === profile.id)
-      .sort((a, b) => a.ordem - b.ordem),
+      .sort(compararTarefas),
   }))
 }
 
@@ -116,7 +138,7 @@ export function getListColumns(tasks: KanbanTask[], mapeadas: ListaMapeada[] = [
     .map(([key, { nome, tasks }]) => ({
       key,
       nome,
-      tasks: tasks.sort((a, b) => a.ordem - b.ordem),
+      tasks: tasks.sort(compararTarefas),
       pos: posDaLista.get(key) ?? undefined,
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
@@ -201,7 +223,7 @@ export function resolverDestinoOffice(
 export function getUnassignedTasks(tasks: KanbanTask[]): KanbanTask[] {
   return tasks
     .filter(t => !t.responsavel_id && !t.trello_list_nome)
-    .sort((a, b) => a.ordem - b.ordem)
+    .sort(compararTarefas)
 }
 
 // ─── Dados do escritório — banco real ─────────────────────────────────────────
