@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getListColumns, getUnassignedTasks, resolverDestinoOffice, ordenarColunasTrello } from './kanban.service'
+import { compararTarefas, getListColumns, getOfficeColumns, getPersonalColumns, getUnassignedTasks, resolverDestinoOffice, ordenarColunasTrello } from './kanban.service'
 import type { KanbanTask } from '@/types/kanban'
 
 function tarefa(overrides: Partial<KanbanTask> = {}): KanbanTask {
@@ -133,5 +133,52 @@ describe('colunas vazias do Trello', () => {
     const ordem = ordenarColunasTrello(pessoas, getListColumns([], mapeadas), [], mapeadas)
       .map(c => (c.tipo === 'pessoa' ? c.col.profile.nome : c.col.nome))
     expect(ordem).toEqual(['Luciana Pessoa', 'CONCLUÍDOS'])
+  })
+})
+
+describe('compararTarefas (ordem das colunas)', () => {
+  const ids = (ts: KanbanTask[]) => ts.slice().sort(compararTarefas).map(t => t.id)
+
+  it('vencimento mais antigo primeiro (vencidas no topo); sem data no fim', () => {
+    const ts = [
+      tarefa({ id: 'sem-data' }),
+      tarefa({ id: 'dez', data: '2026-12-10' }),
+      tarefa({ id: 'vencida', data: '2026-10-21' }),
+      tarefa({ id: 'nov', data: '2026-11-11' }),
+    ]
+    expect(ids(ts)).toEqual(['vencida', 'nov', 'dez', 'sem-data'])
+  })
+
+  it('mesma data: prioridade urgente → baixa; depois a ordem manual', () => {
+    const ts = [
+      tarefa({ id: 'baixa', data: '2026-11-11', prioridade: 'baixa' }),
+      tarefa({ id: 'media-2', data: '2026-11-11', prioridade: 'media', ordem: 2 }),
+      tarefa({ id: 'urgente', data: '2026-11-11', prioridade: 'urgente' }),
+      tarefa({ id: 'media-1', data: '2026-11-11', prioridade: 'media', ordem: 1 }),
+      tarefa({ id: 'alta', data: '2026-11-11', prioridade: 'alta' }),
+    ]
+    expect(ids(ts)).toEqual(['urgente', 'alta', 'media-1', 'media-2', 'baixa'])
+  })
+
+  it('concluídas vão para o fim, mesmo com data antiga', () => {
+    const ts = [tarefa({ id: 'feita', status: 'concluido', data: '2026-01-01' }), tarefa({ id: 'aberta', data: '2026-12-31' })]
+    expect(ids(ts)).toEqual(['aberta', 'feita'])
+  })
+
+  it('data com horário (ISO) é comparada só pelo dia', () => {
+    const ts = [tarefa({ id: 'b', data: '2026-11-12T10:00:00Z' }), tarefa({ id: 'a', data: '2026-11-11T23:00:00Z' })]
+    expect(ids(ts)).toEqual(['a', 'b'])
+  })
+
+  it('vale nas colunas de pessoa, de lista, sem responsável e no quadro pessoal', () => {
+    const tarde = { data: '2026-12-01' }, cedo = { data: '2026-11-01' }
+    const pessoa = getOfficeColumns([tarefa({ id: 't', responsavel_id: 'u1', ...tarde }), tarefa({ id: 'c', responsavel_id: 'u1', ...cedo })],
+      [{ id: 'u1', nome: 'Ana' } as never])
+    expect(pessoa[0].tasks.map(t => t.id)).toEqual(['c', 't'])
+    const lista = getListColumns([tarefa({ id: 't', trello_list_id: 'l1', trello_list_nome: 'PRAZOS', ...tarde }), tarefa({ id: 'c', trello_list_id: 'l1', trello_list_nome: 'PRAZOS', ...cedo })])
+    expect(lista[0].tasks.map(t => t.id)).toEqual(['c', 't'])
+    expect(getUnassignedTasks([tarefa({ id: 't', ...tarde }), tarefa({ id: 'c', ...cedo })]).map(t => t.id)).toEqual(['c', 't'])
+    const pessoal = getPersonalColumns([tarefa({ id: 't', responsavel_id: 'u1', ...tarde }), tarefa({ id: 'c', responsavel_id: 'u1', ...cedo })], 'u1')
+    expect(pessoal[0].tasks.map(t => t.id)).toEqual(['c', 't'])
   })
 })
