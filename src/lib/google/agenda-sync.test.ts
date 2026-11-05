@@ -56,6 +56,15 @@ describe('enviarCompromissoAoGoogle', () => {
     expect(chamadas).toHaveLength(1)
     expect(updates.some(u => u.google_event_id === 'g-audiencia')).toBe(false)
   })
+  it('prazo no dia da audiência fica antes dela; se a audiência é cedo demais, não cria', async () => {
+    const aud = (h: string, fim: string) => ({ id: 'g-aud', summary: 'AUDIÊNCIA - X x Y - 0010976-40.2026.5.03.0004 - UNA', start: { dateTime: `2026-10-30T${h}:00-03:00` }, end: { dateTime: `2026-10-30T${fim}:00-03:00` } })
+    const ok = fakeDb(prazo, { vinculados: [{ google_event_id: 'g-aud' }] }); const c1 = fakeCal([aud('10:15', '11:15')])
+    await enviarCompromissoAoGoogle(ok.db, c1.cal, 'i1')
+    expect(c1.chamadas[0]).toContain('2026-10-30T00:00:00')
+    const cedo = fakeDb(prazo, { vinculados: [{ google_event_id: 'g-aud' }] }); const c2 = fakeCal([aud('00:10', '01:10')])
+    expect(await enviarCompromissoAoGoogle(cedo.db, c2.cal, 'i1')).toMatchObject({ ok: false, erro: expect.stringContaining('antes da audiência') })
+    expect(c2.chamadas).toHaveLength(0)
+  })
   it('pula o horário ocupado da madrugada', async () => {
     const { db } = fakeDb(prazo)
     const { cal, chamadas } = fakeCal([{ id: 'x', summary: 'outro', start: { dateTime: '2026-10-30T00:00:00-03:00' }, end: { dateTime: '2026-10-30T00:10:00-03:00' } }])

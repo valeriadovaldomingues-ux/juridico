@@ -109,12 +109,14 @@ const min = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))
 
 /**
  * Horário do PRAZO na madrugada: início em :00, :20 ou :40, 10 min de duração, com folga de pelo menos 5 min dos eventos
- * já existentes no dia. Procura de 00:00 em diante (até 06:00).
+ * já existentes no dia. Procura de 00:00 em diante (até 06:00). `limiteMin` (minutos desde 00:00) = início da audiência do dia.
  */
-export function escolherHorarioPrazo(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5): { inicio: string; fim: string } | null {
+export function escolherHorarioPrazo(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5, limiteMin: number | null = null): { inicio: string; fim: string } | null {
   for (let t = 0; t < 6 * 60; t += 20) {
     const ini = t
     const fim = t + duracaoMin
+    // prazo no mesmo dia da audiência: tem de terminar (com folga) antes de ela começar
+    if (limiteMin !== null && fim + folgaMin > limiteMin) break
     const conflita = ocupados.some(o => ini < min(o.fim) + folgaMin && fim + folgaMin > min(o.inicio))
     if (!conflita) {
       const f = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -129,6 +131,9 @@ export function hashEvento(e: Pick<EventoGoogle, 'summary' | 'description' | 'lo
   return createHash('sha1').update(JSON.stringify([e.summary, e.description, e.location ?? '', e.dia, e.modo, e.modo === 'audiencia' ? e.hora ?? '' : ''])).digest('hex').slice(0, 16)
 }
 
+/** Título de evento de audiência/perícia (o prazo nunca é o mesmo evento que ela). */
+export const ehEventoDeAudiencia = (summary?: string) => /^\s*(audi[eê]ncia|per[ií]cia)/i.test(summary ?? '')
+
 /**
  * O evento já existe no Google? (mesmo dia e mesmo número de processo no título ou na descrição)
  * Serve só para não duplicar um prazo lançado antes direto no Google. Nunca vale: evento que já pertence a outro compromisso
@@ -140,7 +145,7 @@ export function eventoJaExiste(existentes: { id?: string; summary?: string; desc
   if (dig.length < 15) return null
   const achado = existentes.find(e =>
     !(e.id && ignorarIds.includes(e.id)) &&
-    !/^\s*(audi[eê]ncia|per[ií]cia)/i.test(e.summary ?? '') &&
+    !ehEventoDeAudiencia(e.summary) &&
     `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
   return achado?.id ? { id: achado.id } : null
 }
