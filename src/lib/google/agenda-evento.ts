@@ -103,6 +103,16 @@ export function montarEvento(item: CompromissoParaGoogle, ctx: ContextoProcesso)
   }
 }
 
+/** Contestação: deve ser protocolada antes da audiência. */
+export const ehPrazoDeContestacao = (titulo?: string | null) => /contesta/i.test(titulo ?? '')
+
+/** Dia anterior (AAAA-MM-DD). */
+export function diaAnterior(dia: string): string {
+  const d = new Date(`${dia}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
 export interface Ocupado { inicio: string; fim: string } // HH:MM no dia
 
 const min = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5))
@@ -148,4 +158,17 @@ export function eventoJaExiste(existentes: { id?: string; summary?: string; desc
     !ehEventoDeAudiencia(e.summary) &&
     `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
   return achado?.id ? { id: achado.id } : null
+}
+
+/**
+ * Horário do prazo de contestação na véspera da audiência: 10 min terminando às 18:00 (17:50–18:00); se estiver ocupado,
+ * recua de 20 em 20 min (17:30, 17:10…) até as 08:00, sempre com folga dos eventos já existentes.
+ */
+export function escolherHorarioVespera(ocupados: Ocupado[], duracaoMin = 10, folgaMin = 5, fimMax = 18 * 60): { inicio: string; fim: string } | null {
+  const f = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  for (let fim = fimMax; fim - duracaoMin >= 8 * 60; fim -= 20) {
+    const ini = fim - duracaoMin
+    if (!ocupados.some(o => ini < min(o.fim) + folgaMin && fim + folgaMin > min(o.inicio))) return { inicio: f(ini), fim: f(fim) }
+  }
+  return null
 }

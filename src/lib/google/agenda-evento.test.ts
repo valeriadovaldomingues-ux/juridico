@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escolherHorarioPrazo, eventoJaExiste, extrairLocal, hashEvento, montarEvento, tipoVaiParaGoogle, tituloEvento } from './agenda-evento'
+import { diaAnterior, escolherHorarioVespera, escolherHorarioPrazo, eventoJaExiste, extrairLocal, hashEvento, montarEvento, tipoVaiParaGoogle, tituloEvento } from './agenda-evento'
 
 const ctxTrab = { numero_processo: '0010976-40.2026.5.03.0004', area_direito: 'trabalhista', cliente: 'Feito Afeto', parteContraria: 'Maria Helena' }
 
@@ -72,5 +72,13 @@ describe('duplicidade e hash', () => {
     const a = { summary: 'A', description: 'd', dia: '2026-10-30', modo: 'prazo' as const }
     expect(hashEvento(a)).toBe(hashEvento({ ...a }))
     expect(hashEvento(a)).not.toBe(hashEvento({ ...a, summary: 'B' }))
+  })
+})
+
+describe('véspera da audiência (contestação)', () => {
+  it('17:50–18:00; ocupado, recua de 20 em 20 min (com folga de 5); vira mês', () => {
+    expect(escolherHorarioVespera([])).toEqual({ inicio: '17:50', fim: '18:00' })
+    expect(escolherHorarioVespera([{ inicio: '17:40', fim: '17:50' }])).toEqual({ inicio: '17:10', fim: '17:20' })
+    expect(diaAnterior('2026-12-01')).toBe('2026-11-30')
   })
 })

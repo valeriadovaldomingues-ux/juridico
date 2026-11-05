@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { enviarCompromissoAoGoogle, sincronizarAgendaGoogle, type Calendario, type EventoExistente } from './agenda-sync'
 
-function fakeDb(item: Record<string, unknown> | null, extra: { fila?: { id: string; google_event_id: string }[]; vinculados?: { google_event_id: string }[] } = {}) {
+function fakeDb(item: Record<string, unknown> | null, extra: { fila?: { id: string; google_event_id: string }[]; vinculados?: { google_event_id: string }[]; audiencia?: boolean } = {}) {
   const updates: Record<string, unknown>[] = []
   const excluidos: string[] = []
   const processo = { numero_processo: '0010976-40.2026.5.03.0004', area_direito: 'trabalhista', cliente: { nome: 'Feito Afeto' }, partes_processo: [{ pessoa_nome: 'Maria Helena', tipo_parte: 'autor' }] }
   const tabela = (t: string) => {
     const c: Record<string, unknown> = {}
     let colunas = ''
-    for (const m of ['eq', 'neq', 'is', 'not', 'in', 'gte', 'order', 'limit']) c[m] = () => c
+    let porTipo = false
+    for (const m of ['eq', 'neq', 'is', 'not', 'gte', 'order', 'limit']) c[m] = () => c
+    c.in = (col: string) => { if (col === 'tipo') porTipo = true; return c }
     c.select = (cols: string) => { colunas = cols; return c }
     c.maybeSingle = async () => ({ data: t === 'agenda_items' ? item : t === 'processos' ? processo : null, error: null })
     c.update = (v: Record<string, unknown>) => { updates.push(v); return { eq: async () => ({ error: null }) } }
     c.delete = () => ({ eq: async (_: string, id: string) => { excluidos.push(id); return { error: null } } })
-    c.then = (r: (v: unknown) => void) => r({ data: t === 'agenda_items' && colunas === 'google_event_id' ? extra.vinculados ?? [] : t === 'agenda_items' ? (item ? [{ id: item.id }] : []) : t === 'agenda_google_exclusoes' ? extra.fila ?? [] : [], error: null })
+    c.then = (r: (v: unknown) => void) => r({ data: t === 'agenda_items' && porTipo ? (extra.audiencia ? [{ id: 'a1' }] : []) : t === 'agenda_items' && colunas === 'google_event_id' ? extra.vinculados ?? [] : t === 'agenda_items' ? (item ? [{ id: item.id }] : []) : t === 'agenda_google_exclusoes' ? extra.fila ?? [] : [], error: null })
     return c
   }
   return { db: { from: tabela }, updates, excluidos }
@@ -64,6 +66,15 @@ describe('enviarCompromissoAoGoogle', () => {
     const cedo = fakeDb(prazo, { vinculados: [{ google_event_id: 'g-aud' }] }); const c2 = fakeCal([aud('00:10', '01:10')])
     expect(await enviarCompromissoAoGoogle(cedo.db, c2.cal, 'i1')).toMatchObject({ ok: false, erro: expect.stringContaining('antes da audiência') })
     expect(c2.chamadas).toHaveLength(0)
+  })
+  it('contestação com prazo final no dia da audiência vai para a véspera, terminando às 18:00', async () => {
+    const contestacao = { ...prazo, titulo: 'Protocolar contestação e documentos', prazo_final: '2026-10-30' }
+    const { db } = fakeDb(contestacao, { audiencia: true }); const { cal, chamadas } = fakeCal()
+    await enviarCompromissoAoGoogle(db, cal, 'i1')
+    expect(chamadas[0]).toContain('2026-10-29T17:50:00')
+    const sem = fakeDb(contestacao, { audiencia: false }); const c2 = fakeCal()
+    await enviarCompromissoAoGoogle(sem.db, c2.cal, 'i1')
+    expect(c2.chamadas[0]).toContain('2026-10-30T00:00:00') // sem audiência no dia, segue a regra da madrugada
   })
   it('pula o horário ocupado da madrugada', async () => {
     const { db } = fakeDb(prazo)
