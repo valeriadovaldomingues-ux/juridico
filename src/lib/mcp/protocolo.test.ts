@@ -34,13 +34,14 @@ describe('protocolo MCP', () => {
       insert: (v: unknown) => { inserts.push([t, v]); return { select: () => ({ single: async () => ({ data: { id: 'novo' }, error: null }) }) } },
     }) }
     const c = { db, userId: 'u1', nome: 'Débora', podeEscrever: true }
-    const args = { processo_id: '11111111-1111-1111-1111-111111111111', titulo: 'Juntada de petição' }
+    const args = { processo_id: '11111111-1111-1111-1111-111111111111', titulo: 'Juntada de petição', minutos: 30 }
     const previa = await responderMcp({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'criar_andamento', arguments: args } }, c)
     expect(JSON.stringify(previa?.result)).toContain('confirmacao_necessaria')
     expect(inserts).toHaveLength(0)
     const gravado = await responderMcp({ jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'criar_andamento', arguments: { ...args, confirmar: true } } }, c)
     expect(JSON.stringify(gravado?.result)).toContain('gravado')
-    expect(inserts).toHaveLength(1)
+    // andamento + tarefa concluída na agenda + lançamento de horas (o tempo é obrigatório)
+    expect(inserts.map(i => (i as [string, unknown])[0])).toEqual(['processo_andamentos', 'agenda_items', 'agenda_time_entries'])
     expect(JSON.stringify(inserts[0])).toContain('registrado via Claude por Débora')
   })
   it('erro na ferramenta vira isError e é auditado', async () => {
