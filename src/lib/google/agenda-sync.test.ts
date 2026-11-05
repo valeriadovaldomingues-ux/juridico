@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { enviarCompromissoAoGoogle, sincronizarAgendaGoogle, type Calendario, type EventoExistente } from './agenda-sync'
 
-function fakeDb(item: Record<string, unknown> | null, extra: { fila?: { id: string; google_event_id: string }[] } = {}) {
+function fakeDb(item: Record<string, unknown> | null, extra: { fila?: { id: string; google_event_id: string }[]; vinculados?: { google_event_id: string }[] } = {}) {
   const updates: Record<string, unknown>[] = []
   const excluidos: string[] = []
   const processo = { numero_processo: '0010976-40.2026.5.03.0004', area_direito: 'trabalhista', cliente: { nome: 'Feito Afeto' }, partes_processo: [{ pessoa_nome: 'Maria Helena', tipo_parte: 'autor' }] }
   const tabela = (t: string) => {
     const c: Record<string, unknown> = {}
-    for (const m of ['select', 'eq', 'is', 'not', 'in', 'gte', 'order', 'limit']) c[m] = () => c
+    let colunas = ''
+    for (const m of ['eq', 'neq', 'is', 'not', 'in', 'gte', 'order', 'limit']) c[m] = () => c
+    c.select = (cols: string) => { colunas = cols; return c }
     c.maybeSingle = async () => ({ data: t === 'agenda_items' ? item : t === 'processos' ? processo : null, error: null })
     c.update = (v: Record<string, unknown>) => { updates.push(v); return { eq: async () => ({ error: null }) } }
     c.delete = () => ({ eq: async (_: string, id: string) => { excluidos.push(id); return { error: null } } })
-    c.then = (r: (v: unknown) => void) => r({ data: t === 'agenda_items' ? (item ? [{ id: item.id }] : []) : t === 'agenda_google_exclusoes' ? extra.fila ?? [] : [], error: null })
+    c.then = (r: (v: unknown) => void) => r({ data: t === 'agenda_items' && colunas === 'google_event_id' ? extra.vinculados ?? [] : t === 'agenda_items' ? (item ? [{ id: item.id }] : []) : t === 'agenda_google_exclusoes' ? extra.fila ?? [] : [], error: null })
     return c
   }
   return { db: { from: tabela }, updates, excluidos }
@@ -45,6 +47,14 @@ describe('enviarCompromissoAoGoogle', () => {
     expect(r).toMatchObject({ ok: true, acao: 'vinculado', eventoId: 'g-antigo' })
     expect(chamadas).toHaveLength(0)
     expect(updates.some(u => u.google_event_id === 'g-antigo')).toBe(true)
+  })
+  it('não rouba o evento da audiência: prazo no dia da audiência do mesmo processo cria evento próprio', async () => {
+    const { db, updates } = fakeDb(prazo, { vinculados: [{ google_event_id: 'g-audiencia' }] })
+    const { cal, chamadas } = fakeCal([{ id: 'g-audiencia', summary: 'AUDIÊNCIA TRABALHISTA - Feito Afeto x Maria - 0010976-40.2026.5.03.0004 - UNA', start: { dateTime: '2026-10-30T10:15:00-03:00' }, end: { dateTime: '2026-10-30T11:15:00-03:00' } }])
+    const r = await enviarCompromissoAoGoogle(db, cal, 'i1')
+    expect(r).toMatchObject({ ok: true, acao: 'criado', eventoId: 'g-novo' })
+    expect(chamadas).toHaveLength(1)
+    expect(updates.some(u => u.google_event_id === 'g-audiencia')).toBe(false)
   })
   it('pula o horário ocupado da madrugada', async () => {
     const { db } = fakeDb(prazo)

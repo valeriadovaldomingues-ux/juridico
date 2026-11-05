@@ -129,10 +129,18 @@ export function hashEvento(e: Pick<EventoGoogle, 'summary' | 'description' | 'lo
   return createHash('sha1').update(JSON.stringify([e.summary, e.description, e.location ?? '', e.dia, e.modo, e.modo === 'audiencia' ? e.hora ?? '' : ''])).digest('hex').slice(0, 16)
 }
 
-/** O evento já existe no Google? (mesmo dia e mesmo número de processo no título ou na descrição) */
-export function eventoJaExiste(existentes: { id?: string; summary?: string; description?: string }[], numeroProcesso: string | null | undefined): { id: string } | null {
+/**
+ * O evento já existe no Google? (mesmo dia e mesmo número de processo no título ou na descrição)
+ * Serve só para não duplicar um prazo lançado antes direto no Google. Nunca vale: evento que já pertence a outro compromisso
+ * do PEDV (`ignorarIds`) nem evento de audiência/perícia — o prazo "protocolar contestação" cai no dia da audiência do mesmo
+ * processo e, sem essa regra, assumia o evento da audiência e o sobrescrevia ao ser editado.
+ */
+export function eventoJaExiste(existentes: { id?: string; summary?: string; description?: string }[], numeroProcesso: string | null | undefined, ignorarIds: readonly string[] = []): { id: string } | null {
   const dig = (numeroProcesso ?? '').replace(/\D/g, '')
   if (dig.length < 15) return null
-  const achado = existentes.find(e => `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
+  const achado = existentes.find(e =>
+    !(e.id && ignorarIds.includes(e.id)) &&
+    !/^\s*(audi[eê]ncia|per[ií]cia)/i.test(e.summary ?? '') &&
+    `${e.summary ?? ''} ${e.description ?? ''}`.replace(/\D/g, '').includes(dig))
   return achado?.id ? { id: achado.id } : null
 }

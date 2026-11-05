@@ -75,7 +75,12 @@ export async function enviarCompromissoAoGoogle(db: Db, cal: Calendario, itemId:
   let evento = base
   if (base.modo === 'prazo') {
     if (!item.google_event_id) {
-      const ja = eventoJaExiste(doDia, ctx.numero_processo)
+      // eventos do dia que já pertencem a OUTRO compromisso do PEDV (ex.: a audiência) nunca são "o mesmo prazo"
+      const ids = doDia.map(e => e.id).filter((x): x is string => !!x)
+      const { data: ocupadosPorOutros } = ids.length
+        ? await db.from('agenda_items').select('google_event_id').in('google_event_id', ids).neq('id', itemId)
+        : { data: [] }
+      const ja = eventoJaExiste(doDia, ctx.numero_processo, (ocupadosPorOutros ?? []).map((x: { google_event_id: string }) => x.google_event_id))
       if (ja) { // já está no Google: só vincula, não duplica
         await db.from('agenda_items').update({ google_event_id: ja.id, google_hash: hashAtual, google_synced_at: new Date().toISOString(), google_sync_erro: null }).eq('id', itemId)
         return { ok: true, acao: 'vinculado', eventoId: ja.id }

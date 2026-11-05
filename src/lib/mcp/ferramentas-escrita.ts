@@ -65,7 +65,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
     name: 'criar_compromisso',
     description: 'Cria um compromisso na agenda (tarefa, prazo, audiência ou evento), opcionalmente ligado a um processo. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: {
-      titulo: { type: 'string' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
+      titulo: { type: 'string', description: 'SÓ a descrição do ato (ex.: "Protocolar contestação e documentos"). NÃO repita tipo, cliente, partes nem nº do processo: ao ir para o Google Agenda o sistema já monta "TIPO - CLIENTE x PARTE - Nº - ato"' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
       data_inicio: { type: 'string', description: 'AAAA-MM-DD' }, hora_inicio: { type: 'string', description: 'HH:MM (opcional)' },
       prazo_final: { type: 'string', description: 'AAAA-MM-DD (para prazos; padrão = data_inicio)' },
       processo_id: { type: 'string', description: 'Id do processo (opcional)' },
@@ -180,7 +180,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
     name: 'atualizar_compromisso',
     description: 'Edita um compromisso da agenda (título, tipo, data, hora, prazo final, prioridade, responsável, descrição) e/ou o vincula a um processo. Duas etapas: sem confirmar=true mostra o antes e o depois.',
     inputSchema: { type: 'object', properties: {
-      id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, titulo: { type: 'string' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
+      id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, titulo: { type: 'string', description: 'SÓ a descrição do ato (ex.: "Protocolar contestação e documentos"). NÃO repita tipo, cliente, partes nem nº do processo: ao ir para o Google Agenda o sistema já monta "TIPO - CLIENTE x PARTE - Nº - ato"' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
       data_inicio: { type: 'string', description: 'AAAA-MM-DD' }, hora_inicio: { type: 'string', description: 'HH:MM' }, prazo_final: { type: 'string', description: 'AAAA-MM-DD' },
       prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] }, responsavel: { type: 'string' }, descricao: { type: 'string' },
       processo_id: { type: 'string', description: 'Vincula ao processo (id). O cliente do compromisso passa a ser o do processo.' }, confirmar: CONFIRMAR,

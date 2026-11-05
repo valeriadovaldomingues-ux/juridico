@@ -64,6 +64,9 @@ describe('duplicidade e hash', () => {
     expect(eventoJaExiste([{ id: 'g1', description: 'proc 00109764020265030004' }], '0010976-40.2026.5.03.0004')).toEqual({ id: 'g1' })
     expect(eventoJaExiste([{ id: 'g1', summary: 'outro' }], '0010976-40.2026.5.03.0004')).toBeNull()
     expect(eventoJaExiste([{ id: 'g1', summary: 'qualquer' }], null)).toBeNull()
+    // evento de audiência do mesmo processo não é o prazo; evento já ligado a outro compromisso também não
+    expect(eventoJaExiste([{ id: 'g1', summary: 'AUDIÊNCIA TRABALHISTA - A x B - 0010976-40.2026.5.03.0004 - UNA' }], '0010976-40.2026.5.03.0004')).toBeNull()
+    expect(eventoJaExiste([{ id: 'g1', summary: 'PRAZO - 0010976-40.2026.5.03.0004 - x' }], '0010976-40.2026.5.03.0004', ['g1'])).toBeNull()
   })
   it('hash muda quando o texto muda', () => {
     const a = { summary: 'A', description: 'd', dia: '2026-10-30', modo: 'prazo' as const }
