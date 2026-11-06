@@ -4,8 +4,8 @@ import { usuarioPodeMcp } from '@/lib/mcp/permitidos'
 import ConectarClaude from './ConectarClaude'
 
 export default async function ConectarClaudePage() {
-  const { userId } = await requireAuth()
-  if (!usuarioPodeMcp(userId)) redirect('/dashboard')
+  const { userId, profile } = await requireAuth()
+  if (!usuarioPodeMcp(userId, profile.role)) redirect('/dashboard')
   return (
     <div className="internal-page max-w-3xl space-y-5">
       <div>

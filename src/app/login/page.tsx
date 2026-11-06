@@ -10,6 +10,7 @@ import type { UserRole } from '@/types'
 import Logo from '@/components/ui/Logo'
 import { sanitizeAuthError } from '@/lib/auth/password-reset'
 import { usuarioLiberadoDoModoRestrito } from '@/lib/auth/acesso-por-usuario'
+import { destinoAposLogin } from '@/lib/auth/destino-pos-login'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -54,6 +55,8 @@ export default function LoginPage() {
       }
     }
 
+    // Vindo da autorização do conector do Claude: volta para ela em vez de ir ao painel.
+    redirect = destinoAposLogin(new URLSearchParams(window.location.search).get('next')) ?? redirect
     router.push(redirect)
     router.refresh()
   }
