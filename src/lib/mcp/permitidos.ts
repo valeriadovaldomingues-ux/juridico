@@ -6,6 +6,7 @@ export const MCP_PAPEIS_LIBERADOS = ['advogado', 'gerente'] as const
 export const MCP_USUARIOS_PERMITIDOS: readonly string[] = [
   'dd154172-ebb2-498a-af49-c56ada33792a', // Débora Brito
   '80be07bd-e23a-4ece-aa02-a7cde54bf6c7', // Tuane Miranda
+  'a7eccddf-443a-408d-be21-23a285093fca', // Valéria do Val (sócia; liberada em 05/11/2026)
 ]
 
 // Quem, dentre os liberados, também pode GRAVAR pelo conector (criar andamento, compromisso, cliente...): os mesmos papéis liberados
@@ -13,6 +14,7 @@ export const MCP_USUARIOS_PERMITIDOS: readonly string[] = [
 export const MCP_USUARIOS_ESCRITA: readonly string[] = [
   'dd154172-ebb2-498a-af49-c56ada33792a', // Débora Brito
   '80be07bd-e23a-4ece-aa02-a7cde54bf6c7', // Tuane Miranda
+  'a7eccddf-443a-408d-be21-23a285093fca', // Valéria do Val
 ]
 
 export const MCP_PAPEIS_PERMITIDOS = ['advogado', 'gerente', 'socio'] as const

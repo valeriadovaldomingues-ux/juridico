@@ -19,4 +19,9 @@ describe('liberação do conector', () => {
     expect(usuarioPodeMcp('dd154172-ebb2-498a-af49-c56ada33792a')).toBe(true)
     expect(usuarioPodeEscreverMcp('dd154172-ebb2-498a-af49-c56ada33792a')).toBe(true)
   })
+  it('libera a Valéria (sócia) pela lista, mas não o outro sócio', () => {
+    expect(usuarioPodeMcp('a7eccddf-443a-408d-be21-23a285093fca', 'socio')).toBe(true)
+    expect(usuarioPodeEscreverMcp('a7eccddf-443a-408d-be21-23a285093fca', 'socio')).toBe(true)
+    expect(usuarioPodeMcp('2027c26e-a4fa-4195-99b4-992550163024', 'socio')).toBe(false)
+  })
 })
