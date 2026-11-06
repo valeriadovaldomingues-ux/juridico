@@ -6,7 +6,7 @@ import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
 import { lerTempo } from '@/lib/horas/lancar'
 import { createAgendaTimeEntryPayload } from '@/lib/agenda-time-entries'
 
-// Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem está em MCP_USUARIOS_ESCRITA; (2) toda escrita é em duas
+// Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem pode gravar (advogados, gerentes e a lista MCP_USUARIOS_ESCRITA, ver permitidos.ts); (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
 // esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) só se apaga o que o próprio
 // conector criou pela mesma pessoa (excluir_compromisso) ou a ligação de uma parte com o processo (remover_parte_processo).

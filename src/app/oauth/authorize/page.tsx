@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { usuarioPodeMcp } from '@/lib/mcp/permitidos'
 import { validarPedidoAutorizacao } from '@/lib/mcp/oauth'
 import Logo from '@/components/ui/Logo'
@@ -36,7 +37,8 @@ export default async function AutorizarPage({ searchParams }: { searchParams: Pr
     const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, val]) => (typeof val === 'string' ? [[k, val] as [string, string]] : [])))
     redirect(`/login?next=${encodeURIComponent(`/oauth/authorize?${qs}`)}`)
   }
-  if (!usuarioPodeMcp(user.id)) {
+  const { data: perfil } = await createServiceClient().from('profiles').select('role, ativo').eq('id', user.id).maybeSingle()
+  if (!perfil?.ativo || !usuarioPodeMcp(user.id, perfil.role)) {
     return <Cartao><h1 className="font-brand text-[24px] text-[var(--color-ink)]">Acesso ainda não liberado</h1><p className="text-[13px] text-[var(--color-ink-3)] mt-2">Seu usuário ainda não foi liberado para o conector do Claude. Peça à Valéria para liberar.</p></Cartao>
   }
 

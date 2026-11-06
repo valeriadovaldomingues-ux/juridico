@@ -7,7 +7,7 @@ import { usuarioPodeMcp } from '@/lib/mcp/permitidos'
 export async function POST() {
   const auth = await apiGuard(['advogado', 'gerente', 'socio'])
   if (auth instanceof NextResponse) return auth
-  if (!usuarioPodeMcp(auth.userId)) return NextResponse.json({ error: 'Seu usuário ainda não foi liberado para o conector.' }, { status: 403 })
+  if (!usuarioPodeMcp(auth.userId, auth.role)) return NextResponse.json({ error: 'Seu usuário ainda não foi liberado para o conector.' }, { status: 403 })
   try {
     const { token, expiraEm } = gerarToken(auth.userId, { dias: 90 })
     console.info('[mcp] chave gerada', JSON.stringify({ usuario: auth.userId, expira_em: expiraEm.toISOString() }))

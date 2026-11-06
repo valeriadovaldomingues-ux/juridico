@@ -23,9 +23,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ redirect: urlRetorno(pedido.redirectUri, pedido.state, { error: 'access_denied' }) })
   }
 
-  if (!usuarioPodeMcp(user.id)) return NextResponse.json({ error: 'Seu usuário ainda não foi liberado para o conector.' }, { status: 403 })
   const db = createServiceClient()
   const { data: perfil } = await db.from('profiles').select('role, ativo').eq('id', user.id).maybeSingle()
+  if (!usuarioPodeMcp(user.id, perfil?.role)) return NextResponse.json({ error: 'Seu usuário ainda não foi liberado para o conector.' }, { status: 403 })
   if (!perfil?.ativo || !(MCP_PAPEIS_PERMITIDOS as readonly string[]).includes(perfil.role)) {
     return NextResponse.json({ error: 'Conta inativa ou sem permissão.' }, { status: 403 })
   }
