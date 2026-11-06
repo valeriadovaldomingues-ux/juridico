@@ -13,6 +13,7 @@ import {
 import type { AgendaTimeEntry, UserRole } from '@/types'
 import AgendaTimeEntriesSection from './components/AgendaTimeEntriesSection'
 import type { AgendaTimeEntryDraft } from '@/lib/agenda-time-entries'
+import { AUDIENCIA_MODALIDADES, AUDIENCIA_TIPOS, ehAudienciaOuPericia, erroProcessoDaAudiencia } from '@/lib/agenda/audiencia'
 
 interface Props {
   form: AgendaForm
@@ -77,6 +78,8 @@ export default function AgendaModal({
   const set = (patch: Partial<AgendaForm>) => setForm({ ...form, ...patch })
 
   const hasPrazo = TIPO_TEM_PRAZO.has(form.tipo)
+  const ehAudiencia = ehAudienciaOuPericia(form.tipo)
+  const erroProcesso = erroProcessoDaAudiencia(form.tipo, form.processo_id)
 
   const inputCls = [
     'w-full rounded-xl border border-[var(--color-border)] bg-white',
@@ -225,15 +228,39 @@ export default function AgendaModal({
           <div>
             <label className={labelCls}>Status</label>
             <select className={inputCls} value={form.status} onChange={e => set({ status: e.target.value as Status })}>
-              <option value="pendente">Pendente</option>
-              <option value="concluido">Concluído</option>
-              <option value="cancelado">Cancelado</option>
+              <option value="pendente">{ehAudiencia ? 'Aberta' : 'Pendente'}</option>
+              <option value="concluido">{ehAudiencia ? 'Realizada' : 'Concluído'}</option>
+              <option value="cancelado">{ehAudiencia ? 'Cancelada' : 'Cancelado'}</option>
             </select>
           </div>
 
+          {/* Campos próprios da audiência/perícia */}
+          {ehAudiencia && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Tipo da audiência</label>
+                <select className={inputCls} value={form.audiencia_tipo} onChange={e => set({ audiencia_tipo: e.target.value })}>
+                  <option value="">— Não informado —</option>
+                  {Object.entries(AUDIENCIA_TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Modalidade</label>
+                <select className={inputCls} value={form.audiencia_modalidade} onChange={e => set({ audiencia_modalidade: e.target.value })}>
+                  <option value="">— Não informada —</option>
+                  {Object.entries(AUDIENCIA_MODALIDADES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Link ou endereço</label>
+                <input className={inputCls} placeholder="Link da sala virtual (com ID) ou endereço da audiência" value={form.audiencia_local} onChange={e => set({ audiencia_local: e.target.value })} />
+              </div>
+            </div>
+          )}
+
           {/* Processo */}
           <div>
-            <label className={labelCls}>Processo</label>
+            <label className={labelCls}>Processo{ehAudiencia ? ' *' : ''}</label>
             <SearchableCombobox
               value={form.processo_id}
               selectedOption={processoSel?.value === form.processo_id ? processoSel : null}
@@ -246,6 +273,7 @@ export default function AgendaModal({
               noResultsText="Nenhum resultado encontrado."
               allowClear
             />
+            {erroProcesso && <p className="mt-1.5 text-[12px] text-red-600">{erroProcesso}</p>}
           </div>
 
           {/* Responsável (audiência: até 2, guardados juntos como "Nome 1 / Nome 2") */}
@@ -321,7 +349,7 @@ export default function AgendaModal({
           </button>
           <button
             onClick={onSave}
-            disabled={!form.titulo.trim() || !form.data_inicio || saving}
+            disabled={!form.titulo.trim() || !form.data_inicio || !!erroProcesso || saving}
             className="flex-1 py-2.5 rounded-xl bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
           >
             {saving ? 'Salvando…' : isEdit ? 'Salvar' : 'Criar'}

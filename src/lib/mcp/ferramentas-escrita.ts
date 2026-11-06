@@ -5,6 +5,7 @@ import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
 import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
 import { lerTempo } from '@/lib/horas/lancar'
 import { createAgendaTimeEntryPayload } from '@/lib/agenda-time-entries'
+import { AUDIENCIA_MODALIDADES, AUDIENCIA_TIPOS, erroProcessoDaAudiencia, normalizarCamposAudiencia } from '@/lib/agenda/audiencia'
 
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem pode gravar (advogados, gerentes e a lista MCP_USUARIOS_ESCRITA, ver permitidos.ts); (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
@@ -16,6 +17,20 @@ const dataOk = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.t
 const horaOk = (v: unknown) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null)
 const texto = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 const marca = (nome: string) => `[registrado via Claude por ${nome}]`
+
+/** Campos próprios da audiência vindos dos argumentos do conector (valor informado e inválido é erro, não é ignorado). */
+function camposDaAudiencia(args: Record<string, unknown>) {
+  const c = normalizarCamposAudiencia({ audiencia_tipo: args.tipo_audiencia, audiencia_modalidade: args.modalidade, audiencia_local: args.local_ou_link })
+  if (args.tipo_audiencia !== undefined && !c.audiencia_tipo) throw new Error(`tipo_audiencia inválido (${Object.keys(AUDIENCIA_TIPOS).join(', ')}).`)
+  if (args.modalidade !== undefined && !c.audiencia_modalidade) throw new Error(`modalidade inválida (${Object.keys(AUDIENCIA_MODALIDADES).join(', ')}).`)
+  return c
+}
+
+const PROPS_AUDIENCIA = {
+  tipo_audiencia: { type: 'string', enum: Object.keys(AUDIENCIA_TIPOS), description: 'Só audiência: inicial, una, instrucao, conciliacao ou outra' },
+  modalidade: { type: 'string', enum: Object.keys(AUDIENCIA_MODALIDADES), description: 'Só audiência: presencial, virtual ou hibrida' },
+  local_ou_link: { type: 'string', description: 'Só audiência: link da sala virtual (com ID) ou endereço. Não ponha isso na descrição' },
+}
 
 const AREAS = ['civil', 'trabalhista', 'criminal', 'tributario', 'previdenciario', 'administrativo', 'familia', 'empresarial', 'outro'] as const
 const TIPOS_AGENDA = ['tarefa', 'prazo', 'audiencia', 'evento'] as const
@@ -117,8 +132,9 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       titulo: { type: 'string', description: 'SÓ a descrição do ato (ex.: "Protocolar contestação e documentos"). NÃO repita tipo, cliente, partes nem nº do processo: ao ir para o Google Agenda o sistema já monta "TIPO - CLIENTE x PARTE - Nº - ato"' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
       data_inicio: { type: 'string', description: 'AAAA-MM-DD' }, hora_inicio: { type: 'string', description: 'HH:MM (opcional)' },
       prazo_final: { type: 'string', description: 'AAAA-MM-DD (para prazos; padrão = data_inicio)' },
-      processo_id: { type: 'string', description: 'Id do processo (opcional)' },
-      responsavel: { type: 'string', description: 'Nome (padrão: quem está pedindo). Para audiência, até 2 nomes separados por " / "' },
+      processo_id: { type: 'string', description: 'Id do processo (OBRIGATÓRIO para audiência; opcional nos demais)' },
+      responsavel: { type: 'string', description: 'Nome (padrão: quem está pedindo). Para audiência, até 2 nomes separados por " / " (o 2º é quem acompanha)' },
+      ...PROPS_AUDIENCIA,
       prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] }, descricao: { type: 'string' }, confirmar: CONFIRMAR,
     }, required: ['titulo', 'tipo', 'data_inicio'] },
     async executar(args, ctx) {
@@ -135,6 +151,9 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
         if (!data) throw new Error('Processo não encontrado.')
         processo = data
       }
+      const erroProcesso = erroProcessoDaAudiencia(tipo, processo?.id)
+      if (erroProcesso) throw new Error(`${erroProcesso} Informe processo_id (use buscar_processos).`)
+      const camposAud = tipo === 'audiencia' ? camposDaAudiencia(args) : {}
       const limite = tipo === 'audiencia' ? 2 : 1
       const responsavel = (texto(args.responsavel, 200) ?? ctx.nome).split(' / ').map(n => n.trim()).filter(Boolean).slice(0, limite).join(' / ')
       const prioridade = ['baixa', 'media', 'alta'].includes(String(args.prioridade)) ? String(args.prioridade) : 'media'
@@ -142,11 +161,12 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const resumo = {
         tipo, titulo, data_inicio: dataInicio, hora_inicio: hora, prazo_final: tipo === 'prazo' ? (dataOk(args.prazo_final) ?? dataInicio) : null,
         responsavel, prioridade, processo: processo ? `${processo.numero_processo ?? ''} ${processo.titulo ?? ''}`.trim() : null, descricao,
+        ...camposAud,
       }
       if (args.confirmar !== true) return previa(resumo)
       const { data: criado, error } = await ctx.db.from('agenda_items').insert({
         titulo, descricao, tipo, status: 'pendente', data_inicio: dataInicio, hora_inicio: hora, prazo_final: resumo.prazo_final,
-        prioridade, processo_id: processo?.id ?? null, cliente_id: processo?.cliente_id ?? null, responsavel,
+        prioridade, processo_id: processo?.id ?? null, cliente_id: processo?.cliente_id ?? null, responsavel, ...camposAud,
       }).select('id').single()
       if (error) throw new Error(error.message)
       sincronizarGoogleEmSegundoPlano()
@@ -232,7 +252,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, titulo: { type: 'string', description: 'SÓ a descrição do ato (ex.: "Protocolar contestação e documentos"). NÃO repita tipo, cliente, partes nem nº do processo: ao ir para o Google Agenda o sistema já monta "TIPO - CLIENTE x PARTE - Nº - ato"' }, tipo: { type: 'string', enum: [...TIPOS_AGENDA] },
       data_inicio: { type: 'string', description: 'AAAA-MM-DD' }, hora_inicio: { type: 'string', description: 'HH:MM' }, prazo_final: { type: 'string', description: 'AAAA-MM-DD' },
       prioridade: { type: 'string', enum: ['baixa', 'media', 'alta'] }, responsavel: { type: 'string' }, descricao: { type: 'string' },
-      processo_id: { type: 'string', description: 'Vincula ao processo (id). O cliente do compromisso passa a ser o do processo.' }, confirmar: CONFIRMAR,
+      processo_id: { type: 'string', description: 'Vincula ao processo (id). O cliente do compromisso passa a ser o do processo.' }, ...PROPS_AUDIENCIA, confirmar: CONFIRMAR,
     }, required: ['id'] },
     async executar(args, ctx) {
       const id = String(args.id ?? '')
@@ -254,11 +274,17 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
         if (!p) throw new Error('Processo não encontrado.')
         processo = p; novo.processo_id = p.id; novo.cliente_id = p.cliente_id
       }
+      const camposAud = camposDaAudiencia(args)
+      for (const [k, v] of Object.entries(camposAud)) if (v !== null) novo[k] = v
       if (Object.keys(novo).length === 0) throw new Error('Informe ao menos um campo para alterar.')
       const colunas = Object.keys(novo).filter(k => k !== 'cliente_id')
-      const { data: atual, error } = await ctx.db.from('agenda_items').select(['id', ...colunas].join(', ')).eq('id', id).maybeSingle()
+      const { data: atual, error } = await ctx.db.from('agenda_items').select(['id', 'tipo', 'processo_id', ...colunas].join(', ')).eq('id', id).maybeSingle()
       if (error) throw new Error(error.message)
       if (!atual) throw new Error('Compromisso não encontrado.')
+      // Audiência sempre ligada ao processo: se ficaria sem, a edição exige o vínculo (processo_id) na mesma chamada.
+      const aposEdicao = { tipo: (novo.tipo ?? (atual as Record<string, unknown>).tipo) as string, processo: (novo.processo_id ?? (atual as Record<string, unknown>).processo_id) as string | null }
+      const erroProcesso = erroProcessoDaAudiencia(aposEdicao.tipo, aposEdicao.processo)
+      if (erroProcesso) throw new Error(`${erroProcesso} Informe processo_id (use buscar_processos) junto com a alteração.`)
       const mudancas = Object.fromEntries(colunas.map(k => [k, { antes: (atual as Record<string, unknown>)[k] ?? null, depois: k === 'processo_id' && processo ? `${processo.numero_processo ?? ''} ${processo.titulo ?? ''}`.trim() : novo[k] }]))
       if (args.confirmar !== true) return previa({ compromisso_id: id, mudancas })
       const { error: e2 } = await ctx.db.from('agenda_items').update(novo).eq('id', id)

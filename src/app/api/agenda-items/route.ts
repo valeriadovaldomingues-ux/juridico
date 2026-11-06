@@ -3,6 +3,7 @@ import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { createClient } from '@/lib/supabase/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import type { UserRole } from '@/types'
+import { ehAudienciaOuPericia, erroProcessoDaAudiencia, normalizarCamposAudiencia } from '@/lib/agenda/audiencia'
 
 const ALLOWED: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
 
@@ -35,6 +36,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Data obrigatória' }, { status: 400 })
   }
 
+  const erroProcesso = erroProcessoDaAudiencia(tipo, processo_id)
+  if (erroProcesso) return NextResponse.json({ error: erroProcesso }, { status: 400 })
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
       processo_id:  processo_id  || null,
       cliente_id:   cliente_id   || null,
       responsavel:  responsavel  || null,
+      ...(ehAudienciaOuPericia(tipo) ? normalizarCamposAudiencia(body) : {}),
     })
     .select('id, titulo, tipo, data_inicio, hora_inicio, status')
     .single()

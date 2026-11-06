@@ -35,7 +35,7 @@ export const FERRAMENTAS: Ferramenta[] = [
       const de = dataOk(args.de) ?? hoje()
       const ate = dataOk(args.ate) ?? soma(de, 14)
       let q = ctx.db.from('agenda_items')
-        .select('id, titulo, tipo, status, data_inicio, hora_inicio, prazo_final, responsavel, descricao, processo:processos(id, numero_processo, titulo), cliente:clientes(nome)')
+        .select('id, titulo, tipo, status, data_inicio, hora_inicio, prazo_final, responsavel, descricao, audiencia_tipo, audiencia_modalidade, audiencia_local, processo:processos(id, numero_processo, titulo), cliente:clientes(nome)')
         .gte('data_inicio', de).lte('data_inicio', ate).neq('status', 'cancelado')
         .order('data_inicio').order('hora_inicio').limit(100)
       if (args.so_meus !== false) q = q.ilike('responsavel', `%${ctx.nome}%`)

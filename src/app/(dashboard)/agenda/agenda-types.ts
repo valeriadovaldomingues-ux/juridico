@@ -29,6 +29,9 @@ export interface AgendaItem {
   cliente_id?: string
   opposing_party_name?: string
   responsavel?: string
+  audiencia_tipo?: string | null
+  audiencia_modalidade?: string | null
+  audiencia_local?: string | null
   created_at: string
   processo?: { titulo: string } | null
   cliente?: { nome: string } | null
@@ -53,6 +56,9 @@ export interface AgendaForm {
   cliente_id: string
   parte_contraria: string
   responsavel: string
+  audiencia_tipo: string
+  audiencia_modalidade: string
+  audiencia_local: string
 }
 
 // ─── Visual config ────────────────────────────────────────────────────────────
@@ -172,6 +178,7 @@ export function emptyForm(defaults?: Partial<AgendaForm>): AgendaForm {
     data_inicio: toLocalISODate(new Date()), hora_inicio: '',
     data_fim: '', hora_fim: '', prazo_final: '',
     prioridade: 'media', processo_id: '', cliente_id: '', parte_contraria: '', responsavel: '',
+    audiencia_tipo: '', audiencia_modalidade: '', audiencia_local: '',
     ...defaults,
   }
 }
