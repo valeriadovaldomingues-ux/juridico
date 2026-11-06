@@ -46,25 +46,40 @@ export default function ConectarClaude() {
   return (
     <div className="space-y-5">
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-900">
-        Os dados de processo são sigilosos. A chave é pessoal: <strong>não a compartilhe</strong>. Ela vale por 90 dias e tudo o que for consultado ou gravado fica registrado.
+        Os dados de processo são sigilosos: use só para o trabalho do escritório. Tudo o que for consultado ou gravado fica registrado, e você pode cortar o acesso a qualquer momento na lista abaixo.
       </div>
 
-      <section className="space-y-2">
-        <h2 className="text-[14px] font-semibold text-[#0f1923]">1. Gerar a sua chave</h2>
-        <button onClick={gerar} disabled={gerando} className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl disabled:opacity-60">
-          {gerando ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} {token ? 'Gerar outra chave' : 'Gerar chave'}
-        </button>
-        {erro && <p className="text-[12px] text-red-600">{erro}</p>}
-        {token && <p className="text-[12px] text-[#6b7280]">Chave gerada (vale até {expira}). Ela só aparece agora: copie os comandos abaixo, que já a incluem.</p>}
+      <section className="space-y-3">
+        <h2 className="text-[14px] font-semibold text-[#0f1923]">Conectar no claude.ai (navegador, celular e tarefas na nuvem)</h2>
+        <Bloco titulo="Endereço do conector" texto={URL_MCP} />
+        <ol className="list-decimal pl-5 text-[12px] text-[#374151] space-y-1">
+          <li>No claude.ai, abra <strong>Configurações → Conectores → Adicionar conector personalizado</strong>, dê o nome <strong>PEDV</strong>, cole o endereço acima e clique em <strong>Adicionar</strong>.</li>
+          <li>Clique em <strong>Conectar</strong>, entre com o seu login do PEDV e clique em <strong>Autorizar</strong>.</li>
+        </ol>
+        <p className="text-[12px] text-[#6b7280]">Pronto, uma vez só: vale também no celular e não tem prazo (até você revogar). Teste perguntando: <em>&ldquo;quais são os meus prazos desta semana?&rdquo;</em> Precisa de plano Pro, Max, Team ou Enterprise (em Team/Enterprise, o dono da organização habilita os conectores antes).</p>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-[14px] font-semibold text-[#0f1923]">2. Ligar no seu Claude</h2>
-        <Bloco titulo="Claude Code (terminal) — uma linha" texto={claudeCode} />
-        <Bloco titulo="Claude Desktop (Windows ou Mac) — acrescente isto em Configurações → Desenvolvedor → Editar configuração (precisa do Node.js instalado)" texto={desktop} />
-        <p className="text-[12px] text-[#6b7280]">No Windows, o arquivo fica em <code>%APPDATA%\\Claude\\claude_desktop_config.json</code>. Se já houver outros conectores, acrescente só o bloco <code>&quot;pedv&quot;</code> dentro de <code>mcpServers</code>. Feche o Claude <strong>por completo</strong> (inclusive na bandeja ao lado do relógio) e abra de novo.</p>
-        <p className="text-[12px] text-[#6b7280]">Depois, reinicie o Claude. Teste perguntando: <em>&ldquo;quais são os meus prazos desta semana?&rdquo;</em></p>
-      </section>
+      <details className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-3">
+        <summary className="cursor-pointer text-[13px] font-semibold text-[#374151]">Avançado: chave pessoal para o Claude Desktop ou Claude Code (precisa de Node.js, vale 90 dias)</summary>
+        <div className="mt-3 space-y-5">
+          <section className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-[#0f1923]">1. Gerar a sua chave</h3>
+            <p className="text-[12px] text-[#6b7280]">A chave é pessoal: <strong>não a compartilhe</strong>.</p>
+            <button onClick={gerar} disabled={gerando} className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1D5F60] hover:bg-[#27777A] text-white text-[13px] font-semibold rounded-xl disabled:opacity-60">
+              {gerando ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} {token ? 'Gerar outra chave' : 'Gerar chave'}
+            </button>
+            {erro && <p className="text-[12px] text-red-600">{erro}</p>}
+            {token && <p className="text-[12px] text-[#6b7280]">Chave gerada (vale até {expira}). Ela só aparece agora: copie os comandos abaixo, que já a incluem.</p>}
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-[13px] font-semibold text-[#0f1923]">2. Ligar no seu Claude</h3>
+            <Bloco titulo="Claude Code (terminal) — uma linha" texto={claudeCode} />
+            <Bloco titulo="Claude Desktop (Windows ou Mac) — acrescente isto em Configurações → Desenvolvedor → Editar configuração (precisa do Node.js instalado)" texto={desktop} />
+            <p className="text-[12px] text-[#6b7280]">No Windows, o arquivo fica em <code>%APPDATA%\\Claude\\claude_desktop_config.json</code>. Se já houver outros conectores, acrescente só o bloco <code>&quot;pedv&quot;</code> dentro de <code>mcpServers</code>. Feche o Claude <strong>por completo</strong> (inclusive na bandeja ao lado do relógio) e abra de novo.</p>
+          </section>
+        </div>
+      </details>
 
       <section className="space-y-1">
         <h2 className="text-[14px] font-semibold text-[#0f1923]">O que ele consegue consultar</h2>
