@@ -133,7 +133,12 @@ export async function proxy(request: NextRequest) {
     // (CRON_SECRET) ou é inofensiva (keepalive). Antes eram redirecionadas ao /login.
     pathname.startsWith('/api/cron') ||
     // Conector MCP do PEDV: o Claude chama com chave pessoal (Bearer), sem sessão; a rota valida a chave.
-    pathname === '/api/mcp'
+    pathname === '/api/mcp' ||
+    // Login OAuth do conector (claude.ai): metadados, cadastro e tokens são chamados pelo Claude sem sessão; a tela de
+    // autorização e a aprovação verificam a sessão por conta própria (e levam ao /login com o caminho completo).
+    pathname.startsWith('/.well-known/oauth-') ||
+    pathname.startsWith('/api/oauth/') ||
+    pathname === '/oauth/authorize'
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))

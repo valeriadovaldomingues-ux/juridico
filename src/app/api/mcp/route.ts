@@ -1,27 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { validarToken } from '@/lib/mcp/token'
+import { desafioBearer, origemPublica, pareceTokenAcesso, validarTokenAcesso } from '@/lib/mcp/oauth'
+import { concessaoAtiva } from '@/lib/mcp/oauth-concessoes'
 import { MCP_PAPEIS_PERMITIDOS, usuarioPodeEscreverMcp, usuarioPodeMcp } from '@/lib/mcp/permitidos'
 import { responderMcp } from '@/lib/mcp/protocolo'
 
-// Conector MCP do PEDV (somente leitura). Autenticação por chave pessoal (Bearer) gerada em /conectar-claude.
-// Rota pública para o proxy (o Claude não tem sessão do navegador); toda chamada exige a chave e o usuário na lista.
+// Conector MCP do PEDV. Duas formas de entrar (Bearer): o token do login OAuth (claude.ai, celular, nuvem) ou a chave
+// pessoal gerada em /conectar-claude (Claude Desktop). Rota pública para o proxy (o Claude não tem sessão do navegador);
+// toda chamada exige credencial válida e o usuário na lista. Sem credencial, o 401 aponta para o login (RFC 9728).
 export const maxDuration = 60
 
-const naoAutorizado = (msg: string) =>
-  NextResponse.json({ error: msg }, { status: 401, headers: { 'WWW-Authenticate': 'Bearer realm="pedv"' } })
+const naoAutorizado = (req: Request, msg: string, erro?: string) =>
+  NextResponse.json({ error: msg }, { status: 401, headers: { 'WWW-Authenticate': desafioBearer(origemPublica(req), erro) } })
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get('authorization') ?? ''
   const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : ''
-  if (!token) return naoAutorizado('Chave ausente.')
+  if (!token) return naoAutorizado(req, 'Faça o login do conector.')
 
-  let validacao
-  try { validacao = validarToken(token) } catch { return NextResponse.json({ error: 'Conector não configurado.' }, { status: 503 }) }
-  if (!validacao.ok) return naoAutorizado(`Chave inválida (${validacao.motivo}). Gere uma nova em /conectar-claude.`)
+  let db: ReturnType<typeof createServiceClient>
+  try { db = createServiceClient() } catch { return NextResponse.json({ error: 'Conector não configurado.' }, { status: 503 }) }
+  let validacao: { ok: true; userId: string } | { ok: false; motivo: string }
+  try {
+    if (pareceTokenAcesso(token)) {
+      const t = validarTokenAcesso(token)
+      validacao = t.ok && await concessaoAtiva(db, t.concessaoId, t.userId) ? { ok: true, userId: t.userId } : { ok: false, motivo: t.ok ? 'revogada' : t.motivo }
+    } else {
+      validacao = validarToken(token)
+    }
+  } catch { return NextResponse.json({ error: 'Conector não configurado.' }, { status: 503 }) }
+  if (!validacao.ok) return naoAutorizado(req, `Acesso inválido (${validacao.motivo}). Reconecte o conector.`, 'invalid_token')
   if (!usuarioPodeMcp(validacao.userId)) return NextResponse.json({ error: 'Este usuário não está liberado para o conector.' }, { status: 403 })
 
-  const db = createServiceClient()
   const { data: perfil } = await db.from('profiles').select('nome, role, ativo').eq('id', validacao.userId).maybeSingle()
   if (!perfil?.ativo || !(MCP_PAPEIS_PERMITIDOS as readonly string[]).includes(perfil.role)) {
     return NextResponse.json({ error: 'Conta inativa ou sem permissão.' }, { status: 403 })
