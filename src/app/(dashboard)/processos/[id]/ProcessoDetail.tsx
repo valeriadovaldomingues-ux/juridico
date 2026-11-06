@@ -27,6 +27,7 @@ import {
   ANDAMENTO_TIPO_LABELS,
   ANDAMENTO_TIPOS,
   andamentoTipoPermitidoParaRole,
+  podeEditarAndamento,
   buildAndamentosAuroraContext,
   normalizeAndamentoOrigem,
   normalizeAndamentoTipo,
@@ -1621,6 +1622,9 @@ function AndamentosTab({
                       <span>Responsável: {andamento.responsavel?.nome ?? '—'}</span>
                       <span>Criado por: {andamento.criado_por_profile?.nome ?? '—'}</span>
                       <span>Criação: {formatDateTime(andamento.created_at)}</span>
+                      {new Date(andamento.updated_at).getTime() - new Date(andamento.created_at).getTime() > 60_000 && (
+                        <span>Editado em {formatDateTime(andamento.updated_at)}</span>
+                      )}
                     </div>
                   </div>
 
@@ -1634,7 +1638,7 @@ function AndamentosTab({
                     </button>
                   )}
 
-                  {role === 'socio' && (
+                  {podeEditarAndamento(role, andamento) && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => abrirEdicao(andamento)}
@@ -1643,13 +1647,15 @@ function AndamentosTab({
                       >
                         <Pencil size={14} />
                       </button>
-                      <button
-                        onClick={() => excluirAndamento(andamento.id)}
-                        className="rounded-lg p-2 text-[#6b7280] hover:bg-red-50 hover:text-red-600 transition-colors"
-                        title="Excluir andamento"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {role === 'socio' && (
+                        <button
+                          onClick={() => excluirAndamento(andamento.id)}
+                          className="rounded-lg p-2 text-[#6b7280] hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Excluir andamento"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
