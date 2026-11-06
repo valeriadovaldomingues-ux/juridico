@@ -12,6 +12,8 @@ import {
   toLocalISODate, emptyForm, getWeekStart, TIPO_OPCOES, TIPO_CFG,
 } from './agenda-types'
 import AgendaModal from './AgendaModal'
+import PautaAudienciasButton from './PautaAudienciasButton'
+import { ehAudienciaOuPericia, erroProcessoDaAudiencia, normalizarCamposAudiencia } from '@/lib/agenda/audiencia'
 import ListView  from './views/ListView'
 import DayView   from './views/DayView'
 import WeekView  from './views/WeekView'
@@ -154,12 +156,17 @@ export default function AgendaPage({
       cliente_id:  item.cliente_id ?? '',
       parte_contraria: item.opposing_party_name ?? '',
       responsavel: item.responsavel ?? '',
+      audiencia_tipo: item.audiencia_tipo ?? '',
+      audiencia_modalidade: item.audiencia_modalidade ?? '',
+      audiencia_local: item.audiencia_local ?? '',
     })
     setModalOpen(true)
   }
 
   async function handleSave() {
     if (!form.titulo.trim() || !form.data_inicio) return
+    const erroProcesso = erroProcessoDaAudiencia(form.tipo, form.processo_id)
+    if (erroProcesso) { setFeedback({ type: 'error', message: erroProcesso }); return }
     setSaving(true)
 
     const payload = {
@@ -177,6 +184,8 @@ export default function AgendaPage({
       cliente_id:  form.cliente_id  || null,
       opposing_party_name: form.parte_contraria || null,
       responsavel: form.responsavel || null,
+      // Só audiência/perícia carrega estes campos (assim salvar os outros tipos não depende deles).
+      ...(ehAudienciaOuPericia(form.tipo) ? normalizarCamposAudiencia(form) : {}),
     }
 
     if (editId) {
@@ -320,6 +329,7 @@ export default function AgendaPage({
       cliente_id:  original.cliente_id   ?? null,
       opposing_party_name: original.opposing_party_name ?? null,
       responsavel: original.responsavel  ?? null,
+      ...(ehAudienciaOuPericia(original.tipo) ? normalizarCamposAudiencia(original) : {}),
     }
 
     setModalOpen(false)
@@ -422,6 +432,8 @@ export default function AgendaPage({
                 </button>
               ))}
             </div>
+
+            <PautaAudienciasButton />
 
             <Link
               href="/agenda/importar"
