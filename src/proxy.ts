@@ -138,7 +138,9 @@ export async function proxy(request: NextRequest) {
     // autorização e a aprovação verificam a sessão por conta própria (e levam ao /login com o caminho completo).
     pathname.startsWith('/.well-known/oauth-') ||
     pathname.startsWith('/api/oauth/') ||
-    pathname === '/oauth/authorize'
+    pathname === '/oauth/authorize' ||
+    // Entrada dos cartões da coleta do DJEN (VPS): autenticada por segredo próprio na rota.
+    pathname === '/api/ingest/planilha-diaria'
 
   const isInternalPath = INTERNAL_PREFIXES.some(p => pathname.startsWith(p))
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
