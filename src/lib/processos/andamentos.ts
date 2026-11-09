@@ -95,11 +95,11 @@ export function buildAndamentosAuroraContext(andamentos: ProcessoAndamento[]) {
 }
 
 /**
- * Quem pode EDITAR um andamento: sócio e advogado, qualquer um; estagiário só observações (e sem mudar o tipo),
+ * Quem pode EDITAR um andamento: sócio, advogado e gerente, qualquer um; estagiário só observações (e sem mudar o tipo),
  * a mesma regra de quem pode criar. Excluir continua só do sócio.
  */
 export function podeEditarAndamento(role: UserRole, andamento: { tipo: string }, novoTipo?: string) {
-  if (role === 'socio' || role === 'advogado') return true
+  if (role === 'socio' || role === 'advogado' || role === 'gerente') return true
   if (role === 'estagiario') return andamento.tipo === 'observacao' && (novoTipo === undefined || novoTipo === 'observacao')
   return false
 }
