@@ -1,6 +1,7 @@
-// Quem pode ligar o próprio Claude ao PEDV: todos os ADVOGADOS e GERENTES ativos (liberado pela Valéria em 05/11/2026,
-// depois de começar só com a Débora e a Tuane) e, individualmente, quem estiver nas listas abaixo (ex.: um sócio).
-export const MCP_PAPEIS_LIBERADOS = ['advogado', 'gerente'] as const
+// Quem pode ligar o próprio Claude ao PEDV: todos os ADVOGADOS, GERENTES e ESTAGIÁRIOS ativos (advogados e gerentes liberados pela
+// Valéria em 05/11/2026, depois de começar só com a Débora e a Tuane; estagiários em 09/11/2026) e, individualmente, quem estiver
+// nas listas abaixo (ex.: um sócio).
+export const MCP_PAPEIS_LIBERADOS = ['advogado', 'gerente', 'estagiario'] as const
 
 // Pessoas liberadas à parte, além dos papéis acima. Acrescente o id do usuário para liberar mais alguém (só advogado/gerente/sócio entram).
 export const MCP_USUARIOS_PERMITIDOS: readonly string[] = [
@@ -17,11 +18,11 @@ export const MCP_USUARIOS_ESCRITA: readonly string[] = [
   'a7eccddf-443a-408d-be21-23a285093fca', // Valéria do Val
 ]
 
-export const MCP_PAPEIS_PERMITIDOS = ['advogado', 'gerente', 'socio'] as const
+export const MCP_PAPEIS_PERMITIDOS = ['advogado', 'gerente', 'estagiario', 'socio'] as const
 
 const papelLiberado = (role: string | null | undefined) => !!role && (MCP_PAPEIS_LIBERADOS as readonly string[]).includes(role)
 
-/** Pode usar o conector? `role` é o papel da pessoa no PEDV (todos os advogados e gerentes entram; os demais só se estiverem na lista). */
+/** Pode usar o conector? `role` é o papel da pessoa no PEDV (todos os advogados, gerentes e estagiários entram; os demais só se estiverem na lista). */
 export function usuarioPodeMcp(userId: string | null | undefined, role?: string | null): boolean {
   return !!userId && (MCP_USUARIOS_PERMITIDOS.includes(userId) || papelLiberado(role))
 }
