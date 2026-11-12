@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
-// OAuth 2.1 do conector MCP do PEDV (para o claude.ai, o celular e as tarefas na nuvem). O Claude se cadastra sozinho
+// OAuth 2.1 do conector MCP do PEDV (para o claude.ai, o celular, as tarefas na nuvem e o ChatGPT). O aplicativo se cadastra sozinho
 // (DCR), a pessoa entra com o login do PEDV na tela de autorização e o Claude recebe um token curto + um token de
 // renovação. Os "clientes" e os tokens de acesso são assinados (HMAC), sem tabela; o que fica no banco são só as
 // concessões (mcp_oauth_concessoes), para poder revogar por pessoa. As funções aqui são puras (sem banco).
@@ -36,15 +36,21 @@ function conferir(payload: string, sig: string, env: Env): boolean {
 }
 
 // ── Redirecionamentos aceitos ────────────────────────────────────────────────
-// Só o Claude (claude.ai/claude.com) e o Claude Desktop/Code (loopback) podem receber o código de autorização.
+// Só quem a Valéria liberou pode receber o código de autorização: o Claude (claude.ai/claude.com), o Claude Desktop/Code
+// (loopback) e, desde 12/11/2026, o ChatGPT (chatgpt.com, só os dois caminhos de retorno de conectores da OpenAI).
 const HOSTS_CLAUDE = ['claude.ai', 'claude.com']
+const CHATGPT_RETORNO_FIXO = '/connector_platform_oauth_redirect'
+const CHATGPT_RETORNO_POR_ID = /^\/connector\/oauth\/[A-Za-z0-9_-]{1,100}$/
 
 export function redirectUriValido(uri: unknown): uri is string {
   if (typeof uri !== 'string' || uri.length > 500) return false
   let u: URL
   try { u = new URL(uri) } catch { return false }
   if (u.hash || u.username || u.password) return false
-  if (u.protocol === 'https:') return HOSTS_CLAUDE.includes(u.hostname)
+  if (u.protocol === 'https:') {
+    if (HOSTS_CLAUDE.includes(u.hostname)) return true
+    return u.hostname === 'chatgpt.com' && !u.search && (u.pathname === CHATGPT_RETORNO_FIXO || CHATGPT_RETORNO_POR_ID.test(u.pathname))
+  }
   if (u.protocol === 'http:') return u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]'
   return false
 }
@@ -146,7 +152,7 @@ export function validarPedidoAutorizacao(p: { client_id?: unknown; redirect_uri?
   const cliente = lerClientId(p.client_id, env)
   if (!cliente) return { ok: false, erro: 'Cliente desconhecido. Volte ao Claude e refaça a conexão do conector.' }
   const redirectUri = String(p.redirect_uri ?? '')
-  if (!cliente.redirectUris.includes(redirectUri)) return { ok: false, erro: 'Endereço de retorno não confere com o cadastro do Claude.' }
+  if (!cliente.redirectUris.includes(redirectUri)) return { ok: false, erro: 'Endereço de retorno não confere com o cadastro do aplicativo.' }
   if (p.response_type !== undefined && p.response_type !== 'code') return { ok: false, erro: 'Tipo de resposta não suportado.' }
   const desafio = String(p.code_challenge ?? '')
   if (!/^[A-Za-z0-9_-]{43}$/.test(desafio) || (p.code_challenge_method !== undefined && p.code_challenge_method !== 'S256')) {

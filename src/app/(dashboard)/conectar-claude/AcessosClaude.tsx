@@ -39,8 +39,8 @@ export default function AcessosClaude({ iniciais, todos }: { iniciais: Acesso[];
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[14px] font-semibold text-[#0f1923]">{todos ? 'Acessos do Claude ao PEDV (todos)' : 'Seus acessos do Claude ao PEDV'}</h2>
-      <p className="text-[12px] text-[#6b7280]">Cada linha é um Claude conectado pelo login (navegador, celular ou tarefas na nuvem). Revogar corta o acesso na hora; a pessoa pode conectar de novo quando quiser. As chaves antigas do Claude Desktop não aparecem aqui.</p>
+      <h2 className="text-[14px] font-semibold text-[#0f1923]">{todos ? 'Acessos de IA ao PEDV (todos)' : 'Seus acessos de IA ao PEDV'}</h2>
+      <p className="text-[12px] text-[#6b7280]">Cada linha é um aplicativo de IA (Claude ou ChatGPT) conectado pelo login (navegador, celular ou nuvem). Revogar corta o acesso na hora; a pessoa pode conectar de novo quando quiser. As chaves antigas do Claude Desktop não aparecem aqui.</p>
       {erro && <p className="text-[12px] text-red-600">{erro}</p>}
       {acessos.length === 0 && <p className="text-[12px] text-[#6b7280]">Nenhum acesso ativo.</p>}
       {acessos.length > 0 && (
