@@ -19,7 +19,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ andamentoId: string }> },
 ) {
-  const auth = await apiGuard(['socio', 'advogado', 'estagiario'])
+  const auth = await apiGuard(['socio', 'advogado', 'gerente', 'estagiario'])
   if (auth instanceof NextResponse) return auth
 
   const { andamentoId } = await params
