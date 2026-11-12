@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { usuarioPodeEscreverMcp, usuarioPodeMcp } from './permitidos'
 
 describe('liberação do conector', () => {
-  it('libera todo advogado e gerente, para consultar e para gravar', () => {
-    for (const role of ['advogado', 'gerente']) {
+  it('libera todo advogado, gerente e estagiário, para consultar e para gravar', () => {
+    for (const role of ['advogado', 'gerente', 'estagiario']) {
       expect(usuarioPodeMcp('qualquer-id', role)).toBe(true)
       expect(usuarioPodeEscreverMcp('qualquer-id', role)).toBe(true)
     }
   })
   it('não libera os outros papéis, nem sem papel', () => {
-    for (const role of ['estagiario', 'administrativo', 'comercial', 'cliente', 'socio', undefined, null]) {
+    for (const role of ['administrativo', 'comercial', 'cliente', 'socio', undefined, null]) {
       expect(usuarioPodeMcp('qualquer-id', role)).toBe(false)
       expect(usuarioPodeEscreverMcp('qualquer-id', role)).toBe(false)
     }
