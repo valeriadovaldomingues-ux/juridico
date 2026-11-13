@@ -137,16 +137,20 @@ describe('colunas vazias do Trello', () => {
 })
 
 describe('compararTarefas (ordem das colunas)', () => {
-  const ids = (ts: KanbanTask[]) => ts.slice().sort(compararTarefas).map(t => t.id)
+  const HOJE = '2026-11-12'
+  const ids = (ts: KanbanTask[]) => ts.slice().sort((x, y) => compararTarefas(x, y, HOJE)).map(t => t.id)
 
-  it('vencimento mais antigo primeiro (vencidas no topo); sem data no fim', () => {
+  it('vencidas no topo (a mais recente primeiro), depois hoje e os próximos dias em ordem; sem data no fim', () => {
     const ts = [
       tarefa({ id: 'sem-data' }),
       tarefa({ id: 'dez', data: '2026-12-10' }),
-      tarefa({ id: 'vencida', data: '2026-10-21' }),
-      tarefa({ id: 'nov', data: '2026-11-11' }),
+      tarefa({ id: 'venceu-2019', data: '2019-03-01' }),
+      tarefa({ id: 'venceu-ontem', data: '2026-11-11' }),
+      tarefa({ id: 'hoje', data: '2026-11-12' }),
+      tarefa({ id: 'amanha', data: '2026-11-13' }),
+      tarefa({ id: 'venceu-outubro', data: '2026-10-21' }),
     ]
-    expect(ids(ts)).toEqual(['vencida', 'nov', 'dez', 'sem-data'])
+    expect(ids(ts)).toEqual(['venceu-ontem', 'venceu-outubro', 'venceu-2019', 'hoje', 'amanha', 'dez', 'sem-data'])
   })
 
   it('mesma data: prioridade urgente → baixa; depois a ordem manual', () => {
@@ -171,7 +175,7 @@ describe('compararTarefas (ordem das colunas)', () => {
   })
 
   it('vale nas colunas de pessoa, de lista, sem responsável e no quadro pessoal', () => {
-    const tarde = { data: '2026-12-01' }, cedo = { data: '2026-11-01' }
+    const tarde = { data: '2099-12-01' }, cedo = { data: '2099-11-01' }
     const pessoa = getOfficeColumns([tarefa({ id: 't', responsavel_id: 'u1', ...tarde }), tarefa({ id: 'c', responsavel_id: 'u1', ...cedo })],
       [{ id: 'u1', nome: 'Ana' } as never])
     expect(pessoa[0].tasks.map(t => t.id)).toEqual(['c', 't'])

@@ -75,11 +75,18 @@ export function getPersonalColumns(
 
 const PESO_PRIORIDADE: Record<KanbanPrioridade, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 }
 
+/** Data de hoje (AAAA-MM-DD) no horário de Brasília, para decidir o que já venceu. */
+export function hojeEmBrasilia(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora)
+}
+
 /**
- * Ordem das tarefas dentro de uma coluna: concluídas por último; depois vencimento mais antigo primeiro (as vencidas
- * ficam no topo) e, sem data, no fim; empate por prioridade (urgente → baixa); por fim a ordem manual (`ordem`).
+ * Ordem das tarefas dentro de uma coluna, do mais urgente para o menos urgente:
+ * 1) concluídas por último; 2) vencidas no topo, a que venceu há menos tempo primeiro (a de 2019 fica por último das vencidas);
+ * 3) depois hoje, amanhã e os próximos dias, em ordem cronológica; 4) sem data no fim.
+ * Empate de data: prioridade (urgente → baixa) e, por fim, a ordem manual (`ordem`).
  */
-export function compararTarefas(a: KanbanTask, b: KanbanTask): number {
+export function compararTarefas(a: KanbanTask, b: KanbanTask, hoje: string = hojeEmBrasilia()): number {
   const fimA = a.status === 'concluido' ? 1 : 0
   const fimB = b.status === 'concluido' ? 1 : 0
   if (fimA !== fimB) return fimA - fimB
@@ -88,7 +95,10 @@ export function compararTarefas(a: KanbanTask, b: KanbanTask): number {
   if (dataA !== dataB) {
     if (!dataA) return 1
     if (!dataB) return -1
-    return dataA < dataB ? -1 : 1
+    const vencidaA = dataA < hoje, vencidaB = dataB < hoje
+    if (vencidaA !== vencidaB) return vencidaA ? -1 : 1
+    if (vencidaA) return dataA > dataB ? -1 : 1 // vencidas: a mais recente primeiro
+    return dataA < dataB ? -1 : 1               // de hoje em diante: a mais próxima primeiro
   }
   const prio = PESO_PRIORIDADE[a.prioridade] - PESO_PRIORIDADE[b.prioridade]
   if (prio) return prio
