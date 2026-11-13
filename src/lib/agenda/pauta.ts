@@ -157,7 +157,7 @@ export async function gerarPautaPdf(itens: ItemPauta[], de: string, ate: string,
     campo('Vara/Comarca', it.comarcaVara)
     campo('Cliente', it.cliente)
     campo('Parte contrária', it.parteContraria)
-    campo('Responsáveis', it.responsaveis.length ? it.responsaveis.join(' e ') : null)
+    campo('Responsáveis', it.responsaveis.length ? it.responsaveis.join(' e ') : 'a designar: ______________________________')
     if (it.localOuLink) campo('Local/Link', it.localOuLink)
     if (it.descricao?.trim()) {
       const d = compativel(it.descricao.replace(/\s+/g, ' ').trim())
