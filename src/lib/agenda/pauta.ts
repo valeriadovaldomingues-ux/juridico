@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb, type PDFPage } from 'pdf-lib'
+import { PDFDocument, rgb, type PDFPage } from 'pdf-lib'
+import { embedCarlito, TAM_TEXTO } from '@/lib/pdf/fonte'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { wrapText, getLogoBytes } from '@/lib/documentos-pecas/pdf'
 import {
@@ -87,8 +88,8 @@ const MARGEM_TOPO = 3685 / 20
 const MARGEM_BASE = 2041 / 20
 const MARGEM_LADO = 72
 const LARGURA_TEXTO = LARGURA - 2 * MARGEM_LADO
-const TAM = 9
-const ENTRE = 11.5
+const TAM = TAM_TEXTO
+const ENTRE = 15
 const LIMITE_DESCRICAO = 420
 
 /** A fonte padrão do PDF só entende Latin-1 e algumas pontuações; o resto vira espaço em vez de derrubar o arquivo. */
@@ -101,8 +102,7 @@ const diaSemana = (iso: string) =>
 
 export async function gerarPautaPdf(itens: ItemPauta[], de: string, ate: string, agora = new Date()): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
-  const fonte = await pdf.embedFont(StandardFonts.TimesRoman)
-  const negrito = await pdf.embedFont(StandardFonts.TimesRomanBold)
+  const { regular: fonte, negrito } = await embedCarlito(pdf)
   const fundo = await pdf.embedPng(await getLogoBytes())
 
   let pagina!: PDFPage
@@ -116,7 +116,7 @@ export async function gerarPautaPdf(itens: ItemPauta[], de: string, ate: string,
   const garantir = (altura: number) => { if (y - altura < MARGEM_BASE + 20) novaPagina() }
   function linha(t: string, opts: { negrito?: boolean; tam?: number; x?: number } = {}) {
     pagina.drawText(compativel(t), { x: opts.x ?? MARGEM_LADO, y, size: opts.tam ?? TAM, font: opts.negrito ? negrito : fonte, color: rgb(0, 0, 0) })
-    y -= ENTRE + ((opts.tam ?? TAM) > TAM ? 3 : 0)
+    y -= ENTRE + ((opts.tam ?? TAM) > TAM ? 4 : 0)
   }
   function campo(rotulo: string, valor: string | null, quebrar = true) {
     const texto = compativel(`${rotulo}: ${valor ?? '—'}`)
@@ -127,25 +127,25 @@ export async function gerarPautaPdf(itens: ItemPauta[], de: string, ate: string,
 
   novaPagina()
   const titulo = 'PAUTA DE AUDIÊNCIAS'
-  linha(titulo, { negrito: true, tam: 14, x: (LARGURA - negrito.widthOfTextAtSize(titulo, 14)) / 2 })
+  linha(titulo, { negrito: true, tam: 16, x: (LARGURA - negrito.widthOfTextAtSize(titulo, 16)) / 2 })
   y -= 4
-  linha(`Período: ${brData(de)} a ${brData(ate)}`, { tam: 11 })
-  linha(`${itens.length} ${itens.length === 1 ? 'audiência' : 'audiências'} no período`, { tam: 10 })
+  linha(`Período: ${brData(de)} a ${brData(ate)}`)
+  linha(`${itens.length} ${itens.length === 1 ? 'audiência' : 'audiências'} no período`)
   y -= 8
 
   if (itens.length === 0) {
-    linha('Nenhuma audiência ou perícia no período.', { tam: 11 })
+    linha('Nenhuma audiência ou perícia no período.')
     return pdf.save()
   }
 
   let diaAtual = ''
   for (const it of itens) {
-    garantir(ENTRE * 9)
+    garantir(ENTRE * 10)
     if (it.data !== diaAtual) {
       diaAtual = it.data
       y -= 4
-      linha(`${diaSemana(it.data)}, ${brData(it.data)}`, { negrito: true, tam: 11 })
-      pagina.drawLine({ start: { x: MARGEM_LADO, y: y + 8 }, end: { x: LARGURA - MARGEM_LADO, y: y + 8 }, thickness: 0.6, color: rgb(0.35, 0.35, 0.35) })
+      linha(`${diaSemana(it.data)}, ${brData(it.data)}`, { negrito: true, tam: 13 })
+      pagina.drawLine({ start: { x: MARGEM_LADO, y: y + 10 }, end: { x: LARGURA - MARGEM_LADO, y: y + 10 }, thickness: 0.6, color: rgb(0.35, 0.35, 0.35) })
       y -= 2
     }
 
@@ -168,6 +168,6 @@ export async function gerarPautaPdf(itens: ItemPauta[], de: string, ate: string,
 
   garantir(ENTRE * 2)
   y -= 4
-  linha(`Emitido em ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(agora)}`, { tam: 8 })
+  linha(`Emitido em ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(agora)}`)
   return pdf.save()
 }

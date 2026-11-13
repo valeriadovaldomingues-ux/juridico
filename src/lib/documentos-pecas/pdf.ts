@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
+import { embedCarlito } from '@/lib/pdf/fonte'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -59,8 +60,7 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
   const { titulo, tituloEspacado = true, paragrafos, localData, assinantes, testemunhas = false } = params
 
   const pdf = await PDFDocument.create()
-  const font     = await pdf.embedFont(StandardFonts.TimesRoman)
-  const fontBold = await pdf.embedFont(StandardFonts.TimesRomanBold)
+  const { regular: font, negrito: fontBold } = await embedCarlito(pdf)
   const logoImg  = await pdf.embedPng(await getLogoBytes())
 
   let page: PDFPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
@@ -134,7 +134,7 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
     const nomeUpper = a.nome.toUpperCase()
     desenharLinha(nomeUpper, { x: (PAGE_WIDTH - font.widthOfTextAtSize(nomeUpper, 12)) / 2 })
     if (a.linha2) {
-      desenharLinha(a.linha2, { size: 11, x: (PAGE_WIDTH - font.widthOfTextAtSize(a.linha2, 11)) / 2 })
+      desenharLinha(a.linha2, { size: 12, x: (PAGE_WIDTH - font.widthOfTextAtSize(a.linha2, 12)) / 2 })
     }
   } else {
     // duas assinaturas lado a lado (petição/contrato)
@@ -146,8 +146,8 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
     assinantes.forEach((a, i) => {
       const xCol = MARGIN_SIDE + i * colWidth
       page.drawText(linha, { x: xCol, y: yAssin, size: 12, font })
-      page.drawText(a.nome, { x: xCol, y: yAssin - LINE_HEIGHT, size: 11, font })
-      if (a.linha2) page.drawText(a.linha2, { x: xCol, y: yAssin - LINE_HEIGHT * 2, size: 10, font })
+      page.drawText(a.nome, { x: xCol, y: yAssin - LINE_HEIGHT, size: 12, font })
+      if (a.linha2) page.drawText(a.linha2, { x: xCol, y: yAssin - LINE_HEIGHT * 2, size: 12, font })
     })
     y = yAssin - LINE_HEIGHT * 2.5
 
@@ -157,7 +157,7 @@ export async function gerarPecaPdfBytes(params: PecaPdfParams): Promise<Uint8Arr
       ;['TESTEMUNHA', 'TESTEMUNHA'].forEach((label, i) => {
         const xCol = MARGIN_SIDE + i * colWidth
         page.drawText(linha, { x: xCol, y: yTest, size: 12, font })
-        page.drawText(label, { x: xCol, y: yTest - LINE_HEIGHT, size: 11, font })
+        page.drawText(label, { x: xCol, y: yTest - LINE_HEIGHT, size: 12, font })
       })
       y = yTest - LINE_HEIGHT * 1.5
     }
