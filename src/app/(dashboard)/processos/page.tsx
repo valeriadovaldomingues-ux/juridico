@@ -57,6 +57,13 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
             {buscaLimitada && <span className="text-amber-700"> · mostrando os 300 primeiros — refine a busca</span>}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href="/processos/relatorio-sintetico"
+          className="flex items-center gap-2 px-4 py-3 border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)] text-[var(--color-ink-2)] text-[13px] font-semibold rounded-xl transition-colors"
+        >
+          Relatório por pessoa
+        </Link>
         <Link
           href="/processos/novo"
           className="flex items-center gap-2 px-4 py-3 bg-[var(--color-sidebar)] hover:bg-[var(--color-petrol)] text-white text-[13px] font-semibold rounded-xl transition-colors shadow-sm"
@@ -64,6 +71,7 @@ export default async function ProcessosPage({ searchParams }: { searchParams: Pr
           <Plus size={15} />
           Novo Processo
         </Link>
+        </div>
         </div>
       </div>
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_rgba(13,34,53,0.05)] overflow-hidden">
