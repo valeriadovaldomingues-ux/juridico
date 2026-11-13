@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { FileText } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { FileText, X } from 'lucide-react'
 
 const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
@@ -17,43 +18,59 @@ function semanaPadrao(hoje = new Date()) {
 }
 
 // Pauta de audiências por período em PDF (só audiências e perícias).
+// O painel abre numa janela por cima da página (portal em document.body): o cabeçalho da Agenda tem overflow-hidden e cortava
+// o painel antigo, deixando só o título visível (sem campos de data nem botão).
 export default function PautaAudienciasButton() {
   const [aberto, setAberto] = useState(false)
   const [{ de, ate }, setPeriodo] = useState(semanaPadrao)
   const invalido = !de || !ate || ate < de
-  const inputCls = 'rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[12px] text-[var(--color-ink)]'
+  const inputCls = 'rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-2 text-[14px] text-[var(--color-ink)]'
+
+  useEffect(() => {
+    if (!aberto) return
+    const fechar = (e: KeyboardEvent) => { if (e.key === 'Escape') setAberto(false) }
+    window.addEventListener('keydown', fechar)
+    return () => window.removeEventListener('keydown', fechar)
+  }, [aberto])
 
   return (
-    <div className="relative">
+    <>
       <button
-        onClick={() => setAberto(v => !v)}
+        onClick={() => setAberto(true)}
         className="flex items-center gap-2 px-4 py-2 bg-white border border-[var(--color-border)] hover:border-[var(--color-copper)] text-[13px] font-medium text-[var(--color-ink-2)] rounded-xl transition-colors"
       >
         <FileText size={14} /> Pauta (PDF)
       </button>
-      {aberto && (
-        <div className="absolute right-0 top-full mt-2 z-30 w-72 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl space-y-3">
-          <p className="text-[12px] font-semibold text-[var(--color-ink)]">Pauta de audiências</p>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-[11px] text-[var(--color-ink-3)]">De
-              <input type="date" className={`${inputCls} w-full mt-1`} value={de} onChange={e => setPeriodo(p => ({ ...p, de: e.target.value }))} />
-            </label>
-            <label className="text-[11px] text-[var(--color-ink-3)]">Até
-              <input type="date" className={`${inputCls} w-full mt-1`} value={ate} onChange={e => setPeriodo(p => ({ ...p, ate: e.target.value }))} />
-            </label>
+      {aberto && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={() => setAberto(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Pauta de audiências" onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between">
+              <p className="text-[15px] font-semibold text-[var(--color-ink)]">Pauta de audiências</p>
+              <button onClick={() => setAberto(false)} aria-label="Fechar" className="text-[var(--color-ink-3)] hover:text-[var(--color-ink)]"><X size={16} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-[12px] text-[var(--color-ink-3)]">De
+                <input type="date" className={`${inputCls} w-full mt-1`} value={de} onChange={e => setPeriodo(p => ({ ...p, de: e.target.value }))} />
+              </label>
+              <label className="text-[12px] text-[var(--color-ink-3)]">Até
+                <input type="date" className={`${inputCls} w-full mt-1`} value={ate} onChange={e => setPeriodo(p => ({ ...p, ate: e.target.value }))} />
+              </label>
+            </div>
+            {invalido && <p className="text-[12px] text-red-600">A data final precisa ser igual ou depois da inicial.</p>}
+            <a
+              href={invalido ? undefined : `/api/agenda/pauta-audiencias?de=${de}&ate=${ate}`}
+              aria-disabled={invalido}
+              onClick={() => !invalido && setAberto(false)}
+              className={`block text-center rounded-lg bg-[var(--color-sidebar)] px-3 py-2.5 text-[13px] font-semibold text-white ${invalido ? 'opacity-40 pointer-events-none' : 'hover:bg-[var(--color-petrol)]'}`}
+            >
+              Gerar PDF
+            </a>
+            <p className="text-[12px] text-[var(--color-ink-3)]">Só audiências e perícias do período, com processo, cliente, parte contrária, vara, responsáveis, status e descrição.</p>
           </div>
-          {invalido && <p className="text-[11px] text-red-600">A data final precisa ser igual ou depois da inicial.</p>}
-          <a
-            href={invalido ? undefined : `/api/agenda/pauta-audiencias?de=${de}&ate=${ate}`}
-            aria-disabled={invalido}
-            onClick={() => !invalido && setAberto(false)}
-            className={`block text-center rounded-lg bg-[var(--color-sidebar)] px-3 py-2 text-[12px] font-semibold text-white ${invalido ? 'opacity-40 pointer-events-none' : 'hover:bg-[var(--color-petrol)]'}`}
-          >
-            Gerar PDF
-          </a>
-          <p className="text-[11px] text-[var(--color-ink-3)]">Só audiências e perícias do período, com processo, cliente, parte contrária, vara, responsáveis, status e descrição.</p>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   )
 }
