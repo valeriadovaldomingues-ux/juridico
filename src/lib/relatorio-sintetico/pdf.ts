@@ -41,10 +41,24 @@ export function camposDoProcesso(p: ProcessoRel): [string, string][] {
   return campos.filter((c): c is [string, string] => !!c[1]?.trim())
 }
 
+/** Medida de texto com cache: o cálculo pelo fontkit é lento e as mesmas palavras se repetem em centenas de processos. */
+function medidaComCache(font: PDFFont): PDFFont {
+  const cache = new Map<string, number>()
+  return {
+    widthOfTextAtSize: (texto: string, tamanho: number) => {
+      const chave = `${tamanho}|${texto}`
+      let largura = cache.get(chave)
+      if (largura === undefined) { largura = font.widthOfTextAtSize(texto, tamanho); cache.set(chave, largura) }
+      return largura
+    },
+  } as unknown as PDFFont
+}
+
 /** PDF "Relatório sintético de processos" em nome de uma pessoa: cada processo com dados, partes e andamentos. */
 export async function gerarRelatorioSinteticoPdf(r: RelatorioSintetico): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const { regular: fonte, negrito } = await embedCarlito(pdf)
+  const medir = medidaComCache(fonte)
   const fundo = await pdf.embedPng(await getLogoBytes())
 
   let pagina!: PDFPage
@@ -63,7 +77,7 @@ export async function gerarRelatorioSinteticoPdf(r: RelatorioSintetico): Promise
   }
   function paragrafo(rotulo: string | null, texto: string, recuo = 0) {
     const completo = rotulo ? `${rotulo}: ${texto}` : texto
-    const linhas = wrapText(completo, fonte, TAM, LARGURA_TEXTO - recuo)
+    const linhas = wrapText(completo, medir, TAM, LARGURA_TEXTO - recuo)
     garantir(Math.min(linhas.length, 3))
     for (const l of linhas) { garantir(1); linha(l, { x: MARGEM_LADO + recuo }) }
   }
