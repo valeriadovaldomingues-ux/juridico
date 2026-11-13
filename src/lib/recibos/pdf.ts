@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
+import { embedCarlito } from '@/lib/pdf/fonte'
 import { dataAssinaturaExtenso, formatarValorBRL, mesReferenciaLabel, periodoBeneficio, valorPorExtenso } from './extenso'
 
 export interface DadosPessoais {
@@ -134,8 +135,7 @@ export async function gerarReciboPdfBytes(params: {
   const { corpo, nomeAssinante, mesReferencia } = params
 
   const pdf = await PDFDocument.create()
-  const font = await pdf.embedFont(StandardFonts.TimesRoman)
-  const fontBold = await pdf.embedFont(StandardFonts.TimesRomanBold)
+  const { regular: font, negrito: fontBold } = await embedCarlito(pdf)
 
   const pageWidth = 595.28
   const pageHeight = 841.89

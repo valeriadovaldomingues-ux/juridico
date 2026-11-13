@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, rgb, type PDFFont } from 'pdf-lib'
+import { embedCarlito, TAM_TEXTO } from '@/lib/pdf/fonte'
 import type { RelatorioClienteDraft } from './types'
 import { buildRelatorioPdfSubtitle } from './service'
 import { normalizeRelatorioConteudo } from './validation'
@@ -8,12 +9,12 @@ type PdfSource = {
   clienteNome: string
 }
 
-function wrapText(text: string, fontSize: number, maxWidth: number, charWidthRatio = 0.52) {
+function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number) {
   const words = text.split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let current = ''
 
-  const measure = (value: string) => value.length * fontSize * charWidthRatio
+  const measure = (value: string) => font.widthOfTextAtSize(value, fontSize)
 
   for (const word of words) {
     const next = current ? `${current} ${word}` : word
@@ -58,20 +59,19 @@ function normalizeParagraphs(value: string | string[]) {
 export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, fonte: PdfSource) {
   const conteudo = normalizeRelatorioConteudo(relatorio.conteudo)
   const pdf = await PDFDocument.create()
-  const fontRegular = await pdf.embedFont(StandardFonts.Helvetica)
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const { regular: fontRegular, negrito: fontBold } = await embedCarlito(pdf)
 
   const pageWidth = 595.28
   const pageHeight = 841.89
   const margin = 48
   const contentWidth = pageWidth - margin * 2
-  const lineHeight = 15
+  const lineHeight = 16
   const sectionSpacing = 14
 
   let page = pdf.addPage([pageWidth, pageHeight])
   let y = pageHeight - margin
 
-  function drawLine(text: string, font = fontRegular, size = 11, color = rgb(0.13, 0.16, 0.2), x = margin) {
+  function drawLine(text: string, font = fontRegular, size = TAM_TEXTO, color = rgb(0.13, 0.16, 0.2), x = margin) {
     page.drawText(text, {
       x,
       y,
@@ -88,10 +88,10 @@ export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, f
     }
   }
 
-  function drawWrappedText(text: string, size = 11, font = fontRegular, leading = lineHeight) {
+  function drawWrappedText(text: string, size = TAM_TEXTO, font = fontRegular, leading = lineHeight) {
     const paragraphs = normalizeParagraphs(text)
     paragraphs.forEach((paragraph, index) => {
-      const lines = wrapText(paragraph, size, contentWidth)
+      const lines = wrapText(paragraph, font, size, contentWidth)
       lines.forEach(line => {
         ensureSpace(leading)
         drawLine(line, font, size)
@@ -110,26 +110,26 @@ export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, f
         ? content.split('\n').map(item => item.trim()).filter(Boolean)
         : []
 
-    const estimatedHeight = 26 + Math.max(1, paragraphs.length) * 18 * 2
+    const estimatedHeight = 26 + Math.max(1, paragraphs.length) * lineHeight * 2
     ensureSpace(estimatedHeight)
 
     y -= 6
-    drawLine(title, fontBold, 11, rgb(0.08, 0.36, 0.37))
+    drawLine(title, fontBold, TAM_TEXTO, rgb(0.08, 0.36, 0.37))
     y -= 18
 
     if (paragraphs.length === 0) {
-      drawWrappedText('—', 10)
+      drawWrappedText('—')
       y -= sectionSpacing
       return
     }
 
     paragraphs.forEach(paragraph => {
       const bullet = paragraph.startsWith('-') ? paragraph : `• ${paragraph}`
-      const lines = wrapText(bullet, 10, contentWidth)
+      const lines = wrapText(bullet, fontRegular, TAM_TEXTO, contentWidth)
       lines.forEach(line => {
-        ensureSpace(14)
-        drawLine(line, fontRegular, 10)
-        y -= 14
+        ensureSpace(lineHeight)
+        drawLine(line, fontRegular, TAM_TEXTO)
+        y -= lineHeight
       })
     })
 
@@ -137,7 +137,7 @@ export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, f
   }
 
   // Header
-  const headerHeight = 96
+  const headerHeight = 104
   page.drawRectangle({
     x: 0,
     y: pageHeight - headerHeight,
@@ -148,11 +148,11 @@ export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, f
 
   drawLine('Pessoa e do Val Advocacia', fontBold, 16, rgb(1, 1, 1), margin)
   y = pageHeight - margin - 28
-  drawLine(relatorio.titulo, fontBold, 13, rgb(1, 1, 1))
+  drawLine(relatorio.titulo, fontBold, 14, rgb(1, 1, 1))
   y -= 18
-  drawLine(`${fonte.clienteNome} · ${fonte.processoTitulo}`, fontRegular, 10, rgb(0.9, 0.95, 0.96))
-  y -= 10
-  drawLine(buildRelatorioPdfSubtitle(relatorio), fontRegular, 10, rgb(0.9, 0.95, 0.96))
+  drawLine(`${fonte.clienteNome} · ${fonte.processoTitulo}`, fontRegular, TAM_TEXTO, rgb(0.9, 0.95, 0.96))
+  y -= 14
+  drawLine(buildRelatorioPdfSubtitle(relatorio), fontRegular, TAM_TEXTO, rgb(0.9, 0.95, 0.96))
 
   y = pageHeight - headerHeight - 22
 
@@ -170,22 +170,22 @@ export async function gerarRelatorioPdfBytes(relatorio: RelatorioClienteDraft, f
     const footerY = 28
     p.drawText('Relatório gerado pelo Sistema PEDV', {
       x: margin,
-      y: footerY + 12,
-      size: 9,
+      y: footerY + 14,
+      size: TAM_TEXTO,
       font: fontRegular,
       color: rgb(0.42, 0.48, 0.55),
     })
     p.drawText('Revisado pela equipe jurídica', {
       x: margin,
       y: footerY,
-      size: 9,
+      size: TAM_TEXTO,
       font: fontRegular,
       color: rgb(0.42, 0.48, 0.55),
     })
     p.drawText(`Página ${index + 1} de ${pages.length}`, {
-      x: pageWidth - margin - 72,
-      y: footerY + 6,
-      size: 9,
+      x: pageWidth - margin - 84,
+      y: footerY + 7,
+      size: TAM_TEXTO,
       font: fontRegular,
       color: rgb(0.42, 0.48, 0.55),
     })
