@@ -46,7 +46,7 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
     setLoading(true)
 
     // Partes do lado oposto ao cliente (excluir autor/requerente/exequente/reclamante)
-    const PARTES_CLIENTE = ['autor', 'requerente', 'exequente', 'reclamante', 'impetrante', 'paciente']
+    const PARTES_CLIENTE = ['autor', 'requerente', 'exequente', 'reclamante', 'impetrante', 'paciente', 'outro']
     const partesContrar  = processo!.partes_processo
       .filter(p => !PARTES_CLIENTE.includes(p.tipo_parte))
       .map(p => p.pessoa_nome)
@@ -188,8 +188,8 @@ export default function PecaIA({ processos }: { processos: ProcessoItem[] }) {
             />
             <DataItem
               label="Parte contrária"
-              value={processo.partes_processo.length > 0
-                ? processo.partes_processo.map(p => p.pessoa_nome).join(', ')
+              value={processo.partes_processo.some(p => p.tipo_parte !== 'outro')
+                ? processo.partes_processo.filter(p => p.tipo_parte !== 'outro').map(p => p.pessoa_nome).join(', ')
                 : undefined}
             />
           </div>

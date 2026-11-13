@@ -972,7 +972,7 @@ function AgendaQuickModal({
         if (!ativo || !data) return
         const d = data as unknown as { cliente_id: string | null; cliente: { nome?: string } | { nome?: string }[] | null; partes_processo: { pessoa_nome: string | null; tipo_parte: string | null }[] | null }
         const cli = Array.isArray(d.cliente) ? d.cliente[0] : d.cliente
-        const contrarias = (d.partes_processo ?? []).filter(x => x.pessoa_nome && x.tipo_parte !== 'cliente').map(x => x.pessoa_nome as string)
+        const contrarias = (d.partes_processo ?? []).filter(x => x.pessoa_nome && x.tipo_parte !== 'cliente' && x.tipo_parte !== 'outro').map(x => x.pessoa_nome as string)
         setPartes({ clienteId: d.cliente_id, cliente: cli?.nome ?? null, contrarias })
       })
     return () => { ativo = false }

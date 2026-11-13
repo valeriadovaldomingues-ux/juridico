@@ -37,7 +37,7 @@ interface Props {
 
 function preencherTemplate(conteudo: string, p: ProcessoItem, advNome: string): string {
   const parteContraria = p.partes_processo
-    .filter(pp => ['reu', 'outro', 'terceiro'].includes(pp.tipo_parte))
+    .filter(pp => ['reu', 'terceiro'].includes(pp.tipo_parte))
     .map(pp => pp.pessoa_nome)
     .join(', ') || '[PARTE CONTRÁRIA]'
 
@@ -191,7 +191,7 @@ export default function GeradorModal({ modelos, processos, profiles, modeloInici
                       ['Tribunal',   processo.tribunal                   ?? '—'],
                       ['Vara',       processo.vara                       ?? '—'],
                       ['Valor',      processo.valor_causa ? formatCurrency(processo.valor_causa) : '—'],
-                      ['Parte contrária', processo.partes_processo.filter(p => ['reu','outro','terceiro'].includes(p.tipo_parte)).map(p => p.pessoa_nome).join(', ') || '—'],
+                      ['Parte contrária', processo.partes_processo.filter(p => ['reu','terceiro'].includes(p.tipo_parte)).map(p => p.pessoa_nome).join(', ') || '—'],
                       ['Advogado',   profiles.find(p => p.id === processo.advogado_responsavel_id)?.nome ?? '—'],
                     ].map(([k, v]) => (
                       <div key={k} className="flex gap-1.5">

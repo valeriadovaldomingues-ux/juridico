@@ -9,7 +9,9 @@ import { Search, ChevronRight, SlidersHorizontal, X } from 'lucide-react'
 
 interface ParteItem { id: string; pessoa_nome: string; tipo_parte: string }
 
-function ParteContrariaCell({ partes }: { partes?: ParteItem[] }) {
+// Tipo "outro" = pessoa ligada ao processo que NÃO é parte contrária (ex.: representado, como o José Silvestre): não aparece aqui.
+function ParteContrariaCell({ partes: todas }: { partes?: ParteItem[] }) {
+  const partes = todas?.filter(p => p.tipo_parte !== 'outro')
   const [open, setOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
