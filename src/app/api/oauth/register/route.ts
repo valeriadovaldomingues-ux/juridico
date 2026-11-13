@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { criarClientId, redirectUriValido } from '@/lib/mcp/oauth'
 
 // Cadastro dinâmico de cliente (RFC 7591). O client_id é assinado e leva o nome e os endereços de retorno;
-// só aceitamos retorno para o Claude (claude.ai/claude.com) ou para o próprio computador (Desktop/Code).
+// só aceitamos retorno para o Claude (claude.ai/claude.com), o ChatGPT (chatgpt.com, caminhos de conector) ou o próprio computador (Desktop/Code).
 export async function POST(req: Request) {
   const corpo = await req.json().catch(() => null) as { client_name?: unknown; redirect_uris?: unknown } | null
   const uris = corpo?.redirect_uris

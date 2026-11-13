@@ -23,6 +23,17 @@ describe('endereços de retorno', () => {
     expect(redirectUriValido('https://claude.ai/cb#x')).toBe(false)
     expect(redirectUriValido('javascript:alert(1)')).toBe(false)
   })
+  it('aceita o ChatGPT só nos caminhos de conector; recusa o resto do chatgpt.com e domínios parecidos', () => {
+    expect(redirectUriValido('https://chatgpt.com/connector_platform_oauth_redirect')).toBe(true)
+    expect(redirectUriValido('https://chatgpt.com/connector/oauth/abc123_DEF-9')).toBe(true)
+    expect(redirectUriValido('https://chatgpt.com/')).toBe(false)
+    expect(redirectUriValido('https://chatgpt.com/c/qualquer-conversa')).toBe(false)
+    expect(redirectUriValido('https://chatgpt.com/connector/oauth/a/b')).toBe(false)
+    expect(redirectUriValido('https://chatgpt.com/connector_platform_oauth_redirect?x=1')).toBe(false)
+    expect(redirectUriValido('http://chatgpt.com/connector_platform_oauth_redirect')).toBe(false)
+    expect(redirectUriValido('https://chatgpt.com.evil.example/connector_platform_oauth_redirect')).toBe(false)
+    expect(redirectUriValido('https://evilchatgpt.com/connector_platform_oauth_redirect')).toBe(false)
+  })
 })
 
 describe('client_id assinado (cadastro dinâmico)', () => {

@@ -39,15 +39,15 @@ export default async function AutorizarPage({ searchParams }: { searchParams: Pr
   }
   const { data: perfil } = await createServiceClient().from('profiles').select('role, ativo').eq('id', user.id).maybeSingle()
   if (!perfil?.ativo || !usuarioPodeMcp(user.id, perfil.role)) {
-    return <Cartao><h1 className="font-brand text-[24px] text-[var(--color-ink)]">Acesso ainda não liberado</h1><p className="text-[13px] text-[var(--color-ink-3)] mt-2">Seu usuário ainda não foi liberado para o conector do Claude. Peça à Valéria para liberar.</p></Cartao>
+    return <Cartao><h1 className="font-brand text-[24px] text-[var(--color-ink)]">Acesso ainda não liberado</h1><p className="text-[13px] text-[var(--color-ink-3)] mt-2">Seu usuário ainda não foi liberado para o conector do PEDV. Peça à Valéria para liberar.</p></Cartao>
   }
 
   const { pedido } = v
   return (
     <Cartao>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">Conector do Claude</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--color-copper)] mb-2">Conector do PEDV</p>
       <h1 className="font-brand text-[26px] font-semibold leading-tight text-[var(--color-ink)]">Autorizar o {pedido.clienteNome} a acessar o PEDV?</h1>
-      <p className="text-[13px] text-[var(--color-ink-3)] mt-3">Você entrou como <strong>{user.email}</strong>. O Claude poderá consultar processos, agenda, prazos e publicações e, se você tiver permissão, registrar andamentos e compromissos, sempre pedindo a sua confirmação antes de gravar. Nada é apagado.</p>
+      <p className="text-[13px] text-[var(--color-ink-3)] mt-3">Você entrou como <strong>{user.email}</strong>. O {pedido.clienteNome} poderá consultar processos, agenda, prazos e publicações e, se você tiver permissão, registrar andamentos e compromissos, sempre pedindo a sua confirmação antes de gravar. Nada é apagado.</p>
       <p className="text-[12px] text-[var(--color-ink-3)] mt-2">Você pode desligar esse acesso quando quiser.</p>
       <Autorizar pedido={{ client_id: pedido.clientId, redirect_uri: pedido.redirectUri, state: pedido.state, code_challenge: pedido.codeChallenge }} />
     </Cartao>
