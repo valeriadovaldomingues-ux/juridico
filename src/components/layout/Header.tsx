@@ -24,6 +24,7 @@ const routeLabels: Record<string, string> = {
   '/publicacoes':            'Publicações',
   '/automacoes':             'Automações',
   '/monitoramento':          'Monitoramento',
+  '/monitoramento/clientes': 'Clientes monitorados',
   '/comercial':              'Comercial',
   '/ferramentas-pdf':        'Ferramentas PDF',
 }
