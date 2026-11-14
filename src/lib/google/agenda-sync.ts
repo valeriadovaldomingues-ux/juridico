@@ -44,7 +44,7 @@ async function carregarContexto(db: Db, item: { processo_id?: string | null; cli
       ctx.area_direito = p.area_direito
       const cli = Array.isArray(p.cliente) ? p.cliente[0] : p.cliente
       ctx.cliente = cli?.nome ?? null
-      const contra = (p.partes_processo ?? []).find((x: { pessoa_nome?: string; tipo_parte?: string }) => x.pessoa_nome && x.tipo_parte !== 'cliente')
+      const contra = (p.partes_processo ?? []).find((x: { pessoa_nome?: string; tipo_parte?: string }) => x.pessoa_nome && x.tipo_parte !== 'cliente' && x.tipo_parte !== 'outro')
       ctx.parteContraria = contra?.pessoa_nome ?? null
     }
   } else if (item.cliente_id) {

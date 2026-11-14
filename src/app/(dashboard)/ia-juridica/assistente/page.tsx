@@ -19,7 +19,7 @@ interface ProcessoOpcao {
   vara: string | null
   valor_causa: number | null
   cliente: { nome: string } | null
-  partes_processo: { pessoa_nome: string }[]
+  partes_processo: { pessoa_nome: string; tipo_parte?: string }[]
 }
 
 interface Mensagem {
@@ -48,7 +48,7 @@ export default function AssistenteJuridico() {
       const supabase = createClient()
       const { data } = await supabase
         .from('processos')
-        .select('id, numero_processo, titulo, area_direito, tribunal, vara, valor_causa, cliente:clientes(nome), partes_processo(pessoa_nome)')
+        .select('id, numero_processo, titulo, area_direito, tribunal, vara, valor_causa, cliente:clientes(nome), partes_processo(pessoa_nome, tipo_parte)')
         .in('status', ['ativo', 'suspenso'])
         .order('titulo')
         .limit(200)
@@ -88,7 +88,7 @@ export default function AssistenteJuridico() {
         vara:              processo.vara,
         valor_causa:       processo.valor_causa,
         cliente_nome:      processo.cliente?.nome ?? null,
-        partes_contrarias: processo.partes_processo.map(p => p.pessoa_nome),
+        partes_contrarias: processo.partes_processo.filter(p => p.tipo_parte !== 'outro').map(p => p.pessoa_nome),
       }
     }
 
