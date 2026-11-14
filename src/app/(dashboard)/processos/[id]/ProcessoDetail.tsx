@@ -1,5 +1,6 @@
 'use client'
 
+import ConferirTribunal from './ConferirTribunal'
 import { useEffect, useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -289,6 +290,7 @@ export default function ProcessoDetail({
           <h1 className="text-xl font-semibold text-[#1a1d23]">{processo.titulo}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <ConferirTribunal processoId={processo.id} />
           {role !== 'estagiario' && (
             <button
               onClick={() => setRegistrandoHoras(true)}
