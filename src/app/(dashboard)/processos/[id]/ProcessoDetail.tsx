@@ -74,7 +74,7 @@ const tipoParteLabel: Record<string, string> = {
   autor:    'Autor',
   reu:      'Réu',
   terceiro: 'Terceiro',
-  outro:    'Outro',
+  outro:    'Parte interessada',
 }
 
 // Badges das partes — cores suaves, leitura clara, aspecto premium
@@ -845,7 +845,7 @@ function ParteFormUI({
             <option value="reu">Réu</option>
             <option value="autor">Autor</option>
             <option value="terceiro">Terceiro</option>
-            <option value="outro">Outro</option>
+            <option value="outro">Parte interessada (não é parte contrária)</option>
           </select>
         </div>
 
