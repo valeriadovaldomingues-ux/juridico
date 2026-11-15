@@ -9,8 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const { mockGetUser, mockQueryResult, modo } = vi.hoisted(() => ({
-  mockGetUser: vi.fn<[], Promise<{ data: { user: { id: string } | null } }>>(),
-  mockQueryResult: vi.fn<[], Promise<{ data: { role: string; ativo: boolean } | null; error: null }>>(),
+  mockGetUser: vi.fn<() => Promise<{ data: { user: { id: string } | null } }>>(),
+  mockQueryResult: vi.fn<() => Promise<{ data: { role: string; ativo: boolean } | null; error: null }>>(),
   modo: { restrito: false },
 }))
 
