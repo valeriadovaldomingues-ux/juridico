@@ -82,6 +82,7 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 // SUPABASE_SERVICE_ROLE_KEY não definido → getServiceClient() retorna null → fallback anon
 
 import { proxy } from './proxy'
+import { COOKIE_SESSAO } from '@/lib/portal-cliente/constantes'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,11 @@ const BASE = 'http://localhost:3000'
 /** Create a plain GET NextRequest for the given path */
 function req(pathname: string): NextRequest {
   return new NextRequest(`${BASE}${pathname}`)
+}
+
+/** GET com o cookie de sessão do portal (cliente; sem Supabase) */
+function reqPortal(pathname: string): NextRequest {
+  return new NextRequest(`${BASE}${pathname}`, { headers: { cookie: `${COOKIE_SESSAO}=token-opaco-de-teste` } })
 }
 
 /** Extract Location header from response */
@@ -291,29 +297,32 @@ describe("role 'cliente' acessando rotas internas", () => {
 // 4. ROLE 'cliente' — ACESSO AO PORTAL
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("role 'cliente' acessando /portal", () => {
-  it('/portal → passa através (cliente tem acesso)', async () => {
+describe("resto de sessão Supabase com role 'cliente' (legado) em /portal", () => {
+  // O portal v2 não usa Supabase Auth: o cliente tem só o cookie próprio. Uma sessão Supabase com
+  // role 'cliente' (que nem pode existir mais) não vale nada para o portal.
+  it('/portal sem cookie do portal → redirect para /portal/login com ?next=', async () => {
     asUser('cliente')
     const res = await proxy(req('/portal'))
-    expectPassThru(res)
+    const dest = expectRedirect(res, '/portal/login')
+    expect(dest.searchParams.get('next')).toBe('/portal')
   })
 
-  it('/portal/processos → passa através', async () => {
+  it('/portal/processos sem cookie → redirect para /portal/login', async () => {
     asUser('cliente')
     const res = await proxy(req('/portal/processos'))
-    expectPassThru(res)
+    expectRedirect(res, '/portal/login')
   })
 
-  it('/portal/mensagens → passa através', async () => {
+  it('/portal com o cookie do portal → passa através (o layout valida de verdade)', async () => {
     asUser('cliente')
-    const res = await proxy(req('/portal/mensagens'))
+    const res = await proxy(reqPortal('/portal'))
     expectPassThru(res)
   })
 
-  it('/portal/login com cliente autenticado → redirect para /portal (evita re-login)', async () => {
+  it('/portal/login → passa através (página pública, sem redirect)', async () => {
     asUser('cliente')
     const res = await proxy(req('/portal/login'))
-    expectRedirect(res, '/portal')
+    expectPassThru(res)
   })
 })
 
@@ -378,11 +387,16 @@ describe('usuário autenticado sem profile (sessão órfã)', () => {
     expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
   })
 
-  it('/portal → redirect para /portal/login (sessão órfã no portal)', async () => {
+  it('/portal sem cookie do portal → redirect para /portal/login (resto de sessão Supabase não vale)', async () => {
     asUserNoProfile()
     const res = await proxy(req('/portal'))
     const dest = expectRedirect(res, '/portal/login')
-    expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
+    expect(dest.searchParams.get('next')).toBe('/portal')
+  })
+
+  it('/portal com cookie do portal → passa através mesmo com resto de sessão Supabase órfã', async () => {
+    asUserNoProfile()
+    expectPassThru(await proxy(reqPortal('/portal')))
   })
 
   it('/portal/processos → redirect para /portal/login', async () => {
@@ -535,25 +549,15 @@ describe('role insuficiente para rota restrita', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('prevenção de redirect loops', () => {
-  it('cliente em /portal → passa através (não cria loop com /portal)', async () => {
-    // /portal não é isInternalPath → bloco 3a não dispara
-    // /portal não é isPortalLogin → bloco 3b não dispara
-    // role === 'cliente' → bloco 3c não dispara
-    // Resultado: passa através, sem redirect, sem loop
+  it('cliente com cookie do portal em /portal → passa através (sem loop)', async () => {
     asUser('cliente')
-    const res = await proxy(req('/portal'))
-    expectPassThru(res)
+    expectPassThru(await proxy(reqPortal('/portal')))
   })
 
-  it('cliente em /portal/login → redireciona para /portal (sem loop: /portal passa através)', async () => {
-    // 3b dispara: cliente + isPortalLogin → redirect /portal
-    // Se /portal fosse visitado em seguida, passaria através (sem loop)
-    asUser('cliente')
-    const res = await proxy(req('/portal/login'))
-    expectRedirect(res, '/portal')
-    // Simula segundo request: cliente em /portal — passa através
-    const res2 = await proxy(req('/portal'))
-    expectPassThru(res2)
+  it('sem cookie: /portal → /portal/login, e o login passa através (sem loop)', async () => {
+    noSession()
+    expectRedirect(await proxy(req('/portal')), '/portal/login')
+    expectPassThru(await proxy(req('/portal/login')))
   })
 
   it('staff em /portal → redirect /dashboard; /dashboard passa através (sem loop)', async () => {
@@ -713,11 +717,10 @@ describe('profile query com erro (regressão do bug de Edge Runtime)', () => {
     expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
   })
 
-  it('query error em rota de portal → redirect /portal/login (fail-secure)', async () => {
+  it('query error em rota de portal sem cookie do portal → redirect /portal/login (fail-secure)', async () => {
     asUserWithProfileQueryError()
     const res = await proxy(req('/portal/processos'))
-    const dest = expectRedirect(res, '/portal/login')
-    expect(dest.searchParams.get('erro')).toBe('sessao-invalida')
+    expectRedirect(res, '/portal/login')
   })
 
   it('query error em /portal/login → passa através (sem redirect loop)', async () => {
@@ -1312,5 +1315,107 @@ describe('nova matriz — /financeiro', () => {
   it('comercial em /financeiro → /dashboard', async () => {
     asUser('comercial')
     expectRedirect(await proxy(req('/financeiro')), '/dashboard')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PORTAL DO CLIENTE v2 — sessão própria (cookie), sem Supabase Auth
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('portal v2: cliente só com o cookie do portal (sem sessão Supabase)', () => {
+  it('páginas do portal com cookie → passam através (sem consultar profiles)', async () => {
+    noSession()
+    for (const p of ['/portal', '/portal/processos', '/portal/processos/abc', '/portal/agenda']) {
+      expectPassThru(await proxy(reqPortal(p)))
+    }
+    expect(mockQueryResult).not.toHaveBeenCalled()
+  })
+
+  it('páginas do portal sem cookie → /portal/login com ?next=', async () => {
+    noSession()
+    const dest = expectRedirect(await proxy(req('/portal/agenda')), '/portal/login')
+    expect(dest.searchParams.get('next')).toBe('/portal/agenda')
+  })
+
+  it('cookie vazio não vale', async () => {
+    noSession()
+    const r = new NextRequest(`${BASE}/portal`, { headers: { cookie: `${COOKIE_SESSAO}=` } })
+    expectRedirect(await proxy(r), '/portal/login')
+  })
+
+  it('o cookie do portal NÃO abre as áreas do escritório (cliente × staff)', async () => {
+    noSession()
+    for (const p of ['/dashboard', '/clientes', '/processos', '/kanban', '/financeiro', '/configuracoes', '/clientes/acesso-portal']) {
+      expectRedirect(await proxy(reqPortal(p)), '/login')
+    }
+  })
+
+  it('o cookie do portal NÃO abre as APIs internas (redirect ao login do escritório)', async () => {
+    noSession()
+    expectRedirect(await proxy(reqPortal('/api/portal-admin/pedidos')), '/login')
+    expectRedirect(await proxy(reqPortal('/api/processos/x/portal')), '/login')
+  })
+})
+
+describe('portal v2: staff (sessão Supabase) × portal', () => {
+  it('staff com sessão Supabase não entra no portal como cliente, mesmo com cookie do portal', async () => {
+    asUser('socio')
+    expectRedirect(await proxy(req('/portal')), '/dashboard')
+    expectRedirect(await proxy(reqPortal('/portal/processos')), '/dashboard')
+  })
+
+  it('o login do portal continua aberto a quem está logado no escritório', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/portal/login')))
+  })
+})
+
+describe('portal v2: /api/portal/** usa só o cookie próprio', () => {
+  it.each(['/api/portal/auth/solicitar', '/api/portal/auth/verificar', '/api/portal/auth/pedido-acesso', '/api/portal/auth/sair'])(
+    '%s é público (login) e não consulta Supabase',
+    async p => {
+      const res = await proxy(new NextRequest(`${BASE}${p}`, { method: 'POST' }))
+      expectPassThru(res)
+      expect(mockGetUser).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['/api/portal/processos', '/api/portal/processos/abc', '/api/portal/agenda', '/api/portal/relatorio', '/api/portal/me'])(
+    '%s sem cookie → 401 JSON (não redirect)',
+    async p => {
+      const res = await proxy(req(p))
+      expect(res.status).toBe(401)
+      expect(res.headers.get('content-type')).toContain('application/json')
+      expect(location(res)).toBeNull()
+      expect(mockGetUser).not.toHaveBeenCalled()
+    },
+  )
+
+  it('com cookie → passa para a rota (que valida o hash no banco)', async () => {
+    expectPassThru(await proxy(reqPortal('/api/portal/processos')))
+    expect(mockGetUser).not.toHaveBeenCalled()
+  })
+
+  it('sessão Supabase de staff NÃO substitui o cookie do portal nas APIs do portal', async () => {
+    asUser('socio')
+    const res = await proxy(req('/api/portal/processos'))
+    expect(res.status).toBe(401)
+  })
+})
+
+describe('portal v2: fila de pedidos (/clientes/acesso-portal) só para quem gerencia o portal', () => {
+  it('sócio passa', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(req('/clientes/acesso-portal')))
+  })
+
+  it.each(['administrativo', 'advogado', 'gerente', 'estagiario', 'comercial'])('%s → /dashboard', async role => {
+    asUser(role)
+    expectRedirect(await proxy(req('/clientes/acesso-portal')), '/dashboard')
+  })
+
+  it('o resto de /clientes continua como antes (advogado passa)', async () => {
+    asUser('advogado')
+    expectPassThru(await proxy(req('/clientes')))
   })
 })

@@ -48,6 +48,8 @@ import ProcessoForm from '../ProcessoForm'
 import ComunicacoesTab from './ComunicacoesTab'
 import RelatoriosTab from './RelatoriosTab'
 import AuroraClienteTab from './AuroraClienteTab'
+import OcultarPortalSwitch from './OcultarPortalSwitch'
+import { podeGerenciarPortal } from '@/lib/portal-cliente/constantes'
 
 // ─── Labels e cores ───────────────────────────────────────────────────────────
 
@@ -398,6 +400,15 @@ export default function ProcessoDetail({
                       <Field label="Segredo de justiça"   value={processo.segredo_justica === null || processo.segredo_justica === undefined ? null : (processo.segredo_justica ? 'Sim' : 'Não')} />
                     </div>
                   </div>
+
+                  {podeGerenciarPortal(role) && (
+                    <OcultarPortalSwitch
+                      processoId={processo.id}
+                      ocultar={processo.ocultar_portal === true}
+                      colunaExiste={typeof processo.ocultar_portal === 'boolean'}
+                      segredoJustica={processo.segredo_justica === true}
+                    />
+                  )}
 
                   <PartesSection
                     processoId={processo.id}

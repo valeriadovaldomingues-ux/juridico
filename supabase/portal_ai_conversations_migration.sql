@@ -1,3 +1,6 @@
+-- ⛔ OBSOLETO — NÃO APLICAR. Desenho antigo do portal (magic link + sessão Supabase + role cliente + RLS).
+-- Substituído por portal_cliente_v2_migration.sql (ver supabase/README_PORTAL.md).
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE OR REPLACE FUNCTION public.current_user_role()

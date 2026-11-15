@@ -6,6 +6,9 @@ import { Users } from 'lucide-react'
 import { requireRole } from '@/lib/auth/guards'
 import { canEditClienteContatos } from '@/lib/cliente-contatos'
 import { listClienteContatos } from '@/lib/cliente-contatos'
+import { podeGerenciarPortal } from '@/lib/portal-cliente/constantes'
+import { portalDb } from '@/lib/portal-cliente/db'
+import { statusAcesso, type StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -89,9 +92,20 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     supabase.from('clientes').select('id, nome, cpf_cnpj').eq('dono_id', id).order('nome'),
   ])
 
+  // Bloco "Acesso ao portal" (só quem gerencia o portal). Banco sem a migração → bloco avisa, sem derrubar a ficha.
+  let portalAcesso: StatusAcessoPortal | null = null
+  if (podeGerenciarPortal(session.profile.role)) {
+    try {
+      portalAcesso = await statusAcesso(portalDb(), id, (cliente as { cpf_cnpj?: string | null }).cpf_cnpj ?? null)
+    } catch {
+      portalAcesso = null
+    }
+  }
+
   return (
     <div className="internal-page max-w-7xl">
       <ClienteDetail
+        portalAcesso={portalAcesso}
         cliente={cliente as any}
         processos={processos ?? []}
         interactions={interactions ?? []}

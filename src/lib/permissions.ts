@@ -1,5 +1,6 @@
 import type { UserRole } from '@/types'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
+import { PORTAL_PAPEIS_GESTAO } from '@/lib/portal-cliente/constantes'
 import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario, acessoDoUsuario } from '@/lib/auth/acesso-por-usuario'
 
 export { KANBAN_ONLY_MODE }
@@ -333,6 +334,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
   socio: [
     '/dashboard',
     '/clientes',
+    '/clientes/acesso-portal',
     '/processos',
     '/inpi',
     '/agenda',
@@ -368,6 +370,9 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
 
 // Paths mais específicos DEVEM vir antes dos genéricos (ex: /ia-juridica/aurora antes de /ia-juridica).
 export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
+  // ── Portal do Cliente: fila de pedidos de acesso (hoje só sócio; ver PORTAL_PAPEIS_GESTAO) ───────────────────
+  { prefix: '/clientes/acesso-portal', roles: PORTAL_PAPEIS_GESTAO as UserRole[] },
+
   // ── Aurora (exclusivo sócio — trava para futura feature) ─────────────────────
   { prefix: '/aurora-mobile',          roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',    roles: ['socio'] },

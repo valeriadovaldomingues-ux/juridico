@@ -1,3 +1,6 @@
+-- ⛔ OBSOLETO — NÃO APLICAR. Desenho antigo do portal (magic link + sessão Supabase + role cliente + RLS).
+-- Substituído por portal_cliente_v2_migration.sql (ver supabase/README_PORTAL.md).
+
 -- =============================================
 -- Portal do Cliente — Fase 1
 -- PARTE 1: adiciona role 'cliente' ao constraint de profiles

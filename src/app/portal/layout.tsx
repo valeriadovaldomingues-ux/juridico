@@ -1,6 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect }      from 'next/navigation'
-import Link              from 'next/link'
+import Link from 'next/link'
+import { getPortalSession } from '@/lib/auth/portal-guard'
 import LogoutButton from './LogoutButton'
 import PortalNav    from './PortalNav'
 
@@ -11,27 +10,11 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Sem sessão: o proxy já redireciona qualquer rota não-pública para /portal/login.
-  // A única rota sem sessão que chega aqui é o próprio /portal/login (isPublicPath=true).
-  // Redirecionar para /portal/login aqui causaria loop infinito — renderizar children diretamente.
-  if (!user) return <>{children}</>
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, ativo')
-    .eq('id', user.id)
-    .single()
-
-  // Staff autenticado (qualquer role que não seja 'cliente'): redireciona para painel interno.
-  // Segregação preservada: staff nunca acessa dados do cliente via portal.
-  if (!profile || !profile.ativo || profile.role !== 'cliente') {
-    if (profile?.role && profile.role !== 'cliente') redirect('/dashboard')
-    // Sem profile ou inativo: fail-secure → login (portalGuard() bloqueia as APIs também)
-    redirect('/portal/login')
-  }
+  // Sessão PRÓPRIA do portal (cookie opaco validado no banco), sem Supabase Auth.
+  // Sem sessão renderiza só o conteúdo: é o caso de /portal/login. As demais páginas
+  // redirecionam para o login por conta própria (exigirSessaoPortal), o que evita loop aqui.
+  const session = await getPortalSession()
+  if (!session) return <>{children}</>
 
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
@@ -71,13 +54,13 @@ export default async function PortalLayout({
       <PortalNav />
 
       {/* ── Conteúdo ────────────────────────────────────────────────────────── */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 portal-page">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 portal-page">
         {children}
       </main>
 
       {/* ── Rodapé ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-[#EDE8DF] mt-12 py-6">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
           <span className="text-[11px] text-[#9CA3AF] tracking-wide">
             Pessoa e do Val Advocacia · Belo Horizonte, MG
           </span>

@@ -11,6 +11,8 @@ import {
 import type { Cliente, Processo, ContactInteraction, ClienteContato, TipoContato, TipoInteracao } from '@/types'
 import ClienteForm from '../ClienteForm'
 import ContatosEmpresaTab from './ContatosEmpresaTab'
+import PortalAcessoCard from './PortalAcessoCard'
+import type { StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -329,6 +331,8 @@ type ClienteDetailProps = {
   /** Empresas que têm este cliente como dono / grupo. */
   empresasDoDono?: { id: string; nome: string; cpf_cnpj: string | null }[]
   canEditContatos: boolean
+  /** Status do acesso ao portal (só para quem gerencia o portal); null = não mostra o bloco. */
+  portalAcesso?: StatusAcessoPortal | null
 }
 
 export default function ClienteDetail({
@@ -340,6 +344,7 @@ export default function ClienteDetail({
   contatos,
   empresasDoDono = [],
   canEditContatos,
+  portalAcesso = null,
 }: ClienteDetailProps) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<Tab>('historico')
@@ -517,6 +522,9 @@ export default function ClienteDetail({
               <InfoRow icon={MapPin} label="CEP"       value={cliente.cep} />
             </div>
           )}
+
+          {/* Acesso ao portal do cliente */}
+          {portalAcesso && <PortalAcessoCard clienteId={cliente.id} status={portalAcesso} />}
 
           {/* Responsável + tags */}
           <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">

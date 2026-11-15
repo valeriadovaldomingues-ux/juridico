@@ -1,3 +1,6 @@
+-- ⛔ OBSOLETO — NÃO APLICAR. Desenho antigo do portal (magic link + sessão Supabase + role cliente + RLS).
+-- Substituído por portal_cliente_v2_migration.sql (ver supabase/README_PORTAL.md).
+
 -- =============================================
 -- Portal do Cliente — Storage Hardening
 -- Fase 1 de Segurança

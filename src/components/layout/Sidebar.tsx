@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
-  Mail, Scissors, Tv2, X, Stamp, NotebookPen, Clock3,
+  Mail, Scissors, Tv2, X, Stamp, NotebookPen, Clock3, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -23,6 +23,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/dashboard',  label: 'Dashboard', icon: LayoutDashboard },
       { href: '/clientes',   label: 'Clientes',  icon: Users },
+      { href: '/clientes/acesso-portal', label: 'Portal do cliente', icon: KeyRound },
       { href: '/processos',  label: 'Processos', icon: Scale },
       { href: '/inpi',       label: 'INPI',      icon: Stamp },
       { href: '/agenda',     label: 'Agenda',    icon: CalendarDays },
@@ -115,6 +116,7 @@ export default function Sidebar({ role, userId, devMode = false, isOpen = false,
     if (href === '/dashboard')     return pathname === '/dashboard'
     if (href === '/configuracoes') return pathname === '/configuracoes'
     if (href === '/financeiro')    return pathname === '/financeiro'
+    if (href === '/clientes')      return pathname.startsWith('/clientes') && !pathname.startsWith('/clientes/acesso-portal')
     return pathname.startsWith(href)
   }
 
