@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Scale, CalendarDays,
   DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
-  Mail, Scissors, Tv2, X, Stamp, NotebookPen, Clock3,
+  Mail, Scissors, Tv2, X, Stamp, NotebookPen, Clock3, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -48,6 +48,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/automacoes',    label: 'Automações',    icon: Zap   },
       { href: '/monitoramento', label: 'Monitoramento', icon: Radar },
+      { href: '/monitoramento/clientes', label: 'Clientes monitorados', icon: ShieldCheck },
     ],
   },
   {
@@ -115,6 +116,7 @@ export default function Sidebar({ role, userId, devMode = false, isOpen = false,
     if (href === '/dashboard')     return pathname === '/dashboard'
     if (href === '/configuracoes') return pathname === '/configuracoes'
     if (href === '/financeiro')    return pathname === '/financeiro'
+    if (href === '/monitoramento') return pathname === '/monitoramento'
     return pathname.startsWith(href)
   }
 
