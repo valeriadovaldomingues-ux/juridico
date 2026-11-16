@@ -2,15 +2,14 @@
 
 import Link        from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Scale, CalendarDays, FileText, MessageSquare, Home } from 'lucide-react'
+import { Scale, CalendarDays, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// v1: só processos, andamentos e audiências. Documentos, mensagens e Aurora ficam fora do menu.
 const NAV_ITEMS = [
   { href: '/portal',            label: 'Início',      icon: Home          },
   { href: '/portal/processos',  label: 'Processos',   icon: Scale         },
-  { href: '/portal/agenda',     label: 'Agenda',      icon: CalendarDays  },
-  { href: '/portal/documentos', label: 'Documentos',  icon: FileText      },
-  { href: '/portal/mensagens',  label: 'Mensagens',   icon: MessageSquare },
+  { href: '/portal/agenda',     label: 'Audiências',  icon: CalendarDays  },
 ]
 
 export default function PortalNav() {

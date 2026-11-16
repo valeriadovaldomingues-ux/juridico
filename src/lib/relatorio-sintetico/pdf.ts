@@ -55,7 +55,14 @@ function medidaComCache(font: PDFFont): PDFFont {
 }
 
 /** PDF "Relatório sintético de processos" em nome de uma pessoa: cada processo com dados, partes e andamentos. */
-export async function gerarRelatorioSinteticoPdf(r: RelatorioSintetico): Promise<Uint8Array> {
+export interface OpcoesRelatorioPdf {
+  /** Rótulo antes do nome na capa (padrão "Em nome de"; a versão do cliente usa "Cliente"). */
+  rotuloNome?: string
+  /** Texto exibido quando não há processos. */
+  textoVazio?: string
+}
+
+export async function gerarRelatorioSinteticoPdf(r: RelatorioSintetico, opcoes: OpcoesRelatorioPdf = {}): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const { regular: fonte, negrito } = await embedCarlito(pdf)
   const medir = medidaComCache(fonte)
@@ -89,13 +96,13 @@ export async function gerarRelatorioSinteticoPdf(r: RelatorioSintetico): Promise
   const titulo = 'RELATÓRIO SINTÉTICO DE PROCESSOS'
   linha(titulo, { negrito: true, tam: 16, x: (LARGURA - negrito.widthOfTextAtSize(titulo, 16)) / 2 })
   y -= 6
-  linha(`Em nome de: ${r.pessoa}`, { negrito: true })
+  linha(`${opcoes.rotuloNome ?? 'Em nome de'}: ${r.pessoa}`, { negrito: true })
   linha(`${r.processos.length} ${r.processos.length === 1 ? 'processo' : 'processos'}`)
   linha(`Emitido em ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(r.emitidoEm)}`)
   y -= 8
 
   if (r.processos.length === 0) {
-    linha('Nenhum processo ligado a esta pessoa.')
+    linha(opcoes.textoVazio ?? 'Nenhum processo ligado a esta pessoa.')
     return pdf.save()
   }
 

@@ -1,47 +1,20 @@
 import { NextResponse } from 'next/server'
 import { portalGuard } from '@/lib/auth/portal-guard'
-import { createClient } from '@/lib/supabase/server'
-import { logPortalAccess } from '@/lib/portal/access-log'
+import { portalDb } from '@/lib/portal-cliente/db'
+import { listarProcessosDoCliente } from '@/lib/portal-cliente/consultas'
+import { json, tratarErro } from '@/lib/portal-cliente/http'
 
 /**
  * GET /api/portal/processos
- * Lista os processos do cliente com visivel_cliente = true.
- * A RLS garante que apenas processos do próprio cliente são retornados.
+ * Processos visíveis do cliente da SESSÃO (service role + filtro por clienteId; não há RLS neste caminho).
+ * Visível = todo processo do cliente, exceto segredo de justiça e os marcados "ocultar do portal".
  */
-export async function GET(request: Request) {
+export async function GET() {
   const session = await portalGuard()
   if (session instanceof NextResponse) return session
-
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('processos')
-    .select(`
-      id,
-      numero_processo,
-      titulo,
-      area_direito,
-      status,
-      fase,
-      tribunal,
-      vara,
-      data_distribuicao,
-      created_at
-    `)
-    .eq('cliente_id', session.clienteId)
-    .eq('visivel_cliente', true)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    return NextResponse.json({ error: 'Erro ao buscar processos' }, { status: 500 })
+  try {
+    return json(await listarProcessosDoCliente(portalDb(), session.clienteId))
+  } catch (e) {
+    return tratarErro(e, 'processos')
   }
-
-  await logPortalAccess({
-    userId:    session.userId,
-    clienteId: session.clienteId,
-    acao:      'view_processo',
-    request,
-  })
-
-  return NextResponse.json(data ?? [])
 }

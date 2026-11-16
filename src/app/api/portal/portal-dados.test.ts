@@ -1,0 +1,149 @@
+/**
+ * Rotas de dados do portal: SEMPRE filtram pelo clienteId da sessão (nunca pelo que vem na URL),
+ * e não expõem nada interno.
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NextResponse } from 'next/server'
+import { PDFDocument } from 'pdf-lib'
+import { criarFakeDb, type FakeDb } from '@/lib/portal-cliente/testing/fake-db'
+import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from '@/lib/portal-cliente/testing/seed'
+
+const h = vi.hoisted(() => ({ fake: null as unknown as { db: unknown }, sessao: null as null | { sessaoId: string; clienteId: string; clienteNome: string } }))
+
+vi.mock('@/lib/portal-cliente/db', async orig => ({ ...(await orig<typeof import('@/lib/portal-cliente/db')>()), portalDb: () => h.fake.db }))
+vi.mock('@/lib/auth/portal-guard', () => ({
+  portalGuard: async () => h.sessao ?? NextResponse.json({ error: 'Sessão expirada. Entre novamente.' }, { status: 401 }),
+  getPortalSession: async () => h.sessao,
+}))
+
+import { GET as listar } from './processos/route'
+import { GET as detalhe } from './processos/[id]/route'
+import { GET as agenda } from './agenda/route'
+import { GET as me } from './me/route'
+import { GET as relatorio } from './relatorio/route'
+import { GET as documentos } from './documentos/route'
+import { GET as mensagens, POST as mensagensPost } from './mensagens/route'
+import { POST as accessLog } from './access-log/route'
+import { GET as auroraContexto } from './processos/[id]/aurora-cliente/contexto/route'
+import { GET as auroraHistorico } from './processos/[id]/aurora-cliente/historico/route'
+import { POST as auroraPerguntar } from './processos/[id]/aurora-cliente/perguntar/route'
+
+let f: FakeDb
+const sessaoDe = (clienteId: string, nome: string) => ({ sessaoId: 's', clienteId, clienteNome: nome })
+const chamarDetalhe = (id: string) => detalhe(new Request(`http://localhost/api/portal/processos/${id}`), { params: Promise.resolve({ id }) })
+
+beforeEach(() => {
+  vi.stubEnv('PORTAL_SEGREDO', 'segredo-de-teste')
+  f = criarFakeDb({ ...seedBasico(), portal_acessos_log: [], portal_tentativas: [] })
+  h.fake = f
+  h.sessao = sessaoDe(CLIENTE_A, 'Maria da Silva')
+})
+
+describe('sem sessão', () => {
+  it('todas as rotas de dados respondem 401', async () => {
+    h.sessao = null
+    expect((await listar()).status).toBe(401)
+    expect((await chamarDetalhe(PROC_A1)).status).toBe(401)
+    expect((await agenda()).status).toBe(401)
+    expect((await me()).status).toBe(401)
+    expect((await relatorio()).status).toBe(401)
+    expect(f.consultas).toHaveLength(0)
+  })
+})
+
+describe('GET /api/portal/processos', () => {
+  it('devolve só os processos visíveis do cliente da sessão', async () => {
+    const dados = await (await listar()).json()
+    expect(dados.map((p: { id: string }) => p.id)).toEqual([PROC_A1])
+  })
+  it('outro cliente vê só os dele', async () => {
+    h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
+    expect((await (await listar()).json()).map((p: { id: string }) => p.id)).toEqual([PROC_B1])
+  })
+})
+
+describe('GET /api/portal/processos/[id]', () => {
+  it('processo do próprio cliente → 200 com partes e andamentos client-safe', async () => {
+    const res = await chamarDetalhe(PROC_A1)
+    expect(res.status).toBe(200)
+    const dados = await res.json()
+    expect(dados.id).toBe(PROC_A1)
+    expect(dados.partes.map((p: { nome: string }) => p.nome)).toEqual(['Maria da Silva', 'Banco Réu S.A.'])
+    expect(dados.andamentos.map((a: { id: string }) => a.id)).toEqual(['an1', 'an6'])
+  })
+
+  it('NÃO expõe campos internos', async () => {
+    const texto = JSON.stringify(await (await chamarDetalhe(PROC_A1)).json())
+    expect(texto).not.toMatch(/ESTRATEGIA|987654|valor_causa|observacoes|advogado|TEXTO INTERNO|nervoso|segredo da estrat|529\.982|nota interna|José Vínculo/)
+  })
+
+  it('tentar ler processo de OUTRO cliente → 404 (igual ao inexistente)', async () => {
+    const outro = await chamarDetalhe(PROC_B1)
+    const inexistente = await chamarDetalhe('ffffffff-0000-4000-8000-000000000000')
+    expect(outro.status).toBe(404)
+    expect({ status: outro.status, corpo: await outro.json() }).toEqual({ status: inexistente.status, corpo: await inexistente.json() })
+  })
+
+  it('o cliente B não lê o processo do cliente A', async () => {
+    h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
+    expect((await chamarDetalhe(PROC_A1)).status).toBe(404)
+  })
+
+  it('segredo de justiça e processo oculto → 404 mesmo sendo do cliente', async () => {
+    expect((await chamarDetalhe(PROC_A_SEGREDO)).status).toBe(404)
+    expect((await chamarDetalhe(PROC_A_OCULTO)).status).toBe(404)
+  })
+
+  it('id malformado → 404 sem consultar o banco', async () => {
+    expect((await chamarDetalhe("1'; drop table processos;--")).status).toBe(404)
+    expect((await chamarDetalhe('')).status).toBe(404)
+    expect(f.consultas).toHaveLength(0)
+  })
+
+  it('migração ausente → 503 (sem 500)', async () => {
+    f.falharTabela('processos', '42703')
+    expect((await chamarDetalhe(PROC_A1)).status).toBe(503)
+  })
+})
+
+describe('GET /api/portal/agenda e /me', () => {
+  it('agenda: só audiências futuras dos processos visíveis do cliente', async () => {
+    const dados = await (await agenda()).json()
+    expect(dados.audiencias.map((a: { id: string }) => a.id)).toEqual(['ag1'])
+    expect(JSON.stringify(dados)).not.toMatch(/TITULO INTERNO|DESCRICAO INTERNA|Cristiano/)
+  })
+  it('me: só o nome', async () => {
+    expect(await (await me()).json()).toEqual({ nome: 'Maria da Silva' })
+  })
+})
+
+describe('GET /api/portal/relatorio', () => {
+  it('gera o PDF do cliente da sessão e registra o download', async () => {
+    const res = await relatorio()
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    const pdf = await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))
+    expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1)
+    expect(f.tabelas.portal_acessos_log.map(l => l.acao)).toContain('download_relatorio')
+  })
+
+  it('limite de 10 por hora por cliente → 429', async () => {
+    for (let i = 0; i < 10; i++) expect((await relatorio()).status).toBe(200)
+    expect((await relatorio()).status).toBe(429)
+    h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
+    expect((await relatorio()).status).toBe(200)
+  })
+})
+
+describe('rotas fora da v1 (documentos, mensagens, Aurora, access-log antigo)', () => {
+  it('respondem 404 "em breve" sem consultar nenhuma tabela', async () => {
+    const ctx = { params: Promise.resolve({ id: PROC_A1 }) }
+    const r = [
+      await documentos(), await mensagens(), await mensagensPost(), await accessLog(),
+      await auroraContexto(new Request('http://x'), ctx), await auroraHistorico(new Request('http://x'), ctx), await auroraPerguntar(new Request('http://x'), ctx),
+    ]
+    expect(r.map(x => x.status)).toEqual([404, 404, 404, 404, 404, 404, 404])
+    expect(f.consultas).toHaveLength(0)
+  })
+})

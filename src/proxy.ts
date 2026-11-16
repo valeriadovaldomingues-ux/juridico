@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient }       from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { logSecurity } from '@/lib/portal/logger'
+import { COOKIE_SESSAO, PORTAL_PAPEIS_GESTAO, PREFIXO_API_AUTH_PORTAL } from '@/lib/portal-cliente/constantes'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
 import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
@@ -44,6 +45,7 @@ function getServiceClient(): ReturnType<typeof createClient> | null {
 // Deve espelhar RESTRICTED_ROUTES em src/lib/permissions.ts.
 // Inlined por compatibilidade com Edge Runtime. Paths mais específicos primeiro.
 const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
+  { prefix: '/clientes/acesso-portal',  roles: PORTAL_PAPEIS_GESTAO },
   { prefix: '/aurora-mobile',           roles: ['socio'] },
   { prefix: '/ia-juridica/aurora',     roles: ['socio'] },
   { prefix: '/dashboard/tv',           roles: ['socio'] },
@@ -88,7 +90,22 @@ function isRotaDespesasLiberadaPorUsuario(pathname: string, userId: string): boo
 }
 
 
+// ── Portal do Cliente (sessão PRÓPRIA, sem Supabase Auth) ─────────────────────
+// O cliente entra com CPF/CNPJ + código e recebe um cookie opaco (COOKIE_SESSAO). Aqui o proxy só confere se o
+// cookie EXISTE (filtro barato); quem valida de verdade (hash no banco, expiração, revogação) é o portalGuard()/layout.
+// Não toca em Supabase Auth: o cliente nunca tem JWT, e o JWT de staff não abre o portal.
+const temCookiePortal = (request: NextRequest) => !!request.cookies.get(COOKIE_SESSAO)?.value
+
+function proxyApiPortal(request: NextRequest, pathname: string): NextResponse {
+  // Login (solicitar/verificar/pedido/sair) é público; o resto exige o cookie do portal (401 JSON, não redirect).
+  if (pathname.startsWith(PREFIXO_API_AUTH_PORTAL) || temCookiePortal(request)) return NextResponse.next({ request })
+  return NextResponse.json({ error: 'Sessão expirada. Entre novamente.' }, { status: 401 })
+}
+
 export async function proxy(request: NextRequest) {
+  const caminho = request.nextUrl.pathname
+  if (caminho.startsWith('/api/portal/')) return proxyApiPortal(request, caminho)
+
   let supabaseResponse = NextResponse.next({ request })
 
   // Client anon — usado para auth.getUser() (chama Auth REST API diretamente,
@@ -149,6 +166,10 @@ export async function proxy(request: NextRequest) {
   const isSensitive    = RESTRICTED.some(r => pathname.startsWith(r.prefix))
 
   // ── 1. Sem sessão ─────────────────────────────────────────────────────────
+  // Portal: sem Supabase, o que vale é o cookie próprio (validado de verdade no layout/guard).
+  if (!user && isPortalPath && !isPortalLogin && temCookiePortal(request)) {
+    return supabaseResponse
+  }
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
     url.pathname = isPortalPath ? '/portal/login' : '/login'
@@ -190,11 +211,11 @@ export async function proxy(request: NextRequest) {
     const ativo = profile?.ativo
 
     // 3-orphan. Sessão órfã: usuário autenticado sem profile válido no banco.
-    // Fail-secure: bloqueia acesso sem profile. Exclui /portal/login para
-    // evitar redirect loop.
-    if (!profile && (isInternalPath || (isPortalPath && !isPortalLogin))) {
+    // Fail-secure: bloqueia acesso sem profile. O portal não conta aqui: a sessão
+    // dele é o cookie próprio, e um resto de sessão Supabase não diz nada sobre o cliente.
+    if (!profile && isInternalPath) {
       const url = request.nextUrl.clone()
-      url.pathname = isPortalPath ? '/portal/login' : '/login'
+      url.pathname = '/login'
       url.searchParams.set('erro', 'sessao-invalida')
       logSecurity({
         type:     'orphan_session',
@@ -239,17 +260,21 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // 3b. Role 'cliente' no login do portal → portal home
-    if (role === 'cliente' && isPortalLogin) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/portal'
-      return NextResponse.redirect(url)
-    }
-
-    // 3c. Staff tentando acessar /portal → dashboard
+    // 3b/3c. Staff (sessão Supabase com papel interno) tentando acessar /portal → dashboard.
+    // Staff não entra no portal como cliente. (O login do portal continua aberto: é página pública.)
     if (role && role !== 'cliente' && isPortalPath && !isPortalLogin) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // 3b'. Resto de sessão Supabase sem papel interno (sem profile ou papel legado 'cliente') em /portal:
+    // não vale como sessão do portal. Sem cookie próprio → login; com cookie → passa (o layout valida).
+    if (isPortalPath && !isPortalLogin) {
+      if (temCookiePortal(request)) return supabaseResponse
+      const url = request.nextUrl.clone()
+      url.pathname = '/portal/login'
+      url.searchParams.set('next', pathname)
       return NextResponse.redirect(url)
     }
 
