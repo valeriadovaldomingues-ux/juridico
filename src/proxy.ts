@@ -6,6 +6,7 @@ import { COOKIE_SESSAO, PORTAL_PAPEIS_GESTAO, PREFIXO_API_AUTH_PORTAL } from '@/
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 import { DESPESAS_EXTRA_USER_IDS } from '@/lib/auth/despesas-acesso'
 import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario } from '@/lib/auth/acesso-por-usuario'
+import { CRM_SOCIOS_PAPEIS, CRM_SOCIOS_ROTA } from '@/lib/crm-socios/constants'
 
 // ── Service client para leitura de profiles no middleware ─────────────────────
 //
@@ -54,6 +55,7 @@ const RESTRICTED: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/integracoes',            roles: ['gerente', 'socio'] },
   { prefix: '/relatorios',             roles: ['gerente', 'socio'] },
   { prefix: '/comercial',              roles: ['comercial', 'administrativo', 'socio'] },
+  { prefix: CRM_SOCIOS_ROTA,           roles: [...CRM_SOCIOS_PAPEIS] }, // CRM Cris e Val
   { prefix: '/monitoramento',          roles: ['advogado', 'gerente', 'socio'] },
   { prefix: '/importar',               roles: ['administrativo', 'gerente', 'socio'] },
   { prefix: '/ia-juridica',            roles: ['advogado', 'gerente', 'socio'] },
@@ -66,6 +68,7 @@ const INTERNAL_PREFIXES = [
   '/publicacoes', '/documentos', '/financeiro', '/comercial', '/relatorios',
   '/importar', '/automacoes', '/monitoramento', '/ia-juridica',
   '/integracoes', '/configuracoes', '/tv',
+  CRM_SOCIOS_ROTA,
 ]
 
 // Isenção por ROTA do modo restrito (diferente da isenção por papel logo

@@ -2,6 +2,7 @@ import type { UserRole } from '@/types'
 import { KANBAN_ONLY_MODE } from '@/lib/kanban-only-mode'
 import { PORTAL_PAPEIS_GESTAO } from '@/lib/portal-cliente/constantes'
 import { usuarioLiberadoDoModoRestrito, rotaBloqueadaParaUsuario, rotaLiberadaParaUsuario, acessoDoUsuario } from '@/lib/auth/acesso-por-usuario'
+import { CRM_SOCIOS_PAPEIS, CRM_SOCIOS_ROTA } from '@/lib/crm-socios/constants'
 
 export { KANBAN_ONLY_MODE }
 
@@ -74,6 +75,7 @@ export type Module =
   | 'importacao'
   | 'financeiro'
   | 'comercial'
+  | 'crmSocios'     // CRM Cris e Val — módulo à parte do CRM da Luciana; só sócios
   | 'ferramentasPdf'
   | 'relatorios'
   | 'monitoramento'
@@ -213,6 +215,7 @@ const PERMISSIONS: PermMatrix = {
     importacao:   ['view', 'create'],
     financeiro:   ['view', 'create', 'edit', 'delete'],
     comercial:    ['view', 'create', 'edit', 'delete'],
+    crmSocios:    ['view', 'create', 'edit', 'delete'],
     relatorios:   ['view'],
     monitoramento: ['view', 'create', 'edit', 'manage'],
     usuarios:     ['view', 'create', 'edit', 'delete', 'manage'],
@@ -349,6 +352,7 @@ export const ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/documentos',
     '/ferramentas-pdf',
     '/comercial',
+    '/crm-socios',
     '/relatorios',
     '/importar',
     '/automacoes',
@@ -396,6 +400,9 @@ export const RESTRICTED_ROUTES: Array<{ prefix: string; roles: UserRole[] }> = [
 
   // ── Comercial (CRM interno — somente quem o usa) ─────────────────────────────
   { prefix: '/comercial',             roles: ['comercial', 'administrativo', 'socio'] },
+
+  // ── CRM Cris e Val (só sócios — constante única em lib/crm-socios/constants.ts) ─
+  { prefix: CRM_SOCIOS_ROTA,          roles: [...CRM_SOCIOS_PAPEIS] },
 
   // ── Monitoramento (advogado, gerente, sócio) ──────────────────────────────────
   { prefix: '/monitoramento',         roles: ['advogado', 'gerente', 'socio'] },
