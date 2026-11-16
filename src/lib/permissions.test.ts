@@ -111,3 +111,17 @@ describe('Relatório de horas (/horas)', () => {
     expect(ALLOWED_ROUTES.comercial).not.toContain('/horas')
   })
 })
+
+describe('estagiário cria processos (decisão de 16/11/2026)', () => {
+  it('pode ver e criar, mas não editar nem apagar processos', () => {
+    expect(can('estagiario', 'processos', 'view')).toBe(true)
+    expect(can('estagiario', 'processos', 'create')).toBe(true)
+    expect(can('estagiario', 'processos', 'edit')).toBe(false)
+    expect(can('estagiario', 'processos', 'delete')).toBe(false)
+  })
+
+  it('comercial continua sem criar processos', () => {
+    expect(can('comercial', 'processos', 'create')).toBe(false)
+  })
+})
+

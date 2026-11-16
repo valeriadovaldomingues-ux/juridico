@@ -114,9 +114,9 @@ const PERMISSIONS: PermMatrix = {
   estagiario: {
     dashboard:   ['view'],
     clientes:    ['view'],
-    processos:   ['view'],
+    processos:   ['view', 'create'],   // cria processo desde 16/11/2026; não edita nem apaga
     inpi:        ['view'],
-    partes:      ['view'],
+    partes:      ['view', 'create'],   // o formulário de novo processo grava a parte junto
     agenda:      ['view', 'create', 'edit'],
     kanban:      ['view', 'create', 'edit'],
     publicacoes: ['view'],

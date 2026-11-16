@@ -3,8 +3,8 @@ import ProcessoForm from '../ProcessoForm'
 import { Scale } from 'lucide-react'
 
 export default async function NovoProcessoPage() {
-  // estagiario e comercial não criam processos
-  await requireRole(['administrativo', 'advogado', 'gerente', 'socio'])
+  // comercial não cria processos; estagiário passou a criar em 16/11/2026 (decisão da Valéria)
+  await requireRole(['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'])
 
   return (
     <div className="internal-page space-y-6 max-w-5xl">
