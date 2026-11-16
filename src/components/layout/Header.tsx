@@ -26,6 +26,7 @@ const routeLabels: Record<string, string> = {
   '/monitoramento':          'Monitoramento',
   '/monitoramento/clientes': 'Clientes monitorados',
   '/comercial':              'Comercial',
+  '/crm-socios':             'CRM Cris e Val',
   '/ferramentas-pdf':        'Ferramentas PDF',
 }
 

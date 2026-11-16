@@ -7,6 +7,7 @@ import {
   DollarSign, FileText, Bot, Settings, BarChart2, Banknote,
   Upload, Columns, Newspaper, Radar, UserCog, Handshake, ArrowLeftRight, Zap,
   Mail, Scissors, Tv2, X, Stamp, NotebookPen, Clock3, ShieldCheck,
+  Briefcase,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from '@/components/ui/Logo'
@@ -36,6 +37,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
       { href: '/horas',       label: 'Horas',       icon: Clock3     },
       { href: '/publicacoes', label: 'Publicações', icon: Newspaper  },
       { href: '/comercial',   label: 'Comercial',   icon: Handshake  },
+      { href: '/crm-socios',  label: 'CRM Cris e Val', icon: Briefcase },
       { href: '/financeiro',  label: 'Financeiro',  icon: DollarSign },
       { href: '/financeiro/cobrancas', label: 'Cobranças', icon: Banknote },
       { href: '/documentos',  label: 'Documentos',  icon: FileText   },
