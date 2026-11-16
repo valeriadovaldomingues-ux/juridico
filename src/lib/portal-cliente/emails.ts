@@ -4,9 +4,29 @@ import type { Db } from './db'
 import { emailConfigurado, enviarEmail, textoParaHtml } from '@/lib/email/mailer'
 import { CODIGO_VALIDADE_MS } from './constantes'
 
+/**
+ * Motivo técnico de uma falha de envio, para o log da Vercel. Só campos de diagnóstico do SMTP (código, comando,
+ * resposta do servidor) — nunca o código de acesso, o e-mail do cliente ou o documento. Endereços de e-mail que
+ * apareçam na resposta do servidor são mascarados.
+ */
+export function motivoDaFalhaDeEnvio(e: unknown): string {
+  const err = (e ?? {}) as { code?: unknown; command?: unknown; responseCode?: unknown; response?: unknown }
+  const parte = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v).replace(/[^\w .:@/-]/g, '').slice(0, 120) : '')
+  const resposta = parte(err.response).replace(/[^\s@]+@[^\s@]+/g, '[e-mail]')
+  return [
+    err.code ? `code=${parte(err.code)}` : '',
+    err.command ? `command=${parte(err.command)}` : '',
+    err.responseCode ? `responseCode=${parte(err.responseCode)}` : '',
+    resposta ? `response=${resposta}` : '',
+  ].filter(Boolean).join(' ') || 'erro desconhecido'
+}
+
 /** Envia o código ao e-mail de acesso LIBERADO pelo escritório. Retorna true se saiu. */
 export async function enviarCodigoPorEmail(para: string, codigo: string): Promise<boolean> {
-  if (!emailConfigurado()) return false
+  if (!emailConfigurado()) {
+    console.error('[portal] código não enviado: SMTP não configurado (faltam variáveis SMTP_*)')
+    return false
+  }
   const minutos = Math.round(CODIGO_VALIDADE_MS / 60000)
   const texto = [
     'Olá!',
@@ -18,7 +38,8 @@ export async function enviarCodigoPorEmail(para: string, codigo: string): Promis
   try {
     await enviarEmail({ to: [para], subject: 'Seu código de acesso ao Portal do Cliente', text: texto, html: textoParaHtml(texto) })
     return true
-  } catch {
+  } catch (e) {
+    console.error(`[portal] falha ao enviar o código por e-mail: ${motivoDaFalhaDeEnvio(e)}`)
     return false
   }
 }
@@ -37,7 +58,7 @@ export async function avisarSociosDoPedido(db: Db, documentoParcial: string): Pr
       'Antes de aprovar, confirme com o cliente por telefone ou WhatsApp.',
     ].join('\n\n')
     await enviarEmail({ to: destinos, subject: 'Portal do Cliente: novo pedido de acesso', text: texto, html: textoParaHtml(texto) })
-  } catch {
-    // silencioso
+  } catch (e) {
+    console.error(`[portal] falha ao avisar os sócios do pedido: ${motivoDaFalhaDeEnvio(e)}`)
   }
 }
