@@ -134,7 +134,7 @@ REVOKE ALL ON public.portal_acessos_log     FROM anon, authenticated;
 
 -- ── processos.ocultar_portal ─────────────────────────────────────────────────
 -- Liberação padrão: todo processo do cliente aparece no portal, EXCETO segredo de justiça e os marcados aqui.
--- O interruptor "Ocultar do portal do cliente" fica na ficha do processo (sócio, advogado e gerente).
+-- O interruptor "Ocultar do portal do cliente" fica na ficha do processo (por enquanto só o sócio: PORTAL_PAPEIS_GESTAO).
 ALTER TABLE public.processos
   ADD COLUMN IF NOT EXISTS ocultar_portal boolean NOT NULL DEFAULT false;
 
