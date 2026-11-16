@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { importarDadosProcessoDeDocumento } from '@/lib/processos/importar-documento.server'
 
-const ALLOWED_ROLES = ['administrativo', 'advogado', 'gerente', 'socio'] as const
+const ALLOWED_ROLES = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio'] as const
 
 function statusFromError(message: string) {
   const lower = message.toLowerCase()
