@@ -67,3 +67,55 @@ describe('horas_lancadas', () => {
     expect(r.total_minutos).toBe(60)
   })
 })
+
+describe('lancar_horas: consultoria sem processo (só o cliente)', () => {
+  const CLI = '44444444-4444-4444-4444-444444444444'
+  function dbCliente(doDia: unknown[] = []) {
+    const inserts: [string, unknown][] = []
+    const db = {
+      from: (t: string) => {
+        const c: Record<string, unknown> = {}
+        for (const m of ['eq', 'is', 'gte', 'lte', 'ilike', 'limit', 'order', 'select']) c[m] = () => c
+        c.maybeSingle = async () => ({ data: t === 'clientes' ? { id: CLI, nome: 'GOLD CURSOS' } : null, error: null })
+        c.insert = (v: unknown) => { inserts.push([t, v]); return { select: () => ({ single: async () => ({ data: { id: `novo-${t}` }, error: null }) }) } }
+        c.then = (r: (v: unknown) => void) => r({ data: t === 'agenda_time_entries' ? doDia : [], error: null })
+        return c
+      },
+    }
+    return { db, inserts }
+  }
+  const ctx = (db: unknown) => ({ db, userId: 'u1', nome: 'Tuane' }) as never
+
+  it('exige processo ou cliente', async () => {
+    await expect(lancar.executar({ descricao: 'Consultoria', minutos: 60 }, ctx(dbCliente().db))).rejects.toThrow(/processo.*cliente/i)
+  })
+  it('sem confirmar mostra o cliente e que não há processo; nada é gravado', async () => {
+    const { db, inserts } = dbCliente()
+    const r = await lancar.executar({ cliente_id: CLI, descricao: 'Revisão da política de benefícios', data: '2026-11-17', horas: 2 }, ctx(db)) as { confirmacao_necessaria: boolean; resumo: Record<string, unknown> }
+    expect(r.confirmacao_necessaria).toBe(true)
+    expect(r.resumo).toMatchObject({ cliente: 'GOLD CURSOS', minutos: 120 })
+    expect(r.resumo.processo).toBeUndefined()
+    expect(inserts).toHaveLength(0)
+  })
+  it('com confirmar grava tarefa e tempo ligados só ao cliente (processo_id nulo)', async () => {
+    const { db, inserts } = dbCliente()
+    await lancar.executar({ cliente_id: CLI, descricao: 'Consultoria', data: '2026-11-17', minutos: 90, confirmar: true }, ctx(db))
+    expect(inserts.map(i => i[0])).toEqual(['agenda_items', 'agenda_time_entries'])
+    expect(inserts[0][1]).toMatchObject({ processo_id: null, cliente_id: CLI, tipo: 'tarefa', status: 'concluido' })
+    expect(inserts[1][1]).toMatchObject({ processo_id: null, cliente_id: CLI, duracao_manual_minutos: 90, usa_duracao_manual: true, criado_por: 'u1' })
+  })
+  it('recusa andamento_id sem processo e cliente inexistente', async () => {
+    await expect(lancar.executar({ cliente_id: CLI, descricao: 'x', minutos: 30, andamento_id: PROC }, ctx(dbCliente().db))).rejects.toThrow(/só vale com processo/)
+    const vazio = { from: () => { const c: Record<string, unknown> = {}; c.select = () => c; c.eq = () => c; c.maybeSingle = async () => ({ data: null, error: null }); return c } }
+    await expect(lancar.executar({ cliente_id: CLI, descricao: 'x', minutos: 30 }, ctx(vazio))).rejects.toThrow(/Cliente não encontrado/)
+  })
+})
+
+describe('buscar_clientes', () => {
+  const busca = FERRAMENTAS.find(f => f.name === 'buscar_clientes')!
+  it('exige 2 caracteres e devolve id, nome e documento', async () => {
+    await expect(busca.executar({ texto: 'a' }, { db: {} as never, userId: 'u', nome: 'x' })).rejects.toThrow(/2 caracteres/)
+    const db = { from: () => { const c: Record<string, unknown> = {}; for (const m of ['select', 'or', 'order']) c[m] = () => c; c.limit = async () => ({ data: [{ id: 'c1', nome: 'GOLD CURSOS', cpf_cnpj: null }], error: null }); return c } }
+    expect(await busca.executar({ texto: 'gold' }, { db: db as never, userId: 'u', nome: 'x' })).toEqual([{ id: 'c1', nome: 'GOLD CURSOS', cpf_cnpj: null }])
+  })
+})

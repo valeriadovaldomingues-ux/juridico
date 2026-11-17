@@ -14,7 +14,7 @@ describe('protocolo MCP', () => {
   it('lista só ferramentas de leitura', async () => {
     const r = await responderMcp({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx)
     const nomes = (r?.result as { tools: { name: string }[] }).tools.map(t => t.name)
-    expect(nomes).toEqual(['agenda', 'prazos', 'buscar_processos', 'ver_processo', 'horas_lancadas', 'publicacoes'])
+    expect(nomes).toEqual(['agenda', 'prazos', 'buscar_clientes', 'buscar_processos', 'ver_processo', 'horas_lancadas', 'publicacoes'])
   })
   it('só quem pode escrever vê (e usa) as ferramentas de gravação', async () => {
     const leitura = await responderMcp({ jsonrpc: '2.0', id: 6, method: 'tools/list' }, ctx)
