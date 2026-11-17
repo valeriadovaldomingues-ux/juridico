@@ -177,7 +177,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   },
   {
     name: 'atualizar_andamento',
-    description: 'Corrige um andamento já lançado (título, descrição, tipo e/ou data), seu ou de outra pessoa. Use o id do andamento devolvido por ver_processo (ultimos_andamentos). Mesma regra da tela: advogado, gerente e sócio editam qualquer andamento; estagiário só observações. Não mexe nas horas já lançadas e não exclui (excluir andamento é só do sócio, pela tela). O antes e o depois ficam guardados no histórico. Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    description: 'Corrige um andamento já lançado (título, descrição, tipo e/ou data), seu ou de outra pessoa. Use o id do andamento devolvido por ver_processo (ultimos_andamentos). Mesma regra da tela: advogado, gerente, sócio e estagiário editam qualquer andamento. Não mexe nas horas já lançadas e não exclui (excluir andamento é só do sócio, pela tela). O antes e o depois ficam guardados no histórico. Duas etapas: sem confirmar=true mostra o antes e o depois.',
     inputSchema: { type: 'object', properties: {
       id: { type: 'string', description: 'Id do andamento (de ver_processo)' },
       titulo: { type: 'string' }, descricao: { type: 'string', description: 'Texto novo da descrição (substitui o anterior)' },
@@ -208,7 +208,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       }
       if (!Object.keys(novo).length) throw new Error('Informe o que mudar (titulo, descricao, tipo ou data).')
       if (!podeEditarAndamento((ctx.role ?? '') as UserRole, atual, typeof novo.tipo === 'string' ? novo.tipo : undefined)) {
-        throw new Error('Seu perfil não pode editar este andamento (advogado, gerente e sócio editam; estagiário só observações).')
+        throw new Error('Seu perfil não pode editar este andamento (editam advogado, gerente, sócio e estagiário).')
       }
       const antes = Object.fromEntries(Object.keys(novo).map(c => [c, (atual as Record<string, unknown>)[c] ?? null]))
       const resumo = { andamento: String(atual.titulo ?? ''), antes, depois: novo }

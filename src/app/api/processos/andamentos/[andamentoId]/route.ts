@@ -12,7 +12,7 @@ function parseDataAndamento(value?: string | null) {
 
 const CAMPOS = 'data_andamento, tipo, titulo, descricao, origem, responsavel_id'
 
-// Edição: sócio e advogado (qualquer andamento) e estagiário (só observações). Cada edição grava o antes e o depois
+// Edição: sócio, advogado, gerente e estagiário (qualquer andamento). Cada edição grava o antes e o depois
 // em processo_andamentos_historico. Usa o cliente de serviço porque a regra de banco só deixa o sócio alterar:
 // a autorização é feita aqui.
 export async function PATCH(

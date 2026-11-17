@@ -47,8 +47,9 @@ describe('atualizar_andamento', () => {
     await expect(atualizar.executar({ id: AND, titulo: 'Certo', confirmar: true }, ctx(db, 'advogado'))).rejects.toThrow(/Nada foi alterado/)
     expect(updates).toHaveLength(0)
   })
-  it('comercial e administrativo não editam andamento; estagiário só observação', async () => {
-    for (const role of ['comercial', 'administrativo', 'estagiario']) {
+  it('comercial e administrativo não editam andamento; estagiário edita (liberado em 17/11/2026)', async () => {
+    await atualizar.executar({ id: AND, titulo: 'Certo' }, ctx(dbFalso().db, 'estagiario'))
+    for (const role of ['comercial', 'administrativo']) {
       await expect(atualizar.executar({ id: AND, titulo: 'Certo', confirmar: true }, ctx(dbFalso().db, role))).rejects.toThrow(/não pode editar/)
     }
   })

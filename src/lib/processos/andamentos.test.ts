@@ -48,14 +48,11 @@ describe('andamentos helpers', () => {
 })
 
 describe('podeEditarAndamento', () => {
-  it('sócio, advogado e gerente editam qualquer andamento; estagiário só observação e sem mudar o tipo', () => {
-    expect(podeEditarAndamento('socio', { tipo: 'decisao' })).toBe(true)
-    expect(podeEditarAndamento('advogado', { tipo: 'decisao' })).toBe(true)
-    expect(podeEditarAndamento('gerente', { tipo: 'decisao' })).toBe(true)
-    expect(podeEditarAndamento('estagiario', { tipo: 'observacao' })).toBe(true)
-    expect(podeEditarAndamento('estagiario', { tipo: 'observacao' }, 'observacao')).toBe(true)
-    expect(podeEditarAndamento('estagiario', { tipo: 'observacao' }, 'decisao')).toBe(false)
-    expect(podeEditarAndamento('estagiario', { tipo: 'decisao' })).toBe(false)
+  it('sócio, advogado, gerente e estagiário editam qualquer andamento (estagiário liberado em 17/11/2026)', () => {
+    for (const role of ['socio', 'advogado', 'gerente', 'estagiario'] as const) {
+      expect(podeEditarAndamento(role, { tipo: 'decisao' })).toBe(true)
+      expect(podeEditarAndamento(role, { tipo: 'observacao' }, 'decisao')).toBe(true)
+    }
   })
   it('administrativo e demais papéis não editam (nesta liberação)', () => {
     for (const role of ['administrativo', 'comercial', 'cliente'] as const) {
