@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core'
-import { EyeOff, RefreshCw } from 'lucide-react'
+import { EyeOff, RefreshCw, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getKanbanTasks,
@@ -17,6 +17,7 @@ import {
   getUnassignedTasks,
   resolverDestinoOffice,
   ordenarColunasTrello,
+  filtrarTarefasPorBusca,
   type OfficeColumn,
   type ListaMapeada,
 } from '@/lib/kanban.service'
@@ -82,6 +83,10 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
   // ── Preferências de exibição (quadro do escritório) — por navegador ────────
   const [ocultarVazios, setOcultarVazios] = useState(false)
+  // Busca de cartões (nº do processo, título, parte, responsável...) — só filtra a exibição, não mexe nos dados.
+  const [busca, setBusca] = useState('')
+  const buscando = busca.trim().length > 0
+  const tarefasVisiveis = useMemo(() => filtrarTarefasPorBusca(tasks, busca), [tasks, busca])
 
   // Colunas recolhidas (só o nome na vertical) — também pessoal, por navegador.
   const [recolhidas, setRecolhidas] = useState<string[]>([])
@@ -241,14 +246,16 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   // Sincroniza as colunas do escritório quando tasks ou profiles mudam
   useEffect(() => {
     if (view === 'office' && profiles.length > 0) {
-      setOfficeCols(getOfficeColumns(tasks, profiles))
+      setOfficeCols(getOfficeColumns(tarefasVisiveis, profiles))
     }
-  }, [tasks, profiles, view])
+  }, [tarefasVisiveis, profiles, view])
 
   // ── Callbacks ───────────────────────────────────────────────────────────────
 
+  // Mescla por id: com a busca ligada o quadro pessoal só enxerga uma parte dos cartões, e o resto não pode sumir.
   const handleTasksChange = useCallback((updated: KanbanTask[]) => {
-    setTasks(updated)
+    const porId = new Map(updated.map(t => [t.id, t]))
+    setTasks(prev => prev.map(t => porId.get(t.id) ?? t))
   }, [])
 
   const handleEdit = useCallback((task: KanbanTask) => {
@@ -390,6 +397,32 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
     )
   }
 
+  const barraBusca = (
+    <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="relative w-full max-w-md">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)] pointer-events-none" />
+        <input
+          type="search"
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          placeholder="Buscar cartão: nº do processo, título, parte, responsável…"
+          aria-label="Buscar cartões no Kanban"
+          className="w-full rounded-xl border border-[var(--color-border)] bg-white pl-9 pr-9 py-2 text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-3)] focus:outline-none focus:ring-2 focus:ring-[var(--color-copper)]/40"
+        />
+        {buscando && (
+          <button type="button" onClick={() => setBusca('')} aria-label="Limpar a busca" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)] hover:text-[var(--color-ink)]">
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      {buscando && (
+        <span className="text-[12px] text-[var(--color-ink-3)]">
+          {tarefasVisiveis.length === 0 ? 'Nenhum cartão encontrado' : `${tarefasVisiveis.length} cartão${tarefasVisiveis.length > 1 ? 'ões' : ''} encontrado${tarefasVisiveis.length > 1 ? 's' : ''}`}
+        </span>
+      )}
+    </div>
+  )
+
   // ── Quadro Pessoal ──────────────────────────────────────────────────────────
 
   if (view === 'personal') {
@@ -403,8 +436,9 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
     return (
       <>
+        {barraBusca}
         <PersonalBoard
-          tasks={tasks}
+          tasks={tarefasVisiveis}
           currentUser={currentUser}
           onTasksChange={handleTasksChange}
           onEdit={handleEdit}
@@ -432,16 +466,18 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
 
   // ── Quadro do Escritório (estilo Trello: uma coluna por pessoa, lado a lado) ─
 
-  const unassignedTasks = getUnassignedTasks(tasks)
-  const listCols        = getListColumns(tasks, listasMapeadas)
-  const colVisiveis     = ocultarVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
-  const listColsVisiveis = ocultarVazios ? listCols.filter(col => col.tasks.length > 0) : listCols
+  const unassignedTasks = getUnassignedTasks(tarefasVisiveis)
+  const listCols        = getListColumns(tarefasVisiveis, listasMapeadas)
+  const esconderVazios  = ocultarVazios || buscando // buscando: só ficam as colunas com resultado
+  const colVisiveis     = esconderVazios ? officeCols.filter(col => col.tasks.length > 0) : officeCols
+  const listColsVisiveis = esconderVazios ? listCols.filter(col => col.tasks.length > 0) : listCols
   const mostrarUnassigned = unassignedTasks.length > 0
   // Mesma ordem de colunas do Trello (pessoas e listas intercaladas pela posição da lista)
-  const colunasOrdenadas = ordenarColunasTrello(colVisiveis, listColsVisiveis, tasks, listasMapeadas)
+  const colunasOrdenadas = ordenarColunasTrello(colVisiveis, listColsVisiveis, tarefasVisiveis, listasMapeadas)
 
   return (
     <>
+      {barraBusca}
       {(officeCols.length > 0 || listCols.length > 0) && (
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-2)] cursor-pointer select-none">

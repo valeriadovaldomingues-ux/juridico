@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compararTarefas, getListColumns, getOfficeColumns, getPersonalColumns, getUnassignedTasks, resolverDestinoOffice, ordenarColunasTrello } from './kanban.service'
+import { compararTarefas, getListColumns, getOfficeColumns, getPersonalColumns, getUnassignedTasks, resolverDestinoOffice, ordenarColunasTrello, filtrarTarefasPorBusca } from './kanban.service'
 import type { KanbanTask } from '@/types/kanban'
 
 function tarefa(overrides: Partial<KanbanTask> = {}): KanbanTask {
@@ -185,4 +185,19 @@ describe('compararTarefas (ordem das colunas)', () => {
     const pessoal = getPersonalColumns([tarefa({ id: 't', responsavel_id: 'u1', ...tarde }), tarefa({ id: 'c', responsavel_id: 'u1', ...cedo })], 'u1')
     expect(pessoal[0].tasks.map(t => t.id)).toEqual(['c', 't'])
   })
+})
+
+describe('filtrarTarefasPorBusca', () => {
+  const t = (o: Record<string, unknown>) => ({ id: String(o.titulo), titulo: 'x', status: 'a_fazer', prioridade: 'media', origem: 'manual', ordem: 0, created_at: '', updated_at: '', ...o }) as never
+  const tasks = [
+    t({ id: 'a', titulo: 'Memoriais finais José André', numero_processo: '0011023-60.2026.5.03.0021', responsavel: { id: 'r1', nome: 'Valéria do Val' } }),
+    t({ id: 'b', titulo: 'Redistribuir ação irmã', partes_resumidas: 'Velozinho x Banco', trello_list_nome: 'CONCLUÍDOS' }),
+    t({ id: 'c', titulo: 'Petição inicial', processo: { id: 'p', titulo: 'Condomínio Aurora' } }),
+  ]
+  const ids = (b: string) => filtrarTarefasPorBusca(tasks, b).map(x => (x as { id: string }).id)
+  it('busca vazia devolve tudo', () => { expect(ids('')).toEqual(['a', 'b', 'c']); expect(ids('   ')).toEqual(['a', 'b', 'c']) })
+  it('acha por título, sem acento e sem diferenciar maiúsculas', () => { expect(ids('jose andre')).toEqual(['a']); expect(ids('IRMA')).toEqual(['b']) })
+  it('acha por número do processo, com ou sem pontuação', () => { expect(ids('0011023-60.2026')).toEqual(['a']); expect(ids('00110236020265030021')).toEqual(['a']); expect(ids('0011023')).toEqual(['a']) })
+  it('acha por parte, responsável, lista e título do processo', () => { expect(ids('velozinho')).toEqual(['b']); expect(ids('valeria')).toEqual(['a']); expect(ids('concluidos')).toEqual(['b']); expect(ids('aurora')).toEqual(['c']) })
+  it('todas as palavras precisam aparecer', () => { expect(ids('petição aurora')).toEqual(['c']); expect(ids('petição velozinho')).toEqual([]) })
 })
