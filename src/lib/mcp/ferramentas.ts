@@ -67,6 +67,20 @@ export const FERRAMENTAS: Ferramenta[] = [
     },
   },
   {
+    name: 'buscar_clientes',
+    description: 'Busca clientes por nome ou CPF/CNPJ (sem diferenciar acentos). Devolve até 20, com o id para usar em lancar_horas (consultoria sem processo) e horas_lancadas.',
+    inputSchema: { type: 'object', properties: { texto: { type: 'string', description: 'Parte do nome ou do CPF/CNPJ' } }, required: ['texto'] },
+    async executar(args, ctx) {
+      const texto = String(args.texto ?? '').trim().replace(/[%,()]/g, ' ')
+      if (texto.length < 2) throw new Error('Informe pelo menos 2 caracteres.')
+      const digitos = texto.replace(/\D/g, '')
+      const filtro = digitos.length >= 4 ? `nome.ilike.%${texto}%,cpf_cnpj.ilike.%${digitos}%` : `nome.ilike.%${texto}%`
+      const { data, error } = await ctx.db.from('clientes').select('id, nome, cpf_cnpj').or(filtro).order('nome').limit(20)
+      if (error) throw new Error(error.message)
+      return data ?? []
+    },
+  },
+  {
     name: 'buscar_processos',
     description: 'Busca processos por número, título, nome do cliente ou da parte (sem diferenciar acentos). Devolve até 20.',
     inputSchema: { type: 'object', properties: { texto: { type: 'string', description: 'O que procurar' } }, required: ['texto'] },
@@ -114,6 +128,7 @@ export const FERRAMENTAS: Ferramenta[] = [
     description: 'Horas já lançadas na aba Horas, para conferir antes de lançar de novo (evita duplicidade). Filtra por processo, por pessoa e por período. Não mostra valores em dinheiro.',
     inputSchema: { type: 'object', properties: {
       processo_id: { type: 'string', description: 'Id do processo (de buscar_processos)' },
+      cliente_id: { type: 'string', description: 'Id do cliente (de buscar_clientes): mostra todas as horas do cliente, com ou sem processo (inclui consultorias)' },
       responsavel: { type: 'string', description: 'Parte do nome de quem lançou/trabalhou' },
       de: { type: 'string', description: 'Data inicial AAAA-MM-DD (padrão: 30 dias atrás)' }, ate: { type: 'string', description: 'Data final AAAA-MM-DD (padrão: hoje)' },
     } },
@@ -127,6 +142,11 @@ export const FERRAMENTAS: Ferramenta[] = [
       if (processoId) {
         if (!/^[0-9a-f-]{36}$/i.test(processoId)) throw new Error('Id de processo inválido.')
         q = q.eq('processo_id', processoId)
+      }
+      const clienteId = String(args.cliente_id ?? '')
+      if (clienteId) {
+        if (!/^[0-9a-f-]{36}$/i.test(clienteId)) throw new Error('Id de cliente inválido.')
+        q = q.eq('cliente_id', clienteId)
       }
       const { data, error } = await q
       if (error) throw new Error(error.message)

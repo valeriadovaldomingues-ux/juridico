@@ -588,9 +588,10 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   },
   {
     name: 'lancar_horas',
-    description: 'Lança tempo gasto na aba Horas (timesheet) de um processo, com data, responsável, descrição e tempo (informe `minutos`, ou `horas`+`minutos`, ou `inicio`+`fim`). Pode ser ligado a um andamento (andamento_id). Antes de gravar, confere se já existe lançamento parecido no mesmo processo e dia — use horas_lancadas para ver o que já foi lançado. Duas etapas: sem confirmar=true só mostra o resumo.',
+    description: 'Lança tempo gasto na aba Horas (timesheet) de um processo OU direto de um cliente (consultoria e outros trabalhos sem processo: informe cliente_id, de buscar_clientes, e deixe processo_id vazio), com data, responsável, descrição e tempo (informe `minutos`, ou `horas`+`minutos`, ou `inicio`+`fim`). Pode ser ligado a um andamento (andamento_id). Antes de gravar, confere se já existe lançamento parecido no mesmo processo e dia — use horas_lancadas para ver o que já foi lançado. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: {
-      processo_id: { type: 'string', description: 'Id do processo (de buscar_processos)' },
+      processo_id: { type: 'string', description: 'Id do processo (de buscar_processos). Vazio para consultoria/trabalho sem processo.' },
+      cliente_id: { type: 'string', description: 'Id do cliente (de buscar_clientes). Use quando NÃO houver processo (ex.: consultoria). Se houver processo, o cliente é o do processo.' },
       descricao: { type: 'string', description: 'O que foi feito' },
       data: { type: 'string', description: 'AAAA-MM-DD (padrão: hoje)' },
       horas: { type: 'number', description: 'Horas inteiras (use com minutos)' }, minutos: { type: 'number', description: 'Minutos (0 a 59 se houver horas; senão o total de minutos)' },
@@ -600,22 +601,40 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       cobravel: { type: 'boolean', description: 'Padrão: true' },
       permitir_duplicado: { type: 'boolean', description: 'Só use se o usuário confirmar que é outro lançamento, mesmo havendo um parecido' },
       confirmar: CONFIRMAR,
-    }, required: ['processo_id', 'descricao'] },
+    }, required: ['descricao'] },
     async executar(args, ctx) {
-      const processoId = String(args.processo_id ?? '')
+      const processoIdArg = String(args.processo_id ?? '').trim()
+      const clienteIdArg = String(args.cliente_id ?? '').trim()
       const descricao = texto(args.descricao, 300)
-      if (!UUID.test(processoId) || !descricao) throw new Error('Informe o processo (id) e a descrição do que foi feito.')
+      if (!descricao) throw new Error('Informe a descrição do que foi feito.')
+      if (!processoIdArg && !clienteIdArg) throw new Error('Informe o processo (processo_id) ou, se não houver processo (ex.: consultoria), o cliente (cliente_id, de buscar_clientes).')
+      if (processoIdArg && !UUID.test(processoIdArg)) throw new Error('Id de processo inválido.')
+      if (clienteIdArg && !UUID.test(clienteIdArg)) throw new Error('Id de cliente inválido.')
+      const processoId = processoIdArg
       const data = dataOk(args.data) ?? hojeBrasilia()
       const tempo = lerTempoDosArgumentos(args, data)
       if (!tempo.ok) throw new Error(tempo.erro)
 
-      const { data: proc, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', processoId).maybeSingle()
-      if (error) throw new Error(error.message)
-      if (!proc) throw new Error('Processo não encontrado.')
-      if (!proc.cliente_id) throw new Error('O processo não tem cliente cadastrado; as horas são lançadas por cliente.')
+      // Com processo, o cliente é o do processo; sem processo (consultoria etc.), o cliente informado.
+      let proc: { id?: string; numero_processo?: string | null; titulo?: string | null; cliente_id: string }
+      let clienteNome: string | null = null
+      if (processoId) {
+        const { data: p, error } = await ctx.db.from('processos').select('id, numero_processo, titulo, cliente_id').eq('id', processoId).maybeSingle()
+        if (error) throw new Error(error.message)
+        if (!p) throw new Error('Processo não encontrado.')
+        if (!p.cliente_id) throw new Error('O processo não tem cliente cadastrado; as horas são lançadas por cliente.')
+        proc = p
+      } else {
+        const { data: c, error } = await ctx.db.from('clientes').select('id, nome').eq('id', clienteIdArg).maybeSingle()
+        if (error) throw new Error(error.message)
+        if (!c) throw new Error('Cliente não encontrado.')
+        proc = { cliente_id: c.id }
+        clienteNome = c.nome ?? null
+      }
 
       let andamentoId: string | null = null
       if (args.andamento_id !== undefined && args.andamento_id !== null && args.andamento_id !== '') {
+        if (!processoId) throw new Error('andamento_id só vale com processo (consultoria sem processo não tem andamento).')
         andamentoId = String(args.andamento_id)
         const { data: and } = UUID.test(andamentoId)
           ? await ctx.db.from('processo_andamentos').select('id, titulo').eq('id', andamentoId).eq('processo_id', processoId).maybeSingle()
@@ -634,10 +653,11 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
         respNome = perfis[0].nome
       }
 
-      // Duplicidade: mesmo processo, mesmo dia, mesmo responsável e mesmo tempo (ou mesma descrição)
-      const { data: doDia } = await ctx.db.from('agenda_time_entries')
+      // Duplicidade: mesmo processo (ou, sem processo, mesmo cliente), mesmo dia, mesmo responsável e mesmo tempo (ou mesma descrição)
+      let consultaDoDia = ctx.db.from('agenda_time_entries')
         .select('id, descricao_atividade, usa_duracao_manual, duracao_manual_minutos, duracao_calculada_minutos, agenda_item:agenda_items(responsavel)')
-        .eq('processo_id', processoId).gte('inicio_em', `${data}T00:00:00-03:00`).lte('inicio_em', `${data}T23:59:59-03:00`).limit(50)
+      consultaDoDia = processoId ? consultaDoDia.eq('processo_id', processoId) : consultaDoDia.eq('cliente_id', proc.cliente_id).is('processo_id', null)
+      const { data: doDia } = await consultaDoDia.gte('inicio_em', `${data}T00:00:00-03:00`).lte('inicio_em', `${data}T23:59:59-03:00`).limit(50)
       const semelhantes = (doDia ?? []).filter((e: Record<string, unknown>) => {
         const min = e.usa_duracao_manual ? e.duracao_manual_minutos : e.duracao_calculada_minutos
         const item = Array.isArray(e.agenda_item) ? e.agenda_item[0] : e.agenda_item
@@ -648,7 +668,8 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
 
       const cobravel = args.cobravel === undefined ? true : Boolean(args.cobravel)
       const resumo: Record<string, unknown> = {
-        processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim(), data, responsavel: respNome, descricao,
+        ...(processoId ? { processo: `${proc.numero_processo ?? ''} ${proc.titulo ?? ''}`.trim() } : { cliente: clienteNome, sem_processo: 'consultoria / trabalho sem processo' }),
+        data, responsavel: respNome, descricao,
         tempo: formatarTempo(tempo.tempo.minutos), minutos: tempo.tempo.minutos, cobravel,
         andamento_id: andamentoId,
       }
@@ -663,11 +684,11 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       const obs = [andamentoId ? `Ligado ao andamento ${andamentoId}` : null, marca(ctx.nome)].filter(Boolean).join('\n')
       const { data: item, error: e1 } = await ctx.db.from('agenda_items').insert({
         titulo: descricao, descricao: `${obs}\n\n[lançado no controle de horas]`, tipo: 'tarefa', status: 'concluido',
-        data_inicio: data, prioridade: 'media', processo_id: processoId, cliente_id: proc.cliente_id, responsavel: respNome,
+        data_inicio: data, prioridade: 'media', processo_id: processoId || null, cliente_id: proc.cliente_id, responsavel: respNome,
       }).select('id').single()
       if (e1 || !item) throw new Error(e1?.message ?? 'Não foi possível registrar.')
       const payload = createAgendaTimeEntryPayload({
-        agenda_item_id: item.id, cliente_id: proc.cliente_id, processo_id: processoId, descricao_atividade: descricao, observacoes: obs,
+        agenda_item_id: item.id, cliente_id: proc.cliente_id, processo_id: processoId || null, descricao_atividade: descricao, observacoes: obs,
         inicio_em: tempo.tempo.inicio_em, fim_em: tempo.tempo.fim_em, duracao_manual_minutos: tempo.tempo.duracao_manual_minutos,
         usa_duracao_manual: tempo.tempo.usa_duracao_manual, cobravel,
       })
