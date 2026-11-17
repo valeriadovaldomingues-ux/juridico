@@ -43,6 +43,7 @@ function Cartao({ c }: { c: CartaoDoProcesso }) {
         {c.titulo}
         <span className="text-[var(--color-ink-3)]">
           {c.responsavel ? ` · ${c.responsavel}` : ' · sem responsável'}
+          {c.prazo ? ` · entrega ${dataBR(c.prazo)}` : ''}
           {concluido && c.concluidoEm ? ` · concluído em ${dataBR(c.concluidoEm)}` : ''}
           {c.arquivado ? ' · arquivado' : ''}
         </span>

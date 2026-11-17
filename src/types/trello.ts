@@ -33,6 +33,7 @@ export interface TrelloCard {
   due: string | null
   labels: TrelloLabel[]
   closed: boolean
+  dateLastActivity?: string
 }
 
 // ─── Banco de dados ───────────────────────────────────────────────────────────

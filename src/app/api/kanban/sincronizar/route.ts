@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await syncTrelloBoard(integration.id, auth.userId, supabase)
+    await syncTrelloBoard(integration.id, auth.userId, supabase, { forcar: body?.manual === true })
     return NextResponse.json({ status: 'sincronizado' })
   } catch (err) {
     console.error('[kanban/sincronizar]', err)

@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: mockCreateClient,
 }))
 
-import { syncTrelloBoard, idsParaArquivar, liberarSincronizacoesTravadas } from './sync'
+import { syncTrelloBoard, idsParaArquivar, liberarSincronizacoesTravadas, camposDoTrello } from './sync'
 
 function cartao(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -182,7 +182,7 @@ describe('syncTrelloBoard — responsável: lista tem prioridade sobre membro', 
     })
   })
 
-  it('card que já existe no PEDV não tem status, responsável, título nem prazo sobrescritos pelo Trello', async () => {
+  it('card que já existe e NÃO mudou no Trello não tem status, responsável, título nem prazo sobrescritos', async () => {
     mockFetchOpenCards.mockResolvedValue([cartao({ name: 'Título novo no Trello', idList: 'list-tuane', due: '2026-12-01T00:00:00Z' })])
     const supabase = supabaseFake({
       listMappings: [{ trello_list_id: 'list-tuane', trello_list_name: 'Tuane', kanban_status: 'a_fazer', profile_id: 'profile-tuane' }],
@@ -191,7 +191,7 @@ describe('syncTrelloBoard — responsável: lista tem prioridade sobre membro', 
     const original = supabase.from.getMockImplementation()!
     supabase.from.mockImplementation((table: string) => {
       const t = original(table) as Record<string, unknown>
-      if (table === 'kanban_tasks') t.maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'task-1' }, error: null })
+      if (table === 'kanban_tasks') t.maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'task-1', status: 'concluido', responsavel_id: 'profile-tuane', trello_list_id: 'list-tuane', trello_member_id: null, updated_at: '2026-11-17T20:00:00Z' }, error: null })
       return t as never
     })
     mockCreateClient.mockResolvedValue(supabase)
@@ -269,5 +269,41 @@ describe('liberarSincronizacoesTravadas', () => {
     const lt = chamadas.find(c => c[0] === 'lt')!
     expect(lt[1][0]).toBe('started_at')
     expect(Date.now() - new Date(lt[1][1] as string).getTime()).toBeGreaterThanOrEqual(10 * 60_000 - 1000)
+  })
+})
+
+
+describe('camposDoTrello: regra por campo entre PEDV e Trello', () => {
+  const card = { name: 'Título no Trello', desc: 'desc', idList: 'list-marcelo', due: '2026-11-19T18:00:00Z', dateLastActivity: '2026-11-17T18:00:00Z' }
+  const base = { card, kanbanStatus: 'a_fazer', responsavelId: 'marcelo', firstMemberId: 'm-marcelo', prioridade: 'media', data: '2026-11-19', listaNome: 'Marcelo' }
+  const existente = { status: 'fazendo', responsavel_id: 'tuane', trello_list_id: 'list-marcelo', trello_member_id: 'm-marcelo', updated_at: '2026-11-17T19:00:00Z' }
+  const agora = '2026-11-17T21:00:00Z'
+
+  it('card movido só no PEDV (lista igual) e Trello sem novidade: só atualiza o que é do Trello', () => {
+    const c = camposDoTrello({ ...base, existente }, false, agora, 3)
+    expect(c).toEqual({ trello_member_id: 'm-marcelo', trello_list_id: 'list-marcelo', trello_list_nome: 'Marcelo', trello_list_pos: 3 })
+  })
+  it('card que mudou de lista no Trello (ex.: PLANILHA DIÁRIA → Marcelo): traz status e responsável', () => {
+    const c = camposDoTrello({ ...base, existente: { ...existente, trello_list_id: 'list-planilha' } }, false, agora, 3)
+    expect(c).toMatchObject({ status: 'a_fazer', responsavel_id: 'marcelo', updated_at: agora })
+    expect(c).not.toHaveProperty('titulo')
+  })
+  it('mudou o membro no Trello: traz o responsável', () => {
+    const c = camposDoTrello({ ...base, existente: { ...existente, trello_member_id: 'm-outro' } }, false, agora, null)
+    expect(c).toMatchObject({ responsavel_id: 'marcelo' })
+  })
+  it('atividade no Trello mais nova que a última gravação no PEDV: traz prazo, título, descrição e prioridade', () => {
+    const c = camposDoTrello({ ...base, existente: { ...existente, updated_at: '2026-11-17T10:00:00Z' } }, false, agora, null)
+    expect(c).toMatchObject({ titulo: 'Título no Trello', data: '2026-11-19', prioridade: 'media', descricao: 'desc' })
+    expect(c).not.toHaveProperty('status')
+  })
+  it('atividade no Trello mais ANTIGA que a edição feita no PEDV: não sobrescreve', () => {
+    const c = camposDoTrello({ ...base, existente: { ...existente, updated_at: '2026-11-17T20:00:00Z' } }, false, agora, null)
+    expect(c).not.toHaveProperty('titulo')
+    expect(c).not.toHaveProperty('data')
+  })
+  it('atualização manual (forçar): o Trello vence em tudo', () => {
+    const c = camposDoTrello({ ...base, existente }, true, agora, null)
+    expect(c).toMatchObject({ status: 'a_fazer', responsavel_id: 'marcelo', titulo: 'Título no Trello', data: '2026-11-19' })
   })
 })
