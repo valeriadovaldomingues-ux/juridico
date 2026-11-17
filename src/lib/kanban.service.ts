@@ -358,3 +358,24 @@ export async function deleteTask(id: string): Promise<void> {
   const res = await fetch(`/api/kanban-tasks/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Erro ao excluir tarefa')
 }
+
+// ─── Busca no quadro ──────────────────────────────────────────────────────────
+
+
+/**
+ * Filtra os cartões pelo texto digitado na busca do Kanban (como a busca do Trello). Todas as palavras precisam aparecer
+ * em algum dos campos: título, descrição, nº do processo (com ou sem pontuação), título do processo, partes, área,
+ * pendência, nome do responsável e nome da lista. Sem acento e sem diferenciar maiúsculas. Busca vazia = tudo.
+ */
+export function filtrarTarefasPorBusca(tasks: KanbanTask[], busca: string): KanbanTask[] {
+  const palavras = semAcento(busca).split(/\s+/).filter(Boolean)
+  if (palavras.length === 0) return tasks
+  return tasks.filter(t => {
+    const texto = semAcento([
+      t.titulo, t.descricao, t.numero_processo, t.processo?.titulo, t.processo?.numero_processo, t.partes_resumidas,
+      t.area_juridica, t.pendencia_motivo, t.responsavel?.nome, t.trello_list_nome,
+    ].filter(Boolean).join(' \n '))
+    const digitos = texto.replace(/\D/g, '')
+    return palavras.every(p => texto.includes(p) || (/^[\d.\-/]+$/.test(p) && p.replace(/\D/g, '').length >= 4 && digitos.includes(p.replace(/\D/g, ''))))
+  })
+}
