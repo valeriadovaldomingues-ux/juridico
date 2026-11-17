@@ -55,10 +55,53 @@ export async function liberarSincronizacoesTravadas(
 
 // ─── Sync principal ───────────────────────────────────────────────────────────
 
+type ExistenteParaSync = { status: string; responsavel_id: string | null; trello_list_id: string | null; trello_member_id: string | null; updated_at: string | null }
+
+/** Campos do card existente que o sync pode gravar, conforme o que mudou no Trello (ver o comentário no ponto de uso). */
+export function camposDoTrello(
+  t: {
+    card: { name: string; desc: string; idList: string; due: string | null; dateLastActivity?: string }
+    kanbanStatus: string; responsavelId: string | null; firstMemberId: string | null
+    prioridade: string; data: string | null; listaNome: string | null
+    existente?: ExistenteParaSync
+  },
+  forcar: boolean,
+  agora: string,
+  posLista: number | null,
+): Record<string, unknown> {
+  const ex = t.existente
+  const listaMudou = !!ex && ex.trello_list_id !== t.card.idList
+  const membroMudou = !!ex && (ex.trello_member_id ?? null) !== (t.firstMemberId ?? null)
+  const trelloMaisNovo = !!t.card.dateLastActivity && !!ex?.updated_at && Date.parse(t.card.dateLastActivity) > Date.parse(ex.updated_at)
+
+  // Sempre: o que é do Trello (lista de origem, posição e membro).
+  const campos: Record<string, unknown> = {
+    trello_member_id: t.firstMemberId,
+    trello_list_id: t.card.idList,
+    trello_list_nome: t.listaNome,
+    trello_list_pos: posLista,
+  }
+  if (forcar || listaMudou || membroMudou) {
+    campos.status = t.kanbanStatus
+    campos.responsavel_id = t.responsavelId
+    campos.updated_at = agora
+  }
+  if (forcar || trelloMaisNovo) {
+    campos.titulo = t.card.name
+    campos.descricao = t.card.desc || null
+    campos.prioridade = t.prioridade
+    campos.data = t.data
+    campos.updated_at = agora
+  }
+  return campos
+}
+
+
 export async function syncTrelloBoard(
   integrationId: string,
   triggeredBy: string | null,
   client?: DbClient,
+  opcoes: { forcar?: boolean } = {},
 ): Promise<SyncResult> {
   const supabase = client ?? await createClient()
 
@@ -199,8 +242,10 @@ export async function syncTrelloBoard(
       data: string | null
       listaNome: string | null
       existingId?: string
+      existente?: CardExistente
     }
     const trabalhos: TrabalhoCard[] = []
+    type CardExistente = { id: string; status: string; responsavel_id: string | null; trello_list_id: string | null; trello_member_id: string | null; updated_at: string | null }
 
     for (const card of cards) {
       if (card.closed) { ignorados++; continue }
@@ -243,26 +288,26 @@ export async function syncTrelloBoard(
     await emLotes(trabalhos, 15, async t => {
       const { data: existing } = await supabase
         .from('kanban_tasks')
-        .select('id')
+        .select('id, status, responsavel_id, trello_list_id, trello_member_id, updated_at')
         .eq('origem', 'trello')
         .eq('origem_id', t.card.id)
         .maybeSingle()
       t.existingId = existing?.id
+      t.existente = existing ? (existing as CardExistente) : undefined
     })
 
     // Atualizar os existentes (em lotes paralelos)
     await emLotes(trabalhos.filter(t => t.existingId), 15, async t => {
       await supabase
         .from('kanban_tasks')
-        // Card que já está no PEDV: o PEDV manda. Título, descrição, status, responsável, prioridade e prazo NÃO são
-        // sobrescritos (antes o sync devolvia o card para a coluna do Trello a cada abertura do Kanban e desfazia o que a
-        // pessoa tinha movido/editado). Só se atualiza o que é do Trello: lista de origem, posição e membro.
-        .update({
-          trello_member_id: t.firstMemberId,  // persiste o ID do membro para redistribuição futura
-          trello_list_id:   t.card.idList,
-          trello_list_nome: t.listaNome,
-          trello_list_pos:  posPorLista.get(t.card.idList) ?? null,
-        })
+        // Card que já está no PEDV. A equipe trabalha nos DOIS lados, então a regra é por campo (nada de o Trello
+        // desfazer o que foi movido no PEDV, nem o PEDV ignorar o que mudou no Trello):
+        //  • status e responsável: vêm do Trello só quando o card MUDOU no Trello (lista ou membro diferentes dos
+        //    guardados na última sincronização). Mexer no card só no PEDV não é desfeito.
+        //  • título, descrição, prioridade e prazo: vêm do Trello só quando a última atividade do card no Trello é
+        //    mais nova que a última gravação no PEDV.
+        //  • "Atualizar do Trello" (manual) = o Trello vence em tudo, de propósito.
+        .update(camposDoTrello(t, opcoes.forcar === true, now, posPorLista.get(t.card.idList) ?? null))
         .eq('id', t.existingId!)
       atualizados++
     })

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
-import { diasSemMovimento, movimentacaoMaisRecente, type CartaoDoProcesso } from '@/lib/kanban/pesquisa'
+import { cartaoEDoProcesso, diasSemMovimento, movimentacaoMaisRecente, type CartaoDoProcesso } from '@/lib/kanban/pesquisa'
 import type { UserRole } from '@/types'
 
 // GET /api/kanban-pesquisa?q=… — pesquisa o processo (número, título, cliente, parte) em TODO o sistema, não só no quadro:
@@ -16,13 +16,14 @@ const um = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? 
 
 type CartaoBanco = {
   id: string; titulo: string; status: string; arquivado: boolean | null; concluido_em: string | null; origem: string | null
-  processo_id: string | null; numero_processo: string | null
+  processo_id: string | null; numero_processo: string | null; data: string | null
   responsavel: { nome: string | null } | { nome: string | null }[] | null
 }
 const paraCartao = (c: CartaoBanco): CartaoDoProcesso => ({
   id: c.id, titulo: c.titulo, status: c.status, arquivado: Boolean(c.arquivado), concluidoEm: c.concluido_em,
-  responsavel: um(c.responsavel)?.nome ?? null, origem: c.origem,
+  responsavel: um(c.responsavel)?.nome ?? null, origem: c.origem, prazo: c.data,
 })
+const dadosDoCartao = (c: CartaoBanco) => ({ processoId: c.processo_id, numeroProcesso: c.numero_processo, titulo: c.titulo })
 
 export async function GET(req: NextRequest) {
   const auth = await apiGuard(ALLOWED)
@@ -55,12 +56,16 @@ export async function GET(req: NextRequest) {
   }))
 
   // 3) Cartões do Kanban: ligados a esses processos, ou que citam o número (ou o texto pesquisado) sem estar ligados.
-  const seletor = 'id, titulo, status, arquivado, concluido_em, origem, processo_id, numero_processo, responsavel:profiles!responsavel_id(nome)'
+  const seletor = 'id, titulo, status, arquivado, concluido_em, origem, processo_id, numero_processo, data, responsavel:profiles!responsavel_id(nome)'
   const cartoes: CartaoBanco[] = []
   const vistos = new Set<string>()
   const juntar = (rows: unknown) => { for (const c of (rows ?? []) as CartaoBanco[]) if (!vistos.has(c.id)) { vistos.add(c.id); cartoes.push(c) } }
   if (ids.length) juntar((await supabase.from('kanban_tasks').select(seletor).in('processo_id', ids).limit(300)).data)
-  if (numeros.length) juntar((await supabase.from('kanban_tasks').select(seletor).in('numero_processo', numeros).limit(300)).data)
+  if (numeros.length) {
+    juntar((await supabase.from('kanban_tasks').select(seletor).in('numero_processo', numeros).limit(300)).data)
+    // Cartões do Trello trazem o número só no título.
+    juntar((await supabase.from('kanban_tasks').select(seletor).or(numeros.map(n => `titulo.ilike.%${n.replace(/[%,()]/g, '')}%`).join(',')).limit(300)).data)
+  }
   const termo = q.replace(/[%,()]/g, ' ').trim()
   if (termo.length >= 4) juntar((await supabase.from('kanban_tasks').select(seletor).or(`numero_processo.ilike.%${termo}%,titulo.ilike.%${termo}%`).limit(60)).data)
 
@@ -72,7 +77,7 @@ export async function GET(req: NextRequest) {
       hoje,
     )
     const proximos = d.prazos.map(x => String(x.data_final)).filter(Boolean)
-    const meus = cartoes.filter(c => c.processo_id === p.id || (!!p.numero_processo && c.numero_processo === p.numero_processo))
+    const meus = cartoes.filter(c => cartaoEDoProcesso(dadosDoCartao(c), { id: p.id, numero: p.numero_processo }))
     return {
       id: p.id, numero: p.numero_processo, titulo: p.titulo, cliente: um(p.cliente)?.nome ?? null, status: p.status, fase: p.fase,
       ultimaMovimentacao: mov, diasSemMovimento: diasSemMovimento(mov?.data, hoje),
@@ -80,10 +85,8 @@ export async function GET(req: NextRequest) {
       cartoes: meus.map(paraCartao),
     }
   })
-  const idsDosProcessos = new Set(lista.map(p => p.id))
-  const numerosDosProcessos = new Set(numeros)
   const soKanban = cartoes
-    .filter(c => !(c.processo_id && idsDosProcessos.has(c.processo_id)) && !(c.numero_processo && numerosDosProcessos.has(c.numero_processo)))
+    .filter(c => !lista.some(p => cartaoEDoProcesso(dadosDoCartao(c), { id: p.id, numero: p.numero_processo })))
     .map(paraCartao)
 
   return NextResponse.json({ processos, soKanban })

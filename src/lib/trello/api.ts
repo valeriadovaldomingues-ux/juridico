@@ -31,7 +31,7 @@ export function fetchMembers(boardId: string, key: string, token: string): Promi
 
 export function fetchOpenCards(boardId: string, key: string, token: string): Promise<TrelloCard[]> {
   return trelloFetch<TrelloCard[]>(
-    `/boards/${boardId}/cards?filter=open&fields=id,name,desc,idList,idMembers,due,labels,closed`,
+    `/boards/${boardId}/cards?filter=open&fields=id,name,desc,idList,idMembers,due,labels,closed,dateLastActivity`,
     key, token,
   )
 }

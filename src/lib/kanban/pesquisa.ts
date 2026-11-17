@@ -8,6 +8,7 @@ export interface CartaoDoProcesso {
   concluidoEm: string | null
   responsavel: string | null
   origem: string | null
+  prazo: string | null
 }
 
 export interface MovimentacaoRecente { data: string; fonte: 'andamento' | 'publicacao'; titulo: string | null }
@@ -32,4 +33,16 @@ export function movimentacaoMaisRecente(
   if (publicacao?.data && publicacao.data.slice(0, 10) <= hoje) cand.push({ data: publicacao.data.slice(0, 10), fonte: 'publicacao', titulo: publicacao.titulo })
   if (cand.length === 0) return null
   return cand.sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))[0]
+}
+
+/** O cartão é deste processo? Por vínculo (id), pelo número gravado no cartão ou pelo número escrito no título (cartões do Trello). */
+export function cartaoEDoProcesso(
+  c: { processoId: string | null; numeroProcesso: string | null; titulo: string },
+  p: { id: string; numero: string | null },
+): boolean {
+  if (c.processoId && c.processoId === p.id) return true
+  if (!p.numero) return false
+  if (c.numeroProcesso && c.numeroProcesso === p.numero) return true
+  const digitos = p.numero.replace(/\D/g, '')
+  return c.titulo.includes(p.numero) || (digitos.length >= 15 && c.titulo.replace(/\D/g, '').includes(digitos))
 }

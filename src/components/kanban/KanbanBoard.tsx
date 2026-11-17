@@ -505,7 +505,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
               onClick={() => sincronizar(true)}
               disabled={sincronizando}
               className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink-2)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-white hover:bg-[var(--color-surface-warm)] disabled:opacity-60"
-              title="Busca no Trello as mudanças mais recentes e atualiza o quadro"
+              title="Traz do Trello tudo o que está lá (lista, responsável, prazo, título), inclusive por cima do que foi mudado só aqui. A atualização automática só traz o que mudou no Trello."
             >
               <RefreshCw size={12} className={sincronizando ? 'animate-spin' : ''} />
               {sincronizando ? 'Atualizando…' : 'Atualizar do Trello'}
