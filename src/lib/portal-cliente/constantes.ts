@@ -7,6 +7,10 @@ export const COOKIE_SESSAO = 'pv_portal_sessao'
 /** Sessão do cliente: 12 h, revogável. */
 export const SESSAO_DURACAO_MS = 12 * 60 * 60 * 1000
 
+/** "Ver como cliente" (visualização do sócio): 30 min, só leitura, marcada no user_agent da sessão com o id de quem abriu. */
+export const PREVIA_DURACAO_MS = 30 * 60 * 1000
+export const PREFIXO_PREVIA = 'previa-socio:'
+
 /** Código de acesso: 10 min, uso único, no máximo 5 tentativas. */
 export const CODIGO_VALIDADE_MS = 10 * 60 * 1000
 export const CODIGO_MAX_TENTATIVAS = 5

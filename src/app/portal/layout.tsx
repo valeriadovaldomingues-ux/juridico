@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getPortalSession } from '@/lib/auth/portal-guard'
 import LogoutButton from './LogoutButton'
+import FaixaPrevia from './FaixaPrevia'
 import PortalNav    from './PortalNav'
 
 export const metadata = { title: 'Portal do Cliente — Pessoa e do Val Advocacia' }
@@ -18,6 +19,7 @@ export default async function PortalLayout({
 
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
+      {session.previa && <FaixaPrevia clienteNome={session.clienteNome} clienteId={session.clienteId} />}
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="bg-[#0C1B2A] border-b border-[#C49557]/20">

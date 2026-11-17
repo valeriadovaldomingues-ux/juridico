@@ -15,6 +15,7 @@ export type AcaoPortalLog =
   | 'sessoes_encerradas'
   | 'processo_ocultado'
   | 'processo_reexibido'
+  | 'previa_socio'
 
 export async function registrarLogPortal(
   db: Db,
