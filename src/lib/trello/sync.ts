@@ -254,18 +254,14 @@ export async function syncTrelloBoard(
     await emLotes(trabalhos.filter(t => t.existingId), 15, async t => {
       await supabase
         .from('kanban_tasks')
+        // Card que já está no PEDV: o PEDV manda. Título, descrição, status, responsável, prioridade e prazo NÃO são
+        // sobrescritos (antes o sync devolvia o card para a coluna do Trello a cada abertura do Kanban e desfazia o que a
+        // pessoa tinha movido/editado). Só se atualiza o que é do Trello: lista de origem, posição e membro.
         .update({
-          titulo:           t.card.name,
-          descricao:        t.card.desc || null,
-          status:           t.kanbanStatus,
-          responsavel_id:   t.responsavelId,
           trello_member_id: t.firstMemberId,  // persiste o ID do membro para redistribuição futura
           trello_list_id:   t.card.idList,
           trello_list_nome: t.listaNome,
           trello_list_pos:  posPorLista.get(t.card.idList) ?? null,
-          prioridade:       t.prioridade,
-          data:             t.data,
-          updated_at:       now,
         })
         .eq('id', t.existingId!)
       atualizados++

@@ -182,6 +182,28 @@ describe('syncTrelloBoard — responsável: lista tem prioridade sobre membro', 
     })
   })
 
+  it('card que já existe no PEDV não tem status, responsável, título nem prazo sobrescritos pelo Trello', async () => {
+    mockFetchOpenCards.mockResolvedValue([cartao({ name: 'Título novo no Trello', idList: 'list-tuane', due: '2026-12-01T00:00:00Z' })])
+    const supabase = supabaseFake({
+      listMappings: [{ trello_list_id: 'list-tuane', trello_list_name: 'Tuane', kanban_status: 'a_fazer', profile_id: 'profile-tuane' }],
+    })
+    // o card já existe (foi movido para "concluido" no PEDV)
+    const original = supabase.from.getMockImplementation()!
+    supabase.from.mockImplementation((table: string) => {
+      const t = original(table) as Record<string, unknown>
+      if (table === 'kanban_tasks') t.maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'task-1' }, error: null })
+      return t as never
+    })
+    mockCreateClient.mockResolvedValue(supabase)
+
+    await syncTrelloBoard('integ-1', 'user-1')
+
+    const atualizacao = supabase.updates.find(u => u.table === 'kanban_tasks')!.payload as Record<string, unknown>
+    expect(atualizacao).toMatchObject({ trello_list_id: 'list-tuane', trello_list_nome: 'Tuane' })
+    for (const campo of ['status', 'responsavel_id', 'titulo', 'descricao', 'prioridade', 'data', 'updated_at']) expect(atualizacao).not.toHaveProperty(campo)
+    expect(supabase.inserts).toHaveLength(0)
+  })
+
   it('lista ignorada não conta como sem responsável nem entra no board', async () => {
     mockFetchOpenCards.mockResolvedValue([cartao({ idList: 'list-planilha' })])
     const supabase = supabaseFake({
