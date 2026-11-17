@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock3, Download, Loader2, Plus, Search } from 'lucide-react'
+import { Clock3, Download, Loader2, Pencil, Plus, Search } from 'lucide-react'
 import RegistrarHorasModal from '@/components/horas/RegistrarHorasModal'
+import EditarHorasModal from '@/components/horas/EditarHorasModal'
 import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import { formatDurationMinutes } from '@/lib/agenda-time-entries'
-import type { RelatorioHoras } from '@/lib/relatorio-horas/dados'
+import type { LinhaHoras, RelatorioHoras } from '@/lib/relatorio-horas/dados'
 
 function primeiroDiaDoMes() {
   const d = new Date()
@@ -19,6 +20,7 @@ function hoje() {
 
 export default function HorasPage({ podeRegistrar = true, podeValor = false }: { podeRegistrar?: boolean; podeValor?: boolean }) {
   const [registrando, setRegistrando] = useState(false)
+  const [editando, setEditando] = useState<LinhaHoras | null>(null)
   const [aviso, setAviso] = useState('')
   const [clienteId, setClienteId] = useState('')
   const [de, setDe] = useState(primeiroDiaDoMes())
@@ -60,6 +62,14 @@ export default function HorasPage({ podeRegistrar = true, podeValor = false }: {
           podeValor={podeValor}
           onClose={() => setRegistrando(false)}
           onSalvo={e => { setRegistrando(false); setAviso(`Horas registradas${e.cliente?.nome ? ` para ${e.cliente.nome}` : ''}. Gere o relatório do cliente para ver.`); if (e.cliente_id && e.cliente_id === clienteId) buscar() }}
+        />
+      )}
+      {editando && rel && (
+        <EditarHorasModal
+          linha={editando}
+          cliente={rel.cliente}
+          onClose={() => setEditando(null)}
+          onSalvo={() => { setEditando(null); setAviso('Lançamento atualizado.'); buscar() }}
         />
       )}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_48px_rgba(13,34,53,0.06)]">
@@ -125,6 +135,7 @@ export default function HorasPage({ podeRegistrar = true, podeValor = false }: {
                     <th className="px-5 py-2.5 font-semibold">Data</th><th className="px-3 py-2.5 font-semibold">Processo</th>
                     <th className="px-3 py-2.5 font-semibold">Atividade</th><th className="px-3 py-2.5 font-semibold">Quem fez</th>
                     <th className="px-5 py-2.5 font-semibold text-right">Tempo</th>
+                    {podeRegistrar && <th className="px-3 py-2.5 font-semibold"><span className="sr-only">Editar</span></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
@@ -135,6 +146,14 @@ export default function HorasPage({ podeRegistrar = true, podeValor = false }: {
                       <td className="px-3 py-2.5">{l.atividade}</td>
                       <td className="px-3 py-2.5 text-[var(--color-ink-2)]">{l.responsavel}</td>
                       <td className="px-5 py-2.5 text-right tabular-nums">{formatDurationMinutes(l.minutos)}</td>
+                      {podeRegistrar && (
+                        <td className="px-3 py-2.5 text-right">
+                          <button onClick={() => { setAviso(''); setEditando(l) }} title="Editar este lançamento" aria-label="Editar este lançamento"
+                            className="p-1.5 rounded-lg text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-warm)]">
+                            <Pencil size={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
