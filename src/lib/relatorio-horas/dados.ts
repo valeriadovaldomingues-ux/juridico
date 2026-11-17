@@ -13,6 +13,14 @@ export interface LinhaHoras {
   atividade: string
   responsavel: string
   minutos: number
+  // Para editar o lançamento na tela de Horas (não vão para o PDF).
+  processoId: string | null
+  responsavelId: string | null
+  observacoes: string | null
+  dataISO: string         // AAAA-MM-DD (Brasília)
+  usaDuracaoManual: boolean
+  horaInicio: string | null // HH:MM (Brasília), só quando o lançamento tem início e fim
+  horaFim: string | null
 }
 
 export interface RelatorioHoras {
@@ -29,6 +37,9 @@ const FUSO = 'America/Sao_Paulo'
 export function dataBR(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
 }
+
+const horaBR = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: FUSO, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
+const dataIsoBR = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 
 export function dataValida(s: string | null | undefined): s is string {
   return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00Z`).getTime())
@@ -50,6 +61,9 @@ type EntradaBanco = {
   status_cobranca: string
   descricao_atividade: string | null
   criado_por: string | null
+  processo_id: string | null
+  observacoes: string | null
+  fim_em: string | null
   processo: { numero_processo: string | null } | { numero_processo: string | null }[] | null
   agenda_item: { titulo: string | null } | { titulo: string | null }[] | null
 }
@@ -70,7 +84,7 @@ export async function buscarHoras(
   for (let de = 0; ; de += 1000) {
     const { data } = await supabase
       .from('agenda_time_entries')
-      .select('id, inicio_em, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual, status_cobranca, descricao_atividade, criado_por, processo:processos(numero_processo), agenda_item:agenda_items(titulo)')
+      .select('id, inicio_em, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual, status_cobranca, descricao_atividade, criado_por, processo_id, observacoes, fim_em, processo:processos(numero_processo), agenda_item:agenda_items(titulo)')
       .eq('cliente_id', p.clienteId)
       .eq('cobravel', true)
       .neq('status_cobranca', 'nao_faturavel')
@@ -95,6 +109,13 @@ export async function buscarHoras(
       atividade: (e.descricao_atividade?.trim() || um(e.agenda_item)?.titulo?.trim() || 'Atividade'),
       responsavel: (e.criado_por && nomes.get(e.criado_por)) || '—',
       minutos: calculateEffectiveMinutes(e) ?? 0,
+      processoId: e.processo_id,
+      responsavelId: e.criado_por,
+      observacoes: e.observacoes,
+      dataISO: dataIsoBR(e.inicio_em),
+      usaDuracaoManual: e.usa_duracao_manual,
+      horaInicio: !e.usa_duracao_manual && e.fim_em ? horaBR(e.inicio_em) : null,
+      horaFim: !e.usa_duracao_manual && e.fim_em ? horaBR(e.fim_em) : null,
     }))
     .filter(l => l.minutos > 0)
 
