@@ -3,7 +3,7 @@
 
 type Db = { from: (t: string) => any; rpc: (f: string, a: Record<string, unknown>) => any }  // eslint-disable-line @typescript-eslint/no-explicit-any
 
-export interface ContextoMcp { db: Db; userId: string; nome: string; podeEscrever?: boolean }
+export interface ContextoMcp { db: Db; userId: string; nome: string; podeEscrever?: boolean; role?: string }
 
 export interface Ferramenta {
   name: string
@@ -93,7 +93,7 @@ export const FERRAMENTAS: Ferramenta[] = [
       const [proc, partes, andamentos, prazos, agenda] = await Promise.all([
         ctx.db.from('processos').select('id, numero_processo, titulo, status, area_direito, fase, tribunal, vara, comarca, classe_processual, assunto, valor_causa, data_distribuicao, observacoes, cliente:clientes!cliente_id(nome), advogado_caso:profiles!advogado_caso_id(nome)').eq('id', id).maybeSingle(),
         ctx.db.from('partes_processo').select('id, pessoa_nome, tipo_parte, documento').eq('processo_id', id).limit(30),
-        ctx.db.from('processo_andamentos').select('data_andamento, tipo, titulo, descricao, origem').eq('processo_id', id).order('data_andamento', { ascending: false }).limit(15),
+        ctx.db.from('processo_andamentos').select('id, data_andamento, tipo, titulo, descricao, origem').eq('processo_id', id).order('data_andamento', { ascending: false }).limit(15),
         ctx.db.from('prazos').select('titulo, tipo, data_final, prioridade').eq('processo_id', id).eq('status', 'pendente').order('data_final').limit(20),
         ctx.db.from('agenda_items').select('titulo, tipo, data_inicio, hora_inicio, responsavel').eq('processo_id', id).neq('status', 'cancelado').gte('data_inicio', hoje()).order('data_inicio').limit(20),
       ])

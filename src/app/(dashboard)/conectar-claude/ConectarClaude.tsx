@@ -95,6 +95,7 @@ export default function ConectarClaude() {
         <h2 className="text-[14px] font-semibold text-[#0f1923]">O que ele consegue preencher</h2>
         <ul className="list-disc pl-5 text-[12px] text-[#374151] space-y-0.5">
           <li><strong>criar_andamento</strong> — registra andamento no processo</li>
+          <li><strong>atualizar_andamento</strong> — corrige título, descrição, tipo ou data de um andamento já lançado (advogado, gerente e sócio; estagiário só observações); o antes e o depois ficam no histórico</li>
           <li><strong>lancar_horas</strong> — lança o tempo gasto na aba Horas (processo, data, responsável, descrição e tempo), avisando se já houver lançamento parecido</li>
           <li><strong>criar_compromisso</strong>, <strong>concluir_compromisso</strong> e <strong>excluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis); só exclui o que o próprio conector criou por você</li>
           <li><strong>cadastrar_cliente</strong> e <strong>atualizar_cliente</strong></li>
