@@ -3,12 +3,14 @@
 import type { Db } from './db'
 import { checar } from './db'
 import { resumirIp, resumirUserAgent, sha256, tokenAleatorio } from './segredos'
-import { SESSAO_DURACAO_MS } from './constantes'
+import { PREFIXO_PREVIA, PREVIA_DURACAO_MS, SESSAO_DURACAO_MS } from './constantes'
 
 export interface SessaoPortal {
   sessaoId: string
   clienteId: string
   clienteNome: string
+  /** true = visualização "Ver como cliente" aberta por um sócio (não é o cliente de verdade). */
+  previa: boolean
 }
 
 export async function criarSessao(
@@ -25,7 +27,27 @@ export async function criarSessao(
     criado_em: agora.toISOString(),
     expira_em: expiraEm.toISOString(),
     ip_resumo: resumirIp(contexto.ip),
-    user_agent: resumirUserAgent(contexto.userAgent),
+    // O prefixo de prévia é reservado ao servidor: um navegador que mande esse texto não vira "visualização" (e não esconde logs).
+    user_agent: resumirUserAgent(contexto.userAgent?.startsWith(PREFIXO_PREVIA) ? `_${contexto.userAgent}` : contexto.userAgent),
+  })
+  checar(error, 'sessoes')
+  return { token, expiraEm }
+}
+
+/**
+ * Sessão de VISUALIZAÇÃO para o sócio ver o portal como o cliente vê, sem código. Curta (30 min), marcada com o id de quem abriu
+ * (aparece na faixa do portal e no log). Só vale enquanto o acesso do cliente estiver liberado, como qualquer sessão.
+ */
+export async function criarSessaoPrevia(db: Db, clienteId: string, usuarioId: string, agora: Date = new Date()): Promise<{ token: string; expiraEm: Date }> {
+  const token = tokenAleatorio(32)
+  const expiraEm = new Date(agora.getTime() + PREVIA_DURACAO_MS)
+  const { error } = await db.from('portal_sessoes').insert({
+    token_hash: sha256(token),
+    cliente_id: clienteId,
+    criado_em: agora.toISOString(),
+    expira_em: expiraEm.toISOString(),
+    ip_resumo: null,
+    user_agent: `${PREFIXO_PREVIA}${usuarioId}`,
   })
   checar(error, 'sessoes')
   return { token, expiraEm }
@@ -39,7 +61,7 @@ export async function validarToken(db: Db, token: string | null | undefined, ago
   if (!token || token.length < 20 || token.length > 200) return null
   const { data: s, error } = await db
     .from('portal_sessoes')
-    .select('id, cliente_id, expira_em, revogada_em')
+    .select('id, cliente_id, expira_em, revogada_em, user_agent')
     .eq('token_hash', sha256(token))
     .maybeSingle()
   checar(error, 'sessoes')
@@ -52,7 +74,7 @@ export async function validarToken(db: Db, token: string | null | undefined, ago
   const { data: cliente } = await db.from('clientes').select('id, nome, ativo').eq('id', s.cliente_id as string).maybeSingle()
   if (!cliente || cliente.ativo === false) return null
 
-  return { sessaoId: s.id as string, clienteId: cliente.id as string, clienteNome: (cliente.nome as string) ?? '' }
+  return { sessaoId: s.id as string, clienteId: cliente.id as string, clienteNome: (cliente.nome as string) ?? '', previa: typeof s.user_agent === 'string' && s.user_agent.startsWith(PREFIXO_PREVIA) }
 }
 
 export async function revogarToken(db: Db, token: string | null | undefined, agora: Date = new Date()): Promise<void> {

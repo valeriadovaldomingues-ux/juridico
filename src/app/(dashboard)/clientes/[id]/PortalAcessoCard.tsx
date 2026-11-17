@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { KeyRound, Loader2 } from 'lucide-react'
+import { Eye, KeyRound, Loader2 } from 'lucide-react'
 import type { StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 const dataHora = (iso: string | null) =>
@@ -14,6 +14,22 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
   const [enviar, setEnviar] = useState(true)
   const [ocupado, setOcupado] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+
+  async function verComoCliente() {
+    setOcupado(true)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/portal-admin/clientes/${clienteId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'ver_como_cliente' }),
+      })
+      const dados = await res.json().catch(() => ({}))
+      if (!res.ok) { setMsg({ tipo: 'erro', texto: dados.error ?? 'Não foi possível abrir a visualização.' }); return }
+      window.open(dados.url ?? '/portal', '_blank')
+      setMsg({ tipo: 'ok', texto: 'Portal aberto em outra aba, como o cliente vê (30 minutos, só leitura).' })
+    } finally {
+      setOcupado(false)
+    }
+  }
 
   async function acionar(acao: 'liberar' | 'revogar' | 'encerrar_sessoes') {
     if (acao === 'revogar' && !window.confirm('Revogar o acesso deste cliente ao portal? As sessões abertas serão encerradas.')) return
@@ -79,6 +95,7 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
             </button>
             {status.liberado && (
               <>
+                <button onClick={verComoCliente} disabled={ocupado} className="inline-flex items-center gap-1.5 rounded-lg border border-[#145A5B]/40 px-3 py-2 text-[12px] font-medium text-[#145A5B] hover:bg-[#145A5B]/5 disabled:opacity-40"><Eye size={12} /> Ver como cliente</button>
                 <button onClick={() => acionar('encerrar_sessoes')} disabled={ocupado} className="rounded-lg border border-[#e5e7eb] px-3 py-2 text-[12px] font-medium text-[#374151] hover:bg-[#f9fafb] disabled:opacity-40">Encerrar sessões</button>
                 <button onClick={() => acionar('revogar')} disabled={ocupado} className="rounded-lg border border-rose-200 px-3 py-2 text-[12px] font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-40">Revogar acesso</button>
               </>

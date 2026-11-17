@@ -23,7 +23,7 @@ export async function GET() {
 
     const agora = new Date()
     const bytes = await gerarRelatorioDoClientePdf(db, session.clienteId, session.clienteNome, agora)
-    await registrarLogPortal(db, { acao: 'download_relatorio', clienteId: session.clienteId })
+    if (!session.previa) await registrarLogPortal(db, { acao: 'download_relatorio', clienteId: session.clienteId })
     return new NextResponse(Buffer.from(bytes), {
       status: 200,
       headers: {
