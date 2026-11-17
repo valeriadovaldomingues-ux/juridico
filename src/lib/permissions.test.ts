@@ -113,11 +113,19 @@ describe('Relatório de horas (/horas)', () => {
 })
 
 describe('estagiário cria processos (decisão de 16/11/2026)', () => {
-  it('pode ver e criar, mas não editar nem apagar processos', () => {
+  it('pode ver, criar e editar processos (edição liberada em 17/11/2026), mas não apagar', () => {
     expect(can('estagiario', 'processos', 'view')).toBe(true)
     expect(can('estagiario', 'processos', 'create')).toBe(true)
-    expect(can('estagiario', 'processos', 'edit')).toBe(false)
+    expect(can('estagiario', 'processos', 'edit')).toBe(true)
     expect(can('estagiario', 'processos', 'delete')).toBe(false)
+  })
+  it('edita clientes, partes e documentos, mas não apaga nem cria cliente', () => {
+    expect(can('estagiario', 'clientes', 'edit')).toBe(true)
+    expect(can('estagiario', 'clientes', 'create')).toBe(false)
+    expect(can('estagiario', 'clientes', 'delete')).toBe(false)
+    expect(can('estagiario', 'partes', 'edit')).toBe(true)
+    expect(can('estagiario', 'documentos', 'edit')).toBe(true)
+    expect(can('estagiario', 'documentos', 'delete')).toBe(false)
   })
 
   it('comercial continua sem criar processos', () => {

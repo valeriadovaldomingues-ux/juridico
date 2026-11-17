@@ -1120,7 +1120,7 @@ function AndamentosTab({
     [andamentosFiltrados],
   )
 
-  const tiposDisponiveis = role === 'estagiario'
+  const tiposDisponiveis = role === 'estagiario' && !editingId
     ? (['observacao'] as AndamentoTipo[])
     : ANDAMENTO_TIPOS
 
@@ -1175,7 +1175,7 @@ function AndamentosTab({
       return
     }
 
-    if (!andamentoTipoPermitidoParaRole(role, form.tipo)) {
+    if (!editingId && !andamentoTipoPermitidoParaRole(role, form.tipo)) {
       setErro('Você pode registrar apenas observações internas.')
       return
     }
@@ -1327,7 +1327,7 @@ function AndamentosTab({
                 {editingId ? 'Editar andamento' : 'Novo andamento'}
               </p>
               <p className="text-[12px] text-[#6b7280] mt-1">
-                {role === 'estagiario'
+                {role === 'estagiario' && !editingId
                   ? 'Estagiário pode registrar apenas observações internas.'
                   : 'Preencha os dados e salve para incluir o andamento na linha do tempo.'}
               </p>

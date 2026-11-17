@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const corpo = await req.json().catch(() => null)
   if (!corpo) return NextResponse.json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'JSON inválido' } }, { status: 400 })
 
-  const ctx = { db, userId: validacao.userId, nome: String(perfil.nome ?? ''), podeEscrever: usuarioPodeEscreverMcp(validacao.userId, perfil.role) }
+  const ctx = { db, userId: validacao.userId, nome: String(perfil.nome ?? ''), podeEscrever: usuarioPodeEscreverMcp(validacao.userId, perfil.role), role: String(perfil.role) }
   // Registro de auditoria: quem consultou o quê (aparece nos logs da Vercel).
   const auditar = (e: { ferramenta: string; args: unknown; ms: number; ok: boolean }) =>
     console.info('[mcp]', JSON.stringify({ usuario: validacao.userId, nome: ctx.nome, ...e, args: JSON.stringify(e.args).slice(0, 300) }))

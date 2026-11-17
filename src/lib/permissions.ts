@@ -113,14 +113,14 @@ const PERMISSIONS: PermMatrix = {
   // operacionais de baixo risco (agenda e kanban próprios, upload de docs).
   estagiario: {
     dashboard:   ['view'],
-    clientes:    ['view'],
-    processos:   ['view', 'create'],   // cria processo desde 16/11/2026; não edita nem apaga
+    clientes:    ['view', 'edit'],     // edita desde 17/11/2026 (decisão da Valéria); não cria cliente nem apaga
+    processos:   ['view', 'create', 'edit'],   // cria desde 16/11/2026 e edita desde 17/11/2026; não apaga
     inpi:        ['view'],
-    partes:      ['view', 'create'],   // o formulário de novo processo grava a parte junto
+    partes:      ['view', 'create', 'edit'],   // o formulário de novo processo grava a parte junto
     agenda:      ['view', 'create', 'edit'],
     kanban:      ['view', 'create', 'edit'],
     publicacoes: ['view'],
-    documentos:  ['view', 'create'],
+    documentos:  ['view', 'create', 'edit'],
     ferramentasPdf: ['view'],
     tv: ['view'],
   },

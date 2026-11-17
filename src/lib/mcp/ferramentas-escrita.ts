@@ -4,6 +4,8 @@ import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
 import { enviarCompromissoAoGoogle } from '@/lib/google/agenda-sync'
 import { lerTempo } from '@/lib/horas/lancar'
+import { normalizeAndamentoTipo, podeEditarAndamento } from '@/lib/processos/andamentos'
+import type { UserRole } from '@/types'
 import { createAgendaTimeEntryPayload } from '@/lib/agenda-time-entries'
 import { AUDIENCIA_MODALIDADES, AUDIENCIA_TIPOS, erroProcessoDaAudiencia, normalizarCamposAudiencia } from '@/lib/agenda/audiencia'
 
@@ -171,6 +173,59 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       if (error) throw new Error(error.message)
       sincronizarGoogleEmSegundoPlano()
       return { gravado: true, id: criado.id, ...resumo }
+    },
+  },
+  {
+    name: 'atualizar_andamento',
+    description: 'Corrige um andamento já lançado (título, descrição, tipo e/ou data), seu ou de outra pessoa. Use o id do andamento devolvido por ver_processo (ultimos_andamentos). Mesma regra da tela: advogado, gerente, sócio e estagiário editam qualquer andamento. Não mexe nas horas já lançadas e não exclui (excluir andamento é só do sócio, pela tela). O antes e o depois ficam guardados no histórico. Duas etapas: sem confirmar=true mostra o antes e o depois.',
+    inputSchema: { type: 'object', properties: {
+      id: { type: 'string', description: 'Id do andamento (de ver_processo)' },
+      titulo: { type: 'string' }, descricao: { type: 'string', description: 'Texto novo da descrição (substitui o anterior)' },
+      tipo: { type: 'string', enum: [...TIPOS_ANDAMENTO] }, data: { type: 'string', description: 'AAAA-MM-DD' },
+      confirmar: CONFIRMAR,
+    }, required: ['id'] },
+    async executar(args, ctx) {
+      const id = String(args.id ?? '')
+      if (!UUID.test(id)) throw new Error('Id de andamento inválido.')
+      const { data: atual, error } = await ctx.db.from('processo_andamentos').select('id, processo_id, data_andamento, tipo, titulo, descricao, origem, responsavel_id').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!atual) throw new Error('Andamento não encontrado.')
+      const novo: Record<string, unknown> = {}
+      if (args.titulo !== undefined) {
+        const t = texto(args.titulo, 300)
+        if (!t) throw new Error('O título não pode ficar vazio.')
+        novo.titulo = t
+      }
+      if (args.descricao !== undefined) novo.descricao = texto(args.descricao, 4000)
+      if (args.tipo !== undefined) {
+        if (!TIPOS_ANDAMENTO.includes(args.tipo as never)) throw new Error(`tipo inválido (${TIPOS_ANDAMENTO.join(', ')}).`)
+        novo.tipo = normalizeAndamentoTipo(String(args.tipo))
+      }
+      if (args.data !== undefined) {
+        const d = dataOk(args.data)
+        if (!d) throw new Error('data inválida (use AAAA-MM-DD).')
+        novo.data_andamento = `${d}T12:00:00-03:00`
+      }
+      if (!Object.keys(novo).length) throw new Error('Informe o que mudar (titulo, descricao, tipo ou data).')
+      if (!podeEditarAndamento((ctx.role ?? '') as UserRole, atual, typeof novo.tipo === 'string' ? novo.tipo : undefined)) {
+        throw new Error('Seu perfil não pode editar este andamento (editam advogado, gerente, sócio e estagiário).')
+      }
+      const antes = Object.fromEntries(Object.keys(novo).map(c => [c, (atual as Record<string, unknown>)[c] ?? null]))
+      const resumo = { andamento: String(atual.titulo ?? ''), antes, depois: novo }
+      if (args.confirmar !== true) return previa(resumo)
+      // O histórico vem ANTES da alteração: se não der para registrar, nada é alterado (igual à tela).
+      const { data: hist, error: eh } = await ctx.db.from('processo_andamentos_historico').insert({
+        andamento_id: id, processo_id: atual.processo_id, acao: 'edicao',
+        antes: Object.fromEntries(['data_andamento', 'tipo', 'titulo', 'descricao', 'origem', 'responsavel_id'].map(c => [c, (atual as Record<string, unknown>)[c] ?? null])),
+        depois: { ...atual, ...novo, id: undefined, processo_id: undefined }, feito_por: ctx.userId,
+      }).select('id').single()
+      if (eh || !hist) throw new Error('Não foi possível registrar o histórico da alteração. Nada foi alterado.')
+      const { error: e2 } = await ctx.db.from('processo_andamentos').update({ ...novo, updated_at: new Date().toISOString() }).eq('id', id)
+      if (e2) {
+        await ctx.db.from('processo_andamentos_historico').delete().eq('id', hist.id)
+        throw new Error(e2.message)
+      }
+      return { gravado: true, ...resumo }
     },
   },
   {

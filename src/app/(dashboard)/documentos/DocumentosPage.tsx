@@ -83,7 +83,7 @@ export default function DocumentosPage({ modelos: ini_m, gerados: ini_g, process
   const [copiado,         setCopiado]         = useState<string | null>(null)
 
   const podeCriarModelo  = can(role, 'documentos', 'create') && ['advogado','gerente','socio'].includes(role)
-  const podeEditarModelo = can(role, 'documentos', 'edit')   && ['advogado','gerente','socio'].includes(role)
+  const podeEditarModelo = can(role, 'documentos', 'edit')   && ['estagiario','advogado','gerente','socio'].includes(role)
   const podeExcluirModelo= can(role, 'documentos', 'delete') && ['gerente','socio'].includes(role)
   const podeCriarGerado  = can(role, 'documentos', 'create')
   const podeExcluirGerado= can(role, 'documentos', 'delete')

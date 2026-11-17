@@ -49,16 +49,15 @@ describe('PATCH andamento: quem pode editar', () => {
     expect(f.hist[0]).toMatchObject({ andamento_id: ID, processo_id: 'p1', acao: 'edicao', feito_por: 'u-adv', antes: { titulo: 'Titulo com erro' }, depois: { titulo: 'Título corrigido' } })
     expect(f.updates[0]).toMatchObject({ titulo: 'Título corrigido' })
   })
-  it('estagiário edita observação, mas não outros tipos nem muda o tipo', async () => {
+  it('estagiário edita qualquer andamento, inclusive mudando o tipo (liberado em 17/11/2026)', async () => {
     mockApiGuard.mockResolvedValue({ role: 'estagiario', userId: 'u-est' })
     const ok = dbFalso(existente); mockService.mockReturnValue(ok.db)
     expect((await PATCH(req(corpo), params)).status).toBe(200)
     const outro = dbFalso({ ...existente, tipo: 'decisao' }); mockService.mockReturnValue(outro.db)
-    expect((await PATCH(req(corpo), params)).status).toBe(403)
+    expect((await PATCH(req(corpo), params)).status).toBe(200)
     const muda = dbFalso(existente); mockService.mockReturnValue(muda.db)
-    expect((await PATCH(req({ ...corpo, tipo: 'decisao' }), params)).status).toBe(403)
-    expect(outro.updates).toHaveLength(0)
-    expect(muda.hist).toHaveLength(0)
+    expect((await PATCH(req({ ...corpo, tipo: 'decisao' }), params)).status).toBe(200)
+    expect(muda.hist).toHaveLength(1)
   })
   it('perfis fora da lista (a barreira é do apiGuard) e andamento inexistente', async () => {
     mockApiGuard.mockResolvedValue(NextResponse.json({ error: 'Sem permissão' }, { status: 403 }))
