@@ -24,6 +24,7 @@ import {
 import PersonalBoard from './PersonalBoard'
 import QuadroColuna from './QuadroColuna'
 import KanbanCard from './KanbanCard'
+import PesquisaProcessos from './PesquisaProcessos'
 import TaskModal from './TaskModal'
 import type { KanbanTask, KanbanStatus, KanbanProfile } from '@/types/kanban'
 import { getUserColor } from '@/types/kanban'
@@ -398,6 +399,7 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
   }
 
   const barraBusca = (
+    <>
     <div className="flex items-center gap-3 mb-4 flex-wrap">
       <div className="relative w-full max-w-md">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)] pointer-events-none" />
@@ -421,6 +423,8 @@ export default function KanbanBoard({ view }: { view: 'personal' | 'office' }) {
         </span>
       )}
     </div>
+    {currentUser?.role !== 'comercial' && <PesquisaProcessos busca={busca} />}
+    </>
   )
 
   // ── Quadro Pessoal ──────────────────────────────────────────────────────────
