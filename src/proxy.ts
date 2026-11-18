@@ -262,7 +262,9 @@ export async function proxy(request: NextRequest) {
 
     // 3b/3c. Staff (sessão Supabase com papel interno) tentando acessar /portal → dashboard.
     // Staff não entra no portal como cliente. (O login do portal continua aberto: é página pública.)
-    if (role && role !== 'cliente' && isPortalPath && !isPortalLogin) {
+    // Exceção: com o cookie do portal presente passa, para a "Ver como cliente" do sócio (prévia de 30 min).
+    // O cookie só é aceito se o layout/portalGuard o validar no banco; o JWT de staff continua sem abrir o portal.
+    if (role && role !== 'cliente' && isPortalPath && !isPortalLogin && !temCookiePortal(request)) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
