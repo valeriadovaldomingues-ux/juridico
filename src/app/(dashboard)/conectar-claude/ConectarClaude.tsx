@@ -88,6 +88,7 @@ export default function ConectarClaude() {
           <li><strong>buscar_clientes</strong> — acha o cliente por nome ou CPF/CNPJ (para lançar consultoria sem processo)</li>
           <li><strong>buscar_processos</strong> e <strong>ver_processo</strong> — número, cliente, partes, andamentos</li>
           <li><strong>publicacoes</strong> — publicações recentes e prazos detectados</li>
+          <li><strong>kanban</strong> — cartões do Kanban (os meus por padrão; filtra por responsável, coluna e texto)</li>
           <li><strong>horas_lancadas</strong> — tempo já lançado na aba Horas (para não lançar duas vezes)</li>
         </ul>
       </section>
@@ -98,7 +99,8 @@ export default function ConectarClaude() {
           <li><strong>criar_andamento</strong> — registra andamento no processo</li>
           <li><strong>atualizar_andamento</strong> — corrige título, descrição, tipo ou data de um andamento já lançado (advogado, gerente, sócio e estagiário); o antes e o depois ficam no histórico</li>
           <li><strong>lancar_horas</strong> — lança o tempo gasto na aba Horas (processo, ou só o cliente quando for consultoria sem processo; data, responsável, descrição e tempo), avisando se já houver lançamento parecido</li>
-          <li><strong>criar_compromisso</strong>, <strong>concluir_compromisso</strong> e <strong>excluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis); só exclui o que o próprio conector criou por você</li>
+          <li><strong>criar_compromisso</strong>, <strong>concluir_compromisso</strong> e <strong>excluir_compromisso</strong> — agenda (tarefa, prazo, audiência com até 2 responsáveis); advogado, gerente, administrativo e sócio excluem compromissos pendentes de qualquer pessoa (como na tela, avisando se há horas ligadas); os demais só os que criaram pelo conector</li>
+          <li><strong>criar_cartao_kanban</strong>, <strong>atualizar_cartao_kanban</strong> e <strong>excluir_cartao_kanban</strong> — Kanban: cria cartão, move de coluna, muda prioridade, responsável, prazo ou arquiva; exclui cartões do sistema (os que vieram do Trello só se arquivam). O histórico do cartão é registrado</li>
           <li><strong>cadastrar_cliente</strong> e <strong>atualizar_cliente</strong></li>
           <li><strong>cadastrar_processo</strong>, <strong>atualizar_processo</strong> e <strong>definir_quem_cuida_do_caso</strong></li>
           <li><strong>adicionar_parte_processo</strong>, <strong>atualizar_parte_processo</strong> e <strong>remover_parte_processo</strong></li>

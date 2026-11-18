@@ -22,6 +22,8 @@ const inteiro = (v: unknown, padrao: number, min: number, max: number) => {
 const corta = (v: unknown, n: number) => (typeof v === 'string' && v.length > n ? `${v.slice(0, n)}…` : v)
 const um = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null)
 
+import { KANBAN_LEITURA } from './ferramentas-kanban'
+
 export const FERRAMENTAS: Ferramenta[] = [
   {
     name: 'agenda',
@@ -189,4 +191,5 @@ export const FERRAMENTAS: Ferramenta[] = [
         }))
     },
   },
+  ...KANBAN_LEITURA,
 ]
