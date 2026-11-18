@@ -3,7 +3,7 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
 
   const supabase = await createClient()
@@ -17,7 +17,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
 
   const body = await req.json()

@@ -134,16 +134,16 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType; roles?: UserRole[
   { id: 'prazos',       label: 'Prazos',       icon: Clock      },
   { id: 'publicacoes',  label: 'Publicações',  icon: Newspaper  },
   { id: 'produtividade',label: 'Produtividade',icon: Users      },
-  { id: 'financeiro',   label: 'Financeiro',   icon: DollarSign, roles: ['gerente', 'socio'] },
+  { id: 'financeiro',   label: 'Financeiro',   icon: DollarSign, roles: ['socio'] },
   { id: 'cliente',      label: 'Por Cliente',  icon: Building2  },
-  { id: 'horas',        label: 'Horas',        icon: Clock3, roles: ['gerente', 'socio'] },
+  { id: 'horas',        label: 'Horas',        icon: Clock3, roles: ['socio'] },
 ]
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export default function RelatoriosPage({ processos, agendaItems, publicacoes, kanbanTasks, profiles, lancamentos, timeEntries, role }: Props) {
   const hoje = new Date().toISOString().slice(0, 10)
-  const verFinanceiro = ['gerente', 'socio'].includes(role)
+  const verFinanceiro = role === 'socio'
 
   const [aba,            setAba]            = useState<Aba>('processos')
   const [periodo,        setPeriodo]        = useState('todos')
@@ -731,7 +731,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
           </div>
         )}
 
-        {/* ── Aba Financeiro (gerente/socio) ──────────────────────────────── */}
+        {/* ── Aba Financeiro (só sócio) ──────────────────────────────── */}
         {aba === 'financeiro' && verFinanceiro && fin && (
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-2 gap-4">
@@ -774,7 +774,7 @@ export default function RelatoriosPage({ processos, agendaItems, publicacoes, ka
           </div>
         )}
 
-        {/* ── Aba Horas (gerente/socio) ────────────────────────────────────── */}
+        {/* ── Aba Horas (só sócio: tem valores) ────────────────────────────────────── */}
         {aba === 'horas' && verFinanceiro && (
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-3 gap-4">

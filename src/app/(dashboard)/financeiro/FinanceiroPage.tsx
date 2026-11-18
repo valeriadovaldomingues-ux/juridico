@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, TrendingUp, TrendingDown, Clock, AlertCircle,
   Pencil, Trash2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search,
-  Wallet, BarChart3, ListFilter, Banknote, Send,
+  Wallet, BarChart3, ListFilter, Banknote, Send, Lock,
 } from 'lucide-react'
 import { rotuloPagamento, type FormaPagamento } from '@/lib/financeiro/forma-pagamento'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
@@ -17,6 +17,8 @@ import LancamentoModal from './LancamentoModal'
 import RelatorioDespesasView from './RelatorioDespesasView'
 import PedidosPagamentoView from './PedidosPagamentoView'
 import SalariosView, { type FuncionarioFolha } from './SalariosView'
+import DespesasPessoaisView, { type SocioOpcao } from './DespesasPessoaisView'
+import type { DespesaPessoal } from '@/lib/financeiro/despesas-pessoais'
 import GradePagamentoView, { type ItemGrade } from './GradePagamentoView'
 import ReceberPartidoMes from './ReceberPartidoMes'
 
@@ -58,6 +60,9 @@ interface Props {
   verSalarios?: boolean
   /** Se informado, só estas abas aparecem (ex.: Célio: despesas, a pagar, salários). */
   abasPermitidas?: Aba[]
+  /** Despesas pessoais dos sócios: só chegam preenchidas para sócio (a aba só aparece para ele). */
+  despesasPessoais?: DespesaPessoal[]
+  socios?: SocioOpcao[]
 }
 
 // ─── Config de status ────────────────────────────────────────────────────────
@@ -69,7 +74,7 @@ const statusCfg: Record<string, { bg: string; text: string; dot: string; label: 
   cancelado: { bg: 'bg-[#F3F1EE]', text: 'text-[#7a8899]', dot: 'bg-[#c5cdd8]',  label: 'Cancelado' },
 }
 
-type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos' | 'rel_despesas'
+type Aba = 'lancamentos' | 'receitas' | 'despesas' | 'salarios' | 'grade' | 'receber' | 'pagar' | 'relatorios' | 'pedidos' | 'rel_despesas' | 'pessoais'
 
 const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'grade',       label: 'Receita Partido',  icon: Wallet },
@@ -82,6 +87,7 @@ const ABAS: { id: Aba; label: string; icon: React.ElementType }[] = [
   { id: 'rel_despesas', label: 'Relatório de despesas', icon: BarChart3 },
   { id: 'relatorios',  label: 'Relatórios',      icon: BarChart3   },
   { id: 'lancamentos', label: 'Lançamentos',     icon: ListFilter  },
+  { id: 'pessoais',    label: 'Despesas pessoais sócios', icon: Lock },
 ]
 
 const PERIODOS = [
@@ -139,7 +145,7 @@ function somarMesYM(ym: string, delta: number): string {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true, abasPermitidas }: Props) {
+export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mesFolhaAtual, gradePagamento, role, acessoCompleto = false, verSalarios = true, abasPermitidas, despesasPessoais = [], socios = [] }: Props) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>(inicial)
   const router = useRouter()
   const [aba,         setAba]         = useState<Aba>(abasPermitidas?.[0] ?? 'grade')
@@ -391,7 +397,7 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
       <div className="bg-white rounded-lg border border-[#E2DDD8] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
 
         <div className="flex border-b border-[#f3f4f6]">
-          {ABAS.filter(a => (a.id !== 'salarios' || verSalarios) && (!abasPermitidas || abasPermitidas.includes(a.id))).map(a => {
+          {ABAS.filter(a => (a.id !== 'salarios' || verSalarios) && (a.id !== 'pessoais' || (role === 'socio' && !abasPermitidas)) && (!abasPermitidas || abasPermitidas.includes(a.id))).map(a => {
             const Icon = a.icon
             const ativo = aba === a.id
             return (
@@ -432,6 +438,8 @@ export default function FinanceiroPage({ lancamentos: inicial, funcionarios, mes
           <RelatorioDespesasView podeVerReferencia={role === 'socio'} />
         ) : aba === 'relatorios' ? (
           <RelatoriosView metricas={metricas} />
+        ) : aba === 'pessoais' && role === 'socio' ? (
+          <DespesasPessoaisView iniciais={despesasPessoais} socios={socios} />
         ) : aba === 'salarios' ? (
           <SalariosView mesInicial={mesFolhaAtual} funcionariosIniciais={funcionarios} />
         ) : aba === 'grade' ? (
