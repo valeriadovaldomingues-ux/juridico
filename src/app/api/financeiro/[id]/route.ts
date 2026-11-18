@@ -9,7 +9,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
 
   const { id } = await params

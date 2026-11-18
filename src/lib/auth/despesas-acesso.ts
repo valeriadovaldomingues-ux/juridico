@@ -22,11 +22,10 @@ export function podeAcessarDespesas(userId: string, role: string): boolean {
 }
 
 /**
- * Pode criar/editar lançamentos de despesa via API — sócio/gerente sempre podem
- * (mesma regra do financeiro geral); o usuário extra só pode mexer em lançamentos
- * do tipo 'despesa'.
+ * Pode criar/editar lançamentos de despesa via API — sócio sempre pode (o Financeiro é só do sócio,
+ * gerente incluído, desde 18/11/2026); o usuário extra só pode mexer em lançamentos do tipo 'despesa'.
  */
 export function podeGerenciarLancamentoDespesa(userId: string, role: string, tipoLancamento: string): boolean {
-  if (role === 'socio' || role === 'gerente') return true
+  if (role === 'socio') return true
   return DESPESAS_EXTRA_USER_IDS.includes(userId) && tipoLancamento === 'despesa'
 }

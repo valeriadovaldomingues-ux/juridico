@@ -18,14 +18,14 @@ import RelatoriosPage from './RelatoriosPage'
 
 export default async function RelatoriosRoute() {
   // Relatórios: gerente e sócio, mais pessoas liberadas individualmente (ex.: Tuane) — ver
-  // src/lib/auth/acesso-por-usuario.ts. O financeiro continua só para gerente/sócio (verFinanceiro).
+  // src/lib/auth/acesso-por-usuario.ts. O financeiro (e a aba Horas, com valores) é só do sócio (verFinanceiro).
   const { profile, userId } = await requireAuth()
   if (!['gerente', 'socio'].includes(profile.role) && !rotaLiberadaParaUsuario('/relatorios', userId, profile.role)) {
     redirect('/dashboard')
   }
   const supabase = await createClient()
 
-  const verFinanceiro = ['gerente', 'socio'].includes(profile.role)
+  const verFinanceiro = profile.role === 'socio'
 
   const [
     { data: processos },

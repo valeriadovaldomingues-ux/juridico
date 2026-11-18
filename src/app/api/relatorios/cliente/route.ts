@@ -5,7 +5,7 @@ import { TIPO_TEM_PRAZO } from '@/app/(dashboard)/agenda/agenda-types'
 import type { UserRole } from '@/types'
 
 const ALLOWED: UserRole[] = ['advogado', 'gerente', 'socio']
-const FINANCEIRO_ROLES: UserRole[] = ['gerente', 'socio']
+const FINANCEIRO_ROLES: UserRole[] = ['socio']
 
 export interface RelatorioClienteData {
   cliente: {
@@ -177,7 +177,7 @@ export async function GET(req: NextRequest) {
     pubData = (pubs ?? []) as RelatorioClienteData['publicacoes']
   }
 
-  // ── 6. Financeiro (só gerente/sócio) ─────────────────────────────────────
+  // ── 6. Financeiro (só sócio) ─────────────────────────────────────
   let financeiro: RelatorioClienteData['financeiro'] = null
   if (FINANCEIRO_ROLES.includes(auth.role)) {
     const { data: lanc } = await supabase

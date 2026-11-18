@@ -7,7 +7,7 @@ import { lerPagamento, serieDeParcelas } from '@/lib/financeiro/forma-pagamento'
 import { lerRecorrencia, serieRecorrente } from '@/lib/financeiro/recorrencia'
 
 export async function POST(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio', 'administrativo'])
+  const auth = await apiGuard(['socio', 'administrativo'])
   if (auth instanceof NextResponse) return auth
 
   const supabase = await createClient()

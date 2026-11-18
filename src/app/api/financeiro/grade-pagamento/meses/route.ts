@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 const STATUS = ['pendente', 'pago', 'vencido']
 
 export async function GET(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
   const anoParam = Number(req.nextUrl.searchParams.get('ano'))
   const ano = Number.isInteger(anoParam) && anoParam > 2000 && anoParam < 2100 ? anoParam : new Date().getFullYear()
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const auth = await apiGuard(['gerente', 'socio'])
+  const auth = await apiGuard(['socio'])
   if (auth instanceof NextResponse) return auth
   const body = await req.json().catch(() => null)
   const gradeId = String(body?.grade_id ?? '')

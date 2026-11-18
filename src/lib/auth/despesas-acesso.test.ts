@@ -24,9 +24,10 @@ describe('podeAcessarDespesas', () => {
 })
 
 describe('podeGerenciarLancamentoDespesa', () => {
-  it('sócio e gerente podem gerenciar qualquer tipo de lançamento', () => {
+  it('sócio pode gerenciar qualquer tipo de lançamento; gerente não (Financeiro fechado ao gerente, 18/11/2026)', () => {
     expect(podeGerenciarLancamentoDespesa('x', 'socio',   'receita')).toBe(true)
-    expect(podeGerenciarLancamentoDespesa('x', 'gerente', 'despesa')).toBe(true)
+    expect(podeGerenciarLancamentoDespesa('x', 'gerente', 'despesa')).toBe(false)
+    expect(podeGerenciarLancamentoDespesa('x', 'gerente', 'receita')).toBe(false)
   })
 
   it('Célio só gerencia lançamentos do tipo despesa (receitas ficam de fora, 13/10/2026)', () => {

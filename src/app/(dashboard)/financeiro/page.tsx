@@ -38,6 +38,15 @@ export default async function FinanceiroRoute() {
   ])
 
   // Grade (Receita Partido) é receita: não vai para quem está liberado só em despesas/salários.
+  // Despesas pessoais dos sócios: só sócio (o banco também barra os demais).
+  const ehSocio = profile.role === 'socio'
+  const [{ data: despesasPessoais }, { data: sociosAtivos }] = ehSocio
+    ? await Promise.all([
+        supabase.from('despesas_pessoais_socios').select('id, socio_id, descricao, categoria, valor, vencimento, pagamento_em, status, observacoes').order('vencimento', { ascending: false }).limit(1000),
+        supabase.from('profiles').select('id, nome').eq('role', 'socio').eq('ativo', true).order('nome'),
+      ])
+    : [{ data: [] }, { data: [] }]
+
   const { data: gradePagamento } = somenteLiberado
     ? { data: [] }
     : await supabase
@@ -71,6 +80,8 @@ export default async function FinanceiroRoute() {
         acessoCompleto={financeiroLiberadoPorUsuario(userId)}
         verSalarios={verSalarios}
         abasPermitidas={somenteLiberado ? [...ABAS_FINANCEIRO_LIBERADO] : undefined}
+        despesasPessoais={ehSocio ? ((despesasPessoais ?? []) as any) : []}
+        socios={ehSocio ? ((sociosAtivos ?? []) as any) : []}
       />
     </div>
   )
