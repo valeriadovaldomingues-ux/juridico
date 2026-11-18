@@ -6,6 +6,7 @@ import {
   createAgendaTimeEntryPayload,
   type AgendaTimeEntryDraft,
 } from '@/lib/agenda-time-entries'
+import { podeVerValorHoras, semValorDeHoras } from '@/lib/horas/valores'
 import type { UserRole, AgendaTimeEntry } from '@/types'
 
 const WRITE_ALLOWED: UserRole[] = ['administrativo', 'advogado', 'gerente', 'socio']
@@ -51,11 +52,12 @@ async function getCurrentEntry(id: string) {
     .single()
 }
 
-function buildDraftFromPatch(current: AgendaTimeEntry, body: any): AgendaTimeEntryDraft {
+function buildDraftFromPatch(current: AgendaTimeEntry, body: any, podeValor: boolean): AgendaTimeEntryDraft {
   const inicioEm = parseOptionalIsoDateTime(body.inicio_em, 'inicio_em') ?? current.inicio_em
   const fimEm = parseOptionalIsoDateTime(body.fim_em, 'fim_em')
   const duracaoManual = parseOptionalNumber(body.duracao_manual_minutos, 'duracao_manual_minutos')
-  const valorHora = parseOptionalNumber(body.valor_hora, 'valor_hora')
+  // Valor da hora é só dos sócios: para os demais, o que já está gravado fica como está.
+  const valorHora = podeValor ? parseOptionalNumber(body.valor_hora, 'valor_hora') : undefined
 
   return {
     agenda_item_id: current.agenda_item_id,
@@ -111,7 +113,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const draft = buildDraftFromPatch(current as AgendaTimeEntry, body)
+    const draft = buildDraftFromPatch(current as AgendaTimeEntry, body, podeVerValorHoras(auth.role))
     const payload = createAgendaTimeEntryPayload(draft)
 
     const { data, error } = await supabase
@@ -144,7 +146,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json(data as AgendaTimeEntry)
+    return NextResponse.json(semValorDeHoras(auth.role, data as AgendaTimeEntry))
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Dados inválidos' }, { status: 400 })
   }
