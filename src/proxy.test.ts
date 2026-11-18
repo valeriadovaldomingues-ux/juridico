@@ -349,6 +349,19 @@ describe('staff acessando rotas do portal', () => {
     expectRedirect(res, '/dashboard')
   })
 
+  it('sócio com o cookie do portal (Ver como cliente) em /portal → passa; o layout valida o cookie no banco', async () => {
+    asUser('socio')
+    expectPassThru(await proxy(reqPortal('/portal')))
+    asUser('socio')
+    expectPassThru(await proxy(reqPortal('/portal/processos')))
+  })
+
+  it('staff com cookie do portal continua barrado das rotas internas de outro papel', async () => {
+    asUser('advogado')
+    const res = await proxy(reqPortal('/financeiro'))
+    expectRedirect(res, '/dashboard')
+  })
+
   it('staff em /portal/login → passa através (login é rota pública)', async () => {
     // /portal/login tem isPortalLogin=true; a condição 3c exige !isPortalLogin
     // então staff não é redirecionado do login do portal
@@ -1358,10 +1371,10 @@ describe('portal v2: cliente só com o cookie do portal (sem sessão Supabase)',
 })
 
 describe('portal v2: staff (sessão Supabase) × portal', () => {
-  it('staff com sessão Supabase não entra no portal como cliente, mesmo com cookie do portal', async () => {
+  it('staff com sessão Supabase não entra no portal como cliente (sem o cookie da prévia do sócio)', async () => {
     asUser('socio')
     expectRedirect(await proxy(req('/portal')), '/dashboard')
-    expectRedirect(await proxy(reqPortal('/portal/processos')), '/dashboard')
+    expectRedirect(await proxy(req('/portal/processos')), '/dashboard')
   })
 
   it('o login do portal continua aberto a quem está logado no escritório', async () => {
