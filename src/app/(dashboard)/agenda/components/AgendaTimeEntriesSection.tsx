@@ -7,6 +7,7 @@ import SearchableCombobox from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions, fetchProcessoOptions } from '@/lib/search/remote'
 import type { AgendaItem } from '../agenda-types'
 import type { AgendaTimeEntry, UserRole } from '@/types'
+import { podeVerValorHoras } from '@/lib/horas/valores'
 import {
   AgendaTimeEntryDraft,
   buildAgendaTimeEntrySummary,
@@ -93,6 +94,7 @@ export default function AgendaTimeEntriesSection({
   saving,
   deletingId,
 }: Props) {
+  const verValor = podeVerValorHoras(currentUserRole)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(() => buildDefaultForm(agendaItem))
   const [localError, setLocalError] = useState<string | null>(null)
@@ -149,8 +151,8 @@ export default function AgendaTimeEntriesSection({
       return
     }
 
-    const valorHora = form.valor_hora.trim() ? Number(form.valor_hora) : null
-    if (form.valor_hora.trim() && Number.isNaN(valorHora)) {
+    const valorHora = verValor && form.valor_hora.trim() ? Number(form.valor_hora) : null
+    if (verValor && form.valor_hora.trim() && Number.isNaN(valorHora)) {
       setLocalError('Valor hora inválido.')
       return
     }
@@ -168,7 +170,8 @@ export default function AgendaTimeEntriesSection({
       duracao_manual_minutos: manualMinutes,
       usa_duracao_manual: form.usa_duracao_manual,
       cobravel: form.cobravel,
-      valor_hora: valorHora,
+      // Quem não é sócio não manda valor: o servidor mantém o que já estava gravado.
+      ...(verValor ? { valor_hora: valorHora } : {}),
       status_cobranca: form.cobravel ? form.status_cobranca : 'nao_faturavel',
     }
 
@@ -333,7 +336,7 @@ export default function AgendaTimeEntriesSection({
                       placeholder="Ex.: análise de contestação"
                     />
                   </div>
-                  <div>
+                  {verValor && <div>
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-2)]">
                       Valor hora
                     </label>
@@ -345,7 +348,7 @@ export default function AgendaTimeEntriesSection({
                       onChange={e => setForm(prev => ({ ...prev, valor_hora: e.target.value }))}
                       className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-copper)] focus:ring-2 focus:ring-[var(--color-copper)]/10"
                     />
-                  </div>
+                  </div>}
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -468,7 +471,7 @@ export default function AgendaTimeEntriesSection({
                             )}>
                               {entry.cobravel && entry.status_cobranca !== 'nao_faturavel' ? 'Cobrável' : 'Não faturável'}
                             </span>
-                            {entry.valor_total !== null && entry.valor_total !== undefined && (
+                            {verValor && entry.valor_total !== null && entry.valor_total !== undefined && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-petrol-light)] px-2 py-0.5 text-[var(--color-petrol)]">
                                 <DollarSign size={10} />
                                 {formatCurrencyBRL(entry.valor_total)}

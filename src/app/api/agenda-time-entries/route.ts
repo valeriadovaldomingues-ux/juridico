@@ -6,6 +6,7 @@ import {
   createAgendaTimeEntryPayload,
   type AgendaTimeEntryDraft,
 } from '@/lib/agenda-time-entries'
+import { podeVerValorHoras, semValorDeHoras } from '@/lib/horas/valores'
 import type { UserRole, AgendaTimeEntry } from '@/types'
 
 const READ_ALLOWED: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data ?? [])
+    return NextResponse.json(semValorDeHoras(auth.role, data ?? []))
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Parâmetros inválidos' }, { status: 400 })
   }
@@ -150,7 +151,8 @@ export async function POST(req: NextRequest) {
       duracao_manual_minutos: draft.duracao_manual_minutos,
       usa_duracao_manual: draft.usa_duracao_manual,
       cobravel: draft.cobravel,
-      valor_hora: draft.valor_hora,
+      // Valor da hora é só dos sócios: o de quem não é sócio é ignorado.
+      valor_hora: podeVerValorHoras(auth.role) ? draft.valor_hora : null,
       status_cobranca: draft.status_cobranca,
     })
 
@@ -178,7 +180,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json(data as AgendaTimeEntry, { status: 201 })
+    return NextResponse.json(semValorDeHoras(auth.role, data as AgendaTimeEntry), { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Dados inválidos' }, { status: 400 })
   }

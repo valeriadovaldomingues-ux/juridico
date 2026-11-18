@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSessionProfile } from '@/lib/auth/guards'
 import AgendaPage from './AgendaPage'
 import type { UserRole } from '@/types'
+import { semValorDeHoras } from '@/lib/horas/valores'
 
 const SETUP_SQL = `CREATE TABLE IF NOT EXISTS public.agenda_items (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -118,7 +119,7 @@ export default async function AgendaRoute() {
   return (
     <div className="internal-page">
       <AgendaPage
-        initialItems={items as never}
+        initialItems={items.map(i => (Array.isArray(i.time_entries) ? { ...i, time_entries: semValorDeHoras(role, i.time_entries) } : i)) as never}
         currentUserId={userId}
         currentUserRole={(role ?? 'cliente') as UserRole}
         canDelete={canDelete}
