@@ -1,4 +1,5 @@
 import type { Ferramenta } from './ferramentas'
+import { KANBAN_ESCRITA } from './ferramentas-kanban'
 import { ADVOGADO_RESPONSAVEL_ID, ADVOGADO_RESPONSAVEL_NOME } from '@/lib/processos/responsavel'
 import { sincronizarGoogleEmSegundoPlano } from '@/lib/google/agenda-disparo'
 import { criarCalendario, googleAgendaConfigurado } from '@/lib/google/calendar'
@@ -11,8 +12,9 @@ import { AUDIENCIA_MODALIDADES, AUDIENCIA_TIPOS, erroProcessoDaAudiencia, normal
 
 // Ferramentas de ESCRITA do conector MCP. Regras: (1) só quem pode gravar (advogados, gerentes e a lista MCP_USUARIOS_ESCRITA, ver permitidos.ts); (2) toda escrita é em duas
 // etapas — sem `confirmar: true` só devolve o resumo do que seria gravado, e o Claude precisa mostrar ao usuário e
-// esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) só se apaga o que o próprio
-// conector criou pela mesma pessoa (excluir_compromisso) ou a ligação de uma parte com o processo (remover_parte_processo).
+// esperar o "sim"; (3) o que é gravado leva a marca de que veio pelo Claude e quem pediu; (4) exclusões: compromisso
+// pendente (excluir_compromisso: com a regra de perfil da tela da agenda), cartão do Kanban que não veio do Trello
+// (excluir_cartao_kanban) e a ligação de uma parte com o processo (remover_parte_processo).
 
 const UUID = /^[0-9a-f-]{36}$/i
 const dataOk = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
@@ -62,6 +64,9 @@ function previa(resumo: Record<string, unknown>) {
     instrucao: 'NADA FOI GRAVADO. Mostre este resumo ao usuário e pergunte se pode gravar. Só depois do "sim" chame de novo, com os mesmos argumentos e confirmar=true.',
   }
 }
+
+// Perfis que, na tela da agenda, excluem compromissos de qualquer pessoa (mesma regra de DELETE /api/agenda-items/:id).
+const PAPEIS_EXCLUEM_COMPROMISSO = ['administrativo', 'advogado', 'gerente', 'socio']
 
 const CONFIRMAR = { type: 'boolean', description: 'false/ausente = só mostra o resumo; true = grava (só depois do "sim" do usuário)' }
 
@@ -248,17 +253,22 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   },
   {
     name: 'excluir_compromisso',
-    description: 'Exclui um compromisso da agenda, mas SÓ um que foi criado por este conector pela própria pessoa (com a marca "registrado via Claude"), ainda pendente — serve para desfazer um lançamento errado ou de teste. Não apaga compromissos feitos pelo sistema ou por outras pessoas. Duas etapas: sem confirmar=true só mostra o resumo.',
+    description: 'Exclui um compromisso da agenda ainda pendente, como se faz na tela da agenda: advogados, gerentes, administrativo e sócios podem excluir os de qualquer pessoa; os demais perfis só os que criaram por este conector (com a marca "registrado via Claude"). Compromisso concluído não é excluído (histórico). Se houver horas lançadas ligadas a ele, elas também são apagadas — o resumo avisa. Duas etapas: sem confirmar=true só mostra o resumo.',
     inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Id do compromisso (da ferramenta agenda)' }, confirmar: CONFIRMAR }, required: ['id'] },
     async executar(args, ctx) {
       const id = String(args.id ?? '')
       if (!UUID.test(id)) throw new Error('Id de compromisso inválido.')
-      const { data: item, error } = await ctx.db.from('agenda_items').select('id, titulo, tipo, status, data_inicio, descricao').eq('id', id).maybeSingle()
+      const { data: item, error } = await ctx.db.from('agenda_items').select('id, titulo, tipo, status, data_inicio, descricao, responsavel').eq('id', id).maybeSingle()
       if (error) throw new Error(error.message)
       if (!item) throw new Error('Compromisso não encontrado.')
-      if (!String(item.descricao ?? '').includes(marca(ctx.nome))) throw new Error('Só posso excluir compromissos criados por este conector por você. Este foi criado de outra forma: exclua pela tela da agenda.')
+      if (!PAPEIS_EXCLUEM_COMPROMISSO.includes(String(ctx.role ?? '')) && !String(item.descricao ?? '').includes(marca(ctx.nome))) {
+        throw new Error('Seu perfil só exclui por aqui compromissos que você mesmo criou pelo conector. Este foi criado de outra forma: exclua pela tela da agenda.')
+      }
       if (item.status === 'concluido') throw new Error('Este compromisso já foi concluído; para não perder o histórico, não é excluído por aqui.')
-      const resumo = { excluir: `${item.tipo}: ${item.titulo} (${item.data_inicio})` }
+      const { data: horas } = await ctx.db.from('agenda_time_entries').select('id, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual').eq('agenda_item_id', id)
+      const minutosHoras = (horas ?? []).reduce((t: number, h: Record<string, unknown>) => t + Number((h.usa_duracao_manual ? h.duracao_manual_minutos : h.duracao_calculada_minutos) ?? 0), 0)
+      const resumo: Record<string, unknown> = { excluir: `${item.tipo}: ${item.titulo} (${item.data_inicio})`, responsavel: item.responsavel ?? null }
+      if (horas?.length) resumo.atencao_horas = `Há ${horas.length} lançamento(s) de horas ligados a este compromisso (${formatarTempo(minutosHoras)}); eles também serão apagados.`
       if (args.confirmar !== true) return previa(resumo)
       const { error: e2 } = await ctx.db.from('agenda_items').delete().eq('id', id)
       if (e2) throw new Error(e2.message)
@@ -720,4 +730,5 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
       return { gravado: true, ...resumo }
     },
   },
+  ...KANBAN_ESCRITA,
 ]
