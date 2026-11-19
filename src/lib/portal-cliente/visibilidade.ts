@@ -50,3 +50,24 @@ export function andamentoVisivelNoPortal(a: { tipo?: string | null; origem?: str
 
 /** Partes que o cliente vê: autor, réu e terceiro. O tipo "outro" (parte interessada/vínculo interno) é omitido. */
 export const PARTES_TIPOS_PORTAL = ['autor', 'reu', 'terceiro'] as const
+
+/**
+ * Texto de andamento que o cliente lê. Mantém os parágrafos e tira as marcas de uso interno que
+ * entram na descrição ("registrado via Claude por…", "(Fonte: …)", "Tempo: N min.", "Agenda pedvprazos…").
+ */
+export function descricaoParaCliente(bruto: string | null | undefined, max = 4000): string | null {
+  const t = (bruto ?? '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\[registrado via [^\]]*\]/gi, ' ')
+    .replace(/\(\s*Fonte:[^)]*\)/gi, ' ')
+    .replace(/\bTempo:\s*\d+\s*min\.?/gi, ' ')
+    .replace(/\bAgenda\s+pedvprazos\b[^.\n]*(?:\.|$)/gi, ' ')
+    .split('\n')
+    .map(l => l.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s+([.;,])/g, '$1')
+    .trim()
+  if (!t) return null
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t
+}

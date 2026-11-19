@@ -1,7 +1,12 @@
+'use client'
+
+import { useState } from 'react'
+
 interface Props {
   data:      string | null   // ISO date
   titulo:    string          // texto amigável
   subtitulo?: string         // ex: número do processo, tipo
+  detalhe?:  string          // texto completo; quando houver, o item abre ao clicar
   tipo:      'publicacao' | 'audiencia' | 'prazo' | 'documento' | 'distribuicao' | 'mensagem'
   alerta?:   boolean         // prazo urgente / audiência próxima
   last?:     boolean         // não renderiza linha de conexão abaixo
@@ -23,8 +28,33 @@ function formatarData(iso: string) {
   return `${String(d.getDate()).padStart(2,'0')} ${MESES[d.getMonth()]} ${d.getFullYear()}`
 }
 
-export default function TimelineItem({ data, titulo, subtitulo, tipo, alerta, last }: Props) {
+export default function TimelineItem({ data, titulo, subtitulo, detalhe, tipo, alerta, last }: Props) {
   const cfg = TIPO_CONFIG[tipo]
+  const [aberto, setAberto] = useState(false)
+  // Só vira clicável quando o texto não cabe nas 3 linhas do resumo.
+  const abrivel = !!detalhe && (detalhe.length > 200 || detalhe.includes('\n'))
+  const conteudo = (
+    <>
+      <span className="flex items-start justify-between gap-3">
+        <span className={`block text-[12px] leading-snug font-medium ${alerta ? 'text-amber-700' : 'text-[#1C1C2E]'}`}>
+          {titulo}
+        </span>
+        {data && (
+          <span className="text-[10px] text-[#C5C0B8] shrink-0 tabular-nums mt-0.5">
+            {formatarData(data)}
+          </span>
+        )}
+      </span>
+      {detalhe ? (
+        <>
+          <span className={`block text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide whitespace-pre-line break-words ${abrivel && !aberto ? 'line-clamp-3' : ''}`}>{detalhe}</span>
+          {abrivel && <span className="inline-block mt-1 text-[10px] text-[#C49557] tracking-wide">{aberto ? 'Recolher' : 'Ver completo'}</span>}
+        </>
+      ) : subtitulo ? (
+        <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">{subtitulo}</p>
+      ) : null}
+    </>
+  )
 
   return (
     <div className="flex gap-4">
@@ -37,19 +67,16 @@ export default function TimelineItem({ data, titulo, subtitulo, tipo, alerta, la
 
       {/* Conteúdo */}
       <div className={`flex-1 min-w-0 ${last ? 'pb-0' : 'pb-5'}`}>
-        <div className="flex items-start justify-between gap-3">
-          <p className={`text-[12px] leading-snug font-medium ${alerta ? 'text-amber-700' : 'text-[#1C1C2E]'}`}>
-            {titulo}
-          </p>
-          {data && (
-            <span className="text-[10px] text-[#C5C0B8] shrink-0 tabular-nums mt-0.5">
-              {formatarData(data)}
-            </span>
-          )}
-        </div>
-        {subtitulo && (
-          <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">{subtitulo}</p>
-        )}
+        {abrivel ? (
+          <button
+            type="button"
+            onClick={() => setAberto(v => !v)}
+            aria-expanded={aberto}
+            className="block w-full text-left cursor-pointer"
+          >
+            {conteudo}
+          </button>
+        ) : conteudo}
       </div>
 
     </div>
