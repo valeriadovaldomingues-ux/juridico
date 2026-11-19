@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { andamentoVisivelNoPortal, filtrarVisiveisNoPortal, processoVisivelNoPortal } from './visibilidade'
+import { andamentoVisivelNoPortal, descricaoParaCliente, filtrarVisiveisNoPortal, processoVisivelNoPortal } from './visibilidade'
 import { listarAndamentos, listarAudienciasFuturas, listarPartes, listarProcessosDoCliente, montarResumo, obterProcessoDoCliente } from './consultas'
 import { criarFakeDb } from './testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from './testing/seed'
@@ -30,6 +30,23 @@ describe('processoVisivelNoPortal (regra única)', () => {
     const q = { eq: (...a: unknown[]) => { chamadas.push(['eq', ...a]); return q }, not: (...a: unknown[]) => { chamadas.push(['not', ...a]); return q } }
     filtrarVisiveisNoPortal(q)
     expect(chamadas).toEqual([['eq', 'ocultar_portal', false], ['not', 'segredo_justica', 'is', true]])
+  })
+})
+
+describe('descricaoParaCliente', () => {
+  it('tira as marcas de uso interno e mantém o resto', () => {
+    const bruto = 'Juntada: perícia em 11/11/2026, às 8h. Agendado; cliente a ser informado por e-mail. Tempo: 20 min. [registrado via Claude por Débora Brito]'
+    expect(descricaoParaCliente(bruto)).toBe('Juntada: perícia em 11/11/2026, às 8h. Agendado; cliente a ser informado por e-mail.')
+    expect(descricaoParaCliente('Realizada a audiência. (Fonte: EasyJur) [registrado via Claude por Débora Brito]')).toBe('Realizada a audiência.')
+    expect(descricaoParaCliente('Perícia alterada. Agenda pedvprazos conferida: perícia médica 11/11. Fim.')).not.toContain('pedvprazos')
+  })
+  it('preserva parágrafos e devolve null quando sobra nada', () => {
+    expect(descricaoParaCliente('Primeiro.\r\n\r\n\r\nSegundo.')).toBe('Primeiro.\n\nSegundo.')
+    expect(descricaoParaCliente('[registrado via Claude por Ana]')).toBeNull()
+    expect(descricaoParaCliente(null)).toBeNull()
+  })
+  it('não corta textos longos de 600 caracteres', () => {
+    expect(descricaoParaCliente('a'.repeat(1500))).toHaveLength(1500)
   })
 })
 

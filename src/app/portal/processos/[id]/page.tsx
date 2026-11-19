@@ -90,7 +90,8 @@ export default async function PortalProcessoDetailPage({ params }: { params: Pro
                 key={a.id}
                 data={a.data}
                 titulo={a.titulo}
-                subtitulo={a.descricao ? `${a.tipo}: ${a.descricao}` : a.tipo}
+                subtitulo={a.tipo}
+                detalhe={a.descricao ? `${a.tipo}: ${a.descricao}` : undefined}
                 tipo={a.tipo === 'Audiência' ? 'audiencia' : 'publicacao'}
                 last={i === andamentos.length - 1}
               />

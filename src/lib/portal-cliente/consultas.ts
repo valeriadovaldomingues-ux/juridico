@@ -7,7 +7,7 @@ import type { Db } from './db'
 import { checar } from './db'
 import {
   ANDAMENTO_ORIGENS_PORTAL, ANDAMENTO_TIPOS_PORTAL, PARTES_TIPOS_PORTAL,
-  andamentoVisivelNoPortal, filtrarVisiveisNoPortal, processoVisivelNoPortal,
+  andamentoVisivelNoPortal, descricaoParaCliente, filtrarVisiveisNoPortal, processoVisivelNoPortal,
 } from './visibilidade'
 import { isUUID } from '@/lib/portal/validate'
 
@@ -131,7 +131,7 @@ function paraAndamentoPortal(a: Record<string, unknown>): AndamentoPortal | null
     data: a.data_andamento as string,
     tipo: TIPO_ANDAMENTO_LABELS[a.tipo as string] ?? 'Andamento',
     titulo,
-    descricao: limpar(texto(a.descricao), 600),
+    descricao: descricaoParaCliente(texto(a.descricao)),
   }
 }
 
