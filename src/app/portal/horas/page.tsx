@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Clock } from 'lucide-react'
+import { Clock, FileDown } from 'lucide-react'
 import { exigirSessaoPortal, dataCurta } from '@/lib/portal-cliente/pagina'
 import { listarHoras, mesesComHoras, mesValido, totalMinutos } from '@/lib/portal-cliente/horas'
 import { formatDurationMinutes } from '@/lib/agenda-time-entries'
@@ -28,11 +28,23 @@ export default async function PortalHorasPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <div>
-        <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
-        <h1 className="text-[26px] sm:text-[28px] text-[#1C1C2E] leading-none tracking-tight" style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}>
-          Horas utilizadas
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <p className="text-[10px] text-[#9CA3AF] tracking-[0.2em] uppercase mb-1">Portal</p>
+          <h1 className="text-[26px] sm:text-[28px] text-[#1C1C2E] leading-none tracking-tight" style={{ fontFamily: 'var(--font-serif)', fontWeight: 600 }}>
+            Horas utilizadas
+          </h1>
+        </div>
+        {horas.length > 0 && (
+          <a
+            href={`/api/portal/relatorio-horas${todos || !mes ? '' : `?mes=${mes}`}`}
+            download
+            className="inline-flex items-center justify-center gap-2 bg-[#0C1B2A] text-white hover:bg-[#13283D] transition-colors tracking-[0.08em] uppercase font-medium text-[10px] px-3 py-2"
+          >
+            <FileDown size={12} />
+            Baixar relatório de horas (PDF)
+          </a>
+        )}
       </div>
 
       {horas.length === 0 ? (
@@ -90,7 +102,7 @@ export default async function PortalHorasPage({ searchParams }: { searchParams: 
                   <div className="min-w-0">
                     <p className="text-[12px] text-[#1C1C2E] leading-snug break-words">{h.atividade}</p>
                     <p className="text-[10px] text-[#9CA3AF] mt-0.5 tracking-wide">
-                      {dataCurta(h.data)}{h.processoNumero ? ` · ${h.processoNumero}` : ''}
+                      {dataCurta(h.data)}{h.responsavel !== '—' ? ` · ${h.responsavel}` : ''}{h.processoNumero ? ` · ${h.processoNumero}` : ''}
                     </p>
                   </div>
                   <span className="text-[12px] text-[#1C1C2E] tabular-nums shrink-0">{formatDurationMinutes(h.minutos)}</span>

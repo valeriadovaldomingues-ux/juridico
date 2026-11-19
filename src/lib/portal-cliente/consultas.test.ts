@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { andamentoVisivelNoPortal, descricaoParaCliente, filtrarVisiveisNoPortal, processoVisivelNoPortal } from './visibilidade'
 import { listarAndamentos, listarAudienciasFuturas, listarPartes, listarProcessosDoCliente, montarResumo, obterProcessoDoCliente } from './consultas'
-import { listarHoras, mesesComHoras } from './horas'
+import { horasDoPeriodo, listarHoras, mesesComHoras, relatorioHorasDoCliente } from './horas'
 import { criarFakeDb } from './testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from './testing/seed'
 
@@ -190,7 +190,7 @@ describe('horas do cliente no portal', () => {
     const horas = await listarHoras(criarFakeDb(base).db, CLIENTE_A)
     expect(horas.map(h => [h.id, h.minutos])).toEqual([['h1', 90], ['h6', 30]])
     expect(horas[1].data).toBe('2026-10-05')   // 03:30Z = 00:30 em Brasília
-    expect(JSON.stringify(horas)).not.toMatch(/valor|450|675|difícil|u1|criado_por/)
+    expect(JSON.stringify(horas)).not.toMatch(/valor|450|675|difícil|criado_por/)
     expect(mesesComHoras(horas)).toEqual(['2026-11', '2026-10'])
   })
 
@@ -209,5 +209,19 @@ describe('horas do cliente no portal', () => {
     expect(por.h3.processoNumero).toBeNull()
     expect(por.h3.atividade).toBe('Reunião')
     expect(por.h4.atividade).toBe('Atividade jurídica')
+  })
+
+  it('responsável: nome da equipe; relatório no formato do PDF da equipe, só do período', async () => {
+    const base = seedBasico()
+    base.profiles = [{ id: 'u1', nome: 'Débora Brito', role: 'advogado' }, { id: 'u9', nome: 'Alguém', role: 'cliente' }]
+    base.agenda_time_entries = [ent('h1'), ent('h2', { inicio_em: '2026-10-05T15:00:00Z', criado_por: 'u9' })]
+    const horas = await listarHoras(criarFakeDb(base).db, CLIENTE_A)
+    expect(horas.find(h => h.id === 'h1')?.responsavel).toBe('Débora Brito')
+    expect(horas.find(h => h.id === 'h2')?.responsavel).toBe('—')
+    const { horas: nov, de, ate } = horasDoPeriodo(horas, '2026-11')
+    expect([de, ate, nov.length]).toEqual(['2026-11-01', '2026-11-30', 1])
+    const rel = relatorioHorasDoCliente('Maria da Silva', nov, { de, ate })
+    expect(rel).toMatchObject({ cliente: 'Maria da Silva', totalMinutos: 90, linhas: [{ data: '10/11/2026', responsavel: 'Débora Brito', minutos: 90 }] })
+    expect(horasDoPeriodo(horas, null)).toMatchObject({ de: '2026-10-05', ate: '2026-11-10' })
   })
 })

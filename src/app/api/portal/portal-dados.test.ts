@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
 import { criarFakeDb, type FakeDb } from '@/lib/portal-cliente/testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from '@/lib/portal-cliente/testing/seed'
@@ -22,6 +22,7 @@ import { GET as detalhe } from './processos/[id]/route'
 import { GET as agenda } from './agenda/route'
 import { GET as me } from './me/route'
 import { GET as relatorio } from './relatorio/route'
+import { GET as relatorioHoras } from './relatorio-horas/route'
 import { GET as documentos } from './documentos/route'
 import { GET as mensagens, POST as mensagensPost } from './mensagens/route'
 import { POST as accessLog } from './access-log/route'
@@ -133,6 +134,31 @@ describe('GET /api/portal/relatorio', () => {
     expect((await relatorio()).status).toBe(429)
     h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
     expect((await relatorio()).status).toBe(200)
+  })
+})
+
+describe('GET /api/portal/relatorio-horas', () => {
+  const chamar = (q = '') => relatorioHoras(new NextRequest(`http://localhost/api/portal/relatorio-horas${q}`))
+  it('401 sem sessão', async () => {
+    h.sessao = null
+    expect((await chamar()).status).toBe(401)
+  })
+  it('gera o PDF de horas só do cliente da sessão, sem valores, e registra o download', async () => {
+    f = criarFakeDb({
+      ...seedBasico(), portal_acessos_log: [], portal_tentativas: [], profiles: [{ id: 'u1', nome: 'Débora Brito', role: 'advogado' }],
+      agenda_time_entries: [
+        { id: 'h1', cliente_id: CLIENTE_A, cobravel: true, status_cobranca: 'a_faturar', inicio_em: '2026-11-10T13:00:00Z', duracao_calculada_minutos: 90, usa_duracao_manual: false, descricao_atividade: 'Petição', processo_id: PROC_A1, criado_por: 'u1', valor_hora: 450 },
+        { id: 'h2', cliente_id: CLIENTE_B, cobravel: true, status_cobranca: 'a_faturar', inicio_em: '2026-11-10T13:00:00Z', duracao_calculada_minutos: 60, usa_duracao_manual: false, descricao_atividade: 'De outro cliente', processo_id: PROC_B1, criado_por: 'u1' },
+      ],
+    })
+    h.fake = f
+    const res = await chamar('?mes=2026-11')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    expect(res.headers.get('content-disposition')).toContain('minhas-horas-2026-11')
+    const pdf = await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))
+    expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1)
+    expect(f.tabelas.portal_acessos_log.map(l => l.acao)).toContain('download_relatorio')
   })
 })
 

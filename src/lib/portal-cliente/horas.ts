@@ -1,16 +1,19 @@
 // Horas que o cliente vê no portal — só TEMPO (nunca valor/hora nem total em R$: isso é só dos sócios).
-// Entram as horas cobráveis do próprio cliente, como no relatório de horas. Não saem: quem lançou, observações
-// internas, título da tarefa da agenda nem o nº de processos que o portal não mostra (segredo de justiça / ocultos).
+// Entram as horas cobráveis do próprio cliente, como no relatório de horas da equipe. Aparece o NOME de quem
+// trabalhou (igual ao PDF que o escritório já entrega). Não saem: observações internas, título da tarefa da
+// agenda nem o nº de processos que o portal não mostra (segredo de justiça / ocultos).
 
 import { calculateEffectiveMinutes } from '@/lib/agenda-time-entries'
 import type { Db } from './db'
 import { checar } from './db'
 import { descricaoParaCliente, processoVisivelNoPortal } from './visibilidade'
+import { totaisPorResponsavel, type RelatorioHoras } from '@/lib/relatorio-horas/dados'
 
 export interface HoraPortal {
   id: string
   data: string            // AAAA-MM-DD (Brasília)
   atividade: string
+  responsavel: string
   processoId: string | null
   processoNumero: string | null
   minutos: number
@@ -28,6 +31,7 @@ type Linha = {
   usa_duracao_manual: boolean
   descricao_atividade: string | null
   processo_id: string | null
+  criado_por: string | null
 }
 
 /** Horas cobráveis do cliente (mais recentes primeiro). `clienteId` vem SEMPRE da sessão do portal. */
@@ -36,7 +40,7 @@ export async function listarHoras(db: Db, clienteId: string): Promise<HoraPortal
   for (let pagina = 0; pagina < 20; pagina++) {
     const { data, error } = await db
       .from('agenda_time_entries')
-      .select('id, inicio_em, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual, descricao_atividade, processo_id')
+      .select('id, inicio_em, duracao_calculada_minutos, duracao_manual_minutos, usa_duracao_manual, descricao_atividade, processo_id, criado_por')
       .eq('cliente_id', clienteId)
       .eq('cobravel', true)
       .neq('status_cobranca', 'nao_faturavel')
@@ -64,6 +68,17 @@ export async function listarHoras(db: Db, clienteId: string): Promise<HoraPortal
     }
   }
 
+  // Nome de quem lançou (só equipe ativa; a função perfis_equipe não serve aqui: ela depende do login da equipe).
+  const nomes = new Map<string, string>()
+  const idsEquipe = [...new Set(linhas.map(l => l.criado_por).filter((v): v is string => !!v))]
+  for (const grupo of lotes(idsEquipe, 80)) {
+    const { data, error } = await db.from('profiles').select('id, nome, role').in('id', grupo)
+    checar(error, 'equipe')
+    for (const p of (data ?? []) as { id: string; nome: string | null; role: string | null }[]) {
+      if (p.nome && p.role !== 'cliente') nomes.set(p.id, p.nome)
+    }
+  }
+
   return linhas
     .map((l): HoraPortal | null => {
       const minutos = calculateEffectiveMinutes(l) ?? 0
@@ -73,6 +88,7 @@ export async function listarHoras(db: Db, clienteId: string): Promise<HoraPortal
         id: l.id,
         data: dataISOBrasilia(l.inicio_em),
         atividade: descricaoParaCliente(l.descricao_atividade, 300)?.replace(/\n+/g, ' ') ?? 'Atividade jurídica',
+        responsavel: (l.criado_por && nomes.get(l.criado_por)) || '—',
         processoId: visivel ? l.processo_id : null,
         processoNumero: visivel ? visiveis.get(l.processo_id as string) ?? null : null,
         minutos,
@@ -89,3 +105,28 @@ export function mesesComHoras(horas: Pick<HoraPortal, 'data'>[]): string[] {
 export const mesValido = (m: string | null | undefined): m is string => !!m && /^\d{4}-(0[1-9]|1[0-2])$/.test(m)
 
 export const totalMinutos = (horas: Pick<HoraPortal, 'minutos'>[]) => horas.reduce((s, h) => s + h.minutos, 0)
+
+const dataBR = (iso: string) => iso.split('-').reverse().join('/')
+
+/** O mesmo relatório de horas que a equipe emite (mesmo PDF), montado só com o que o portal pode mostrar. */
+export function relatorioHorasDoCliente(clienteNome: string, horas: HoraPortal[], periodo: { de: string; ate: string }): RelatorioHoras {
+  const linhas = [...horas]
+    .sort((a, b) => a.data.localeCompare(b.data) || a.id.localeCompare(b.id))
+    .map(h => ({
+      id: h.id, inicioEm: `${h.data}T12:00:00-03:00`, data: dataBR(h.data), processo: h.processoNumero, atividade: h.atividade,
+      responsavel: h.responsavel, minutos: h.minutos,
+      processoId: null, responsavelId: null, observacoes: null, dataISO: h.data, usaDuracaoManual: false, horaInicio: null, horaFim: null,
+    }))
+  return { cliente: clienteNome, de: periodo.de, ate: periodo.ate, linhas, totalMinutos: totalMinutos(horas), porResponsavel: totaisPorResponsavel(linhas) }
+}
+
+/** Filtra por "AAAA-MM" ou "todos" e devolve também o período (primeiro e último dia). */
+export function horasDoPeriodo(horas: HoraPortal[], mes: string | null | undefined): { horas: HoraPortal[]; de: string; ate: string } {
+  const filtradas = mesValido(mes) ? horas.filter(h => h.data.startsWith(mes)) : horas
+  if (mesValido(mes)) {
+    const ultimo = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate()
+    return { horas: filtradas, de: `${mes}-01`, ate: `${mes}-${String(ultimo).padStart(2, '0')}` }
+  }
+  const datas = filtradas.map(h => h.data).sort()
+  return { horas: filtradas, de: datas[0] ?? '', ate: datas[datas.length - 1] ?? '' }
+}
