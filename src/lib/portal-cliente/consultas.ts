@@ -46,7 +46,6 @@ export const AREA_LABELS: Record<string, string> = {
   previdenciario: 'Previdenciário', administrativo: 'Administrativo', familia: 'Família', empresarial: 'Empresarial', outro: 'Outra área',
 }
 export const STATUS_LABELS: Record<string, string> = { ativo: 'Em andamento', suspenso: 'Suspenso', arquivado: 'Arquivado', encerrado: 'Encerrado' }
-export const TIPO_PARTE_LABELS: Record<string, string> = { autor: 'Autor', reu: 'Réu', terceiro: 'Terceiro interessado' }
 export const TIPO_ANDAMENTO_LABELS: Record<string, string> = {
   peticao: 'Petição', decisao: 'Decisão', despacho: 'Despacho', audiencia: 'Audiência', juntada: 'Juntada', publicacao: 'Publicação',
 }
@@ -96,44 +95,50 @@ export async function obterProcessoDoCliente(db: Db, clienteId: string, processo
   return paraProcessoPortal(data as unknown as Record<string, unknown>)
 }
 
-/** Importadas em massa do campo "parte contrária" do processo: o papel (autor/réu) nunca foi conferido. */
-const ehParteContrariaImportada = (observacoes: unknown) =>
-  typeof observacoes === 'string' && observacoes.startsWith('[importado do campo parte contrária')
-
 const chaveNome = (nome: string) => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
 
+/**
+ * Partes que o cliente vê. Autor e réu dependem do lado em que o cliente está (e a importação de 12/11/2026 gravou
+ * todas as contrapartes como "réu" sem conferir), então o portal não usa esses termos: quem tem o nome do próprio
+ * cliente aparece como "Cliente"; autor/réu são "Parte contrária"; terceiro continua "Terceiro interessado".
+ */
 export async function listarPartes(db: Db, processoIds: string[]): Promise<Map<string, ParteProcessoPortal[]>> {
-  const mapa = new Map<string, (ParteProcessoPortal & { importada: boolean })[]>()
+  const resultado = new Map<string, ParteProcessoPortal[]>()
   for (const grupo of lotes(processoIds, 80)) {
     const { data, error } = await db
       .from('partes_processo')
-      .select('processo_id, pessoa_nome, tipo_parte, observacoes')
+      .select('processo_id, pessoa_nome, tipo_parte')
       .in('processo_id', grupo)
       .in('tipo_parte', [...PARTES_TIPOS_PORTAL])
     checar(error, 'partes')
-    for (const p of (data ?? []) as { processo_id: string; pessoa_nome: string; tipo_parte: string; observacoes?: string | null }[]) {
+
+    const { data: procs, error: erroProcs } = await db.from('processos').select('id, cliente_id').in('id', grupo)
+    checar(erroProcs, 'processos')
+    const clienteDoProcesso = new Map(((procs ?? []) as { id: string; cliente_id: string | null }[]).map(p => [p.id, p.cliente_id]))
+    const idsClientes = [...new Set([...clienteDoProcesso.values()].filter((v): v is string => !!v))]
+    const nomeDoCliente = new Map<string, string>()
+    if (idsClientes.length) {
+      const { data: clientes, error: erroClientes } = await db.from('clientes').select('id, nome').in('id', idsClientes)
+      checar(erroClientes, 'clientes')
+      for (const c of (clientes ?? []) as { id: string; nome: string | null }[]) if (c.nome) nomeDoCliente.set(c.id, chaveNome(c.nome))
+    }
+
+    const vistos = new Map<string, Set<string>>()
+    for (const p of (data ?? []) as { processo_id: string; pessoa_nome: string; tipo_parte: string }[]) {
       const nome = texto(p.pessoa_nome)
       if (!nome) continue
-      // A observação é interna: só serve para saber se o papel foi conferido; nunca vai para o cliente.
-      const importada = ehParteContrariaImportada(p.observacoes)
-      const lista = mapa.get(p.processo_id) ?? []
-      lista.push({ nome, tipo: importada ? 'Parte contrária' : TIPO_PARTE_LABELS[p.tipo_parte] ?? 'Parte', importada })
-      mapa.set(p.processo_id, lista)
+      const chave = chaveNome(nome)
+      // A mesma pessoa não aparece duas vezes no mesmo processo.
+      const jaVistos = vistos.get(p.processo_id) ?? new Set<string>()
+      if (jaVistos.has(chave)) continue
+      jaVistos.add(chave)
+      vistos.set(p.processo_id, jaVistos)
+      const ehCliente = nomeDoCliente.get(clienteDoProcesso.get(p.processo_id) ?? '') === chave
+      const tipo = ehCliente ? 'Cliente' : p.tipo_parte === 'terceiro' ? 'Terceiro interessado' : 'Parte contrária'
+      const lista = resultado.get(p.processo_id) ?? []
+      lista.push({ nome, tipo })
+      resultado.set(p.processo_id, lista)
     }
-  }
-  // A mesma pessoa não aparece duas vezes (ex.: reclamante cadastrada como autor e repetida como "réu" pela importação):
-  // vale a parte conferida; entre iguais, a primeira.
-  const resultado = new Map<string, ParteProcessoPortal[]>()
-  for (const [processoId, lista] of mapa) {
-    const vistos = new Map<string, number>()
-    const saida: (ParteProcessoPortal & { importada: boolean })[] = []
-    for (const parte of lista) {
-      const k = chaveNome(parte.nome)
-      const i = vistos.get(k)
-      if (i === undefined) { vistos.set(k, saida.length); saida.push(parte) }
-      else if (saida[i].importada && !parte.importada) saida[i] = parte
-    }
-    resultado.set(processoId, saida.map(({ nome, tipo }) => ({ nome, tipo })))
   }
   return resultado
 }

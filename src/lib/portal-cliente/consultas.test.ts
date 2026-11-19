@@ -87,22 +87,28 @@ describe('consultas filtram pelo cliente da sessão', () => {
   it('partes: só autor/réu/terceiro, sem documento e sem o tipo "outro"', async () => {
     const f = criarFakeDb(seedBasico())
     const partes = (await listarPartes(f.db, [PROC_A1])).get(PROC_A1)
-    expect(partes).toEqual([{ nome: 'Maria da Silva', tipo: 'Autor' }, { nome: 'Banco Réu S.A.', tipo: 'Réu' }])
+    expect(partes).toEqual([{ nome: 'Maria da Silva', tipo: 'Cliente' }, { nome: 'Banco Réu S.A.', tipo: 'Parte contrária' }])
     expect(JSON.stringify(partes)).not.toMatch(/529|0001-91|nota interna|José Vínculo/)
   })
 
-  it('partes: importada do campo "parte contrária" vira "Parte contrária" e a repetida de uma parte conferida some', async () => {
+  it('partes: nunca "autor"/"réu" (depende do lado do cliente): contrapartes são "Parte contrária", repetidas somem', async () => {
     const IMP = '[importado do campo parte contrária do processo, 12/11/2026]'
-    const f = criarFakeDb({
-      partes_processo: [
-        { id: 'x1', processo_id: PROC_A1, pessoa_nome: 'Jessica Ferreira Luz', tipo_parte: 'autor', observacoes: null },
-        { id: 'x2', processo_id: PROC_A1, pessoa_nome: 'JESSICA FERREIRA LUZ', tipo_parte: 'reu', observacoes: IMP },
-        { id: 'x3', processo_id: PROC_A1, pessoa_nome: 'Fulano de Tal', tipo_parte: 'reu', observacoes: IMP },
-      ],
-    } as never)
-    const partes = (await listarPartes(f.db, [PROC_A1])).get(PROC_A1)
-    expect(partes).toEqual([{ nome: 'Jessica Ferreira Luz', tipo: 'Autor' }, { nome: 'Fulano de Tal', tipo: 'Parte contrária' }])
-    expect(JSON.stringify(partes)).not.toMatch(/importado/)
+    const base = seedBasico()
+    base.partes_processo = [
+      { id: 'x1', processo_id: PROC_A1, pessoa_nome: 'Jessica Ferreira Luz', tipo_parte: 'autor', observacoes: null },
+      { id: 'x2', processo_id: PROC_A1, pessoa_nome: 'JESSICA FERREIRA LUZ', tipo_parte: 'reu', observacoes: IMP },
+      { id: 'x3', processo_id: PROC_A1, pessoa_nome: 'Fulano de Tal', tipo_parte: 'reu', observacoes: IMP },
+      { id: 'x4', processo_id: PROC_A1, pessoa_nome: 'maria da silva', tipo_parte: 'reu', observacoes: null },
+      { id: 'x5', processo_id: PROC_A1, pessoa_nome: 'Seguradora X', tipo_parte: 'terceiro', observacoes: null },
+    ]
+    const partes = (await listarPartes(criarFakeDb(base).db, [PROC_A1])).get(PROC_A1)
+    expect(partes).toEqual([
+      { nome: 'Jessica Ferreira Luz', tipo: 'Parte contrária' },
+      { nome: 'Fulano de Tal', tipo: 'Parte contrária' },
+      { nome: 'maria da silva', tipo: 'Cliente' },
+      { nome: 'Seguradora X', tipo: 'Terceiro interessado' },
+    ])
+    expect(JSON.stringify(partes)).not.toMatch(/importado|Autor|Réu/)
   })
 
   it('andamentos: só os client-safe, mais recentes primeiro, sem autor/responsável', async () => {
