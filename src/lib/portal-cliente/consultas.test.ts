@@ -91,6 +91,20 @@ describe('consultas filtram pelo cliente da sessão', () => {
     expect(JSON.stringify(partes)).not.toMatch(/529|0001-91|nota interna|José Vínculo/)
   })
 
+  it('partes: importada do campo "parte contrária" vira "Parte contrária" e a repetida de uma parte conferida some', async () => {
+    const IMP = '[importado do campo parte contrária do processo, 12/11/2026]'
+    const f = criarFakeDb({
+      partes_processo: [
+        { id: 'x1', processo_id: PROC_A1, pessoa_nome: 'Jessica Ferreira Luz', tipo_parte: 'autor', observacoes: null },
+        { id: 'x2', processo_id: PROC_A1, pessoa_nome: 'JESSICA FERREIRA LUZ', tipo_parte: 'reu', observacoes: IMP },
+        { id: 'x3', processo_id: PROC_A1, pessoa_nome: 'Fulano de Tal', tipo_parte: 'reu', observacoes: IMP },
+      ],
+    } as never)
+    const partes = (await listarPartes(f.db, [PROC_A1])).get(PROC_A1)
+    expect(partes).toEqual([{ nome: 'Jessica Ferreira Luz', tipo: 'Autor' }, { nome: 'Fulano de Tal', tipo: 'Parte contrária' }])
+    expect(JSON.stringify(partes)).not.toMatch(/importado/)
+  })
+
   it('andamentos: só os client-safe, mais recentes primeiro, sem autor/responsável', async () => {
     const f = criarFakeDb(seedBasico())
     const ands = await listarAndamentos(f.db, PROC_A1)

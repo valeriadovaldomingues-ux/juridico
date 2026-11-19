@@ -96,24 +96,46 @@ export async function obterProcessoDoCliente(db: Db, clienteId: string, processo
   return paraProcessoPortal(data as unknown as Record<string, unknown>)
 }
 
+/** Importadas em massa do campo "parte contrária" do processo: o papel (autor/réu) nunca foi conferido. */
+const ehParteContrariaImportada = (observacoes: unknown) =>
+  typeof observacoes === 'string' && observacoes.startsWith('[importado do campo parte contrária')
+
+const chaveNome = (nome: string) => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+
 export async function listarPartes(db: Db, processoIds: string[]): Promise<Map<string, ParteProcessoPortal[]>> {
-  const mapa = new Map<string, ParteProcessoPortal[]>()
+  const mapa = new Map<string, (ParteProcessoPortal & { importada: boolean })[]>()
   for (const grupo of lotes(processoIds, 80)) {
     const { data, error } = await db
       .from('partes_processo')
-      .select('processo_id, pessoa_nome, tipo_parte')
+      .select('processo_id, pessoa_nome, tipo_parte, observacoes')
       .in('processo_id', grupo)
       .in('tipo_parte', [...PARTES_TIPOS_PORTAL])
     checar(error, 'partes')
-    for (const p of (data ?? []) as { processo_id: string; pessoa_nome: string; tipo_parte: string }[]) {
+    for (const p of (data ?? []) as { processo_id: string; pessoa_nome: string; tipo_parte: string; observacoes?: string | null }[]) {
       const nome = texto(p.pessoa_nome)
       if (!nome) continue
+      // A observação é interna: só serve para saber se o papel foi conferido; nunca vai para o cliente.
+      const importada = ehParteContrariaImportada(p.observacoes)
       const lista = mapa.get(p.processo_id) ?? []
-      lista.push({ nome, tipo: TIPO_PARTE_LABELS[p.tipo_parte] ?? 'Parte' })
+      lista.push({ nome, tipo: importada ? 'Parte contrária' : TIPO_PARTE_LABELS[p.tipo_parte] ?? 'Parte', importada })
       mapa.set(p.processo_id, lista)
     }
   }
-  return mapa
+  // A mesma pessoa não aparece duas vezes (ex.: reclamante cadastrada como autor e repetida como "réu" pela importação):
+  // vale a parte conferida; entre iguais, a primeira.
+  const resultado = new Map<string, ParteProcessoPortal[]>()
+  for (const [processoId, lista] of mapa) {
+    const vistos = new Map<string, number>()
+    const saida: (ParteProcessoPortal & { importada: boolean })[] = []
+    for (const parte of lista) {
+      const k = chaveNome(parte.nome)
+      const i = vistos.get(k)
+      if (i === undefined) { vistos.set(k, saida.length); saida.push(parte) }
+      else if (saida[i].importada && !parte.importada) saida[i] = parte
+    }
+    resultado.set(processoId, saida.map(({ nome, tipo }) => ({ nome, tipo })))
+  }
+  return resultado
 }
 
 const limpar = (v: string | null, max: number): string | null => {
