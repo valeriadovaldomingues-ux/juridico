@@ -1,5 +1,7 @@
 // Constantes de envio de documentos SEM dependência de servidor (usadas também pela tela do navegador).
 
+import type { UserRole } from '@/types'
+
 export const TAMANHO_MAXIMO_BYTES = 25 * 1024 * 1024
 export const MAX_DESCRICAO = 300
 
@@ -27,4 +29,4 @@ export function extensaoDe(nome: string): string {
 
 
 /** Quem da equipe vê e baixa os documentos que o cliente enviou pelo portal (o "comercial" não). */
-export const PAPEIS_ENVIOS: string[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
+export const PAPEIS_ENVIOS: UserRole[] = ['estagiario', 'administrativo', 'advogado', 'gerente', 'socio']
