@@ -145,6 +145,12 @@ describe('GET /api/portal/relatorio-horas', () => {
     h.sessao = null
     expect((await chamar()).status).toBe(401)
   })
+  it('com a chave "mostrar horas" desligada para o cliente → 404 e nada é gerado nem registrado', async () => {
+    f = criarFakeDb({ ...seedBasico(), portal_acessos_log: [], portal_tentativas: [], portal_acessos: [{ id: 'a1', cliente_id: CLIENTE_A, ativo: true, email_acesso: 'a@x.com', mostrar_horas: false }] })
+    h.fake = f
+    expect((await chamar()).status).toBe(404)
+    expect(f.tabelas.portal_acessos_log).toHaveLength(0)
+  })
   it('gera o PDF de horas só do cliente da sessão, sem valores, e registra o download', async () => {
     f = criarFakeDb({
       ...seedBasico(), portal_acessos_log: [], portal_tentativas: [], profiles: [{ id: 'u1', nome: 'Débora Brito', role: 'advogado' }],

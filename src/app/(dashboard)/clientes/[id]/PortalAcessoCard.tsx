@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, KeyRound, Loader2 } from 'lucide-react'
+import { Clock, Eye, KeyRound, Loader2 } from 'lucide-react'
 import type { StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 const dataHora = (iso: string | null) =>
@@ -26,6 +26,22 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
       if (!res.ok) { setMsg({ tipo: 'erro', texto: dados.error ?? 'Não foi possível abrir a visualização.' }); return }
       window.open(dados.url ?? '/portal', '_blank')
       setMsg({ tipo: 'ok', texto: 'Portal aberto em outra aba, como o cliente vê (30 minutos, só leitura).' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  async function alternarHoras(mostrar: boolean) {
+    setOcupado(true)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/portal-admin/clientes/${clienteId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'definir_horas', mostrar }),
+      })
+      const dados = await res.json().catch(() => ({}))
+      if (!res.ok) { setMsg({ tipo: 'erro', texto: dados.error ?? 'Não foi possível salvar.' }); return }
+      setMsg({ tipo: 'ok', texto: mostrar ? 'O cliente passa a ver a aba Horas no portal.' : 'A aba Horas foi escondida do portal deste cliente.' })
+      router.refresh()
     } finally {
       setOcupado(false)
     }
@@ -86,6 +102,13 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
           <label className="flex items-center gap-2 text-[12px] text-[#3d4a5c]">
             <input type="checkbox" checked={enviar} onChange={e => setEnviar(e.target.checked)} /> Enviar um primeiro código agora
           </label>
+
+          {status.liberado && (
+            <label className="flex items-start gap-2 text-[12px] text-[#3d4a5c]">
+              <input type="checkbox" className="mt-0.5" checked={status.mostrarHoras} disabled={ocupado} onChange={e => alternarHoras(e.target.checked)} />
+              <span><span className="inline-flex items-center gap-1 font-medium"><Clock size={12} /> Mostrar horas no portal do cliente</span><br /><span className="text-[#7a8899]">Desligue para clientes com contrato fechado: a aba Horas some e o relatório de horas deixa de ser baixado por ele.</span></span>
+            </label>
+          )}
 
           {msg && <p role="status" className={`text-[12px] ${msg.tipo === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.texto}</p>}
 

@@ -1,7 +1,8 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { Clock, FileDown } from 'lucide-react'
 import { exigirSessaoPortal, dataCurta } from '@/lib/portal-cliente/pagina'
-import { listarHoras, mesesComHoras, mesValido, totalMinutos } from '@/lib/portal-cliente/horas'
+import { horasVisiveis, listarHoras, mesesComHoras, mesValido, totalMinutos } from '@/lib/portal-cliente/horas'
 import { formatDurationMinutes } from '@/lib/agenda-time-entries'
 import EmptyState from '../_components/EmptyState'
 
@@ -12,6 +13,7 @@ const curto = (m: string) => `${MESES[Number(m.slice(5, 7)) - 1].slice(0, 3)}/${
 export default async function PortalHorasPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const { mes: mesParam } = await searchParams
   const { session, db } = await exigirSessaoPortal()
+  if (!(await horasVisiveis(db, session.clienteId))) notFound()
   const horas = await listarHoras(db, session.clienteId)
   const meses = mesesComHoras(horas)
 

@@ -5,7 +5,7 @@ import { aplicarLimites, LIMITES } from '@/lib/portal-cliente/anti-abuso'
 import { registrarLogPortal } from '@/lib/portal-cliente/log'
 import { json, tratarErro } from '@/lib/portal-cliente/http'
 import { hojeSP } from '@/lib/portal-cliente/consultas'
-import { horasDoPeriodo, listarHoras, relatorioHorasDoCliente } from '@/lib/portal-cliente/horas'
+import { horasDoPeriodo, horasVisiveis, listarHoras, relatorioHorasDoCliente } from '@/lib/portal-cliente/horas'
 import { gerarRelatorioHorasPdf } from '@/lib/relatorio-horas/pdf'
 
 export const maxDuration = 60
@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   if (session instanceof NextResponse) return session
   try {
     const db = portalDb()
+    if (!(await horasVisiveis(db, session.clienteId))) return json({ error: 'Não encontrado.' }, 404)
     const limite = await aplicarLimites(db, [LIMITES.relatorioPorCliente(session.clienteId)])
     if (!limite.ok) return json({ error: 'Você já baixou o relatório várias vezes agora há pouco. Tente de novo mais tarde.' }, 429)
 

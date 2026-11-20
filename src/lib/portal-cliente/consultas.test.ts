@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { andamentoVisivelNoPortal, descricaoParaCliente, filtrarVisiveisNoPortal, processoVisivelNoPortal } from './visibilidade'
 import { listarAndamentos, listarAudienciasFuturas, listarPartes, listarProcessosDoCliente, montarResumo, obterProcessoDoCliente } from './consultas'
-import { horasDoPeriodo, listarHoras, mesesComHoras, relatorioHorasDoCliente } from './horas'
+import { horasDoPeriodo, horasVisiveis, listarHoras, mesesComHoras, relatorioHorasDoCliente } from './horas'
 import { criarFakeDb } from './testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from './testing/seed'
 
@@ -223,5 +223,17 @@ describe('horas do cliente no portal', () => {
     const rel = relatorioHorasDoCliente('Maria da Silva', nov, { de, ate })
     expect(rel).toMatchObject({ cliente: 'Maria da Silva', totalMinutos: 90, linhas: [{ data: '10/11/2026', responsavel: 'Débora Brito', minutos: 90 }] })
     expect(horasDoPeriodo(horas, null)).toMatchObject({ de: '2026-10-05', ate: '2026-11-10' })
+  })
+
+  it('chave "mostrar horas": só desliga para quem o escritório desligou; erro/migração ausente não esconde', async () => {
+    const ligado = criarFakeDb({ ...seedBasico(), portal_acessos: [{ id: 'a1', cliente_id: CLIENTE_A, ativo: true, email_acesso: 'a@x.com' }, { id: 'a2', cliente_id: CLIENTE_B, ativo: true, email_acesso: 'b@x.com', mostrar_horas: false }] })
+    expect(await horasVisiveis(ligado.db, CLIENTE_A)).toBe(true)    // sem valor definido = padrão ligada
+    expect(await horasVisiveis(ligado.db, CLIENTE_B)).toBe(false)
+    const ausente = criarFakeDb({ ...seedBasico(), portal_acessos: [] })
+    ausente.falharTabela('portal_acessos', '42703')
+    expect(await horasVisiveis(ausente.db, CLIENTE_A)).toBe(true)
+    const quebrado = criarFakeDb({ ...seedBasico(), portal_acessos: [] })
+    quebrado.falharTabela('portal_acessos', '57014')
+    expect(await horasVisiveis(quebrado.db, CLIENTE_A)).toBe(false)
   })
 })
