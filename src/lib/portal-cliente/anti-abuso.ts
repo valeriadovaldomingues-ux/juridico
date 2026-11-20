@@ -27,6 +27,7 @@ export const LIMITES = {
   pedidoPorDocumento: (doc: string): Limite => ({ tipo: 'pedido_doc', valor: doc, max: 3, janelaMs: HORA }),
   pedidoPorEmail: (email: string): Limite => ({ tipo: 'pedido_email', valor: email.toLowerCase(), max: 3, janelaMs: HORA }),
   pedidoGlobal: (): Limite => ({ tipo: 'pedido_global', valor: 'todos', max: 40, janelaMs: HORA }),
+  envioPorCliente: (clienteId: string): Limite => ({ tipo: 'envio_doc', valor: clienteId, max: 30, janelaMs: HORA }),
   relatorioPorCliente: (clienteId: string): Limite => ({ tipo: 'relatorio', valor: clienteId, max: 10, janelaMs: HORA }),
 } as const
 

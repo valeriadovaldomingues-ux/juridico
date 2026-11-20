@@ -2,15 +2,16 @@
 
 import Link        from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Scale, CalendarDays, Home, Clock } from 'lucide-react'
+import { Scale, CalendarDays, Home, Clock, FolderUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// v1: processos, andamentos, audiências e horas. Documentos, mensagens e Aurora ficam fora do menu.
+// v1: processos, andamentos, audiências, horas e documentos (envio do cliente). Mensagens e Aurora ficam fora do menu.
 const NAV_ITEMS = [
   { href: '/portal',            label: 'Início',      icon: Home          },
   { href: '/portal/processos',  label: 'Processos',   icon: Scale         },
   { href: '/portal/agenda',     label: 'Audiências',  icon: CalendarDays  },
   { href: '/portal/horas',      label: 'Horas',       icon: Clock         },
+  { href: '/portal/documentos', label: 'Documentos',  icon: FolderUp      },
 ]
 
 export default function PortalNav({ mostrarHoras = true }: { mostrarHoras?: boolean }) {

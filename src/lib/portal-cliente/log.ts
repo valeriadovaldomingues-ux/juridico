@@ -17,6 +17,7 @@ export type AcaoPortalLog =
   | 'processo_reexibido'
   | 'previa_socio'
   | 'horas_visibilidade'
+  | 'envio_documento'
 
 export async function registrarLogPortal(
   db: Db,
