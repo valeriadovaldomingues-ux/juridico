@@ -13,13 +13,13 @@ const NAV_ITEMS = [
   { href: '/portal/horas',      label: 'Horas',       icon: Clock         },
 ]
 
-export default function PortalNav() {
+export default function PortalNav({ mostrarHoras = true }: { mostrarHoras?: boolean }) {
   const pathname = usePathname()
 
   return (
     <nav className="bg-[#0C1B2A]/95 border-b border-[#C49557]/15">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-0 overflow-x-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.filter(i => mostrarHoras || i.href !== '/portal/horas').map(({ href, label, icon: Icon }) => {
           const active = href === '/portal'
             ? pathname === '/portal'
             : pathname.startsWith(href)

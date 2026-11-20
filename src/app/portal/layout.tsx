@@ -3,6 +3,8 @@ import { getPortalSession } from '@/lib/auth/portal-guard'
 import LogoutButton from './LogoutButton'
 import FaixaPrevia from './FaixaPrevia'
 import PortalNav    from './PortalNav'
+import { portalDb } from '@/lib/portal-cliente/db'
+import { horasVisiveis } from '@/lib/portal-cliente/horas'
 
 export const metadata = { title: 'Portal do Cliente — Pessoa e do Val Advocacia' }
 
@@ -16,6 +18,7 @@ export default async function PortalLayout({
   // redirecionam para o login por conta própria (exigirSessaoPortal), o que evita loop aqui.
   const session = await getPortalSession()
   if (!session) return <>{children}</>
+  const mostrarHoras = await horasVisiveis(portalDb(), session.clienteId)
 
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
@@ -53,7 +56,7 @@ export default async function PortalLayout({
       </header>
 
       {/* ── Navegação ───────────────────────────────────────────────────────── */}
-      <PortalNav />
+      <PortalNav mostrarHoras={mostrarHoras} />
 
       {/* ── Conteúdo ────────────────────────────────────────────────────────── */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 portal-page">

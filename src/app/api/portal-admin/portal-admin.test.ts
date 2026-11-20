@@ -54,6 +54,7 @@ describe('permissão: só o sócio', () => {
     expect((await listarPedidos()).status).toBe(403)
     expect((await decidirPedido({ acao: 'rejeitar' })).status).toBe(403)
     expect((await acionar({ acao: 'revogar' })).status).toBe(403)
+    expect((await acionar({ acao: 'definir_horas', mostrar: false })).status).toBe(403)
     expect(f.consultas).toHaveLength(0)
     expect(f.tabelas.portal_pedidos_acesso[0].status).toBe('pendente')
   })
@@ -88,6 +89,17 @@ describe('sócio', () => {
   it('rejeita e apaga os dados', async () => {
     expect((await decidirPedido({ acao: 'rejeitar' })).status).toBe(200)
     expect(f.tabelas.portal_pedidos_acesso[0]).toMatchObject({ status: 'rejeitado', nascimento: null, nome_mae: null })
+  })
+
+  it('liga/desliga a aba Horas do cliente (só boolean; exige acesso liberado)', async () => {
+    expect((await acionar({ acao: 'definir_horas', mostrar: false })).status).toBe(409)
+    await acionar({ acao: 'liberar', email_acesso: 'a@maria.com' })
+    expect((await acionar({ acao: 'definir_horas', mostrar: 'nao' })).status).toBe(400)
+    expect((await acionar({ acao: 'definir_horas' })).status).toBe(400)
+    const res = await acionar({ acao: 'definir_horas', mostrar: false })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, mostrarHoras: false })
+    expect(f.tabelas.portal_acessos[0].mostrar_horas).toBe(false)
   })
 
   it('ação inválida / ids malformados → 400/404', async () => {

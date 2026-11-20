@@ -230,6 +230,23 @@ export async function revogarAcesso(db: Db, clienteId: string, usuarioId: string
   return { sessoesEncerradas }
 }
 
+/** Liga/desliga a aba Horas no portal de UM cliente (só quem já tem linha em portal_acessos). */
+export async function definirMostrarHoras(
+  db: Db,
+  clienteId: string,
+  mostrar: boolean,
+  usuarioId: string,
+  agora: Date = new Date(),
+): Promise<ResultadoDecisao> {
+  const { data: existente, error } = await db.from('portal_acessos').select('id').eq('cliente_id', clienteId).maybeSingle()
+  checar(error, 'acessos')
+  if (!existente) return { ok: false, erro: 'Libere o acesso deste cliente ao portal antes de ajustar o que ele vê.', status: 409 }
+  const { error: e } = await db.from('portal_acessos').update({ mostrar_horas: mostrar, updated_at: agora.toISOString() }).eq('id', existente.id as string)
+  checar(e, 'acessos')
+  await registrarLogPortal(db, { acao: 'horas_visibilidade', clienteId, usuarioId, detalhes: { mostrar } })
+  return { ok: true }
+}
+
 export async function encerrarSessoes(db: Db, clienteId: string, usuarioId: string, agora: Date = new Date()): Promise<{ sessoesEncerradas: number }> {
   const sessoesEncerradas = await revogarSessoesDoCliente(db, clienteId, agora)
   await registrarLogPortal(db, { acao: 'sessoes_encerradas', clienteId, usuarioId, detalhes: { sessoes: sessoesEncerradas } })
@@ -248,23 +265,48 @@ export interface StatusAcessoPortal {
   revogadoEm: string | null
   sessoesAtivas: number
   documentoValido: boolean
+  /** Chave "mostrar horas no portal" (padrão: ligada). */
+  mostrarHoras: boolean
 }
 
 export async function statusAcesso(db: Db, clienteId: string, cpfCnpj: string | null, agora: Date = new Date()): Promise<StatusAcessoPortal> {
   const d = somenteDigitos(cpfCnpj ?? '')
   const base: StatusAcessoPortal = {
     disponivel: true, liberado: false, emailAcesso: null, aprovadoEm: null, ultimoAcesso: null, revogadoEm: null,
-    sessoesAtivas: 0, documentoValido: cpfValido(d) || cnpjValido(d),
+    sessoesAtivas: 0, documentoValido: cpfValido(d) || cnpjValido(d), mostrarHoras: true,
   }
   const { data, error } = await db
     .from('portal_acessos')
-    .select('email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em')
+    .select('email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em, mostrar_horas')
     .eq('cliente_id', clienteId)
     .maybeSingle()
   if (error) {
+    // 42703 = coluna mostrar_horas ainda não existe (migração pendente): lê sem ela e deixa a chave no padrão (ligada).
+    if (error.code === '42703') {
+      const { data: antigo, error: e2 } = await db
+        .from('portal_acessos')
+        .select('email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em')
+        .eq('cliente_id', clienteId)
+        .maybeSingle()
+      if (e2) {
+        if (tabelaAusente(e2)) return { ...base, disponivel: false }
+        throw new Error('status do acesso ao portal')
+      }
+      return completarStatus(db, base, antigo, clienteId, agora)
+    }
     if (tabelaAusente(error)) return { ...base, disponivel: false }
     throw new Error('status do acesso ao portal')
   }
+  return completarStatus(db, base, data, clienteId, agora)
+}
+
+async function completarStatus(
+  db: Db,
+  base: StatusAcessoPortal,
+  data: Record<string, unknown> | null,
+  clienteId: string,
+  agora: Date,
+): Promise<StatusAcessoPortal> {
   const { count } = await db
     .from('portal_sessoes')
     .select('id', { count: 'exact', head: true })
@@ -279,5 +321,6 @@ export async function statusAcesso(db: Db, clienteId: string, cpfCnpj: string | 
     ultimoAcesso: (data?.ultimo_acesso as string | null) ?? null,
     revogadoEm: (data?.revogado_em as string | null) ?? null,
     sessoesAtivas: count ?? 0,
+    mostrarHoras: data?.mostrar_horas !== false,
   }
 }
