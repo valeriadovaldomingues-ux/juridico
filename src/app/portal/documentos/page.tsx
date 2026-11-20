@@ -1,4 +1,5 @@
-import { FileText } from 'lucide-react'
+import { ExternalLink, FileText, FolderOpen } from 'lucide-react'
+import { pastaDropboxDoCliente } from '@/lib/portal-cliente/pasta-dropbox'
 import { exigirSessaoPortal, dataCurta } from '@/lib/portal-cliente/pagina'
 import { listarProcessosDoCliente } from '@/lib/portal-cliente/consultas'
 import { listarEnviosDoCliente, tamanhoLegivel } from '@/lib/portal-cliente/envios'
@@ -18,6 +19,7 @@ export default async function PortalDocumentosPage() {
     if (e instanceof PortalIndisponivel) return <EmBreve titulo="Documentos" />
     throw e
   }
+  const pastaDropbox = await pastaDropboxDoCliente(db, session.clienteId)
   const processos = (await listarProcessosDoCliente(db, session.clienteId)).map(p => ({ id: p.id, rotulo: [p.numero, p.titulo].filter(Boolean).join(' · ') || 'Processo' }))
 
   return (
@@ -29,6 +31,24 @@ export default async function PortalDocumentosPage() {
         </h1>
         <p className="text-[12px] text-[#6B7280] mt-2">Envie aqui os documentos que o escritório pediu (ou que você queira nos mostrar). Tudo fica guardado e a equipe é quem recebe.</p>
       </div>
+
+      {pastaDropbox && (
+        <div className="bg-white border border-[#E8E3D8] px-4 py-4 flex items-start gap-3">
+          <FolderOpen size={18} className="text-[#C49557] mt-0.5 shrink-0" strokeWidth={1.5} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] text-[#1C1C2E] font-medium">Sua pasta no Dropbox</p>
+            <p className="text-[12px] text-[#6B7280] mt-0.5">Os documentos do escritório compartilhados com você ficam nesta pasta.</p>
+            <a
+              href={pastaDropbox}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 bg-[#145A5B] px-3.5 py-2 text-[12px] font-medium text-white hover:bg-[#1B6E70]"
+            >
+              Abrir minha pasta <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      )}
 
       <EnviarDocumento processos={processos} somenteLeitura={!!session.previa} />
 

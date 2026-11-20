@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Eye, KeyRound, Loader2 } from 'lucide-react'
+import { Clock, Eye, FolderOpen, KeyRound, Loader2 } from 'lucide-react'
 import type { StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 const dataHora = (iso: string | null) =>
@@ -12,6 +12,7 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
   const router = useRouter()
   const [email, setEmail] = useState(status.emailAcesso ?? '')
   const [enviar, setEnviar] = useState(true)
+  const [pasta, setPasta] = useState(status.pastaDropbox ?? '')
   const [ocupado, setOcupado] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
 
@@ -41,6 +42,22 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
       const dados = await res.json().catch(() => ({}))
       if (!res.ok) { setMsg({ tipo: 'erro', texto: dados.error ?? 'Não foi possível salvar.' }); return }
       setMsg({ tipo: 'ok', texto: mostrar ? 'O cliente passa a ver a aba Horas no portal.' : 'A aba Horas foi escondida do portal deste cliente.' })
+      router.refresh()
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  async function salvarPasta() {
+    setOcupado(true)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/portal-admin/clientes/${clienteId}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'definir_pasta_dropbox', url: pasta }),
+      })
+      const dados = await res.json().catch(() => ({}))
+      if (!res.ok) { setMsg({ tipo: 'erro', texto: dados.error ?? 'Não foi possível salvar o link.' }); return }
+      setMsg({ tipo: 'ok', texto: dados.pastaDropbox ? 'Link salvo: o cliente passa a ver o botão da pasta na aba Documentos.' : 'Link removido do portal deste cliente.' })
       router.refresh()
     } finally {
       setOcupado(false)
@@ -108,6 +125,17 @@ export default function PortalAcessoCard({ clienteId, status }: { clienteId: str
               <input type="checkbox" className="mt-0.5" checked={status.mostrarHoras} disabled={ocupado} onChange={e => alternarHoras(e.target.checked)} />
               <span><span className="inline-flex items-center gap-1 font-medium"><Clock size={12} /> Mostrar horas no portal do cliente</span><br /><span className="text-[#7a8899]">Desligue para clientes com contrato fechado: a aba Horas some e o relatório de horas deixa de ser baixado por ele.</span></span>
             </label>
+          )}
+
+          {status.liberado && (
+            <div>
+              <label htmlFor="portal-pasta-dropbox" className="text-[11px] text-[#a8b3c4] uppercase tracking-wider flex items-center gap-1"><FolderOpen size={11} /> Pasta do Dropbox do cliente (link)</label>
+              <div className="mt-1 flex gap-2">
+                <input id="portal-pasta-dropbox" type="url" value={pasta} onChange={e => setPasta(e.target.value)} placeholder="https://www.dropbox.com/scl/fo/…" className="min-w-0 flex-1 rounded-lg border border-[#E2DDD8] px-3 py-2 text-[13px]" />
+                <button onClick={salvarPasta} disabled={ocupado || pasta.trim() === (status.pastaDropbox ?? '')} className="rounded-lg border border-[#145A5B]/40 px-3 py-2 text-[12px] font-medium text-[#145A5B] hover:bg-[#145A5B]/5 disabled:opacity-40">Salvar</button>
+              </div>
+              <p className="mt-1 text-[11px] text-[#7a8899]">No Dropbox, crie o link da pasta como &quot;só convidados&quot; (ou com senha). O cliente vê o botão só depois de entrar no portal. Deixe vazio e salve para remover.</p>
+            </div>
           )}
 
           {msg && <p role="status" className={`text-[12px] ${msg.tipo === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.texto}</p>}
