@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { andamentoVisivelNoPortal, descricaoParaCliente, filtrarVisiveisNoPortal, processoVisivelNoPortal } from './visibilidade'
 import { listarAndamentos, listarAudienciasFuturas, listarPartes, listarProcessosDoCliente, montarResumo, obterProcessoDoCliente } from './consultas'
+import { horasDoPeriodo, listarHoras, mesesComHoras, relatorioHorasDoCliente } from './horas'
 import { criarFakeDb } from './testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, PROC_A1, PROC_A_OCULTO, PROC_A_SEGREDO, PROC_B1, seedBasico } from './testing/seed'
 
@@ -164,5 +165,63 @@ describe('migração ausente', () => {
     const f = criarFakeDb(seedBasico())
     f.falharTabela('processos', '42703')
     await expect(listarProcessosDoCliente(f.db, CLIENTE_A)).rejects.toMatchObject({ name: 'PortalIndisponivel' })
+  })
+})
+
+describe('horas do cliente no portal', () => {
+  const ent = (id: string, extra: Record<string, unknown> = {}) => ({
+    id, cliente_id: CLIENTE_A, cobravel: true, status_cobranca: 'a_faturar', inicio_em: '2026-11-10T13:00:00Z',
+    duracao_calculada_minutos: 90, duracao_manual_minutos: null, usa_duracao_manual: false,
+    descricao_atividade: 'Elaboração de petição', processo_id: PROC_A1,
+    // nada disto pode sair:
+    valor_hora: 450, valor_total: 675, observacoes: 'cliente difícil', criado_por: 'u1', ...extra,
+  })
+
+  it('só tempo: sem valores, observações ou quem lançou; só horas cobráveis do próprio cliente', async () => {
+    const base = seedBasico()
+    base.agenda_time_entries = [
+      ent('h1'),
+      ent('h2', { cobravel: false }),
+      ent('h3', { status_cobranca: 'nao_faturavel' }),
+      ent('h4', { cliente_id: CLIENTE_B }),
+      ent('h5', { duracao_calculada_minutos: 0 }),
+      ent('h6', { usa_duracao_manual: true, duracao_manual_minutos: 30, inicio_em: '2026-10-05T03:30:00Z' }),
+    ]
+    const horas = await listarHoras(criarFakeDb(base).db, CLIENTE_A)
+    expect(horas.map(h => [h.id, h.minutos])).toEqual([['h1', 90], ['h6', 30]])
+    expect(horas[1].data).toBe('2026-10-05')   // 03:30Z = 00:30 em Brasília
+    expect(JSON.stringify(horas)).not.toMatch(/valor|450|675|difícil|criado_por/)
+    expect(mesesComHoras(horas)).toEqual(['2026-11', '2026-10'])
+  })
+
+  it('processo oculto/segredo não mostra o número; atividade sem texto interno', async () => {
+    const base = seedBasico()
+    base.agenda_time_entries = [
+      ent('h1'),
+      ent('h2', { processo_id: PROC_A_SEGREDO }),
+      ent('h3', { processo_id: PROC_A_OCULTO, descricao_atividade: 'Reunião [registrado via Claude por Ana]' }),
+      ent('h4', { descricao_atividade: null, processo_id: null }),
+    ]
+    const horas = await listarHoras(criarFakeDb(base).db, CLIENTE_A)
+    const por = Object.fromEntries(horas.map(h => [h.id, h]))
+    expect(por.h1.processoNumero).toMatch(/^000/)
+    expect(por.h2.processoNumero).toBeNull()
+    expect(por.h3.processoNumero).toBeNull()
+    expect(por.h3.atividade).toBe('Reunião')
+    expect(por.h4.atividade).toBe('Atividade jurídica')
+  })
+
+  it('responsável: nome da equipe; relatório no formato do PDF da equipe, só do período', async () => {
+    const base = seedBasico()
+    base.profiles = [{ id: 'u1', nome: 'Débora Brito', role: 'advogado' }, { id: 'u9', nome: 'Alguém', role: 'cliente' }]
+    base.agenda_time_entries = [ent('h1'), ent('h2', { inicio_em: '2026-10-05T15:00:00Z', criado_por: 'u9' })]
+    const horas = await listarHoras(criarFakeDb(base).db, CLIENTE_A)
+    expect(horas.find(h => h.id === 'h1')?.responsavel).toBe('Débora Brito')
+    expect(horas.find(h => h.id === 'h2')?.responsavel).toBe('—')
+    const { horas: nov, de, ate } = horasDoPeriodo(horas, '2026-11')
+    expect([de, ate, nov.length]).toEqual(['2026-11-01', '2026-11-30', 1])
+    const rel = relatorioHorasDoCliente('Maria da Silva', nov, { de, ate })
+    expect(rel).toMatchObject({ cliente: 'Maria da Silva', totalMinutos: 90, linhas: [{ data: '10/11/2026', responsavel: 'Débora Brito', minutos: 90 }] })
+    expect(horasDoPeriodo(horas, null)).toMatchObject({ de: '2026-10-05', ate: '2026-11-10' })
   })
 })
