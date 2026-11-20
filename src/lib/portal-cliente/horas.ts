@@ -5,7 +5,7 @@
 
 import { calculateEffectiveMinutes } from '@/lib/agenda-time-entries'
 import type { Db } from './db'
-import { checar } from './db'
+import { checar, tabelaAusente } from './db'
 import { descricaoParaCliente, processoVisivelNoPortal } from './visibilidade'
 import { totaisPorResponsavel, type RelatorioHoras } from '@/lib/relatorio-horas/dados'
 
@@ -129,4 +129,15 @@ export function horasDoPeriodo(horas: HoraPortal[], mes: string | null | undefin
   }
   const datas = filtradas.map(h => h.data).sort()
   return { horas: filtradas, de: datas[0] ?? '', ate: datas[datas.length - 1] ?? '' }
+}
+
+/**
+ * Chave "mostrar horas no portal" do cliente (portal_acessos.mostrar_horas). Padrão: ligada — inclusive quando a coluna
+ * ainda não existe no banco (migração pendente), para não esconder nada de quem nunca foi ajustado.
+ */
+export async function horasVisiveis(db: Db, clienteId: string): Promise<boolean> {
+  const { data, error } = await db.from('portal_acessos').select('mostrar_horas').eq('cliente_id', clienteId).maybeSingle()
+  // Coluna/tabela ausente = migração pendente (padrão ligada); qualquer outro erro esconde por cautela.
+  if (error) return tabelaAusente(error)
+  return data?.mostrar_horas !== false
 }

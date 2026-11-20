@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { criarFakeDb, type FakeDb } from './testing/fake-db'
 import { CLIENTE_A, CLIENTE_B, CPF_A_DIGITOS, seedBasico } from './testing/seed'
-import { decidirPedido, encerrarSessoes, liberarAcesso, listarPedidosPendentes, revogarAcesso, statusAcesso } from './gestao'
+import { decidirPedido, definirMostrarHoras, encerrarSessoes, liberarAcesso, listarPedidosPendentes, revogarAcesso, statusAcesso } from './gestao'
 import { conferirCodigo } from './codigo'
 import { criarSessao, validarToken } from './sessao'
 import { PORTAL_PAPEIS_GESTAO, podeGerenciarPortal } from './constantes'
@@ -200,5 +200,24 @@ describe('liberar / revogar / encerrar sessões', () => {
   it('status com a migração ausente → disponivel:false (a ficha do cliente não quebra)', async () => {
     f.falharTabela('portal_acessos', '42P01')
     expect((await statusAcesso(f.db, CLIENTE_A, null)).disponivel).toBe(false)
+  })
+
+  it('chave "mostrar horas": padrão ligada; sócio desliga e liga; sem acesso liberado → 409', async () => {
+    expect(await definirMostrarHoras(f.db, CLIENTE_A, false, SOCIO)).toMatchObject({ ok: false, status: 409 })
+    await liberarAcesso(f.db, { clienteId: CLIENTE_A, emailAcesso: 'a@x.com', usuarioId: SOCIO, enviarCodigo: false })
+    expect((await statusAcesso(f.db, CLIENTE_A, '529.982.247-25')).mostrarHoras).toBe(true)
+    expect(await definirMostrarHoras(f.db, CLIENTE_A, false, SOCIO)).toEqual({ ok: true })
+    expect(f.tabelas.portal_acessos[0].mostrar_horas).toBe(false)
+    expect((await statusAcesso(f.db, CLIENTE_A, '529.982.247-25')).mostrarHoras).toBe(false)
+    expect(f.tabelas.portal_acessos_log.map(l => l.acao)).toContain('horas_visibilidade')
+    await definirMostrarHoras(f.db, CLIENTE_A, true, SOCIO)
+    expect((await statusAcesso(f.db, CLIENTE_A, '529.982.247-25')).mostrarHoras).toBe(true)
+  })
+
+  it('religar o acesso (liberar de novo) não mexe na chave das horas', async () => {
+    await liberarAcesso(f.db, { clienteId: CLIENTE_A, emailAcesso: 'a@x.com', usuarioId: SOCIO, enviarCodigo: false })
+    await definirMostrarHoras(f.db, CLIENTE_A, false, SOCIO)
+    await liberarAcesso(f.db, { clienteId: CLIENTE_A, emailAcesso: 'novo@x.com', usuarioId: SOCIO, enviarCodigo: false })
+    expect(f.tabelas.portal_acessos[0].mostrar_horas).toBe(false)
   })
 })
