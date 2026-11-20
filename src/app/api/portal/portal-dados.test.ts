@@ -24,6 +24,8 @@ import { GET as me } from './me/route'
 import { GET as relatorio } from './relatorio/route'
 import { GET as relatorioHoras } from './relatorio-horas/route'
 import { GET as documentos } from './documentos/route'
+import { POST as solicitarEnvio } from './envios/route'
+import { POST as confirmarEnvio } from './envios/[id]/confirmar/route'
 import { GET as mensagens, POST as mensagensPost } from './mensagens/route'
 import { POST as accessLog } from './access-log/route'
 import { GET as auroraContexto } from './processos/[id]/aurora-cliente/contexto/route'
@@ -159,6 +161,78 @@ describe('GET /api/portal/relatorio-horas', () => {
     const pdf = await PDFDocument.load(new Uint8Array(await res.arrayBuffer()))
     expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1)
     expect(f.tabelas.portal_acessos_log.map(l => l.acao)).toContain('download_relatorio')
+  })
+})
+
+describe('envio de documentos pelo cliente (POST /api/portal/envios e /[id]/confirmar)', () => {
+  let noStorage: string[]
+  const corpo = (o: unknown) => new Request('http://localhost/api/portal/envios', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) })
+  const confirmar = (id: string) => confirmarEnvio(new Request('http://x', { method: 'POST' }), { params: Promise.resolve({ id }) })
+  beforeEach(() => {
+    noStorage = []
+    f = criarFakeDb({ ...seedBasico(), portal_acessos_log: [], portal_tentativas: [], portal_envios: [] })
+    ;(f.db as unknown as { storage: unknown }).storage = {
+      from: () => ({
+        createSignedUploadUrl: async (c: string) => ({ data: { token: 'tok-' + c.length, path: c }, error: null }),
+        list: async (_p: string, o: { search: string }) => ({ data: noStorage.filter(n => n === o.search).map(n => ({ name: n, metadata: { size: 5000 } })), error: null }),
+        remove: async () => ({ data: null, error: null }),
+      }),
+    }
+    h.fake = f
+  })
+
+  it('401 sem sessão (nenhuma tabela é consultada)', async () => {
+    h.sessao = null
+    expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10 }))).status).toBe(401)
+    expect((await confirmar(PROC_A1)).status).toBe(401)
+    expect(f.consultas).toHaveLength(0)
+  })
+
+  it('fluxo completo: autoriza, o arquivo chega, confirma e aparece (e só para o cliente certo)', async () => {
+    const r1 = await solicitarEnvio(corpo({ nome: 'RG.pdf', tamanho: 5000, descricao: 'frente e verso' }))
+    expect(r1.status).toBe(200)
+    const d = await r1.json()
+    expect(d).toMatchObject({ bucket: 'portal-envios', contentType: 'application/pdf' })
+    expect(d.caminho.startsWith(`${CLIENTE_A}/`)).toBe(true)
+    expect(d.token).toBeTruthy()
+
+    // outro cliente não consegue confirmar o envio do A
+    h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
+    expect((await confirmar(d.id)).status).toBe(404)
+    h.sessao = sessaoDe(CLIENTE_A, 'Maria da Silva')
+
+    expect((await confirmar(d.id)).status).toBe(409)             // ainda não chegou ao Storage
+    noStorage.push(d.caminho.slice(d.caminho.lastIndexOf('/') + 1))
+    expect((await confirmar(d.id)).status).toBe(200)
+    expect(f.tabelas.portal_envios[0]).toMatchObject({ status: 'enviado', tamanho_bytes: 5000 })
+    expect(f.tabelas.portal_acessos_log.map(l => l.acao)).toContain('envio_documento')
+  })
+
+  it('valida no servidor: tipo, tamanho e corpo inválido', async () => {
+    expect((await solicitarEnvio(corpo({ nome: 'virus.exe', tamanho: 10 }))).status).toBe(415)
+    expect((await solicitarEnvio(corpo({ nome: 'grande.pdf', tamanho: 30 * 1024 * 1024 }))).status).toBe(413)
+    expect((await solicitarEnvio(corpo({ tamanho: 10 }))).status).toBe(400)
+    expect((await solicitarEnvio(new Request('http://x', { method: 'POST', body: 'nao é json' }))).status).toBe(400)
+    expect((await confirmar('nao-uuid')).status).toBe(404)
+    expect(f.tabelas.portal_envios).toHaveLength(0)
+  })
+
+  it('processo de outro cliente → 404 e nada é criado', async () => {
+    expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10, processo_id: PROC_B1 }))).status).toBe(404)
+    expect(f.tabelas.portal_envios).toHaveLength(0)
+  })
+
+  it('limite de 30 envios por hora por cliente → 429 (outro cliente não é afetado)', async () => {
+    for (let i = 0; i < 30; i++) expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10 }))).status).toBe(200)
+    expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10 }))).status).toBe(429)
+    h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
+    expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10 }))).status).toBe(200)
+  })
+
+  it('"ver como cliente" (prévia do sócio) não envia nada → 403', async () => {
+    h.sessao = { ...sessaoDe(CLIENTE_A, 'Maria da Silva'), previa: true } as never
+    expect((await solicitarEnvio(corpo({ nome: 'a.pdf', tamanho: 10 }))).status).toBe(403)
+    expect(f.tabelas.portal_envios).toHaveLength(0)
   })
 })
 

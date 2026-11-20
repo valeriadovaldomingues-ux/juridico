@@ -9,6 +9,8 @@ import { listClienteContatos } from '@/lib/cliente-contatos'
 import { podeGerenciarPortal } from '@/lib/portal-cliente/constantes'
 import { portalDb } from '@/lib/portal-cliente/db'
 import { statusAcesso, type StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
+import { listarEnviosParaEquipe, type EnvioParaEquipe } from '@/lib/portal-cliente/envios'
+import { PAPEIS_ENVIOS } from '@/lib/portal-cliente/envios-constantes'
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -102,10 +104,21 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
     }
   }
 
+  // Documentos que o cliente enviou pelo portal (direto para a equipe). Banco sem a migração → bloco some, sem derrubar a ficha.
+  let enviosPortal: EnvioParaEquipe[] | null = null
+  if (PAPEIS_ENVIOS.includes(session.profile.role)) {
+    try {
+      enviosPortal = await listarEnviosParaEquipe(portalDb(), id)
+    } catch {
+      enviosPortal = null
+    }
+  }
+
   return (
     <div className="internal-page max-w-7xl">
       <ClienteDetail
         portalAcesso={portalAcesso}
+        enviosPortal={enviosPortal}
         cliente={cliente as any}
         processos={processos ?? []}
         interactions={interactions ?? []}

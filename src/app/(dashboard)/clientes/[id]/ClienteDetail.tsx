@@ -12,6 +12,8 @@ import type { Cliente, Processo, ContactInteraction, ClienteContato, TipoContato
 import ClienteForm from '../ClienteForm'
 import ContatosEmpresaTab from './ContatosEmpresaTab'
 import PortalAcessoCard from './PortalAcessoCard'
+import DocumentosDoPortalCard from './DocumentosDoPortalCard'
+import type { EnvioParaEquipe } from '@/lib/portal-cliente/envios'
 import type { StatusAcessoPortal } from '@/lib/portal-cliente/gestao'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -333,6 +335,7 @@ type ClienteDetailProps = {
   canEditContatos: boolean
   /** Status do acesso ao portal (só para quem gerencia o portal); null = não mostra o bloco. */
   portalAcesso?: StatusAcessoPortal | null
+  enviosPortal?: EnvioParaEquipe[] | null
 }
 
 export default function ClienteDetail({
@@ -345,6 +348,7 @@ export default function ClienteDetail({
   empresasDoDono = [],
   canEditContatos,
   portalAcesso = null,
+  enviosPortal = null,
 }: ClienteDetailProps) {
   const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<Tab>('historico')
@@ -525,6 +529,9 @@ export default function ClienteDetail({
 
           {/* Acesso ao portal do cliente */}
           {portalAcesso && <PortalAcessoCard clienteId={cliente.id} status={portalAcesso} />}
+
+          {/* Documentos enviados pelo cliente no portal */}
+          {enviosPortal && <DocumentosDoPortalCard envios={enviosPortal} />}
 
           {/* Responsável + tags */}
           <div className="bg-white rounded-lg border border-[#E2DDD8] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] space-y-3">
