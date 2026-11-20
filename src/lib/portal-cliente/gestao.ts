@@ -9,6 +9,7 @@ import { revogarSessoesDoCliente } from './sessao'
 import { registrarLogPortal } from './log'
 import { cnpjValido, cpfValido, somenteDigitos } from './documento'
 import { emailValido } from '@/lib/email/mailer'
+import { validarLinkDropbox } from './pasta-dropbox'
 
 // ── Pedidos ──────────────────────────────────────────────────────────────────
 
@@ -247,6 +248,30 @@ export async function definirMostrarHoras(
   return { ok: true }
 }
 
+/**
+ * Define (ou limpa, com vazio) o link da pasta do Dropbox do cliente no portal. Só quem já tem linha em portal_acessos.
+ * Aceita só links https do próprio Dropbox (validarLinkDropbox).
+ */
+export async function definirPastaDropbox(
+  db: Db,
+  clienteId: string,
+  linkBruto: unknown,
+  usuarioId: string,
+  agora: Date = new Date(),
+): Promise<{ ok: true; url: string | null } | { ok: false; erro: string; status: number }> {
+  const v = validarLinkDropbox(linkBruto)
+  if (!v.ok) return { ok: false, erro: v.erro, status: 400 }
+  const { data: existente, error } = await db.from('portal_acessos').select('id').eq('cliente_id', clienteId).maybeSingle()
+  checar(error, 'acessos')
+  if (!existente) return { ok: false, erro: 'Libere o acesso deste cliente ao portal antes de ajustar o que ele vê.', status: 409 }
+  const { error: e } = await db.from('portal_acessos').update({ pasta_dropbox_url: v.url, updated_at: agora.toISOString() }).eq('id', existente.id as string)
+  // 42703 = coluna ainda não existe (migração da pasta do Dropbox pendente): avisa em vez de dar erro genérico.
+  if (e?.code === '42703') return { ok: false, erro: 'A pasta do Dropbox ainda não foi ativada no banco (migração pendente).', status: 503 }
+  checar(e, 'acessos')
+  await registrarLogPortal(db, { acao: 'pasta_dropbox', clienteId, usuarioId, detalhes: { definida: v.url !== null } })
+  return { ok: true, url: v.url }
+}
+
 export async function encerrarSessoes(db: Db, clienteId: string, usuarioId: string, agora: Date = new Date()): Promise<{ sessoesEncerradas: number }> {
   const sessoesEncerradas = await revogarSessoesDoCliente(db, clienteId, agora)
   await registrarLogPortal(db, { acao: 'sessoes_encerradas', clienteId, usuarioId, detalhes: { sessoes: sessoesEncerradas } })
@@ -267,37 +292,29 @@ export interface StatusAcessoPortal {
   documentoValido: boolean
   /** Chave "mostrar horas no portal" (padrão: ligada). */
   mostrarHoras: boolean
+  /** Link da pasta do Dropbox do cliente no portal (null = sem pasta). */
+  pastaDropbox: string | null
 }
+
+const COLUNAS_BASE = 'email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em'
 
 export async function statusAcesso(db: Db, clienteId: string, cpfCnpj: string | null, agora: Date = new Date()): Promise<StatusAcessoPortal> {
   const d = somenteDigitos(cpfCnpj ?? '')
   const base: StatusAcessoPortal = {
     disponivel: true, liberado: false, emailAcesso: null, aprovadoEm: null, ultimoAcesso: null, revogadoEm: null,
-    sessoesAtivas: 0, documentoValido: cpfValido(d) || cnpjValido(d), mostrarHoras: true,
+    sessoesAtivas: 0, documentoValido: cpfValido(d) || cnpjValido(d), mostrarHoras: true, pastaDropbox: null,
   }
-  const { data, error } = await db
-    .from('portal_acessos')
-    .select('email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em, mostrar_horas')
-    .eq('cliente_id', clienteId)
-    .maybeSingle()
-  if (error) {
-    // 42703 = coluna mostrar_horas ainda não existe (migração pendente): lê sem ela e deixa a chave no padrão (ligada).
-    if (error.code === '42703') {
-      const { data: antigo, error: e2 } = await db
-        .from('portal_acessos')
-        .select('email_acesso, ativo, aprovado_em, ultimo_acesso, revogado_em')
-        .eq('cliente_id', clienteId)
-        .maybeSingle()
-      if (e2) {
-        if (tabelaAusente(e2)) return { ...base, disponivel: false }
-        throw new Error('status do acesso ao portal')
-      }
-      return completarStatus(db, base, antigo, clienteId, agora)
-    }
+  // 42703 = coluna opcional ainda não existe (migração pendente). Tenta com todas as colunas, depois só com mostrar_horas,
+  // por fim só as básicas; o que faltar fica no padrão (horas ligadas, sem pasta).
+  const tentativas = [`${COLUNAS_BASE}, mostrar_horas, pasta_dropbox_url`, `${COLUNAS_BASE}, mostrar_horas`, COLUNAS_BASE]
+  for (const colunas of tentativas) {
+    const { data, error } = await db.from('portal_acessos').select(colunas).eq('cliente_id', clienteId).maybeSingle()
+    if (!error) return completarStatus(db, base, data as Record<string, unknown> | null, clienteId, agora)
+    if (error.code === '42703') continue
     if (tabelaAusente(error)) return { ...base, disponivel: false }
     throw new Error('status do acesso ao portal')
   }
-  return completarStatus(db, base, data, clienteId, agora)
+  throw new Error('status do acesso ao portal')
 }
 
 async function completarStatus(
@@ -322,5 +339,6 @@ async function completarStatus(
     revogadoEm: (data?.revogado_em as string | null) ?? null,
     sessoesAtivas: count ?? 0,
     mostrarHoras: data?.mostrar_horas !== false,
+    pastaDropbox: (data?.pasta_dropbox_url as string | null | undefined) ?? null,
   }
 }

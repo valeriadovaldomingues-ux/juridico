@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiGuard } from '@/lib/auth/api-guard'
 import { portalDb } from '@/lib/portal-cliente/db'
-import { definirMostrarHoras, encerrarSessoes, liberarAcesso, revogarAcesso } from '@/lib/portal-cliente/gestao'
+import { definirMostrarHoras, definirPastaDropbox, encerrarSessoes, liberarAcesso, revogarAcesso } from '@/lib/portal-cliente/gestao'
 import { enviarCodigoPorEmail } from '@/lib/portal-cliente/emails'
 import { COOKIE_SESSAO, PORTAL_PAPEIS_GESTAO } from '@/lib/portal-cliente/constantes'
 import { criarSessaoPrevia, opcoesCookie } from '@/lib/portal-cliente/sessao'
@@ -16,7 +16,8 @@ import type { UserRole } from '@/types'
  *   { acao: 'revogar' }                                — bloqueia o acesso e encerra todas as sessões
  *   { acao: 'encerrar_sessoes' }                       — só derruba as sessões abertas
  *   { acao: 'definir_horas', mostrar: boolean }        — liga/desliga a aba Horas no portal deste cliente
- *   { acao: 'ver_como_cliente' }                       — abre o portal como o cliente vê (30 min, só leitura), sem código
+ *   { acao: 'definir_pasta_dropbox', url }              — link da pasta do Dropbox deste cliente (vazio = remove); só https do dropbox.com
+ *   { acao: 'ver_como_cliente' }                      — abre o portal como o cliente vê (30 min, só leitura), sem código
  * Só quem gerencia o portal (hoje: sócio). Tudo vai para portal_acessos_log.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -54,6 +55,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const r = await definirMostrarHoras(db, id, mostrar, auth.userId)
       if (!r.ok) return json({ error: r.erro }, r.status)
       return json({ ok: true, mostrarHoras: mostrar })
+    }
+    if (acao === 'definir_pasta_dropbox') {
+      const r = await definirPastaDropbox(db, id, lido.corpo.url, auth.userId)
+      if (!r.ok) return json({ error: r.erro }, r.status)
+      return json({ ok: true, pastaDropbox: r.url })
     }
     if (acao === 'revogar') return json({ ok: true, ...(await revogarAcesso(db, id, auth.userId)) })
     if (acao === 'encerrar_sessoes') return json({ ok: true, ...(await encerrarSessoes(db, id, auth.userId)) })

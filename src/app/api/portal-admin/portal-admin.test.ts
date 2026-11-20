@@ -102,6 +102,20 @@ describe('sócio', () => {
     expect(f.tabelas.portal_acessos[0].mostrar_horas).toBe(false)
   })
 
+  it('define a pasta do Dropbox do cliente (só link https do dropbox.com; exige acesso liberado)', async () => {
+    const link = 'https://www.dropbox.com/scl/fo/abc123/xyz?rlkey=k&dl=0'
+    expect((await acionar({ acao: 'definir_pasta_dropbox', url: link })).status).toBe(409)
+    await acionar({ acao: 'liberar', email_acesso: 'a@maria.com' })
+    expect((await acionar({ acao: 'definir_pasta_dropbox', url: 'https://evil.com/x' })).status).toBe(400)
+    expect((await acionar({ acao: 'definir_pasta_dropbox', url: 42 })).status).toBe(400)
+    const res = await acionar({ acao: 'definir_pasta_dropbox', url: link })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, pastaDropbox: link })
+    expect(f.tabelas.portal_acessos[0].pasta_dropbox_url).toBe(link)
+    const limpa = await acionar({ acao: 'definir_pasta_dropbox', url: '' })
+    expect(await limpa.json()).toMatchObject({ ok: true, pastaDropbox: null })
+  })
+
   it('ação inválida / ids malformados → 400/404', async () => {
     expect((await decidirPedido({ acao: 'apagar' })).status).toBe(400)
     expect((await decidirPedido({ acao: 'rejeitar' }, 'nao-uuid')).status).toBe(404)

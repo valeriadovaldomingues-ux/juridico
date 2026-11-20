@@ -18,6 +18,7 @@ export type AcaoPortalLog =
   | 'previa_socio'
   | 'horas_visibilidade'
   | 'envio_documento'
+  | 'pasta_dropbox'
 
 export async function registrarLogPortal(
   db: Db,
