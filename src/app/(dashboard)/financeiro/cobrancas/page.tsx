@@ -1,6 +1,7 @@
 import { requireRole } from '@/lib/auth/guards'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobranca } from '@/types/cobrancas'
+import { COBRANCAS_SELECT } from '@/lib/cobrancas'
 import CobrancasPage from './CobrancasPage'
 
 interface ClienteOpcao {
@@ -34,7 +35,9 @@ export default async function CobrancasRoute() {
   const [{ data: cobrancas }, { data: daGrade }] = await Promise.all([
     supabase
       .from('cobrancas')
-      .select('*, cliente:clientes(id, nome, cpf_cnpj, email), processo:processos(id, numero_processo, titulo)')
+      // COBRANCAS_SELECT traz o endereço completo do pagador (cep, endereço, cidade, uf, tipo de pessoa): sem ele a janela
+      // "Confirmar dados do pagador" abria vazia e pedia tudo de novo, mesmo com o cadastro completo.
+      .select(COBRANCAS_SELECT)
       .order('data_vencimento', { ascending: false })
       .limit(500),
     supabase
