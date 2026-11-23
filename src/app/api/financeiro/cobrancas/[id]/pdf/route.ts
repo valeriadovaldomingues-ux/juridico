@@ -3,8 +3,13 @@ import { apiGuard } from '@/lib/auth/api-guard'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createSupabaseCobrancasStore } from '@/lib/cobrancas-store'
 import { getInterChargePdf, extractPdfBase64, sanitizeInterError } from '@/lib/interClient'
+import { erroDeLimite } from '@/lib/cobrancas-carne'
 
 const ALLOWED = ['socio'] as const
+export const maxDuration = 30
+
+// O Inter responde 429 (Too Many Requests) quando recebe pedidos seguidos: espera um pouco e tenta de novo.
+const ESPERAS_429_MS = [1500, 3000, 6000]
 
 /** GET /api/financeiro/cobrancas/:id/pdf — baixa o boleto direto do Inter.
  *
@@ -31,7 +36,16 @@ export async function GET(
   }
 
   try {
-    const payload = await getInterChargePdf(cobranca.inter_cobranca_id)
+    let payload: Awaited<ReturnType<typeof getInterChargePdf>> | null = null
+    for (let tentativa = 0; payload === null; tentativa += 1) {
+      try {
+        payload = await getInterChargePdf(cobranca.inter_cobranca_id)
+      } catch (e) {
+        const msg = e instanceof Error ? sanitizeInterError(e.message) : ''
+        if (!erroDeLimite(msg) || tentativa >= ESPERAS_429_MS.length) throw e
+        await new Promise(resolve => setTimeout(resolve, ESPERAS_429_MS[tentativa]))
+      }
+    }
     const base64 = extractPdfBase64(payload)
     if (!base64) {
       return NextResponse.json({ error: 'Inter nao retornou o PDF do boleto.' }, { status: 502 })
