@@ -7,6 +7,7 @@ import {
   Banknote,
   Clipboard,
   Copy,
+  Download,
   FileText,
   Loader2,
   Plus,
@@ -26,6 +27,7 @@ import SearchableCombobox, { type SearchableComboboxOption } from '@/components/
 import { fetchClienteOptions } from '@/lib/search/remote'
 import PagadorInterModal from './PagadorInterModal'
 import { ASSUNTOS_COBRANCA, montarPlano, parseValorBR } from '@/lib/cobrancas-parcelas'
+import { emitirEmFila, erroDeLimite, parcelasDoContrato, precisaEmitir } from '@/lib/cobrancas-carne'
 
 interface ClienteOpcao {
   id: string
@@ -165,6 +167,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [carneFase, setCarneFase] = useState<string | null>(null)
   const [pagadorModalCobranca, setPagadorModalCobranca] = useState<Cobranca | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cobranca | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -385,6 +388,125 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     )
   }
 
+  /** Recarrega as cobranças de um cliente (usado depois da fila, para refletir erros que não voltam como cobrança). */
+  async function recarregarCliente(clienteId: string) {
+    const res = await fetch(`/api/financeiro/cobrancas?cliente_id=${encodeURIComponent(clienteId)}`)
+    if (!res.ok) return
+    const lista = (await res.json().catch(() => null)) as Cobranca[] | null
+    if (!Array.isArray(lista)) return
+    setCobrancas(prev => prev.map(c => lista.find(n => n.id === c.id) ?? c))
+  }
+
+  /** Gera, uma a uma e com pausa, todos os boletos pendentes do contrato (o Inter limita pedidos em sequência rápida). */
+  async function gerarTodosBoletos(ref: Cobranca) {
+    const contrato = parcelasDoContrato(ref, cobrancas)
+    if (contrato.ambiguo) { setError('Há dois contratos iguais misturados para este cliente; gere os boletos um a um.'); return }
+    const pendentes = contrato.parcelas.filter(precisaEmitir)
+    if (!pendentes.length) { setAviso('Todas as parcelas deste contrato já foram enviadas ao Inter.'); return }
+    const minutos = Math.max(1, Math.ceil((pendentes.length * 4) / 60))
+    if (!window.confirm(`Gerar ${pendentes.length} boleto(s) no Banco Inter para ${ref.cliente?.nome ?? 'este cliente'}?\n\nLeva cerca de ${minutos} minuto(s). Não feche esta página até terminar.`)) return
+
+    setError(null)
+    setAviso(null)
+    setCarneFase('Iniciando…')
+    try {
+      const resultado = await emitirEmFila({
+        parcelas: contrato.parcelas,
+        emitir: async id => {
+          const res = await fetch(`/api/financeiro/cobrancas/${id}/emitir-inter`, { method: 'POST' })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) return { ok: false, erro: data.error ?? 'Erro ao emitir no Inter.' }
+          setCobrancas(prev => prev.map(c => c.id === data.id ? data : c))
+          return { ok: true }
+        },
+        esperar: ms => new Promise(resolve => setTimeout(resolve, ms)),
+        aoProgredir: ({ numero, feitas, total, aguardando429 }) =>
+          setCarneFase(aguardando429
+            ? `O Inter pediu uma pausa. Aguardando para tentar a parcela ${numero} de novo…`
+            : `Gerando o boleto da parcela ${numero} (${feitas + 1} de ${total})…`),
+      })
+
+      await recarregarCliente(ref.cliente_id)
+
+      // Boletos recém-enviados costumam ficar "em processamento": uma consulta a cada um já traz o que estiver pronto.
+      setCarneFase('Conferindo no Inter…')
+      for (const numero of resultado.emitidas) {
+        const parcela = contrato.parcelas.find(p => p.parcela_numero === numero)
+        if (!parcela) continue
+        const res = await fetch(`/api/financeiro/cobrancas/${parcela.id}/sincronizar`, { method: 'POST' })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && data?.id) setCobrancas(prev => prev.map(c => c.id === data.id ? data : c))
+        await new Promise(resolve => setTimeout(resolve, 1200))
+      }
+
+      const extras = resultado.puladasVencidas.length ? ` Puladas por já estarem vencidas: ${resultado.puladasVencidas.join(', ')}.` : ''
+      if (resultado.falha) {
+        setError(`Parei na parcela ${resultado.falha.numero}: ${resultado.falha.erro}. As anteriores foram geradas. Corrija e clique de novo: só as pendentes serão enviadas.${extras}`)
+      } else {
+        setAviso(`Boletos enviados ao Inter: ${resultado.emitidas.length}.${extras} Se alguma parcela ainda aparecer "Processando", aguarde alguns minutos e use "Atualizar status no Inter"; depois baixe o carnê.`)
+      }
+    } finally {
+      setCarneFase(null)
+    }
+  }
+
+  /** Abre o PDF do boleto numa nova aba; se o Inter ainda não liberou, explica em vez de mostrar o erro cru. */
+  async function abrirPdfBoleto(c: Cobranca) {
+    setError(null)
+    setAviso(null)
+    const aba = window.open('', '_blank') // abre já, no clique, para o navegador não bloquear
+    try {
+      const res = await fetch(`/api/financeiro/cobrancas/${c.id}/pdf`)
+      if (!res.ok) {
+        const dados = await res.json().catch(() => ({}))
+        aba?.close()
+        setError(
+          res.status === 409
+            ? 'Esta cobrança ainda não foi enviada ao Inter.'
+            : erroDeLimite(dados.error)
+            ? 'O Inter está limitando pedidos seguidos (erro 429). Aguarde cerca de 1 minuto e clique de novo.'
+            : `O Inter ainda não liberou o PDF deste boleto${c.status === 'processando' ? ' (ele está em processamento)' : ''}. Aguarde alguns minutos, use "Atualizar status no Inter" e tente de novo.${dados.error ? ` (Inter: ${dados.error})` : ''}`,
+        )
+        return
+      }
+      const url = URL.createObjectURL(await res.blob())
+      if (aba) aba.location.href = url
+      else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch {
+      aba?.close()
+      setError('Não consegui abrir o PDF do boleto. Tente de novo em instantes.')
+    }
+  }
+
+  /** Baixa o PDF único com todos os boletos do contrato. O servidor só entrega o carnê completo. */
+  async function baixarCarne(ref: Cobranca) {
+    setError(null)
+    setAviso(null)
+    setCarneFase('Montando o carnê (juntando os boletos)…')
+    try {
+      const res = await fetch(`/api/financeiro/cobrancas/${ref.id}/carne`)
+      if (!res.ok) {
+        const dados = await res.json().catch(() => ({}))
+        setError(dados.error ?? 'Não consegui montar o carnê.')
+        return
+      }
+      const blob = await res.blob()
+      const nome = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? 'carne.pdf'
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = nome
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      setAviso('Carnê baixado. Confira o arquivo (resumo + um boleto por parcela) antes de enviar ao cliente.')
+    } finally {
+      setCarneFase(null)
+    }
+  }
+
   function mensagemCliente(c: Cobranca) {
     const nome = c.cliente?.nome ?? 'cliente'
     return `Ola, ${nome}. Segue cobranca referente aos honorarios advocaticios do PEDV Advocacia, com vencimento em ${formatDate(c.data_vencimento)}, no valor de ${formatCurrency(Number(c.valor))}. Voce pode pagar por boleto ou Pix pelo QR Code/linha abaixo.\n\nLinha digitavel: ${c.linha_digitavel ?? 'a emitir'}\nPix copia e cola: ${c.pix_copia_cola ?? 'a emitir'}`
@@ -590,15 +712,15 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
               <CopyBox label="Pix copia e cola" value={selected.pix_copia_cola} onCopy={copy} />
 
               {selected.inter_cobranca_id && (
-                <a
-                  href={`/api/financeiro/cobrancas/${selected.id}/pdf`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[#34495e] text-[13px] font-medium hover:bg-[#F7F9F9]"
+                <button
+                  type="button"
+                  onClick={() => abrirPdfBoleto(selected)}
+                  disabled={!!carneFase}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#d8dee8] text-[#34495e] text-[13px] font-medium hover:bg-[#F7F9F9] disabled:opacity-60"
                 >
                   <ExternalLink size={15} />
                   Abrir PDF do boleto
-                </a>
+                </button>
               )}
 
               {selected.erro_emissao && (
@@ -626,6 +748,37 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
                   <Send size={15} />
                   Copiar mensagem WhatsApp
                 </button>
+                {podeExcluir && selected.parcela_total > 1 && (() => {
+                  const contrato = parcelasDoContrato(selected, cobrancas)
+                  const comBoleto = contrato.parcelas.filter(p => p.inter_cobranca_id).length
+                  const aGerar = contrato.parcelas.filter(precisaEmitir).length
+                  return (
+                    <div className="rounded-lg border border-[#e8edf2] bg-[#F7F9F9] p-3 space-y-2">
+                      <p className="text-[12px] font-semibold text-[#34495e]">Carnê do contrato</p>
+                      <p className="text-[12px] text-[#5b6776]">
+                        {contrato.parcelas.length} de {selected.parcela_total} parcelas · {comBoleto} enviadas ao Inter · {aGerar} a gerar
+                        {contrato.ausentes.length > 0 && <span className="text-amber-700"> · faltam (canceladas/não criadas): {contrato.ausentes.join(', ')}</span>}
+                      </p>
+                      <button
+                        onClick={() => gerarTodosBoletos(selected)}
+                        disabled={!!carneFase || aGerar === 0 || contrato.ambiguo}
+                        className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0F3D3E] text-white text-[13px] font-medium disabled:opacity-50"
+                      >
+                        {carneFase ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+                        Gerar todos os boletos do contrato{aGerar > 0 ? ` (${aGerar})` : ''}
+                      </button>
+                      <button
+                        onClick={() => baixarCarne(selected)}
+                        disabled={!!carneFase || contrato.ambiguo}
+                        className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg border border-[#145A5B]/40 text-[#145A5B] text-[13px] font-medium hover:bg-[#145A5B]/5 disabled:opacity-50"
+                      >
+                        <Download size={15} />
+                        Baixar carnê (PDF único)
+                      </button>
+                      {carneFase && <p role="status" className="text-[12px] text-[#145A5B]">{carneFase}</p>}
+                    </div>
+                  )
+                })()}
                 {podeExcluir && !['paga', 'cancelada'].includes(selected.status) && (
                   <div className="pt-2 border-t border-[#eef2f5]">
                     <button
