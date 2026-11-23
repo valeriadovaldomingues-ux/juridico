@@ -136,7 +136,7 @@ describe('GET /api/portal/relatorio', () => {
     expect((await relatorio()).status).toBe(429)
     h.sessao = sessaoDe(CLIENTE_B, 'Empresa B')
     expect((await relatorio()).status).toBe(200)
-  })
+  }, 20_000) // gera 11 PDFs seguidos: com a máquina ocupada passava dos 5 s padrão e falhava de forma intermitente
 })
 
 describe('GET /api/portal/relatorio-horas', () => {
