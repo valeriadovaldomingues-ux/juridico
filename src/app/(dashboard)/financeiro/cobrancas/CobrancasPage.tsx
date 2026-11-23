@@ -164,6 +164,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [pagadorModalCobranca, setPagadorModalCobranca] = useState<Cobranca | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cobranca | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -367,6 +368,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   async function sincronizar(cobranca: Cobranca) {
     setBusyId(cobranca.id)
     setError(null)
+    setAviso(null)
     const res = await fetch(`/api/financeiro/cobrancas/${cobranca.id}/sincronizar`, { method: 'POST' })
     const data = await res.json().catch(() => ({}))
     setBusyId(null)
@@ -375,6 +377,12 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
       return
     }
     setCobrancas(prev => prev.map(c => c.id === data.id ? data : c))
+    // Sempre dizer o que o Inter respondeu: antes, se nada mudava, a tela ficava muda e parecia que o clique não fez nada.
+    setAviso(
+      data.status === 'processando'
+        ? 'Atualizado: o Banco Inter ainda está processando esta cobrança (pode levar alguns minutos). Tente de novo daqui a pouco.'
+        : `Atualizado: situação no Inter agora é "${statusCfg[data.status as CobrancaStatus]?.label ?? data.status}".`,
+    )
   }
 
   function mensagemCliente(c: Cobranca) {
@@ -476,6 +484,14 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
           </div>
         )}
       </div>
+
+      {aviso && (
+        <div role="status" className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[13px] text-sky-800">
+          <RefreshCw size={16} className="mt-0.5" />
+          <span>{aviso}</span>
+          <button onClick={() => setAviso(null)} className="ml-auto" aria-label="Fechar aviso"><X size={14} /></button>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
