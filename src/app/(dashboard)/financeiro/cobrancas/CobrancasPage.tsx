@@ -25,6 +25,7 @@ import type { Cobranca, CobrancaStatus } from '@/types/cobrancas'
 import SearchableCombobox, { type SearchableComboboxOption } from '@/components/ui/SearchableCombobox'
 import { fetchClienteOptions } from '@/lib/search/remote'
 import PagadorInterModal from './PagadorInterModal'
+import { ASSUNTOS_COBRANCA, montarPlano, parseValorBR } from '@/lib/cobrancas-parcelas'
 
 interface ClienteOpcao {
   id: string
@@ -72,6 +73,9 @@ type ChargeFormValues = {
   parcela_extra_dezembro?: boolean
   valor_variavel?: boolean
   valores_mensais?: string[]
+  // 13º (só advocacia de partido): em dezembro soma o 13º ao valor do mês. valores_13o[i] = 13º da parcela i (vazio = em dobro).
+  incluir_13o?: boolean
+  valores_13o?: string[]
 }
 
 type PagadorFormValues = {
@@ -135,11 +139,13 @@ const emptyRecorrente: ChargeFormValues = {
   quantidade_parcelas: '12',
   dia_vencimento: String(new Date().getDate()),
   descricao: '',
-  tipo_caso: '',
+  tipo_caso: 'partido',
   percentual_exito: '',
   parcela_extra_dezembro: false,
-  valor_variavel: false,
+  valor_variavel: true,
   valores_mensais: [],
+  incluir_13o: false,
+  valores_13o: [],
 }
 
 export default function CobrancasPage({ initialCobrancas, clientes, processos, role }: Props) {
@@ -199,6 +205,20 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
   function abrirModal(tipo: 'unica' | 'recorrente') {
     setForm(emptyForm); setRecorrente(emptyRecorrente); setPagadorForm(emptyPagador); setNovoCliente(emptyNovoCliente); setError(null)
     setModal(tipo)
+  }
+
+  /** Alterna entre cobrança única e contrato parcelado (partido / ação isolada) sem perder cliente, processo e descrição. */
+  function trocarModalidade(m: 'unica' | 'partido' | 'isolado') {
+    const atual = modal === 'unica' ? form : recorrente
+    const comum = { cliente_id: atual.cliente_id, processo_id: atual.processo_id, descricao: atual.descricao }
+    setError(null)
+    if (m === 'unica') {
+      setForm(prev => ({ ...prev, ...comum }))
+      setModal('unica')
+    } else {
+      setRecorrente(prev => ({ ...prev, ...comum, tipo_caso: m }))
+      setModal('recorrente')
+    }
   }
 
   /** Cliente escolhido na busca (qualquer cliente do cadastro): traz os dados do pagador e os processos dele. */
@@ -262,7 +282,7 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     const payload = {
       ...form,
       cliente_id: cliente.id,
-      valor: Number(form.valor.replace(',', '.')),
+      valor: parseValorBR(form.valor) ?? Number.NaN,
       processo_id: form.processo_id || null,
     }
     const res = await fetch('/api/financeiro/cobrancas', {
@@ -290,21 +310,40 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
     const cliente = await prepararCliente(recorrente.cliente_id)
     if ('erro' in cliente) { setSaving(false); setError(cliente.erro); return }
     const quantidade = Number(recorrente.quantidade_parcelas)
-    const valorVariavel = recorrente.tipo_caso === 'partido' && !!recorrente.valor_variavel
+    const partido = recorrente.tipo_caso === 'partido'
+    // Advocacia de partido: o valor de cada parcela (com 13º, se marcado) sai do mesmo plano que a tela mostra.
+    let valoresMensais: number[] | undefined
+    if (partido) {
+      const plano = montarPlano({
+        vencimentoInicial: recorrente.data_vencimento_inicial ?? '',
+        quantidade,
+        diaVencimento: Number(recorrente.dia_vencimento),
+        valorFixo: recorrente.valor,
+        valoresMensais: recorrente.valor_variavel ? Array.from({ length: quantidade }, (_, i) => recorrente.valores_mensais?.[i] ?? '') : undefined,
+        incluir13: !!recorrente.incluir_13o,
+        valores13: recorrente.valores_13o,
+      })
+      if (plano.invalidas.length) {
+        setSaving(false)
+        setError(`Preencha o valor de todas as parcelas (mínimo R$ 2,50). Faltam: ${plano.invalidas.slice(0, 12).join(', ')}${plano.invalidas.length > 12 ? '…' : ''}.`)
+        return
+      }
+      valoresMensais = plano.parcelas.map(p => p.valor as number)
+    }
     const payload = {
       ...recorrente,
       cliente_id: cliente.id,
-      valor: Number(recorrente.valor.replace(',', '.')),
+      valor: parseValorBR(recorrente.valor) ?? Number.NaN,
       quantidade_parcelas: quantidade,
       dia_vencimento: Number(recorrente.dia_vencimento),
       processo_id: recorrente.processo_id || null,
       tipo_caso: recorrente.tipo_caso || undefined,
       percentual_exito: recorrente.tipo_caso === 'isolado' ? (recorrente.percentual_exito || undefined) : undefined,
-      parcela_extra_dezembro: recorrente.tipo_caso === 'partido' && !valorVariavel ? !!recorrente.parcela_extra_dezembro : undefined,
-      valores_mensais: valorVariavel
-        ? Array.from({ length: quantidade }, (_, i) => Number((recorrente.valores_mensais?.[i] ?? '0').replace(',', '.')))
-        : undefined,
+      parcela_extra_dezembro: undefined,
+      valores_mensais: valoresMensais,
       valor_variavel: undefined,
+      incluir_13o: undefined,
+      valores_13o: undefined,
     }
     const res = await fetch('/api/financeiro/cobrancas/gerar-recorrentes', {
       method: 'POST',
@@ -610,10 +649,31 @@ export default function CobrancasPage({ initialCobrancas, clientes, processos, r
         <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
           <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl border border-[#e8edf2]">
             <div className="px-5 py-4 border-b border-[#eef2f5] flex items-center justify-between">
-              <h2 className="text-[16px] font-semibold text-[#0f1923]">{modal === 'unica' ? 'Nova cobranca' : 'Gerar cobrancas do contrato'}</h2>
+              <h2 className="text-[16px] font-semibold text-[#0f1923]">{modal === 'unica' ? 'Nova cobrança' : 'Gerar cobranças do contrato'}</h2>
               <button onClick={() => setModal(null)}><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4">
+              <div role="radiogroup" aria-label="Tipo de cobrança" className="grid grid-cols-3 gap-1 rounded-lg bg-[#F1F4F6] p-1 text-[12px] font-medium">
+                {([
+                  ['unica', 'Cobrança única'],
+                  ['partido', 'Advocacia de partido'],
+                  ['isolado', 'Ação isolada (êxito)'],
+                ] as const).map(([valor, rotulo]) => {
+                  const ativo = valor === 'unica' ? modal === 'unica' : modal === 'recorrente' && recorrente.tipo_caso === valor
+                  return (
+                    <button
+                      key={valor}
+                      type="button"
+                      role="radio"
+                      aria-checked={ativo}
+                      onClick={() => trocarModalidade(valor)}
+                      className={cn('rounded-md px-2 py-2 transition-colors', ativo ? 'bg-white text-[#0F3D3E] shadow-sm' : 'text-[#5b6776] hover:text-[#0f1923]')}
+                    >
+                      {rotulo}
+                    </button>
+                  )
+                })}
+              </div>
               <ChargeForm
                 form={modal === 'unica' ? form : recorrente}
                 setForm={
@@ -822,6 +882,21 @@ function ChargeForm({
   onClienteEscolhido: (id: string) => Promise<void>
 }) {
   const [clienteOpcao, setClienteOpcao] = useState<SearchableComboboxOption | null>(null)
+  const [outroAssunto, setOutroAssunto] = useState(false)
+  const [aplicarTodos, setAplicarTodos] = useState('')
+  const quantidadeParcelas = Math.max(0, Math.min(120, Math.trunc(Number(form.quantidade_parcelas)) || 0))
+  const dataInicialOk = /^\d{4}-\d{2}-\d{2}$/.test(form.data_vencimento_inicial ?? '')
+  const plano = recorrente && form.tipo_caso === 'partido' && dataInicialOk
+    ? montarPlano({
+        vencimentoInicial: form.data_vencimento_inicial as string,
+        quantidade: quantidadeParcelas,
+        diaVencimento: Math.max(1, Math.min(31, Math.trunc(Number(form.dia_vencimento)) || 1)),
+        valorFixo: form.valor,
+        valoresMensais: form.valor_variavel ? Array.from({ length: quantidadeParcelas }, (_, i) => form.valores_mensais?.[i] ?? '') : undefined,
+        incluir13: !!form.incluir_13o,
+        valores13: form.valores_13o,
+      })
+    : null
   const set = (key: keyof ChargeFormValues, value: string) => setForm(prev => ({ ...prev, [key]: value }))
   const setPagador = (key: keyof PagadorFormValues, value: string) => setPagadorForm(prev => ({ ...prev, [key]: value }))
 
@@ -954,19 +1029,6 @@ function ChargeForm({
             <input type="number" min="1" max="31" value={form.dia_vencimento} onChange={e => set('dia_vencimento', e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px]" />
           </label>
 
-          <label className="space-y-1 md:col-span-2">
-            <span className="text-[12px] font-medium text-[#34495e]">Tipo de contrato</span>
-            <select
-              value={form.tipo_caso ?? ''}
-              onChange={e => setForm(prev => ({ ...prev, tipo_caso: e.target.value as TipoCaso }))}
-              className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white"
-            >
-              <option value="">— Selecione —</option>
-              <option value="isolado">Ação isolada</option>
-              <option value="partido">Advocacia de partido</option>
-            </select>
-          </label>
-
           {form.tipo_caso === 'isolado' && (
             <label className="space-y-1 md:col-span-2">
               <span className="text-[12px] font-medium text-[#34495e]">% de êxito</span>
@@ -981,49 +1043,98 @@ function ChargeForm({
 
           {form.tipo_caso === 'partido' && (
             <div className="md:col-span-2 rounded-lg border border-[#e8edf2] bg-[#F7F9F9] p-3 space-y-3">
-              {!form.valor_variavel && (
-                <label className="flex items-center gap-2 text-[13px] text-[#34495e]">
-                  <input
-                    type="checkbox"
-                    checked={!!form.parcela_extra_dezembro}
-                    onChange={e => setForm(prev => ({ ...prev, parcela_extra_dezembro: e.target.checked }))}
-                  />
-                  Mensalidade em dobro em dezembro
-                </label>
-              )}
-
-              <label className="space-y-1">
+              <label className="space-y-1 block">
                 <span className="text-[12px] font-medium text-[#34495e]">Valores ao longo do contrato</span>
                 <select
                   value={form.valor_variavel ? 'variam' : 'fixo'}
                   onChange={e => setForm(prev => ({ ...prev, valor_variavel: e.target.value === 'variam' }))}
                   className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white"
                 >
-                  <option value="fixo">Valor fixo em todos os meses{form.parcela_extra_dezembro ? ' (exceto dezembro)' : ''}</option>
-                  <option value="variam">Valores variam ao longo do contrato</option>
+                  <option value="variam">Valor diferente em cada mês (mês a mês)</option>
+                  <option value="fixo">Mesmo valor todos os meses</option>
                 </select>
               </label>
 
+              <label className="flex items-start gap-2 text-[13px] text-[#34495e]">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={!!form.incluir_13o}
+                  onChange={e => setForm(prev => ({ ...prev, incluir_13o: e.target.checked }))}
+                />
+                <span>
+                  Com 13º (em dezembro)
+                  <span className="block text-[11px] text-[#7a8899]">Em cada dezembro, o boleto vem com o valor do mês + o 13º (por padrão, o dobro). Você pode ajustar o 13º abaixo. Desmarcado = dezembro igual aos outros meses.</span>
+                </span>
+              </label>
+
               {form.valor_variavel && (
+                <div className="flex items-end gap-2">
+                  <label className="flex-1 space-y-1">
+                    <span className="block text-[11px] font-medium text-[#7a8899]">Preencher todos os meses com o mesmo valor</span>
+                    <input value={aplicarTodos} onChange={e => setAplicarTodos(e.target.value)} placeholder="1500,00" className="w-full px-2 py-1.5 rounded-lg border border-[#d8dee8] text-[13px] bg-white" />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={parseValorBR(aplicarTodos) === null}
+                    onClick={() => setForm(prev => ({ ...prev, valores_mensais: Array.from({ length: quantidadeParcelas }, () => aplicarTodos) }))}
+                    className="px-3 py-1.5 rounded-lg border border-[#d8dee8] bg-white text-[12px] font-medium text-[#34495e] hover:bg-[#F7F9F9] disabled:opacity-40"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              )}
+
+              {plano && quantidadeParcelas > 0 && (
                 <div>
-                  <p className="text-[11px] text-[#7a8899] mb-2">Informe o valor de cada uma das {form.quantidade_parcelas || 0} parcelas.</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: Number(form.quantidade_parcelas) || 0 }).map((_, i) => (
-                      <div key={i}>
-                        <span className="block text-[11px] font-medium text-[#7a8899] mb-1">Parcela {i + 1}</span>
-                        <input
-                          value={form.valores_mensais?.[i] ?? ''}
-                          onChange={e => {
-                            const next = [...(form.valores_mensais ?? [])]
-                            next[i] = e.target.value
-                            setForm(prev => ({ ...prev, valores_mensais: next }))
-                          }}
-                          placeholder="0,00"
-                          className="w-full px-2 py-1.5 rounded-lg border border-[#d8dee8] text-[13px]"
-                        />
-                      </div>
+                  <p className="text-[11px] text-[#7a8899] mb-2">
+                    {form.valor_variavel ? `Informe o valor de cada uma das ${quantidadeParcelas} parcelas, mês a mês.` : `${quantidadeParcelas} parcelas com o valor do campo "Valor" acima.`}
+                  </p>
+                  <ul className="max-h-72 overflow-y-auto divide-y divide-[#e8edf2] rounded-lg border border-[#e8edf2] bg-white">
+                    {plano.parcelas.map((par, i) => (
+                      <li key={par.numero} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                        <span className="w-6 text-[11px] text-[#9aa5b1]">{par.numero}</span>
+                        <span className="w-20 text-[13px] font-medium text-[#34495e]">{par.mes}</span>
+                        <span className="w-24 text-[11px] text-[#7a8899]">venc. {formatDate(par.vencimento)}</span>
+                        {form.valor_variavel ? (
+                          <input
+                            aria-label={`Valor da parcela ${par.numero} (${par.mes})`}
+                            value={form.valores_mensais?.[i] ?? ''}
+                            onChange={e => {
+                              const next = Array.from({ length: quantidadeParcelas }, (_, k) => form.valores_mensais?.[k] ?? '')
+                              next[i] = e.target.value
+                              setForm(prev => ({ ...prev, valores_mensais: next }))
+                            }}
+                            placeholder="0,00"
+                            className="w-28 px-2 py-1.5 rounded-lg border border-[#d8dee8] text-[13px]"
+                          />
+                        ) : (
+                          <span className="text-[13px] text-[#34495e]">{par.base !== null ? formatCurrency(par.base) : '—'}</span>
+                        )}
+                        {form.incluir_13o && par.ehDezembro && (
+                          <label className="flex items-center gap-1 text-[11px] text-[#7a8899]">
+                            + 13º
+                            <input
+                              aria-label={`13º de ${par.mes}`}
+                              value={form.valores_13o?.[i] ?? ''}
+                              onChange={e => {
+                                const next = Array.from({ length: quantidadeParcelas }, (_, k) => form.valores_13o?.[k] ?? '')
+                                next[i] = e.target.value
+                                setForm(prev => ({ ...prev, valores_13o: next }))
+                              }}
+                              placeholder={par.base !== null ? String(par.base).replace('.', ',') : 'igual ao mês'}
+                              className="w-24 px-2 py-1.5 rounded-lg border border-[#d8dee8] text-[13px]"
+                            />
+                          </label>
+                        )}
+                        <span className="ml-auto text-[12px] font-semibold text-[#0F3D3E]">{par.valor !== null ? formatCurrency(par.valor) : '—'}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
+                  <p className="mt-2 text-[12px] text-[#34495e]">
+                    <strong>Total do contrato: {formatCurrency(plano.total)}</strong> em {quantidadeParcelas} parcela{quantidadeParcelas > 1 ? 's' : ''}
+                    {plano.invalidas.length > 0 && <span className="text-amber-700"> · faltam valores (mín. R$ 2,50) nas parcelas: {plano.invalidas.slice(0, 12).join(', ')}{plano.invalidas.length > 12 ? '…' : ''}</span>}
+                  </p>
                 </div>
               )}
             </div>
@@ -1031,8 +1142,24 @@ function ChargeForm({
         </>
       )}
       <label className="space-y-1 md:col-span-2">
-        <span className="text-[12px] font-medium text-[#34495e]">Descricao dos honorarios</span>
-        <textarea value={form.descricao} onChange={e => set('descricao', e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
+        <span className="text-[12px] font-medium text-[#34495e]">Do que se trata</span>
+        <select
+          value={(ASSUNTOS_COBRANCA as readonly string[]).includes(form.descricao) ? form.descricao : (outroAssunto || form.descricao ? 'outro' : '')}
+          onChange={e => {
+            const v = e.target.value
+            if (v === 'outro') { setOutroAssunto(true); set('descricao', '') }
+            else { setOutroAssunto(false); set('descricao', v) }
+          }}
+          className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] bg-white"
+        >
+          <option value="">— Escolha —</option>
+          {ASSUNTOS_COBRANCA.map(a => <option key={a} value={a}>{a}</option>)}
+          <option value="outro">Outro (digitar abaixo)</option>
+        </select>
+      </label>
+      <label className="space-y-1 md:col-span-2">
+        <span className="text-[12px] font-medium text-[#34495e]">Descrição (aparece no boleto)</span>
+        <textarea value={form.descricao} onChange={e => set('descricao', e.target.value)} rows={3} placeholder="Ex.: Honorários advocatícios — contrato de advocacia de partido" className="w-full px-3 py-2 rounded-lg border border-[#d8dee8] text-[13px] resize-none" />
       </label>
     </div>
   )
