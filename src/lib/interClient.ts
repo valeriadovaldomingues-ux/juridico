@@ -2,6 +2,7 @@ import { createPrivateKey, createPublicKey, timingSafeEqual, X509Certificate } f
 import { readFileSync } from 'node:fs'
 import { request as httpsRequest } from 'node:https'
 import { URL } from 'node:url'
+import { criarCacheToken, type RespostaToken } from './inter-token-cache'
 
 type Json = Record<string, unknown>
 
@@ -281,6 +282,8 @@ function requestJson<T>(
           res.on('end', () => {
             const raw = Buffer.concat(chunks).toString('utf8')
             if ((res.statusCode ?? 500) >= 400) {
+              // Token recusado (revogado/expirou antes do previsto): esquece o guardado para o próximo pedido buscar outro.
+              if (res.statusCode === 401 && !path.includes('/oauth/')) cacheTokenInter.limpar()
               reject(new Error(`Inter API ${res.statusCode}: ${sanitizeInterError(raw || res.statusMessage || 'erro')}`))
               return
             }
@@ -296,20 +299,22 @@ function requestJson<T>(
   })
 }
 
+// O token dura ~1 h: reaproveitar evita 1 pedido extra a cada chamada e o erro 429 do Inter em carnês.
+const cacheTokenInter = criarCacheToken()
+
 export async function getInterAccessToken(): Promise<string> {
-  const config = getConfig()
-  const body = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    grant_type: 'client_credentials',
-    scope: process.env.INTER_TOKEN_SCOPE ?? 'boleto-cobranca.write boleto-cobranca.read',
+  return cacheTokenInter.obter(() => {
+    const config = getConfig()
+    const body = new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      grant_type: 'client_credentials',
+      scope: process.env.INTER_TOKEN_SCOPE ?? 'boleto-cobranca.write boleto-cobranca.read',
+    })
+    return requestJson<RespostaToken>('POST', '/oauth/v2/token', body, {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    })
   })
-
-  const data = await requestJson<{ access_token: string }>('POST', '/oauth/v2/token', body, {
-    'Content-Type': 'application/x-www-form-urlencoded',
-  })
-
-  return data.access_token
 }
 
 /** A API de boleto/Pix do Inter rejeita a cobrança inteira ("Dados
